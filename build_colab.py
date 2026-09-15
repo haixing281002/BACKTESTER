@@ -70,13 +70,20 @@ Three papers go through the pipeline. **All three are rejected.** That is the sy
 3. **A completely different paper** (trend following) — included to prove the engine is
    paper-agnostic, not tuned to one paper.
 
+**You need two files, and the notebook will refuse to continue without both:**
+
+| File | Why it is required |
+|---|---|
+| `Factor_Indices_Historical_Price_Data.xlsx` | the price history every backtest runs on |
+| the research paper `.pdf` | Step 01 ingests it; without it there is no page evidence, no recovered results tables and no auditable Strategy Card |
+
 Total runtime: roughly 5–8 minutes on a free Colab CPU runtime. No GPU needed."""))
 
 cells.append(md(r"""---
 # SECTION 0 — Setup
 
 Run these three cells in order. Cell 0.1 installs libraries, 0.2 unpacks the engine,
-0.3 loads your data."""))
+0.3 loads **both** of your input files."""))
 
 cells.append(code(r'''#@title 0.1 — Install dependencies  { display-mode: "form" }
 # Colab already ships pandas, numpy, scipy, matplotlib, statsmodels and PyYAML.
@@ -137,13 +144,19 @@ print("\nstrategy cards:")
 for f in sorted(os.listdir("cards")):
     print("   cards/" + f)'''))
 
-cells.append(md(r"""### 0.3 — Load your data
+cells.append(md(r"""### 0.3 — Load your data (both files required)
 
-You need **`Factor_Indices_Historical_Price_Data.xlsx`**. The paper PDF is optional — without
-it, Step 01 (ingestion) is skipped and everything else still runs.
+Upload **both**:
 
-Pick whichever option suits you. Option A (upload) is simplest for a one-off; Option B (Drive)
-is better if you will re-run this."""))
+1. **`Factor_Indices_Historical_Price_Data.xlsx`** — your NSE factor index price history
+2. **the research paper `.pdf`** — the paper being evaluated
+
+The cell hard-fails if either is missing. That is deliberate: a Strategy Card with no source
+document cannot cite page evidence, so Gate A has nothing to check the interpretation against.
+An uncitable card is exactly the failure mode this system exists to prevent.
+
+In the upload dialog you can select both files at once (ctrl-click / cmd-click). Option B
+(Google Drive) is better if you will re-run this often."""))
 
 cells.append(code(r'''#@title 0.3 — Load your data  { display-mode: "form" }
 SOURCE = "upload"  #@param ["upload", "google_drive", "already_here"]
@@ -167,7 +180,8 @@ def _place(path):
 
 if SOURCE == "upload":
     from google.colab import files
-    print("Select your .xlsx (and optionally the paper .pdf), then wait for the upload to finish.\n")
+    print("Select BOTH your .xlsx AND the paper .pdf (ctrl-click / cmd-click to")
+    print("multi-select), then wait for the upload to finish.\n")
     for name in files.upload():
         print("  " + _place(name))
 
@@ -181,10 +195,17 @@ elif SOURCE == "google_drive":
         print("  " + _place(h))
 
 print()
+PDF = "docs/devanathan_2026_simple_dynamic_sbg.pdf"
+missing = []
 if not os.path.exists(XLSX):
+    missing.append("  - the price workbook  (Factor_Indices_Historical_Price_Data.xlsx)")
+if not os.path.exists(PDF):
+    missing.append("  - the research paper  (any .pdf)")
+if missing:
     raise FileNotFoundError(
-        "Price workbook not found. Re-run this cell and upload "
-        "Factor_Indices_Historical_Price_Data.xlsx")
+        "BOTH input files are required. Missing:\n" + "\n".join(missing) +
+        "\n\nRe-run this cell and select both at once (ctrl-click / cmd-click "
+        "in the upload dialog).")
 
 # Validate the file before anything downstream trusts it.
 from ros.data.loaders import load_nse_factor_workbook, audit_frame
@@ -198,8 +219,16 @@ print(f"source sha256: {prov['sha256'][:32]}\n")
 print("DATA AUDIT (runs before any backtest touches the frame):")
 print(audit_frame(frame).to_string(index=False))
 
-PDF_OK = os.path.exists("docs/devanathan_2026_simple_dynamic_sbg.pdf")
-print(f"\npaper PDF present: {PDF_OK}" + ("" if PDF_OK else "  (Step 01 will be skipped)"))'''))
+# Validate the PDF too -- a file with a .pdf extension is not necessarily readable.
+from ros.cards.extract import extract_document
+doc = extract_document(PDF)
+print(f"\npaper loaded : {doc.quality.n_pages} pages, {doc.quality.n_chars:,} chars, "
+      f"sha256 {doc.sha256[:16]}")
+if doc.quality.is_scanned:
+    raise ValueError(
+        "This PDF is scanned (near-zero extractable text). It cannot be carded "
+        "without OCR -- which is itself a Step 01 finding, not a bug.")
+print("both inputs present and readable.")'''))
 
 cells.append(md(r"""#### What just happened, and why the audit matters
 
@@ -304,23 +333,21 @@ the `math density` number."""))
 cells.append(code(r'''#@title 2.1 — Ingest the paper  { display-mode: "form" }
 import os
 os.chdir("/content/research_os")
+from ros.cards.extract import extract_document, summarize
 
 PDF = "docs/devanathan_2026_simple_dynamic_sbg.pdf"
-if not os.path.exists(PDF):
-    print("No PDF uploaded -- skipping Step 01. Re-run cell 0.3 with the paper to see this.")
-else:
-    from ros.cards.extract import (extract_document, summarize, parse_text_tables,
-                                   propose_replication_targets, detect_target_conflicts)
-    doc = extract_document(PDF)
-    print(summarize(doc))
+assert os.path.exists(PDF), "paper PDF missing -- re-run cell 0.3"
 
-    print("\n" + "=" * 90)
-    print("WHAT THE EQUATIONS LOOK LIKE AFTER EXTRACTION (page 6, the core constraint):")
-    print("=" * 90)
-    for line in doc.page_text(6).splitlines():
-        if "wspy" in line or "wagg" in line:
-            print("   " + line)
-    print("""
+doc = extract_document(PDF)
+print(summarize(doc))
+
+print("\n" + "=" * 90)
+print("WHAT THE EQUATIONS LOOK LIKE AFTER EXTRACTION (page 6, the core constraint):")
+print("=" * 90)
+for line in doc.page_text(6).splitlines():
+    if "wspy" in line or "wagg" in line:
+        print("   " + line)
+print("""
    In the actual PDF this reads:   w^spy_t + w^agg_t + w^gld_t  <=  1
    Every subscript and superscript is gone. An LLM handed this text will
    reconstruct a formula that is plausible and wrong, with total confidence.""")'''))
@@ -339,32 +366,32 @@ Run the next cell."""))
 cells.append(code(r'''#@title 2.2 — Recover the results tables, and find the trap  { display-mode: "form" }
 import os
 os.chdir("/content/research_os")
+from ros.cards.extract import (extract_document, parse_text_tables,
+                               propose_replication_targets, detect_target_conflicts)
 
-if not os.path.exists("docs/devanathan_2026_simple_dynamic_sbg.pdf"):
-    print("No PDF uploaded -- skipping.")
+doc = extract_document("docs/devanathan_2026_simple_dynamic_sbg.pdf")
+tables = parse_text_tables(doc)
+print(f"tables recovered by text geometry : {len(tables)}   (ruled-table detection found 0)\n")
+
+hit = next((t for t in tables if "Volatility" in (t["header"] or "")), None)
+if hit is None:
+    print("No portfolio-by-metric table found. Expected for a paper with a different")
+    print("results layout -- the parser is generic, not tuned to this paper.")
 else:
-    from ros.cards.extract import (extract_document, parse_text_tables,
-                                   propose_replication_targets, detect_target_conflicts)
-    doc = extract_document("docs/devanathan_2026_simple_dynamic_sbg.pdf")
-
-    tables = parse_text_tables(doc)
-    print(f"tables recovered by text geometry : {len(tables)}   (ruled-table detection found 0)\n")
-
-    hit = next(t for t in tables if "Volatility" in (t["header"] or ""))
     print(f"Table 1 (page {hit['page']}) -- the paper's headline results:")
     print(f"   {'portfolio':<20}{'return':>9}{'vol':>8}{'sharpe':>8}{'maxDD':>8}")
     for lbl, vals in hit["rows"].items():
         print(f"   {lbl:<20}{vals[0]:>8.1%}{vals[1]:>8.1%}{vals[2]:>8.2f}{vals[3]:>8.1%}")
 
-    props = propose_replication_targets(tables)
-    conflicts = detect_target_conflicts(props)
-    print(f"\ncandidate replication targets : {len(props)}")
-    print(f"CONFLICTING targets           : {len(conflicts)}\n")
+props = propose_replication_targets(tables)
+conflicts = detect_target_conflicts(props)
+print(f"\ncandidate replication targets : {len(props)}")
+print(f"CONFLICTING targets           : {len(conflicts)}\n")
 
-    for c in conflicts:
-        if c["portfolio"] == "Markowitz" and c["metric"] == "sharpe":
-            print(f"   Markowitz Sharpe appears as: {c['values']}  on pages {c['pages']}")
-    print("""
+for c in conflicts:
+    if c["portfolio"] == "Markowitz" and c["metric"] == "sharpe":
+        print(f"   Markowitz Sharpe appears as: {c['values']}  on pages {c['pages']}")
+print("""
    Those are not parser errors. They are the SAME metric on different bases:
        1.08  pre-tax, nominal        (Table 1, p11)
        0.99  inflation-adjusted      (p17)

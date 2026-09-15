@@ -157,8 +157,13 @@ embedded as a base64 tarball, so it needs no GitHub access and nothing to downlo
 1. Open [colab.research.google.com](https://colab.research.google.com) → **Upload notebook**
 2. Run cell **0.1** (installs cvxpy, clarabel, pdfplumber, openpyxl — 60–90s)
 3. Run cell **0.2** (unpacks the engine)
-4. Run cell **0.3** and upload `Factor_Indices_Historical_Price_Data.xlsx`
-   (the paper PDF is optional; without it, Step 01 is skipped)
+4. Run cell **0.3** and upload **both** required inputs — select them together with
+   ctrl-click / cmd-click:
+   - `Factor_Indices_Historical_Price_Data.xlsx` (the price history)
+   - the research paper `.pdf` (Step 01 ingests it for page evidence)
+
+   The cell hard-fails if either is missing, and rejects a scanned PDF with no
+   extractable text.
 5. Run the rest top to bottom — about 5–8 minutes on a free CPU runtime
 
 The notebook walks all eight steps with the reasoning inline, and ends with an editable
