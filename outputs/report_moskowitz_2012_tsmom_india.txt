@@ -128,8 +128,8 @@ STEP 04  |  POINT-IN-TIME DATA + LINEAGE
 ====================================================================================================
   snapshot_id   : moskowitz_2012_tsmom_india__1bf41cb0afd2fb8d
   content_hash  : 84abe49445fb2131d6b251d94b698f1c
-  engine_code   : af212659f19e0bca2f300c669557a524
-  git_commit    : n/a
+  engine_code   : a8b53d961606696fdbde71f3e19749a5
+  git_commit    : b25a645fdd7a
   shape         : (5247, 7)  2005-04-01 -> 2026-05-29
   pit_status    : backfilled
   verify()      : True
@@ -353,7 +353,5 @@ STEP 08 -- PROMOTION LADDER
       [FAIL] beats every free alternative the fund already has  [-0.06 vs > 0 Sharpe]
              worst Sharpe margin vs NIFTY 500, NIFTY500 MULTIFACTOR MQVLV 50, Equal-weight sleeves
 
-  library entry : moskowitz_2012_tsmom_india__1bf41cb0afd2fb8d__20260915T095913
-  ! 1 prior entr(ies) share this factor fingerprint (cos >= 0.90):
-      moskowitz_2012_tsmom_india  cos=1.0  outcome=REJECTED
+  library entry : moskowitz_2012_tsmom_india__1bf41cb0afd2fb8d__20260915T103631
   charts written to outputs/charts_moskowitz_2012_tsmom_india.png

@@ -186,8 +186,8 @@ STEP 04  |  POINT-IN-TIME DATA + LINEAGE
 ====================================================================================================
   snapshot_id   : devanathan_2026_india_factor_adaptation__6b8f4683ceaf1eee
   content_hash  : 84abe49445fb2131d6b251d94b698f1c
-  engine_code   : af212659f19e0bca2f300c669557a524
-  git_commit    : n/a
+  engine_code   : a8b53d961606696fdbde71f3e19749a5
+  git_commit    : b25a645fdd7a
   shape         : (5247, 7)  2005-04-01 -> 2026-05-29
   pit_status    : backfilled
   verify()      : True
@@ -422,7 +422,5 @@ STEP 08 -- PROMOTION LADDER
       [FAIL] beats every free alternative the fund already has  [-0.09 vs > 0 Sharpe]
              worst Sharpe margin vs NIFTY 500, NIFTY500 MULTIFACTOR MQVLV 50, Equal-weight sleeves
 
-  library entry : devanathan_2026_india_factor_adaptation__6b8f4683ceaf1eee__20260915T095828
-  ! 1 prior entr(ies) share this factor fingerprint (cos >= 0.90):
-      devanathan_2026_india_factor_adaptation  cos=1.0  outcome=REJECTED
+  library entry : devanathan_2026_india_factor_adaptation__6b8f4683ceaf1eee__20260915T103608
   charts written to outputs/charts_devanathan_2026_india_factor_adaptation.png

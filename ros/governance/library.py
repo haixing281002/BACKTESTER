@@ -95,8 +95,14 @@ class StrategyLibrary:
                 if e.get("card_fingerprint") == fingerprint and e.get("entry_id") != exclude]
 
     def similar_by_fingerprint(self, fingerprint: Dict[str, float],
-                               threshold: float = 0.90) -> List[Dict[str, Any]]:
-        """Cosine similarity over factor loadings: find the same bet under a new name."""
+                               threshold: float = 0.90,
+                               exclude: Optional[str] = None) -> List[Dict[str, Any]]:
+        """Cosine similarity over factor loadings: find the same bet under a new name.
+
+        `exclude` drops one entry_id from the search. The caller writes its own
+        entry before searching, so without this the run always reports itself as
+        a perfect match and buries the genuine neighbours underneath it.
+        """
         if not fingerprint:
             return []
         keys = sorted(fingerprint)
@@ -104,6 +110,8 @@ class StrategyLibrary:
         nv = np.linalg.norm(v)
         hits = []
         for e in self.all():
+            if exclude is not None and e.get("entry_id") == exclude:
+                continue
             fp = e.get("factor_fingerprint") or {}
             common = [k for k in keys if k in fp]
             if len(common) < max(2, len(keys) // 2):
