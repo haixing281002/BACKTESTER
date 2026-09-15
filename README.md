@@ -146,3 +146,28 @@ cards/                        Strategy Cards (one YAML per paper)
 tests/                        17 engine-correctness tests
 docs/PIPELINE_REVIEW.md       step-by-step issues, red flags, green flags, findings
 ```
+
+---
+
+## Running it in Google Colab
+
+`colab/Research_OS_Colab.ipynb` is a **self-contained** notebook: the entire `ros` package is
+embedded as a base64 tarball, so it needs no GitHub access and nothing to download.
+
+1. Open [colab.research.google.com](https://colab.research.google.com) → **Upload notebook**
+2. Run cell **0.1** (installs cvxpy, clarabel, pdfplumber, openpyxl — 60–90s)
+3. Run cell **0.2** (unpacks the engine)
+4. Run cell **0.3** and upload `Factor_Indices_Historical_Price_Data.xlsx`
+   (the paper PDF is optional; without it, Step 01 is skipped)
+5. Run the rest top to bottom — about 5–8 minutes on a free CPU runtime
+
+The notebook walks all eight steps with the reasoning inline, and ends with an editable
+cell where you write and run your own Strategy Card.
+
+**Regenerating the notebook** after changing the engine:
+
+```bash
+python build_colab.py     # re-tars the package and rebuilds the .ipynb
+```
+
+Every code cell is executed end to end as a verification step before release.

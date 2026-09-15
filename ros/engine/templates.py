@@ -233,22 +233,39 @@ class EqualRiskContribution(Allocator):
         self.target_vol = target_vol
 
     def target_weights(self, ctx):
+        import warnings
+
         import cvxpy as cp
         Sigma = np.asarray(ctx.cov, dtype=float)
         Sigma = 0.5 * (Sigma + Sigma.T)
         ev, evec = np.linalg.eigh(Sigma)
-        Sigma = evec @ np.diag(np.clip(ev, 1e-12, None)) @ evec.T
+        # The log barrier is poorly conditioned when a short-window covariance is
+        # near-singular -- which, with 11 daily observations over five correlated
+        # sleeves, it frequently is. Floor the eigenvalues harder than elsewhere so
+        # the barrier stays finite, and count inaccurate solves rather than letting
+        # cvxpy print a warning per rebalance.
+        Sigma = evec @ np.diag(np.clip(ev, 1e-8, None)) @ evec.T
         y = cp.Variable(self.n, pos=True)
         try:
-            cp.Problem(cp.Minimize(0.5 * cp.quad_form(y, cp.psd_wrap(Sigma))
-                                   - cp.sum(cp.log(y)))).solve(solver=cp.CLARABEL)
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", UserWarning)
+                prob = cp.Problem(cp.Minimize(0.5 * cp.quad_form(y, cp.psd_wrap(Sigma))
+                                              - cp.sum(cp.log(y))))
+                prob.solve(solver=cp.CLARABEL)
             if y.value is None:
                 raise RuntimeError("no solution")
+            if prob.status == "optimal_inaccurate":
+                self._inaccurate = getattr(self, "_inaccurate", 0) + 1
         except Exception:
+            self._failures = getattr(self, "_failures", 0) + 1
             return ctx.current_weights.copy()
         w = np.asarray(y.value, dtype=float)
         w = w / w.sum()
         return _scale_to_vol(w, Sigma, self.target_vol)
+
+    def diagnostics(self) -> Dict[str, Any]:
+        return {"solver_failures": getattr(self, "_failures", 0),
+                "inaccurate_solves": getattr(self, "_inaccurate", 0)}
 
 
 @template("min_variance")

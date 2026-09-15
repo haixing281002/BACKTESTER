@@ -86,6 +86,7 @@ class Snapshot:
     content_hash: str = ""
     engine_code_hash: str = ""
     git_commit: Optional[str] = None
+    storage_format: str = "parquet"
 
     def manifest(self) -> Dict[str, Any]:
         return {
@@ -99,6 +100,7 @@ class Snapshot:
             "date_min": str(self.frame.index.min().date()),
             "date_max": str(self.frame.index.max().date()),
             "pit_status": self.pit_status,
+            "storage_format": self.storage_format,
             "proxies_used": self.proxies_used,
             "caveats": self.caveats,
             "sources": self.sources,
@@ -107,7 +109,19 @@ class Snapshot:
 
     def save(self, outdir: str) -> str:
         os.makedirs(outdir, exist_ok=True)
-        self.frame.to_parquet(os.path.join(outdir, f"{self.snapshot_id}.parquet"))
+        # Parquet preserves dtypes exactly, which matters for a frame whose hash
+        # is the lineage. Where the engine is unavailable (a bare Colab runtime),
+        # fall back to CSV and say so in the manifest rather than failing the run.
+        try:
+            self.frame.to_parquet(os.path.join(outdir, f"{self.snapshot_id}.parquet"))
+            self.storage_format = "parquet"
+        except Exception as exc:
+            self.frame.to_csv(os.path.join(outdir, f"{self.snapshot_id}.csv"))
+            self.storage_format = "csv"
+            self.caveats.append(
+                f"Snapshot stored as CSV, not parquet ({type(exc).__name__}). Float "
+                "round-tripping through text is lossy; re-loading this file may not "
+                "reproduce the content hash. Install pyarrow for exact lineage.")
         path = os.path.join(outdir, f"{self.snapshot_id}.manifest.json")
         with open(path, "w") as fh:
             json.dump(self.manifest(), fh, indent=2, default=str)

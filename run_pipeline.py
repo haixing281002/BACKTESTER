@@ -524,7 +524,8 @@ def main(argv=None) -> int:
     if dups:
         R.p(f"  ! this exact experiment has been run {len(dups)} time(s) before; "
             f"the trial budget above already counts them")
-    similar = lib.similar_by_fingerprint(entry.factor_fingerprint, threshold=0.90)
+    similar = lib.similar_by_fingerprint(entry.factor_fingerprint, threshold=0.90,
+                                         exclude=eid)
     if similar:
         R.p(f"  ! {len(similar)} prior entr(ies) share this factor fingerprint (cos >= 0.90):")
         for s_ in similar[:5]:
