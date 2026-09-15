@@ -1,0 +1,118 @@
+card_version: "1.0"
+
+# GENERALITY PROOF.
+# A different paper, a different mechanism (trend following, not mean-variance),
+# a different forecast (12-1 trailing return, not an EWMA), a different sizing rule
+# (inverse-vol among trending sleeves). Cost to support it: one allocator template
+# and one branch in the alpha builder. Zero changes to the backtest engine, the
+# accounting, the validation suite, the gates or the ladder.
+
+paper:
+  id: moskowitz_2012_tsmom_india
+  title: "India adaptation: time-series momentum across NIFTY500 factor sleeves"
+  authors: [Tobias J. Moskowitz, Yao Hua Ooi, Lasse Heje Pedersen]
+  date: "2012-05-01"
+  url: "Journal of Financial Economics 104(2):228-250"
+
+intent:
+  mode: adaptation
+  rationale: >
+    Second test case, deliberately chosen to be structurally unlike the first, to
+    demonstrate that the pipeline is paper-agnostic rather than tuned to one paper.
+  transferred_mechanism: >
+    Hold only sleeves with positive 12-month trailing return (skipping the most
+    recent month), size inverse to trailing volatility, scale to a volatility target,
+    rebalance monthly, long-only and unlevered.
+  broken_assumptions:
+    - >
+      The source paper is a LONG-SHORT study across 58 futures markets spanning
+      equities, bonds, currencies and commodities. Long-only, single-country, five
+      correlated equity sleeves removes both the short leg and the diversification
+      that carried the original result.
+    - >
+      The original trades deep, cheap futures. Indian factor-sleeve replication is
+      cash equity with materially higher round-trip costs.
+    - "POINT-IN-TIME: same NSE backfill and price-return caveats as the first card."
+
+universe:
+  description: Five NSE single-factor sleeves drawn from the NIFTY500 universe.
+  asset_class: equity
+  geography: IN
+  assets:
+    - NIFTY500 MOMENTUM 50
+    - NIFTY500 QUALITY 50
+    - NIFTY500 VALUE 50
+    - NIFTY500 LOW VOLATILITY 50
+    - NIFTY ALPHA 50
+  benchmark: NIFTY 500
+  cash_asset: CASH_PROXY
+
+signal:
+  name: ts_momentum_sleeves
+  template: ts_momentum
+  lookback_days: 63          # covariance / vol estimation window
+  lag_days: 1
+  description: 12-1 trailing return filter, inverse-vol sizing, 18% vol target.
+  params:
+    target_vol: 0.18
+    vol_weighted: true
+    min_positive: 1
+    alpha_source: momentum
+    alpha_window: 252
+    alpha_skip: 21
+
+portfolio:
+  rebalance: monthly
+  long_only: true
+  max_gross: 1.0
+  allow_cash: true
+  mandate_allow_cash: false
+  target_vol: 0.18
+  start: "2005-04-01"
+  end: "2026-05-29"
+
+costs:
+  spread_bps: 30.0
+  cost_model: half_spread
+
+data_requirements:
+  - {name: "NIFTY500 MOMENTUM 50", kind: price, frequency: daily, mandatory: true, purpose: "sleeve"}
+  - {name: "NIFTY500 QUALITY 50", kind: price, frequency: daily, mandatory: true, purpose: "sleeve"}
+  - {name: "NIFTY500 VALUE 50", kind: price, frequency: daily, mandatory: true, purpose: "sleeve"}
+  - {name: "NIFTY500 LOW VOLATILITY 50", kind: price, frequency: daily, mandatory: true, purpose: "sleeve"}
+  - {name: "NIFTY ALPHA 50", kind: price, frequency: daily, mandatory: true, purpose: "sleeve"}
+  - {name: "NIFTY 500", kind: price, frequency: daily, mandatory: true, purpose: "fund benchmark"}
+  - {name: "NIFTY500 MULTIFACTOR MQVLV 50", kind: price, frequency: daily, mandatory: true, purpose: "free off-the-shelf competitor"}
+  - {name: india_cash_rate, kind: risk_free_rate, frequency: daily, mandatory: true, purpose: "cash accrual"}
+
+ambiguities:
+  - field: signal.lookback_days
+    issue: >
+      The source paper sizes on ex-ante vol from a long exponentially weighted
+      window; it does not prescribe a window for a five-sleeve equity book.
+    resolution: 63-day trailing covariance, midway between reactive and stable. Swept.
+    confidence: medium
+    material: true
+  - field: universe.mapping
+    issue: Futures markets mapped onto equity factor sleeves is an adaptation, not a translation.
+    resolution: Scored only as an adaptation; never against the paper's printed numbers.
+    confidence: high
+    material: true
+  - field: portfolio.allow_cash
+    issue: Trend following goes to cash when nothing trends; the fund cannot.
+    resolution: Run both the faithful and the mandate-compliant variant; the mandate variant decides.
+    confidence: high
+    material: true
+
+replication_targets: []
+
+benchmark_templates:
+  - {name: "Equal-weight sleeves", template: fixed_weight, params: {weights: equal}, rebalance: annual}
+  - {name: "Vol-target overlay",   template: vol_target,   params: {weights: equal, target_vol: 0.18}}
+  - {name: "Inverse vol",          template: inverse_vol,  params: {}}
+
+n_configs_tried: 1
+
+notes: >
+  Same promotion bar as every other card: beat NIFTY 500 AND the free MQVLV index,
+  after 30bp costs, with alpha that survives the factor fingerprint.
