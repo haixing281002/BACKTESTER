@@ -1,0 +1,179 @@
+{
+  "entry_id": "moskowitz_2012_tsmom_india__1bf41cb0afd2fb8d__20260915T095913",
+  "card_id": "moskowitz_2012_tsmom_india",
+  "mode": "adaptation",
+  "created_utc": "2026-09-15T09:59:13.749139+00:00",
+  "card_fingerprint": "1bf41cb0afd2fb8d",
+  "snapshot_id": "moskowitz_2012_tsmom_india__1bf41cb0afd2fb8d",
+  "content_hash": "84abe49445fb2131d6b251d94b698f1c8a8d779af2a39ce7d205db0f5b92368c",
+  "engine_code_hash": "af212659f19e0bca2f300c669557a5247a280731c7049f3cb350742ee204216a",
+  "git_commit": null,
+  "outcome": "REJECTED",
+  "attained_rung": null,
+  "stopped_at": "INDIA_VALIDATED",
+  "headline_metrics": {
+    "strategy": "ts_momentum_sleeves [mandate: fully invested]",
+    "n_configs_tried": 5,
+    "cagr": 0.16127280729151794,
+    "vol": 0.19106043844043613,
+    "sharpe": 0.5352906235875025,
+    "max_dd": 0.618936368725735,
+    "turnover": 1.7115505728694556,
+    "deflated_sharpe_prob": 0.004039030022960727,
+    "max_corr_to_book": 0.9932486251099364,
+    "best_delta_ir": 0.02203702967117427
+  },
+  "factor_fingerprint": {
+    "NIFTY ALPHA 50": 0.3621,
+    "NIFTY500 LOW VOLATILITY 50": 0.6339,
+    "NIFTY500 MOMENTUM 50": 0.3992,
+    "NIFTY500 QUALITY 50": 0.502,
+    "NIFTY500 VALUE 50": 0.236
+  },
+  "gates": [
+    {
+      "gate": "GATE A -- interpretation",
+      "owner": "researcher",
+      "decision": "PENDING",
+      "passed": true,
+      "rationale": "",
+      "criteria": [
+        {
+          "name": "card validates against schema",
+          "passed": true,
+          "evidence": "schema clean",
+          "value": null,
+          "threshold": null,
+          "blocking": true
+        },
+        {
+          "name": "all ambiguities resolved",
+          "passed": true,
+          "evidence": "3 ambiguities logged and resolved",
+          "value": 0,
+          "threshold": 0,
+          "blocking": true
+        },
+        {
+          "name": "no low-confidence material interpretation",
+          "passed": true,
+          "evidence": "none",
+          "value": 0,
+          "threshold": 0,
+          "blocking": false
+        },
+        {
+          "name": "data feasibility resolved",
+          "passed": true,
+          "evidence": "no blocking data gaps",
+          "value": "GO_WITH_PROXY",
+          "threshold": "GO or GO_WITH_PROXY",
+          "blocking": true
+        },
+        {
+          "name": "transferred mechanism stated",
+          "passed": true,
+          "evidence": "Hold only sleeves with positive 12-month trailing return (skipping the most recent month), size inverse to trailing volatility, scale to a volatility target, rebalance monthly, long-only and unlevered.\n",
+          "value": null,
+          "threshold": null,
+          "blocking": true
+        },
+        {
+          "name": "broken source assumptions enumerated",
+          "passed": true,
+          "evidence": "The source paper is a LONG-SHORT study across 58 futures markets spanning equities, bonds, currencies and commodities. Long-only, single-country, five correlated equity sleeves removes both the short leg and the diversification that carried the original result.\n; The original trades deep, cheap futures. Indian factor-sleeve replication is cash equity with materially higher round-trip costs.\n; POINT-IN-TIME: same NSE backfill and price-return caveats as the first card.",
+          "value": 3,
+          "threshold": ">=1",
+          "blocking": false
+        }
+      ]
+    },
+    {
+      "gate": "GATE B -- investment decision",
+      "owner": "PM / IC",
+      "decision": "REJECT",
+      "passed": false,
+      "rationale": "",
+      "criteria": [
+        {
+          "name": "deflated Sharpe clears selection bias",
+          "passed": false,
+          "evidence": "After penalising 5 configuration(s) tried, the threshold Sharpe is 1.19; observed 0.59; P(skill) = 0.4%.",
+          "value": "0.00",
+          "threshold": 0.95,
+          "blocking": true
+        },
+        {
+          "name": "positive Sharpe in every out-of-sample window",
+          "passed": false,
+          "evidence": "worst walk-forward window",
+          "value": "-0.01",
+          "threshold": 0.3,
+          "blocking": true
+        },
+        {
+          "name": "advantage over benchmark is significant",
+          "passed": false,
+          "evidence": "paired stationary-bootstrap P(Sharpe difference <= 0)",
+          "value": "0.801",
+          "threshold": "<=0.05",
+          "blocking": true
+        },
+        {
+          "name": "differentiated from existing book",
+          "passed": false,
+          "evidence": "max correlation to any existing signal",
+          "value": "0.99",
+          "threshold": "<=0.8",
+          "blocking": true
+        },
+        {
+          "name": "improves the book's information ratio",
+          "passed": false,
+          "evidence": "incremental IR at a realistic sleeve size",
+          "value": "+0.022",
+          "threshold": ">=0.05",
+          "blocking": true
+        },
+        {
+          "name": "alpha survives the factor fingerprint",
+          "passed": false,
+          "evidence": "HAC t-stat of alpha vs known factor sleeves",
+          "value": "1.88",
+          "threshold": "|t|>=2.0",
+          "blocking": true
+        },
+        {
+          "name": "implementable within mandate",
+          "passed": true,
+          "evidence": "no mandate violations",
+          "value": null,
+          "threshold": null,
+          "blocking": true
+        },
+        {
+          "name": "turnover within operational tolerance",
+          "passed": true,
+          "evidence": "annualised two-way turnover",
+          "value": "171%",
+          "threshold": "<=400%",
+          "blocking": false
+        }
+      ]
+    }
+  ],
+  "lessons": [
+    "Stopped at INDIA_VALIDATED; attained nothing.",
+    "Max correlation to an already-available alternative: 0.99.",
+    "Alpha vs factor sleeves: t = 1.88 (HAC).",
+    "Deflated Sharpe P(skill) = 0.00 at 5 trials.",
+    "Source assumption broken: The source paper is a LONG-SHORT study across 58 futures markets spanning equities, bonds, currencies and commodities. Long-only, single-country, five correlate",
+    "Source assumption broken: The original trades deep, cheap futures. Indian factor-sleeve replication is cash equity with materially higher round-trip costs.",
+    "Source assumption broken: POINT-IN-TIME: same NSE backfill and price-return caveats as the first card."
+  ],
+  "reuse_notes": [
+    "Snapshot + code hash stored: this run is re-derivable.",
+    "Factor fingerprint stored for similarity search (5 loadings)."
+  ],
+  "reviewer": ""
+}

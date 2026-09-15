@@ -1,0 +1,175 @@
+
+====================================================================================================
+AI RESEARCH OPERATING SYSTEM  |  card: devanathan_2026_sbg_replication
+====================================================================================================
+  title  : Simple Dynamic Stock/Bond/Gold Portfolios
+  mode   : REPLICATION
+  hash   : 67beb9452d34c0e2
+  rationale: Reproduce the paper's own results on the paper's own data before asking whether anything in it is useful to us. Replication and India-investability are separate questions and must never share a verdict.
+
+====================================================================================================
+STEP 01  |  INGEST
+====================================================================================================
+STEP 01 -- INGEST
+  file          : docs/devanathan_2026_simple_dynamic_sbg.pdf
+  sha256        : 2629076cfeb93ee1...
+  pages         : 43   chars: 93,088   table-pages: 5
+  math density  : 7.2% of lines   scanned: False
+  numeric tables: 0 (candidate replication targets)
+  EXTRACTION WARNINGS:
+    ! Math-bearing lines on 7% of lines. Equations are unreliable after extraction -- any card field derived from a formula needs human verification against the rendered page.
+    ! Reversed (rotated) text on pages [10, 12, 13, 15, 16, 30]: figure axis labels. Numbers must not be read off these pages.
+  CANDIDATE FIELDS (page-anchored, for human confirmation):
+    rebalance     : rebalancing (p1), rebalanced (p2), monthly (p2), rebalance (p6), annually (p11), rebalanced (p14)
+    cost_bps      : 0.0005 (p7), 5 (p7), 0.0005 (p8), 5 (p9), 2.5 (p9), 5 (p27)
+    lookback      : 11 (p7), 11 (p8), 252 (p8), 252 (p28), 252 (p29), 315 (p35)
+    target_vol    : 7 (p14), 7 (p35)
+    sample_period : 2006 (p1), 2006 (p2), 2006 (p9), 2006 (p18), 1915 (p23), 2011 (p32)
+    ticker        : SPY (p2), AGG (p2), GLD (p2), SPY (p5), AGG (p5), GLD (p5)
+    constraint    : long only (p2), no leverage (p2), no derivatives (p2), long-only (p4), unlevered (p4), nonnegative (p6)
+    benchmark     : 60/40 (p1), risk parity (p1), 60/40 (p2), 50/30/20 (p2), 60/40 (p3), risk parity (p3)
+    data_source   : Yahoo Finance (p9), FRED (p9), FRED (p28), Kenneth French (p28)
+    code_url      : https://github.com/cvxgrp/simple-portfolio-code. (p3)
+    sharpe        : 1.08 (p3), 0.56 (p3), 0.60 (p3), 1.08 (p9), 1.08 (p11), 0.56 (p11)
+
+  text-geometry tables recovered : 19
+  candidate replication targets  : 64
+  CONFLICTING targets            : 22
+    ! 1 day                cagr     = [0.109, 0.116]  pages [34]
+    ! 1 day                max_dd   = [0.181, 0.188]  pages [34]
+    ! 1 day                mean_dd  = [0.028, 0.029]  pages [34]
+    ! 1 day                sharpe   = [1.01, 1.08]  pages [34]
+    ! 1 day                turnover = [2.69, 2.85]  pages [34]
+    ! 1 day                vol      = [0.089, 0.09]  pages [34]
+    -> The paper reports the same metric on several accounting bases (pre-tax / inflation-adjusted / post-tax). Harvesting all of them yields a replication test that can never fail. A human pins ONE basis at Gate A; the card's targets are pre-pinned to Table 1, page 11.
+
+====================================================================================================
+STEP 02  |  STRATEGY CARD
+====================================================================================================
+  template   : markowitz_l1   rebalance: monthly   lag: 0d   lookback: 11d
+  universe   : 3 assets, benchmark 60/40
+  costs      : 5 bps round trip (half_spread)
+  ambiguities: 7 logged, 0 unresolved, 7 material
+
+  [  high] metrics.sharpe  (p9)
+           issue   : The paper's Sharpe is geometric: (CAGR - compounded fed funds CAGR) / annualised vol. This is NOT the conventional arithmetic-excess Sharpe. The paper itself quotes both (1.08 vs 1.08 for Markowitz, 0.60 vs 0.56 for 60/40).
+           resolved: Replicate the geometric definition as primary; always compute and report the conventional one alongside. Targets below are pinned to the geometric basis.
+  [  high] signal.lookback_days  (p7)
+           issue   : The 11-day volatility/covariance window was chosen "after a modest search over various values" and is acknowledged as noisy. That search used the full 20-year sample, so the headline number is in-sample at the hyperparameter level.
+           resolved: Replicate at 11 days to match the paper, but treat the result as in-sample and inflate the trial count for the deflated Sharpe ratio. Report a lookback sweep.
+  [  high] portfolio.target_vol  (p10)
+           issue   : The 7% target is asserted, not derived. Section 3.4 then sweeps 3%-12% in 0.5% steps -- 19 further configurations on the same sample.
+           resolved: Treat 7% as the paper's headline and count the full sweep in the trial budget.
+  [  high] costs.cost_model  (p27)
+           issue   : Appendix A charges cost only on changes in NON-CASH weights: "moving value into or out of cash is not itself a trade". Volatility control works precisely by moving into and out of cash, so its main activity is free by construction.
+           resolved: Replicate as specified to match the paper, then re-run charging cash moves as trades and report the difference as a named sensitivity. Do not merge the two.
+  [medium] signal.cov_estimator  (p8)
+           issue   : A 3x3 covariance matrix has 6 free parameters and is estimated from 11 daily observations. This is near-degenerate; the risk constraint it feeds is noisy.
+           resolved: Replicate as specified, with a PSD projection before the solver, and record the solver-failure count as a diagnostic rather than hiding fallbacks.
+  [  high] universe.cash_asset  (p9)
+           issue   : The fed funds rate is used both as the Sharpe numeraire and as the yield the portfolio actually earns on cash. No investor earns DFF on a cash balance.
+           resolved: Replicate as specified; flag that realised cash yield would be lower and that this flatters every cash-holding portfolio, which is all the winners.
+  [medium] signal.alpha_source  (p28)
+           issue   : The forecast target is a 100-day FORWARD return. Causality rests entirely on the training set ending at t-100. An off-by-one here would inflate every result.
+           resolved: Implement with the stated t-100 cutoff and verify with an explicit look-ahead tripwire against same-bar returns before trusting any output.
+
+====================================================================================================
+STEP 03  |  DATA FEASIBILITY
+====================================================================================================
+STEP 03 -- DATA FEASIBILITY
+  card    : devanathan_2026_sbg_replication  (mode=replication)
+  verdict : FAIL_FAST
+  counts  : {'UNAVAILABLE': 14}
+
+  requirement                       req  status       resolved to
+  --------------------------------------------------------------------------------------
+  SPY_adj_close                     M    UNAVAILABLE  --
+      why: not in registry and no declared proxy
+  AGG_adj_close                     M    UNAVAILABLE  --
+      why: not in registry and no declared proxy
+  GLD_adj_close                     M    UNAVAILABLE  --
+      why: not in registry and no declared proxy
+  SPY_volume                        M    UNAVAILABLE  --
+      why: not in registry and no declared proxy
+  AGG_volume                        M    UNAVAILABLE  --
+      why: not in registry and no declared proxy
+  GLD_volume                        M    UNAVAILABLE  --
+      why: not in registry and no declared proxy
+  DFF_fed_funds                     M    UNAVAILABLE  --
+      why: not in registry and no declared proxy
+  CPILFESL_core_cpi                 o    UNAVAILABLE  --
+      why: not in registry and no declared proxy
+  UST_yield_curve                   M    UNAVAILABLE  --
+      why: not in registry and no declared proxy
+  UST_10y_real_yield                M    UNAVAILABLE  --
+      why: not in registry and no declared proxy
+  UST_10y_breakeven                 M    UNAVAILABLE  --
+      why: not in registry and no declared proxy
+  VIX                               M    UNAVAILABLE  --
+      why: not in registry and no declared proxy
+  broad_dollar_index                M    UNAVAILABLE  --
+      why: not in registry and no declared proxy
+  fama_french_factors               M    UNAVAILABLE  --
+      why: not in registry and no declared proxy
+
+  BLOCKING:
+    X SPY_adj_close (price) is mandatory and unavailable
+    X AGG_adj_close (price) is mandatory and unavailable
+    X GLD_adj_close (price) is mandatory and unavailable
+    X SPY_volume (volume) is mandatory and unavailable
+    X AGG_volume (volume) is mandatory and unavailable
+    X GLD_volume (volume) is mandatory and unavailable
+    X DFF_fed_funds (risk_free_rate) is mandatory and unavailable
+    X UST_yield_curve (macro) is mandatory and unavailable
+    X UST_10y_real_yield (macro) is mandatory and unavailable
+    X UST_10y_breakeven (macro) is mandatory and unavailable
+    X VIX (macro) is mandatory and unavailable
+    X broad_dollar_index (macro) is mandatory and unavailable
+    X fama_french_factors (factor_return) is mandatory and unavailable
+
+  NOTES:
+    - 0/13 mandatory requirements are clean-AVAILABLE.
+
+====================================================================================================
+GATE A  |  HUMAN INTERPRETATION CONTROL
+====================================================================================================
+  GATE A -- interpretation (owner: researcher) -> BLOCKED
+    [PASS] card validates against schema
+           schema clean
+    [PASS] all ambiguities resolved  [0 vs 0]
+           7 ambiguities logged and resolved
+    [PASS] no low-confidence material interpretation  [0 vs 0]
+           none
+    [FAIL] data feasibility resolved  [FAIL_FAST vs GO or GO_WITH_PROXY]
+           SPY_adj_close (price) is mandatory and unavailable; AGG_adj_close (price) is mandatory and unavailable; GLD_adj_close (price) is mandatory and unavailable; SPY_volume (volume) is mandatory and unavailable; AGG_volume (volume) is mandatory and unavailable; GLD_volume (volume) is mandatory and unavailable; DFF_fed_funds (risk_free_rate) is mandatory and unavailable; UST_yield_curve (macro) is mandatory and unavailable; UST_10y_real_yield (macro) is mandatory and unavailable; UST_10y_breakeven (macro) is mandatory and unavailable; VIX (macro) is mandatory and unavailable; broad_dollar_index (macro) is mandatory and unavailable; fama_french_factors (factor_return) is mandatory and unavailable
+    [PASS] replication targets defined  [10 vs >=1]
+           targets pinned to a single accounting basis
+    [PASS] source text is machine-readable
+           Math-bearing lines on 7% of lines. Equations are unreliable after extraction -- any card field derived from a formula needs human verification against the rendered page.; Reversed (rotated) text on pages [10, 12, 13, 15, 16, 30]: figure axis labels. Numbers must not be read off these pages.
+    [warn] equations verified against rendered page  [7.2% vs <5%]
+           high math density: formulas were hand-checked, not trusted from text
+    decision: PENDING
+
+====================================================================================================
+PIPELINE HALTED AT STEP 03 (FAIL FAST)
+====================================================================================================
+  No code was written against this card and no backtest was run.
+  Blocking requirements:
+    X SPY_adj_close (price) is mandatory and unavailable
+    X AGG_adj_close (price) is mandatory and unavailable
+    X GLD_adj_close (price) is mandatory and unavailable
+    X SPY_volume (volume) is mandatory and unavailable
+    X AGG_volume (volume) is mandatory and unavailable
+    X GLD_volume (volume) is mandatory and unavailable
+    X DFF_fed_funds (risk_free_rate) is mandatory and unavailable
+    X UST_yield_curve (macro) is mandatory and unavailable
+    X UST_10y_real_yield (macro) is mandatory and unavailable
+    X UST_10y_breakeven (macro) is mandatory and unavailable
+    X VIX (macro) is mandatory and unavailable
+    X broad_dollar_index (macro) is mandatory and unavailable
+    X fama_french_factors (factor_return) is mandatory and unavailable
+
+  This is a SUCCESSFUL outcome for the pipeline: the paper was screened,
+  carded, and rejected on data grounds in minutes rather than days.
+  The finding is stored so nobody re-derives it.
+  library entry: devanathan_2026_sbg_replication__67beb9452d34c0e2__20260915T095633

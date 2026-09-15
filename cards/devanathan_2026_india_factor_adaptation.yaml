@@ -1,0 +1,188 @@
+card_version: "1.0"
+
+paper:
+  id: devanathan_2026_india_factor_adaptation
+  title: "India adaptation: dynamic factor-sleeve allocation within NIFTY500"
+  authors: [Nikhil Devanathan, Alexandros E. Tzikas, Stephen P. Boyd]
+  date: "2026-09-09"
+  source_file: docs/devanathan_2026_simple_dynamic_sbg.pdf
+  source_sha256: "2629076cfeb93ee1"
+
+intent:
+  mode: adaptation
+  parent_card: devanathan_2026_sbg_replication
+  rationale: >
+    The paper itself is not investable for a long-only Indian equity fund: wrong
+    market, wrong asset classes, and it holds cash as a core mechanism. But the
+    MECHANISM -- allocate dynamically across a small set of long-only sleeves using
+    a trailing risk estimate, a hard risk cap and an l1 leash to a strategic mix --
+    is asset-agnostic. Our NIFTY500 factor sleeves are exactly such a set. This card
+    tests the mechanism, not the paper.
+  transferred_mechanism: >
+    Monthly long-only allocation across a small sleeve set, maximising an EWMA-momentum
+    return forecast net of half-spread cost, subject to a hard ex-ante volatility cap
+    and an l1 constraint to a strategic mix (paper eq. 3), with a volatility-control
+    overlay (paper eq. 1) as the simpler comparator.
+  broken_assumptions:
+    - >
+      DIVERSIFICATION: the paper's lift depends on SPY/AGG/GLD being weakly or
+      negatively correlated. Our six sleeves are single-country equity and correlate
+      0.74-0.94 pairwise. A risk-constrained optimiser over near-collinear assets has
+      far less to work with; expect most of the paper's benefit NOT to transfer.
+    - >
+      CASH: the paper de-risks into cash, and cash is where its drawdown control comes
+      from. A long-only fully-invested equity mandate cannot do this. The mandate-
+      compliant variant is therefore a materially different strategy.
+    - >
+      RISK-FREE ASSET: no Indian cash-rate series is in the snapshot. Any cash-holding
+      variant runs on a declared constant proxy and must be read under the rate sweep.
+    - >
+      POINT-IN-TIME: NSE factor indices are backfilled to a 2005 base with methodology
+      fixed much later. The sleeve definitions were chosen knowing this history.
+    - >
+      RETURN BASIS: these are price-return indices. Dividends are missing from every
+      series, so absolute returns understate and any cash-vs-equity comparison is
+      biased against equity.
+    - >
+      INVESTABILITY: an index is not a portfolio. Real sleeve replication carries
+      tracking error, rebalance impact and sleeve-level turnover that the index does
+      not charge.
+
+universe:
+  description: >
+    Five NSE single-factor sleeves drawn from the NIFTY500 universe, plus a declared
+    cash proxy. NIFTY HIGH BETA 50 is excluded: its history starts 2012-11 and would
+    truncate the sample by seven years.
+  asset_class: equity
+  geography: IN
+  assets:
+    - NIFTY500 MOMENTUM 50
+    - NIFTY500 QUALITY 50
+    - NIFTY500 VALUE 50
+    - NIFTY500 LOW VOLATILITY 50
+    - NIFTY ALPHA 50
+  benchmark: NIFTY 500
+  cash_asset: CASH_PROXY
+
+signal:
+  name: dynamic_factor_sleeve_allocation
+  template: markowitz_l1
+  lookback_days: 11
+  lag_days: 1
+  description: >
+    Paper eq. (3) applied to factor sleeves. lag_days is 1, not 0: NSE index closes
+    are published after the close, so a signal computed on date t cannot be traded at
+    t's close. The paper assumes same-close execution; we do not.
+  params:
+    strategic_weights:
+      NIFTY500 MOMENTUM 50: 0.2
+      NIFTY500 QUALITY 50: 0.2
+      NIFTY500 VALUE 50: 0.2
+      NIFTY500 LOW VOLATILITY 50: 0.2
+      NIFTY ALPHA 50: 0.2
+    target_vol: 0.18
+    l1_budget: 1.0
+    spread_bps: 30.0
+    alpha_halflife: 252
+    alpha_scale: 21
+
+portfolio:
+  rebalance: monthly
+  long_only: true
+  max_gross: 1.0
+  allow_cash: true
+  mandate_allow_cash: false      # the fund is long-only and fully invested
+  target_vol: 0.18
+  start: "2005-04-01"
+  end: "2026-05-29"
+
+costs:
+  # 30bp round trip, not the paper's 5bp. Indian sleeve rotation at mid-cap depth
+  # costs far more than SPY. Assuming otherwise is the single most common way an
+  # Indian equity backtest lies.
+  spread_bps: 30.0
+  cost_model: half_spread
+
+data_requirements:
+  - {name: "NIFTY500 MOMENTUM 50", kind: price, frequency: daily, start: "2005-04-01", mandatory: true, purpose: "momentum sleeve"}
+  - {name: "NIFTY500 QUALITY 50", kind: price, frequency: daily, start: "2005-04-01", mandatory: true, purpose: "quality sleeve"}
+  - {name: "NIFTY500 VALUE 50", kind: price, frequency: daily, start: "2005-04-01", mandatory: true, purpose: "value sleeve"}
+  - {name: "NIFTY500 LOW VOLATILITY 50", kind: price, frequency: daily, start: "2005-04-01", mandatory: true, purpose: "low-vol sleeve"}
+  - {name: "NIFTY ALPHA 50", kind: price, frequency: daily, start: "2005-04-01", mandatory: true, purpose: "alpha sleeve"}
+  - {name: "NIFTY 500", kind: price, frequency: daily, start: "2005-04-01", mandatory: true, purpose: "fund benchmark"}
+  - {name: "NIFTY500 MULTIFACTOR MQVLV 50", kind: price, frequency: daily, mandatory: true, purpose: "off-the-shelf multifactor competitor -- the real alternative to building this"}
+  - {name: india_cash_rate, kind: risk_free_rate, frequency: daily, mandatory: true, purpose: "cash accrual and Sharpe numeraire"}
+
+ambiguities:
+  - field: universe.mapping
+    issue: >
+      Mapping SPY/AGG/GLD onto five equity factor sleeves is a judgement, not a
+      translation. The source assets span asset classes; the targets do not.
+    resolution: >
+      Proceed as an explicit ADAPTATION, never scored against the paper's numbers.
+      The empirical cost of the lost diversification is measured and reported, not
+      assumed away.
+    confidence: high
+    material: true
+
+  - field: portfolio.target_vol
+    issue: >
+      The paper's 7% target is meaningless here: the cheapest sleeve runs at 16% vol,
+      so a 7% cap would force the book permanently ~60% into cash.
+    resolution: >
+      Set the target to 18%, just above NIFTY 500's realised 20.2%, so the cap binds
+      in stress rather than continuously. Swept 12%-26% as a named sensitivity.
+    confidence: medium
+    material: true
+
+  - field: costs.spread_bps
+    issue: >
+      The paper assumes 5bp. Rotating between Indian factor sleeves -- which are
+      mid-cap heavy -- costs materially more once impact and STT are included.
+    resolution: >
+      Use 30bp round trip as the base case and report the breakeven cost at which
+      the edge disappears. Capacity, not Sharpe, is the binding constraint here.
+    confidence: medium
+    material: true
+
+  - field: universe.cash_asset
+    issue: No Indian risk-free series in the snapshot.
+    resolution: >
+      Declared constant 6% proxy, recorded in the snapshot as a proxy, and swept
+      4%-8%. Results that flip inside that band are reported as rate-dependent.
+    confidence: low
+    material: true
+
+  - field: data.pit_status
+    issue: >
+      Backfilled index history. NSE defined these sleeves years after 2005 and the
+      construction rules were chosen with knowledge of the intervening returns.
+    resolution: >
+      Accept for mechanism testing only. Caps the ladder at ROBUST: no live claim may
+      rest on backfilled sleeve history. A live decision needs a post-launch-only run.
+    confidence: high
+    material: true
+
+  - field: portfolio.allow_cash
+    issue: The fund's mandate is long-only and fully invested; the mechanism uses cash.
+    resolution: >
+      Run BOTH: the faithful cash-holding variant (mechanism test) and a fully-invested
+      variant (mandate test). The mandate variant governs the promotion decision.
+    confidence: high
+    material: true
+
+replication_targets: []
+
+benchmark_templates:
+  - {name: "Equal-weight sleeves", template: fixed_weight, params: {weights: equal}, rebalance: annual}
+  - {name: "Vol-target overlay",   template: vol_target,   params: {weights: equal, target_vol: 0.18}}
+  - {name: "Inverse vol",          template: inverse_vol,  params: {}}
+  - {name: "Equal risk contribution", template: equal_risk_contribution, params: {}}
+  - {name: "Min variance",         template: min_variance, params: {}}
+
+n_configs_tried: 1
+
+notes: >
+  The promotion question is NOT "is the Sharpe good". It is whether this beats, after
+  30bp costs, the two things the fund can already do for free: hold NIFTY 500, or buy
+  the NIFTY500 MULTIFACTOR MQVLV 50 index. Both are run as benchmarks.

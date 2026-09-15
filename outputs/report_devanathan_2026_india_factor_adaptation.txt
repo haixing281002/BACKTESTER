@@ -1,0 +1,428 @@
+
+====================================================================================================
+AI RESEARCH OPERATING SYSTEM  |  card: devanathan_2026_india_factor_adaptation
+====================================================================================================
+  title  : India adaptation: dynamic factor-sleeve allocation within NIFTY500
+  mode   : ADAPTATION   (parent: devanathan_2026_sbg_replication)
+  hash   : 6b8f4683ceaf1eee
+  rationale: The paper itself is not investable for a long-only Indian equity fund: wrong market, wrong asset classes, and it holds cash as a core mechanism. But the MECHANISM -- allocate dynamically across a small set of long-only sleeves using a trailing risk estimate, a hard risk cap and an l1 leash to a strategic mix -- is asset-agnostic. Our NIFTY500 factor sleeves are exactly such a set. This card tests the mechanism, not the paper.
+
+====================================================================================================
+STEP 01  |  INGEST
+====================================================================================================
+STEP 01 -- INGEST
+  file          : docs/devanathan_2026_simple_dynamic_sbg.pdf
+  sha256        : 2629076cfeb93ee1...
+  pages         : 43   chars: 93,088   table-pages: 5
+  math density  : 7.2% of lines   scanned: False
+  numeric tables: 0 (candidate replication targets)
+  EXTRACTION WARNINGS:
+    ! Math-bearing lines on 7% of lines. Equations are unreliable after extraction -- any card field derived from a formula needs human verification against the rendered page.
+    ! Reversed (rotated) text on pages [10, 12, 13, 15, 16, 30]: figure axis labels. Numbers must not be read off these pages.
+  CANDIDATE FIELDS (page-anchored, for human confirmation):
+    rebalance     : rebalancing (p1), rebalanced (p2), monthly (p2), rebalance (p6), annually (p11), rebalanced (p14)
+    cost_bps      : 0.0005 (p7), 5 (p7), 0.0005 (p8), 5 (p9), 2.5 (p9), 5 (p27)
+    lookback      : 11 (p7), 11 (p8), 252 (p8), 252 (p28), 252 (p29), 315 (p35)
+    target_vol    : 7 (p14), 7 (p35)
+    sample_period : 2006 (p1), 2006 (p2), 2006 (p9), 2006 (p18), 1915 (p23), 2011 (p32)
+    ticker        : SPY (p2), AGG (p2), GLD (p2), SPY (p5), AGG (p5), GLD (p5)
+    constraint    : long only (p2), no leverage (p2), no derivatives (p2), long-only (p4), unlevered (p4), nonnegative (p6)
+    benchmark     : 60/40 (p1), risk parity (p1), 60/40 (p2), 50/30/20 (p2), 60/40 (p3), risk parity (p3)
+    data_source   : Yahoo Finance (p9), FRED (p9), FRED (p28), Kenneth French (p28)
+    code_url      : https://github.com/cvxgrp/simple-portfolio-code. (p3)
+    sharpe        : 1.08 (p3), 0.56 (p3), 0.60 (p3), 1.08 (p9), 1.08 (p11), 0.56 (p11)
+
+  text-geometry tables recovered : 19
+  candidate replication targets  : 64
+  CONFLICTING targets            : 22
+    ! 1 day                cagr     = [0.109, 0.116]  pages [34]
+    ! 1 day                max_dd   = [0.181, 0.188]  pages [34]
+    ! 1 day                mean_dd  = [0.028, 0.029]  pages [34]
+    ! 1 day                sharpe   = [1.01, 1.08]  pages [34]
+    ! 1 day                turnover = [2.69, 2.85]  pages [34]
+    ! 1 day                vol      = [0.089, 0.09]  pages [34]
+    -> The paper reports the same metric on several accounting bases (pre-tax / inflation-adjusted / post-tax). Harvesting all of them yields a replication test that can never fail. A human pins ONE basis at Gate A; the card's targets are pre-pinned to Table 1, page 11.
+
+====================================================================================================
+STEP 02  |  STRATEGY CARD
+====================================================================================================
+  template   : markowitz_l1   rebalance: monthly   lag: 1d   lookback: 11d
+  universe   : 5 assets, benchmark NIFTY 500
+  costs      : 30 bps round trip (half_spread)
+  ambiguities: 6 logged, 0 unresolved, 6 material
+
+  [  high] universe.mapping
+           issue   : Mapping SPY/AGG/GLD onto five equity factor sleeves is a judgement, not a translation. The source assets span asset classes; the targets do not.
+           resolved: Proceed as an explicit ADAPTATION, never scored against the paper's numbers. The empirical cost of the lost diversification is measured and reported, not assumed away.
+  [medium] portfolio.target_vol
+           issue   : The paper's 7% target is meaningless here: the cheapest sleeve runs at 16% vol, so a 7% cap would force the book permanently ~60% into cash.
+           resolved: Set the target to 18%, just above NIFTY 500's realised 20.2%, so the cap binds in stress rather than continuously. Swept 12%-26% as a named sensitivity.
+  [medium] costs.spread_bps
+           issue   : The paper assumes 5bp. Rotating between Indian factor sleeves -- which are mid-cap heavy -- costs materially more once impact and STT are included.
+           resolved: Use 30bp round trip as the base case and report the breakeven cost at which the edge disappears. Capacity, not Sharpe, is the binding constraint here.
+  [   low] universe.cash_asset
+           issue   : No Indian risk-free series in the snapshot.
+           resolved: Declared constant 6% proxy, recorded in the snapshot as a proxy, and swept 4%-8%. Results that flip inside that band are reported as rate-dependent.
+  [  high] data.pit_status
+           issue   : Backfilled index history. NSE defined these sleeves years after 2005 and the construction rules were chosen with knowledge of the intervening returns.
+           resolved: Accept for mechanism testing only. Caps the ladder at ROBUST: no live claim may rest on backfilled sleeve history. A live decision needs a post-launch-only run.
+  [  high] portfolio.allow_cash
+           issue   : The fund's mandate is long-only and fully invested; the mechanism uses cash.
+           resolved: Run BOTH: the faithful cash-holding variant (mechanism test) and a fully-invested variant (mandate test). The mandate variant governs the promotion decision.
+
+  ASSUMPTIONS THE SOURCE PAPER MAKES THAT DO NOT HOLD HERE:
+    - DIVERSIFICATION: the paper's lift depends on SPY/AGG/GLD being weakly or negatively correlated. Our six sleeves are single-country equity and correlate 0.74-0.94 pairwise. A risk-constrained optimiser over near-collinear assets has far less to work with; expect most of the paper's benefit NOT to transfer.
+    - CASH: the paper de-risks into cash, and cash is where its drawdown control comes from. A long-only fully-invested equity mandate cannot do this. The mandate- compliant variant is therefore a materially different strategy.
+    - RISK-FREE ASSET: no Indian cash-rate series is in the snapshot. Any cash-holding variant runs on a declared constant proxy and must be read under the rate sweep.
+    - POINT-IN-TIME: NSE factor indices are backfilled to a 2005 base with methodology fixed much later. The sleeve definitions were chosen knowing this history.
+    - RETURN BASIS: these are price-return indices. Dividends are missing from every series, so absolute returns understate and any cash-vs-equity comparison is biased against equity.
+    - INVESTABILITY: an index is not a portfolio. Real sleeve replication carries tracking error, rebalance impact and sleeve-level turnover that the index does not charge.
+
+====================================================================================================
+STEP 03  |  DATA FEASIBILITY
+====================================================================================================
+STEP 03 -- DATA FEASIBILITY
+  card    : devanathan_2026_india_factor_adaptation  (mode=adaptation)
+  verdict : GO_WITH_PROXY
+  counts  : {'DEGRADED': 7, 'PROXY': 1}
+
+  requirement                       req  status       resolved to
+  --------------------------------------------------------------------------------------
+  NIFTY500 MOMENTUM 50              M    DEGRADED     NIFTY500 MOMENTUM 50
+      why: held, but pit_status=backfilled: history was not knowable as-was on past dates
+      ! NSE factor index: history backfilled to a 2005 base date, but the index was launched and its methodology fixed years later. Sleeve construction rules were chosen with knowledge of this history -- selection bias is built into the series.
+      ! Price-return index: excludes dividends (~1.3-1.5% p.a. for Indian large/mid caps). Absolute returns understate; any equity-vs-cash comparison is biased against equity.
+      ! An index is not a portfolio: no replication tracking error, no rebalance impact, no sleeve-level turnover cost is charged inside the index level.
+  NIFTY500 QUALITY 50               M    DEGRADED     NIFTY500 QUALITY 50
+      why: held, but pit_status=backfilled: history was not knowable as-was on past dates
+      ! NSE factor index: history backfilled to a 2005 base date, but the index was launched and its methodology fixed years later. Sleeve construction rules were chosen with knowledge of this history -- selection bias is built into the series.
+      ! Price-return index: excludes dividends (~1.3-1.5% p.a. for Indian large/mid caps). Absolute returns understate; any equity-vs-cash comparison is biased against equity.
+      ! An index is not a portfolio: no replication tracking error, no rebalance impact, no sleeve-level turnover cost is charged inside the index level.
+  NIFTY500 VALUE 50                 M    DEGRADED     NIFTY500 VALUE 50
+      why: held, but pit_status=backfilled: history was not knowable as-was on past dates
+      ! NSE factor index: history backfilled to a 2005 base date, but the index was launched and its methodology fixed years later. Sleeve construction rules were chosen with knowledge of this history -- selection bias is built into the series.
+      ! Price-return index: excludes dividends (~1.3-1.5% p.a. for Indian large/mid caps). Absolute returns understate; any equity-vs-cash comparison is biased against equity.
+      ! An index is not a portfolio: no replication tracking error, no rebalance impact, no sleeve-level turnover cost is charged inside the index level.
+  NIFTY500 LOW VOLATILITY 50        M    DEGRADED     NIFTY500 LOW VOLATILITY 50
+      why: held, but pit_status=backfilled: history was not knowable as-was on past dates
+      ! NSE factor index: history backfilled to a 2005 base date, but the index was launched and its methodology fixed years later. Sleeve construction rules were chosen with knowledge of this history -- selection bias is built into the series.
+      ! Price-return index: excludes dividends (~1.3-1.5% p.a. for Indian large/mid caps). Absolute returns understate; any equity-vs-cash comparison is biased against equity.
+      ! An index is not a portfolio: no replication tracking error, no rebalance impact, no sleeve-level turnover cost is charged inside the index level.
+  NIFTY ALPHA 50                    M    DEGRADED     NIFTY ALPHA 50
+      why: held, but pit_status=backfilled: history was not knowable as-was on past dates
+      ! NSE factor index: history backfilled to a 2005 base date, but the index was launched and its methodology fixed years later. Sleeve construction rules were chosen with knowledge of this history -- selection bias is built into the series.
+      ! Price-return index: excludes dividends (~1.3-1.5% p.a. for Indian large/mid caps). Absolute returns understate; any equity-vs-cash comparison is biased against equity.
+      ! An index is not a portfolio: no replication tracking error, no rebalance impact, no sleeve-level turnover cost is charged inside the index level.
+  NIFTY 500                         M    DEGRADED     NIFTY 500
+      why: held, but pit_status=backfilled: history was not knowable as-was on past dates
+      ! Price-return index: excludes dividends (~1.3-1.5% p.a. for Indian large/mid caps). Absolute returns understate; any equity-vs-cash comparison is biased against equity.
+      ! Benchmark series ends 2026-05-29, nine trading days before the factor sleeves. Comparisons are truncated to the common window.
+  NIFTY500 MULTIFACTOR MQVLV 50     M    DEGRADED     NIFTY500 MULTIFACTOR MQVLV 50
+      why: held, but pit_status=backfilled: history was not knowable as-was on past dates
+      ! NSE factor index: history backfilled to a 2005 base date, but the index was launched and its methodology fixed years later. Sleeve construction rules were chosen with knowledge of this history -- selection bias is built into the series.
+      ! Price-return index: excludes dividends (~1.3-1.5% p.a. for Indian large/mid caps). Absolute returns understate; any equity-vs-cash comparison is biased against equity.
+      ! An index is not a portfolio: no replication tracking error, no rebalance impact, no sleeve-level turnover cost is charged inside the index level.
+  india_cash_rate                   M    PROXY        CASH_PROXY_CONSTANT_6PCT
+      why: substituting CASH_PROXY_CONSTANT_6PCT
+      ! NOT a real series. A constant rate is wrong in level and wrong in shape: it cannot capture the 2009 or 2020 easing cycles, which is exactly when a de-risking strategy parks in cash. Treat every cash-holding result as provisional until a real MIBOR/T-bill series is procured.
+
+  SIGN-OFF REQUIRED (Gate A):
+    ? NIFTY500 MOMENTUM 50: accept backfilled history? Results carry selection bias from the index/field construction.
+    ? NIFTY500 QUALITY 50: accept backfilled history? Results carry selection bias from the index/field construction.
+    ? NIFTY500 VALUE 50: accept backfilled history? Results carry selection bias from the index/field construction.
+    ? NIFTY500 LOW VOLATILITY 50: accept backfilled history? Results carry selection bias from the index/field construction.
+    ? NIFTY ALPHA 50: accept backfilled history? Results carry selection bias from the index/field construction.
+    ? NIFTY 500: accept backfilled history? Results carry selection bias from the index/field construction.
+    ? NIFTY500 MULTIFACTOR MQVLV 50: accept backfilled history? Results carry selection bias from the index/field construction.
+    ? india_cash_rate: approve proxy 'CASH_PROXY_CONSTANT_6PCT'. A proxy changes the economic claim, not just the data.
+
+  NOTES:
+    - Adaptation card: a PASS here means the ADAPTED strategy is testable on our data. It says nothing about whether the original paper replicates.
+    - broken assumption carried from source paper: DIVERSIFICATION: the paper's lift depends on SPY/AGG/GLD being weakly or negatively correlated. Our six sleeves are single-country equity and correlate 0.74-0.94 pairwise. A risk-constrained optimiser over near-collinear assets has far less to work with; expect most of the paper's benefit NOT to transfer.
+
+    - broken assumption carried from source paper: CASH: the paper de-risks into cash, and cash is where its drawdown control comes from. A long-only fully-invested equity mandate cannot do this. The mandate- compliant variant is therefore a materially different strategy.
+
+    - broken assumption carried from source paper: RISK-FREE ASSET: no Indian cash-rate series is in the snapshot. Any cash-holding variant runs on a declared constant proxy and must be read under the rate sweep.
+
+    - broken assumption carried from source paper: POINT-IN-TIME: NSE factor indices are backfilled to a 2005 base with methodology fixed much later. The sleeve definitions were chosen knowing this history.
+
+    - broken assumption carried from source paper: RETURN BASIS: these are price-return indices. Dividends are missing from every series, so absolute returns understate and any cash-vs-equity comparison is biased against equity.
+
+    - broken assumption carried from source paper: INVESTABILITY: an index is not a portfolio. Real sleeve replication carries tracking error, rebalance impact and sleeve-level turnover that the index does not charge.
+
+    - 0/8 mandatory requirements are clean-AVAILABLE.
+
+====================================================================================================
+GATE A  |  HUMAN INTERPRETATION CONTROL
+====================================================================================================
+  GATE A -- interpretation (owner: researcher) -> PASS
+    [PASS] card validates against schema
+           schema clean
+    [PASS] all ambiguities resolved  [0 vs 0]
+           6 ambiguities logged and resolved
+    [warn] no low-confidence material interpretation  [1 vs 0]
+           low-confidence: universe.cash_asset
+    [PASS] data feasibility resolved  [GO_WITH_PROXY vs GO or GO_WITH_PROXY]
+           no blocking data gaps
+    [PASS] transferred mechanism stated
+           Monthly long-only allocation across a small sleeve set, maximising an EWMA-momentum return forecast net of half-spread cost, subject to a hard ex-ante volatility cap and an l1 constraint to a strategic mix (paper eq. 3), with a volatility-control overlay (paper eq. 1) as the simpler comparator.
+
+    [PASS] broken source assumptions enumerated  [6 vs >=1]
+           DIVERSIFICATION: the paper's lift depends on SPY/AGG/GLD being weakly or negatively correlated. Our six sleeves are single-country equity and correlate 0.74-0.94 pairwise. A risk-constrained optimiser over near-collinear assets has far less to work with; expect most of the paper's benefit NOT to transfer.
+; CASH: the paper de-risks into cash, and cash is where its drawdown control comes from. A long-only fully-invested equity mandate cannot do this. The mandate- compliant variant is therefore a materially different strategy.
+; RISK-FREE ASSET: no Indian cash-rate series is in the snapshot. Any cash-holding variant runs on a declared constant proxy and must be read under the rate sweep.
+; POINT-IN-TIME: NSE factor indices are backfilled to a 2005 base with methodology fixed much later. The sleeve definitions were chosen knowing this history.
+; RETURN BASIS: these are price-return indices. Dividends are missing from every series, so absolute returns understate and any cash-vs-equity comparison is biased against equity.
+; INVESTABILITY: an index is not a portfolio. Real sleeve replication carries tracking error, rebalance impact and sleeve-level turnover that the index does not charge.
+
+    [PASS] source text is machine-readable
+           Math-bearing lines on 7% of lines. Equations are unreliable after extraction -- any card field derived from a formula needs human verification against the rendered page.; Reversed (rotated) text on pages [10, 12, 13, 15, 16, 30]: figure axis labels. Numbers must not be read off these pages.
+    [warn] equations verified against rendered page  [7.2% vs <5%]
+           high math density: formulas were hand-checked, not trusted from text
+    decision: PENDING
+
+====================================================================================================
+STEP 04  |  POINT-IN-TIME DATA + LINEAGE
+====================================================================================================
+  snapshot_id   : devanathan_2026_india_factor_adaptation__6b8f4683ceaf1eee
+  content_hash  : 84abe49445fb2131d6b251d94b698f1c
+  engine_code   : af212659f19e0bca2f300c669557a524
+  git_commit    : n/a
+  shape         : (5247, 7)  2005-04-01 -> 2026-05-29
+  pit_status    : backfilled
+  verify()      : True
+
+  DATA AUDIT:
+                           series  n_obs      first       last  first_value  gaps  n_zero_ret  max_abs_ret  n_gt_20pct  n_stale_5d  neg_or_zero_px
+             NIFTY500 MOMENTUM 50   5247 2005-04-01 2026-05-29      1000.00     0           0       0.1429           0           0               0
+              NIFTY500 QUALITY 50   5247 2005-04-01 2026-05-29      1000.00     0           0       0.1290           0           0               0
+                NIFTY500 VALUE 50   5247 2005-04-01 2026-05-29      1000.00     0           0       0.1478           0           0               0
+       NIFTY500 LOW VOLATILITY 50   5247 2005-04-01 2026-05-29      1000.00     0           1       0.1057           0           0               0
+                   NIFTY ALPHA 50   5247 2005-04-01 2026-05-29      1589.39     0           0       0.1605           0           0               0
+                        NIFTY 500   5247 2005-04-01 2026-05-29      1805.30     0           4       0.1622           0           0               0
+    NIFTY500 MULTIFACTOR MQVLV 50   5247 2005-04-01 2026-05-29      1000.00     0           0       0.1053           0           0               0
+
+  PROXIES IN USE (recorded, never silent):
+    - CASH_PROXY_CONSTANT_6PCT standing in for india_cash_rate
+
+====================================================================================================
+STEP 05  |  BUILD + EXECUTE
+====================================================================================================
+  configurations executed : 7
+  aligned common start    : 2006-04-29
+    (all runs truncated to the last first-rebalance date and rebased to 1.0, so a
+     252-day EWMA warm-up cannot hand the benchmarks a free year of returns)
+  solver                  : 242 solves, 0 failures
+
+  LOOK-AHEAD TRIPWIRES (signal[t] vs return[t] and return[t+1]):
+    PASS  alpha
+    PASS  sigma_bench
+    PASS  negative control 'planted same-bar leak' correctly caught
+    PASS  negative control 'planted next-bar leak' correctly caught
+
+  PERFORMANCE (net of costs; 'sharpe' is the paper's geometric definition):
+                                                                 cagr    vol sharpe sharpe_conventional max_dd mean_dd turnover cvar_95_monthly hit_rate_monthly
+    name                                                                                                                                                        
+    dynamic_factor_sleeve_allocation                            12.1%  17.5%   0.35                0.42  53.3%   16.4%   160.3%           13.4%            63.2%
+    dynamic_factor_sleeve_allocation [mandate: fully invested]  15.2%  21.2%   0.44                0.51  69.3%   16.1%   146.5%           16.8%            59.9%
+    Equal-weight sleeves                                        15.0%  20.2%   0.45                0.51  64.0%   11.5%     5.0%           15.5%            61.2%
+    Vol-target overlay                                          13.0%  16.9%   0.42                0.48  54.0%   11.0%    77.1%           12.9%            61.6%
+    Inverse vol                                                 14.3%  19.4%   0.43                0.50  62.4%   10.6%    90.7%           15.1%            62.0%
+    Equal risk contribution                                     14.2%  19.4%   0.43                0.50  62.3%   10.6%    97.1%           15.1%            61.6%
+    Min variance                                                12.5%  17.0%   0.39                0.45  54.7%    8.7%   553.0%           12.9%            60.7%
+    NIFTY 500                                                   10.5%  20.4%   0.22                0.31  64.3%   11.7%     0.0%           15.3%            60.3%
+    NIFTY500 MULTIFACTOR MQVLV 50                               15.1%  17.4%   0.53                0.57  54.8%    8.7%     0.0%           13.4%            59.5%
+
+====================================================================================================
+STEP 06  |  RESEARCH VALIDATION
+====================================================================================================
+  Strategy under test: dynamic_factor_sleeve_allocation [mandate: fully invested]
+  (the mandate-compliant variant governs the decision where one exists)
+
+  REPLICATION GAP: N/A -- this is an ADAPTATION card. It is not scored
+  against the source paper's numbers, and it may never claim REPLICATED.
+
+  SHARPE BY SUB-PERIOD (regime dependence):
+                                                                2006-2011  2011-2016  2016-2021  2021-2026  full
+    dynamic_factor_sleeve_allocation                                 0.09       0.27       0.42       0.68  0.35
+    dynamic_factor_sleeve_allocation [mandate: fully invested]       0.16       0.44       0.67       0.69  0.44
+    Equal-weight sleeves                                             0.22       0.48       0.61       0.67  0.45
+    Vol-target overlay                                               0.24       0.43       0.44       0.63  0.42
+    Inverse vol                                                      0.19       0.51       0.60       0.65  0.43
+    Equal risk contribution                                          0.20       0.48       0.60       0.65  0.43
+    Min variance                                                     0.42       0.29       0.36       0.53  0.39
+    NIFTY 500                                                        0.06       0.13       0.47       0.41  0.22
+    NIFTY500 MULTIFACTOR MQVLV 50                                    0.34       0.84       0.51       0.64  0.53
+
+  ANCHORED WALK-FORWARD (out-of-sample windows):
+                    window   n  cagr   vol  sharpe  max_dd
+    2011-04-29..2015-02-04 937 0.171 0.142   0.789   0.214
+    2015-02-04..2018-11-12 932 0.093 0.184   0.187   0.209
+    2018-11-12..2022-08-20 935 0.193 0.210   0.636   0.366
+    2022-08-20..2026-05-29 934 0.223 0.185   0.884   0.238
+
+  STATIONARY BLOCK BOOTSTRAP  (3000 reps, mean block 21d, paired draws):
+                                                     portfolio   sharpe_ci95     cagr_ci95     maxdd_ci95
+                              dynamic_factor_sleeve_allocation [-0.18, 1.00] [2.7%, 22.7%] [27.8%, 67.8%]
+    dynamic_factor_sleeve_allocation [mandate: fully invested] [-0.12, 1.13] [3.2%, 28.6%] [34.4%, 74.6%]
+                                          Equal-weight sleeves [-0.10, 1.14] [3.8%, 27.3%] [31.8%, 72.2%]
+                                            Vol-target overlay [-0.13, 1.10] [3.7%, 23.7%] [26.8%, 65.5%]
+                                                   Inverse vol [-0.12, 1.12] [3.6%, 26.1%] [30.9%, 71.0%]
+                                       Equal risk contribution [-0.11, 1.12] [3.6%, 26.0%] [30.9%, 71.1%]
+                                                  Min variance [-0.13, 1.05] [3.7%, 22.5%] [26.6%, 64.2%]
+                                                     NIFTY 500 [-0.27, 0.85] [0.2%, 22.3%] [32.5%, 76.8%]
+                                 NIFTY500 MULTIFACTOR MQVLV 50 [-0.03, 1.24] [5.3%, 25.9%] [27.3%, 64.0%]
+
+  PAIRED SHARPE DIFFERENCE: (dynamic_factor_sleeve_allocation [mandate: fully invested]) minus each comparator
+                          comparator mean_diff           ci95 P(diff<=0)
+    dynamic_factor_sleeve_allocation     +0.09 [-0.13, +0.33]      0.206
+                Equal-weight sleeves     -0.01 [-0.15, +0.14]      0.535
+                  Vol-target overlay     +0.02 [-0.19, +0.24]      0.401
+                         Inverse vol     +0.01 [-0.14, +0.16]      0.446
+             Equal risk contribution     +0.01 [-0.14, +0.16]      0.437
+                        Min variance     +0.06 [-0.18, +0.31]      0.321
+                           NIFTY 500     +0.22 [+0.01, +0.46]      0.022
+       NIFTY500 MULTIFACTOR MQVLV 50     -0.09 [-0.30, +0.12]      0.790
+    worst-case P(no advantage) across comparators = 0.790
+
+  DEFLATED SHARPE RATIO (Bailey & Lopez de Prado):
+    sharpe_ann                  : 0.5117
+    n_trials                    : 7
+    selection_threshold_sharpe  : 1.3868
+    deflated_sharpe_prob        : 0.0001
+    skew                        : -0.9560
+    kurtosis                    : 12.6715
+    -> After penalising 7 configuration(s) tried, the threshold Sharpe is 1.39; observed 0.51; P(skill) = 0.0%.
+    trial budget = card(1) + this run(7) + library history(0)
+
+  COST SENSITIVITY (breakeven analysis):
+     spread_bps   cagr    vol  sharpe  max_dd  turnover
+              0 0.1605 0.2085  0.4867  0.6838    2.6214
+              5 0.1606 0.2083  0.4878  0.6830    2.1798
+             15 0.1527 0.2069  0.4530  0.6851    1.6745
+             30 0.1440 0.2069  0.4108  0.6925    1.3906
+             50 0.1508 0.2076  0.4422  0.6743    0.9667
+             75 0.1372 0.2049  0.3818  0.6738    0.8249
+            100 0.1327 0.2015  0.3655  0.6822    0.6679
+
+  IMPLEMENTATION-LAG SENSITIVITY (a real signal decays gently):
+     lag_days   cagr    vol  sharpe  max_dd
+            0 0.1486 0.2067  0.4335  0.6838
+            1 0.1440 0.2069  0.4108  0.6925
+            2 0.1423 0.2067  0.4028  0.6851
+            5 0.1485 0.2057  0.4349  0.6657
+           10 0.1559 0.2046  0.4737  0.6625
+
+  TARGET-VOLATILITY SWEEP (how much of the result is this one knob?):
+     target_vol   cagr    vol  sharpe  max_dd
+           0.12 0.1490 0.1999  0.4502  0.6590
+           0.15 0.1459 0.2042  0.4256  0.6757
+           0.18 0.1440 0.2069  0.4108  0.6925
+           0.21 0.1382 0.2088  0.3793  0.6989
+           0.24 0.1378 0.2103  0.3745  0.6952
+           0.26 0.1363 0.2116  0.3652  0.7023
+
+  CASH-RATE PROXY SWEEP (the proxy is an assumption, so it gets swept):
+     cash_rate  sharpe_primary  sharpe_mandate
+          0.04          0.4730          0.5400
+          0.05          0.4098          0.4862
+          0.06          0.3527          0.4397
+          0.07          0.2916          0.3883
+          0.08          0.2601          0.3547
+
+====================================================================================================
+STEP 07  |  PORTFOLIO VALIDATION
+====================================================================================================
+  VERSUS FUND BENCHMARK (NIFTY 500):
+    beta                  : 0.9456
+    alpha_ann             : 0.0494
+    tracking_error        : 0.0886
+    information_ratio     : 0.5046
+    active_return_ann     : 0.0447
+    correlation           : 0.9103
+    up_capture            : 1.0082
+    down_capture          : 0.9660
+    n_obs                 : 4979
+
+  FACTOR FINGERPRINT (HAC / Newey-West):
+    R^2                  : 0.9519
+    alpha (annualised)   : +0.17%
+    alpha t-stat (HAC)   : +0.15   p = 0.879
+    residual vol         : 4.66%
+    loadings:
+      NIFTY500 MOMENTUM 50             +0.397   (t = +16.6)
+      NIFTY500 QUALITY 50              +0.065   (t = +3.5)
+      NIFTY500 VALUE 50                +0.138   (t = +9.9)
+      NIFTY500 LOW VOLATILITY 50       +0.172   (t = +8.4)
+      NIFTY ALPHA 50                   +0.211   (t = +10.3)
+
+  SIGNAL SIMILARITY vs everything the fund can already run:
+                     existing_signal  correlation  beta_to_existing  residual_vol_retained
+                Equal-weight sleeves        0.974             1.022                  0.229
+                         Inverse vol        0.970             1.062                  0.244
+             Equal risk contribution        0.969             1.062                  0.247
+       NIFTY500 MULTIFACTOR MQVLV 50        0.934             1.139                  0.357
+                  Vol-target overlay        0.934             1.171                  0.358
+    dynamic_factor_sleeve_allocation        0.922             1.121                  0.387
+                           NIFTY 500        0.910             0.946                  0.414
+                        Min variance        0.905             1.132                  0.425
+
+  INCREMENTAL INFORMATION RATIO (existing book = 'Equal-weight sleeves'):
+     sleeve_weight  blended_ir  delta_ir  blended_te  blended_cagr
+              0.00      0.6412    0.0000      0.0625        0.1522
+              0.05      0.6380   -0.0031      0.0631        0.1524
+              0.10      0.6341   -0.0071      0.0639        0.1526
+              0.20      0.6242   -0.0170      0.0657        0.1530
+              0.35      0.6052   -0.0360      0.0689        0.1535
+
+  MANDATE CHECK (run on realised positions, not on the config):
+    max cash 0.0%   mean cash 0.0%   days in cash 0%
+    passes: True
+    (faithful cash-holding variant would violate: True -- max cash 100%)
+
+  CAPACITY (AUM Rs1,000cr, tradable ADV Rs300cr, 10% participation):
+    annual turnover              : 147%
+    notional per rebalance       : Rs243 cr
+    days to execute a rebalance  : 8.1
+
+====================================================================================================
+GATE B  |  INVESTMENT DECISION
+====================================================================================================
+  GATE B -- investment decision (owner: PM / IC) -> BLOCKED
+    [FAIL] deflated Sharpe clears selection bias  [0.00 vs 0.95]
+           After penalising 7 configuration(s) tried, the threshold Sharpe is 1.39; observed 0.51; P(skill) = 0.0%.
+    [FAIL] positive Sharpe in every out-of-sample window  [0.19 vs 0.3]
+           worst walk-forward window
+    [FAIL] advantage over benchmark is significant  [0.790 vs <=0.05]
+           paired stationary-bootstrap P(Sharpe difference <= 0)
+    [FAIL] differentiated from existing book  [0.97 vs <=0.8]
+           max correlation to any existing signal
+    [FAIL] improves the book's information ratio  [+0.000 vs >=0.05]
+           incremental IR at a realistic sleeve size
+    [FAIL] alpha survives the factor fingerprint  [0.15 vs |t|>=2.0]
+           HAC t-stat of alpha vs known factor sleeves
+    [PASS] implementable within mandate
+           no mandate violations
+    [PASS] turnover within operational tolerance  [147% vs <=400%]
+           annualised two-way turnover
+    decision: PENDING
+
+====================================================================================================
+STEP 08  |  PROMOTION LADDER + STRATEGY LIBRARY
+====================================================================================================
+STEP 08 -- PROMOTION LADDER
+  card: devanathan_2026_india_factor_adaptation (adaptation)
+  attained: NONE   stopped at: INDIA_VALIDATED
+
+  REPLICATED         N/A
+      adaptation card: replication is a different question
+  INDIA_VALIDATED    FAIL
+      [PASS] runs on held Indian data within mandate
+             clean
+      [FAIL] beats every free alternative the fund already has  [-0.09 vs > 0 Sharpe]
+             worst Sharpe margin vs NIFTY 500, NIFTY500 MULTIFACTOR MQVLV 50, Equal-weight sleeves
+
+  library entry : devanathan_2026_india_factor_adaptation__6b8f4683ceaf1eee__20260915T095828
+  ! 1 prior entr(ies) share this factor fingerprint (cos >= 0.90):
+      devanathan_2026_india_factor_adaptation  cos=1.0  outcome=REJECTED
+  charts written to outputs/charts_devanathan_2026_india_factor_adaptation.png

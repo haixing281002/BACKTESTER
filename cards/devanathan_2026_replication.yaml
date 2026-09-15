@@ -1,0 +1,181 @@
+card_version: "1.0"
+
+paper:
+  id: devanathan_2026_sbg_replication
+  title: Simple Dynamic Stock/Bond/Gold Portfolios
+  authors: [Nikhil Devanathan, Alexandros E. Tzikas, Stephen P. Boyd]
+  date: "2026-09-09"
+  source_file: docs/devanathan_2026_simple_dynamic_sbg.pdf
+  source_sha256: "2629076cfeb93ee1"
+  url: https://github.com/cvxgrp/simple-portfolio-code
+
+intent:
+  mode: replication
+  rationale: >
+    Reproduce the paper's own results on the paper's own data before asking whether
+    anything in it is useful to us. Replication and India-investability are separate
+    questions and must never share a verdict.
+
+universe:
+  description: Three US ETFs plus cash, as published.
+  asset_class: multi_asset
+  geography: US
+  assets: [SPY, AGG, GLD]
+  benchmark: "60/40"
+  cash_asset: DFF
+
+signal:
+  name: markowitz_l1_with_ridge_forecast
+  template: markowitz_l1
+  lookback_days: 11
+  lag_days: 0
+  description: >
+    Monthly mean-variance optimisation maximising forecast next-month return net of
+    a half-spread cost, subject to long-only, unlevered, an l1 leash of 1.0 to the
+    50/30/20 relative mix, and a hard 7% ex-ante volatility cap (paper eq. 3).
+  params:
+    strategic_weights: {SPY: 0.5, AGG: 0.3, GLD: 0.2}
+    target_vol: 0.07
+    l1_budget: 1.0
+    spread_bps: 5.0
+    alpha_source: ridge_forecast_appendix_b
+
+portfolio:
+  rebalance: monthly
+  long_only: true
+  max_gross: 1.0
+  allow_cash: true
+  target_vol: 0.07
+  start: "2006-01-01"
+  end: "2026-01-01"
+
+costs:
+  spread_bps: 5.0
+  cost_model: half_spread
+
+# ---- Step 03 resolves each of these against the firm's data registry ----
+data_requirements:
+  - {name: SPY_adj_close, kind: price, frequency: daily, start: "2004-01-01", mandatory: true, purpose: "equity sleeve", evidence_page: 9}
+  - {name: AGG_adj_close, kind: price, frequency: daily, start: "2004-01-01", mandatory: true, purpose: "bond sleeve", evidence_page: 9}
+  - {name: GLD_adj_close, kind: price, frequency: daily, start: "2004-01-01", mandatory: true, purpose: "gold sleeve", evidence_page: 9}
+  - {name: SPY_volume, kind: volume, frequency: daily, mandatory: true, purpose: "liquidity features for the return forecast", evidence_page: 28}
+  - {name: AGG_volume, kind: volume, frequency: daily, mandatory: true, purpose: "liquidity features", evidence_page: 28}
+  - {name: GLD_volume, kind: volume, frequency: daily, mandatory: true, purpose: "liquidity features", evidence_page: 28}
+  - {name: DFF_fed_funds, kind: risk_free_rate, frequency: daily, mandatory: true, purpose: "cash accrual and the Sharpe numeraire", evidence_page: 9}
+  - {name: CPILFESL_core_cpi, kind: macro, frequency: monthly, mandatory: false, purpose: "inflation-adjusted metrics (section 4)", evidence_page: 9}
+  - {name: UST_yield_curve, kind: macro, frequency: daily, mandatory: true, purpose: "rates features 3m/2y/5y/10y/30y", evidence_page: 28}
+  - {name: UST_10y_real_yield, kind: macro, frequency: daily, mandatory: true, purpose: "rates feature", evidence_page: 28}
+  - {name: UST_10y_breakeven, kind: macro, frequency: daily, mandatory: true, purpose: "rates feature", evidence_page: 28}
+  - {name: VIX, kind: macro, frequency: daily, mandatory: true, purpose: "market-state feature", evidence_page: 28}
+  - {name: broad_dollar_index, kind: macro, frequency: daily, mandatory: true, purpose: "market-state feature", evidence_page: 28}
+  - {name: fama_french_factors, kind: factor_return, frequency: daily, mandatory: true, purpose: "8 smoothed FF factor returns", evidence_page: 28}
+
+# ---- Every one of these was found by reading the paper, not by running it ----
+ambiguities:
+  - field: metrics.sharpe
+    issue: >
+      The paper's Sharpe is geometric: (CAGR - compounded fed funds CAGR) / annualised
+      vol. This is NOT the conventional arithmetic-excess Sharpe. The paper itself
+      quotes both (1.08 vs 1.08 for Markowitz, 0.60 vs 0.56 for 60/40).
+    resolution: >
+      Replicate the geometric definition as primary; always compute and report the
+      conventional one alongside. Targets below are pinned to the geometric basis.
+    confidence: high
+    evidence_page: 9
+    material: true
+
+  - field: signal.lookback_days
+    issue: >
+      The 11-day volatility/covariance window was chosen "after a modest search over
+      various values" and is acknowledged as noisy. That search used the full 20-year
+      sample, so the headline number is in-sample at the hyperparameter level.
+    resolution: >
+      Replicate at 11 days to match the paper, but treat the result as in-sample and
+      inflate the trial count for the deflated Sharpe ratio. Report a lookback sweep.
+    confidence: high
+    evidence_page: 7
+    material: true
+
+  - field: portfolio.target_vol
+    issue: >
+      The 7% target is asserted, not derived. Section 3.4 then sweeps 3%-12% in 0.5%
+      steps -- 19 further configurations on the same sample.
+    resolution: >
+      Treat 7% as the paper's headline and count the full sweep in the trial budget.
+    confidence: high
+    evidence_page: 10
+    material: true
+
+  - field: costs.cost_model
+    issue: >
+      Appendix A charges cost only on changes in NON-CASH weights: "moving value into
+      or out of cash is not itself a trade". Volatility control works precisely by
+      moving into and out of cash, so its main activity is free by construction.
+    resolution: >
+      Replicate as specified to match the paper, then re-run charging cash moves as
+      trades and report the difference as a named sensitivity. Do not merge the two.
+    confidence: high
+    evidence_page: 27
+    material: true
+
+  - field: signal.cov_estimator
+    issue: >
+      A 3x3 covariance matrix has 6 free parameters and is estimated from 11 daily
+      observations. This is near-degenerate; the risk constraint it feeds is noisy.
+    resolution: >
+      Replicate as specified, with a PSD projection before the solver, and record the
+      solver-failure count as a diagnostic rather than hiding fallbacks.
+    confidence: medium
+    evidence_page: 8
+    material: true
+
+  - field: universe.cash_asset
+    issue: >
+      The fed funds rate is used both as the Sharpe numeraire and as the yield the
+      portfolio actually earns on cash. No investor earns DFF on a cash balance.
+    resolution: >
+      Replicate as specified; flag that realised cash yield would be lower and that
+      this flatters every cash-holding portfolio, which is all the winners.
+    confidence: high
+    evidence_page: 9
+    material: true
+
+  - field: signal.alpha_source
+    issue: >
+      The forecast target is a 100-day FORWARD return. Causality rests entirely on the
+      training set ending at t-100. An off-by-one here would inflate every result.
+    resolution: >
+      Implement with the stated t-100 cutoff and verify with an explicit look-ahead
+      tripwire against same-bar returns before trusting any output.
+    confidence: medium
+    evidence_page: 28
+    material: true
+
+# ---- Pinned to ONE accounting basis: pre-tax, nominal, Table 1, page 11 ----
+replication_targets:
+  - {portfolio: Markowitz,        metric: sharpe,   value: 1.08,  absolute_tolerance: 0.10, evidence_page: 11}
+  - {portfolio: Markowitz,        metric: cagr,     value: 0.116, absolute_tolerance: 0.015, evidence_page: 11}
+  - {portfolio: Markowitz,        metric: vol,      value: 0.090, absolute_tolerance: 0.010, evidence_page: 11}
+  - {portfolio: Markowitz,        metric: max_dd,   value: 0.181, absolute_tolerance: 0.030, evidence_page: 11}
+  - {portfolio: Simple Markowitz, metric: sharpe,   value: 0.91,  absolute_tolerance: 0.10, evidence_page: 11}
+  - {portfolio: 50/30/20 VC,      metric: sharpe,   value: 0.82,  absolute_tolerance: 0.10, evidence_page: 11}
+  - {portfolio: 60/40 VC,         metric: sharpe,   value: 0.71,  absolute_tolerance: 0.10, evidence_page: 11}
+  - {portfolio: 50/30/20,         metric: sharpe,   value: 0.70,  absolute_tolerance: 0.10, evidence_page: 11}
+  - {portfolio: 60/40,            metric: sharpe,   value: 0.56,  absolute_tolerance: 0.10, evidence_page: 11}
+  - {portfolio: 60/40,            metric: max_dd,   value: 0.337, absolute_tolerance: 0.030, evidence_page: 11}
+
+benchmark_templates:
+  - {name: "60/40",       template: fixed_weight, params: {weights: {SPY: 0.6, AGG: 0.4, GLD: 0.0}}, rebalance: annual}
+  - {name: "50/30/20",    template: fixed_weight, params: {weights: {SPY: 0.5, AGG: 0.3, GLD: 0.2}}, rebalance: annual}
+  - {name: "60/40 VC",    template: vol_target,   params: {weights: {SPY: 0.6, AGG: 0.4, GLD: 0.0}, target_vol: 0.07}}
+  - {name: "50/30/20 VC", template: vol_target,   params: {weights: {SPY: 0.5, AGG: 0.3, GLD: 0.2}, target_vol: 0.07}}
+
+# 1 headline + 19 vol-target sweep + lookback search + appendix E/F/G variants.
+# Understating this is the easiest way to manufacture a significant result.
+n_configs_tried: 40
+
+notes: >
+  Expected to FAIL FAST at Step 03 for this fund: we hold no US ETF prices, no FRED
+  series and no Fama-French factors. That is the correct and cheap outcome -- it is
+  a procurement question, not a research question. Retained in the library so the
+  next person to pick up this paper inherits the finding instead of rediscovering it.

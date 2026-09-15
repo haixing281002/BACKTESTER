@@ -1,0 +1,147 @@
+{
+  "snapshot_id": "devanathan_2026_india_factor_adaptation__6b8f4683ceaf1eee",
+  "created_utc": "2026-09-15T09:56:41+00:00",
+  "content_hash": "84abe49445fb2131d6b251d94b698f1c8a8d779af2a39ce7d205db0f5b92368c",
+  "engine_code_hash": "af212659f19e0bca2f300c669557a5247a280731c7049f3cb350742ee204216a",
+  "git_commit": null,
+  "shape": [
+    5247,
+    7
+  ],
+  "columns": [
+    "NIFTY500 MOMENTUM 50",
+    "NIFTY500 QUALITY 50",
+    "NIFTY500 VALUE 50",
+    "NIFTY500 LOW VOLATILITY 50",
+    "NIFTY ALPHA 50",
+    "NIFTY 500",
+    "NIFTY500 MULTIFACTOR MQVLV 50"
+  ],
+  "date_min": "2005-04-01",
+  "date_max": "2026-05-29",
+  "pit_status": "backfilled",
+  "proxies_used": [
+    {
+      "series": "CASH_PROXY_CONSTANT_6PCT",
+      "proxy_for": "india_cash_rate",
+      "rationale": "substituting CASH_PROXY_CONSTANT_6PCT"
+    }
+  ],
+  "caveats": [
+    "NIFTY500 MOMENTUM 50: NSE factor index: history backfilled to a 2005 base date, but the index was launched and its methodology fixed years later. Sleeve construction rules were chosen with knowledge of this history -- selection bias is built into the series.",
+    "NIFTY500 MOMENTUM 50: Price-return index: excludes dividends (~1.3-1.5% p.a. for Indian large/mid caps). Absolute returns understate; any equity-vs-cash comparison is biased against equity.",
+    "NIFTY500 MOMENTUM 50: An index is not a portfolio: no replication tracking error, no rebalance impact, no sleeve-level turnover cost is charged inside the index level.",
+    "NIFTY500 QUALITY 50: NSE factor index: history backfilled to a 2005 base date, but the index was launched and its methodology fixed years later. Sleeve construction rules were chosen with knowledge of this history -- selection bias is built into the series.",
+    "NIFTY500 QUALITY 50: Price-return index: excludes dividends (~1.3-1.5% p.a. for Indian large/mid caps). Absolute returns understate; any equity-vs-cash comparison is biased against equity.",
+    "NIFTY500 QUALITY 50: An index is not a portfolio: no replication tracking error, no rebalance impact, no sleeve-level turnover cost is charged inside the index level.",
+    "NIFTY500 VALUE 50: NSE factor index: history backfilled to a 2005 base date, but the index was launched and its methodology fixed years later. Sleeve construction rules were chosen with knowledge of this history -- selection bias is built into the series.",
+    "NIFTY500 VALUE 50: Price-return index: excludes dividends (~1.3-1.5% p.a. for Indian large/mid caps). Absolute returns understate; any equity-vs-cash comparison is biased against equity.",
+    "NIFTY500 VALUE 50: An index is not a portfolio: no replication tracking error, no rebalance impact, no sleeve-level turnover cost is charged inside the index level.",
+    "NIFTY500 LOW VOLATILITY 50: NSE factor index: history backfilled to a 2005 base date, but the index was launched and its methodology fixed years later. Sleeve construction rules were chosen with knowledge of this history -- selection bias is built into the series.",
+    "NIFTY500 LOW VOLATILITY 50: Price-return index: excludes dividends (~1.3-1.5% p.a. for Indian large/mid caps). Absolute returns understate; any equity-vs-cash comparison is biased against equity.",
+    "NIFTY500 LOW VOLATILITY 50: An index is not a portfolio: no replication tracking error, no rebalance impact, no sleeve-level turnover cost is charged inside the index level.",
+    "NIFTY ALPHA 50: NSE factor index: history backfilled to a 2005 base date, but the index was launched and its methodology fixed years later. Sleeve construction rules were chosen with knowledge of this history -- selection bias is built into the series.",
+    "NIFTY ALPHA 50: Price-return index: excludes dividends (~1.3-1.5% p.a. for Indian large/mid caps). Absolute returns understate; any equity-vs-cash comparison is biased against equity.",
+    "NIFTY ALPHA 50: An index is not a portfolio: no replication tracking error, no rebalance impact, no sleeve-level turnover cost is charged inside the index level.",
+    "NIFTY 500: Price-return index: excludes dividends (~1.3-1.5% p.a. for Indian large/mid caps). Absolute returns understate; any equity-vs-cash comparison is biased against equity.",
+    "NIFTY 500: Benchmark series ends 2026-05-29, nine trading days before the factor sleeves. Comparisons are truncated to the common window.",
+    "NIFTY500 MULTIFACTOR MQVLV 50: NSE factor index: history backfilled to a 2005 base date, but the index was launched and its methodology fixed years later. Sleeve construction rules were chosen with knowledge of this history -- selection bias is built into the series.",
+    "NIFTY500 MULTIFACTOR MQVLV 50: Price-return index: excludes dividends (~1.3-1.5% p.a. for Indian large/mid caps). Absolute returns understate; any equity-vs-cash comparison is biased against equity.",
+    "NIFTY500 MULTIFACTOR MQVLV 50: An index is not a portfolio: no replication tracking error, no rebalance impact, no sleeve-level turnover cost is charged inside the index level.",
+    "india_cash_rate: NOT a real series. A constant rate is wrong in level and wrong in shape: it cannot capture the 2009 or 2020 easing cycles, which is exactly when a de-risking strategy parks in cash. Treat every cash-holding result as provisional until a real MIBOR/T-bill series is procured."
+  ],
+  "sources": [
+    {
+      "loader": "load_nse_factor_workbook",
+      "path": "data/raw/Factor_Indices_Historical_Price_Data.xlsx",
+      "sha256": "0d4ead719783d06fce3904a8fca15b391bcebfc69bc3ef0e758c2d2ebf55eafc",
+      "sheet": "0",
+      "n_rows": 5637,
+      "n_series": 8,
+      "date_min": "2003-09-30",
+      "date_max": "2026-06-11",
+      "fields": {
+        "NIFTY ALPHA 50": "Close",
+        "NIFTY500 MOMENTUM 50": "Close",
+        "NIFTY500 MULTIFACTOR MQVLV 50": "Close",
+        "NIFTY500 QUALITY 50": "Close",
+        "NIFTY500 VALUE 50": "Close",
+        "NIFTY500 LOW VOLATILITY 50": "Close",
+        "NIFTY HIGH BETA 50": "Close",
+        "NIFTY 500": "Close"
+      },
+      "series": {
+        "NIFTY ALPHA 50": {
+          "first": "2003-12-31",
+          "last": "2026-06-11",
+          "n_obs": 5572,
+          "gaps_inside_coverage": 0,
+          "first_value": 1000.0
+        },
+        "NIFTY500 MOMENTUM 50": {
+          "first": "2005-04-01",
+          "last": "2026-06-11",
+          "n_obs": 5256,
+          "gaps_inside_coverage": 0,
+          "first_value": 1000.0
+        },
+        "NIFTY500 MULTIFACTOR MQVLV 50": {
+          "first": "2005-04-01",
+          "last": "2026-06-11",
+          "n_obs": 5256,
+          "gaps_inside_coverage": 0,
+          "first_value": 1000.0
+        },
+        "NIFTY500 QUALITY 50": {
+          "first": "2005-04-01",
+          "last": "2026-06-11",
+          "n_obs": 5256,
+          "gaps_inside_coverage": 0,
+          "first_value": 1000.0
+        },
+        "NIFTY500 VALUE 50": {
+          "first": "2005-04-01",
+          "last": "2026-06-11",
+          "n_obs": 5256,
+          "gaps_inside_coverage": 0,
+          "first_value": 1000.0
+        },
+        "NIFTY500 LOW VOLATILITY 50": {
+          "first": "2005-04-01",
+          "last": "2026-06-11",
+          "n_obs": 5256,
+          "gaps_inside_coverage": 0,
+          "first_value": 1000.0
+        },
+        "NIFTY HIGH BETA 50": {
+          "first": "2012-11-30",
+          "last": "2026-06-11",
+          "n_obs": 3349,
+          "gaps_inside_coverage": 0,
+          "first_value": 1607.37
+        },
+        "NIFTY 500": {
+          "first": "2003-09-30",
+          "last": "2026-05-29",
+          "n_obs": 5628,
+          "gaps_inside_coverage": 0,
+          "first_value": 1138.55
+        }
+      }
+    }
+  ],
+  "transformations": [
+    {
+      "step": "restrict",
+      "detail": "start=2005-04-01 end=2026-05-29 cols=['NIFTY500 MOMENTUM 50', 'NIFTY500 QUALITY 50', 'NIFTY500 VALUE 50', 'NIFTY500 LOW VOLATILITY 50', 'NIFTY ALPHA 50', 'NIFTY 500', 'NIFTY500 MULTIFACTOR MQVLV 50']",
+      "rows_before": 5637,
+      "rows_after": 5247
+    },
+    {
+      "step": "require_complete",
+      "detail": "cols=['NIFTY500 MOMENTUM 50', 'NIFTY500 QUALITY 50', 'NIFTY500 VALUE 50', 'NIFTY500 LOW VOLATILITY 50', 'NIFTY ALPHA 50', 'NIFTY 500', 'NIFTY500 MULTIFACTOR MQVLV 50']",
+      "rows_before": 5247,
+      "rows_after": 5247
+    }
+  ]
+}
