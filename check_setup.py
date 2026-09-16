@@ -54,17 +54,32 @@ def main() -> int:
     if not good:
         problems.append("Python 3.10 or newer is required.")
 
-    missing = []
+    missing, broken = [], []
     for m in ("pandas", "numpy", "scipy", "statsmodels", "cvxpy", "clarabel",
               "pdfplumber", "openpyxl", "yaml", "pydantic", "pytest"):
         try:
             importlib.import_module(m)
-        except Exception:                                        # noqa: BLE001
-            missing.append(m)
-    print(f"{OK if not missing else BAD}dependencies"
-          + (f"  missing: {missing}" if missing else "  all present"))
+        except ModuleNotFoundError as e:
+            # A package that is genuinely absent names ITSELF. One that is
+            # installed but broken names something underneath it -- a different
+            # problem with a different fix, so do not merge the two.
+            (missing if getattr(e, "name", m) == m else broken).append((m, e))
+        except Exception as e:                                   # noqa: BLE001
+            broken.append((m, e))
+    print(f"{OK if not (missing or broken) else BAD}dependencies"
+          + ("  all present" if not (missing or broken) else ""))
+    for m, _ in missing:
+        print(f"        NOT INSTALLED  {m}")
+    for m, e in broken:
+        print(f"        INSTALLED BUT BROKEN  {m} -> {type(e).__name__}: {e}")
     if missing:
-        problems.append("Run: pip install -r requirements.txt")
+        problems.append("Run: python -m pip install -r requirements.txt")
+    if broken:
+        problems.append(
+            "A package is installed but its dependencies are broken. Repair the "
+            "chain, do not reinstall the top-level package:\n"
+            "      python -m pip install --upgrade --force-reinstall cffi cryptography\n"
+            "      python -m pip install --upgrade --force-reinstall pdfminer.six pdfplumber")
 
     xlsx = "data/raw/Factor_Indices_Historical_Price_Data.xlsx"
     have_data = os.path.exists(xlsx)

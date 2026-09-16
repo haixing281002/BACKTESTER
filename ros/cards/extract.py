@@ -17,10 +17,17 @@ import re
 from dataclasses import dataclass, field, asdict
 from typing import Any, Dict, List, Optional, Tuple
 
+# Keep the REAL import failure. pdfplumber pulls in pdfminer.six, which pulls
+# in cryptography, which needs a working cffi -- and on a fresh install that
+# chain breaks in ways that have nothing to do with pdfplumber being absent.
+# Telling someone who just installed pdfplumber to install pdfplumber sends
+# them in a circle, so the original exception is carried and shown.
+pdfplumber = None
+_PDFPLUMBER_ERROR = None
 try:
     import pdfplumber
-except ImportError:  # pragma: no cover
-    pdfplumber = None
+except Exception as _exc:  # noqa: BLE001 - any failure here must be reportable
+    _PDFPLUMBER_ERROR = _exc
 
 
 # --------------------------------------------------------------------------
@@ -175,7 +182,16 @@ def _numeric_table(tbl: List[List[Optional[str]]]) -> bool:
 def extract_document(path: str, max_pages: Optional[int] = None) -> Document:
     """Parse a PDF into page-anchored evidence plus an extraction-quality report."""
     if pdfplumber is None:
-        raise RuntimeError("pdfplumber is required for PDF ingestion (pip install pdfplumber)")
+        raise RuntimeError(
+            "PDF ingestion needs pdfplumber, and importing it failed.\n"
+            f"  actual error: {type(_PDFPLUMBER_ERROR).__name__}: {_PDFPLUMBER_ERROR}\n\n"
+            "If that names a module OTHER than pdfplumber itself (_cffi_backend and\n"
+            "cryptography are the usual culprits), then pdfplumber IS installed and a\n"
+            "dependency underneath it is broken. Repair the chain rather than\n"
+            "reinstalling pdfplumber:\n"
+            "    python -m pip install --upgrade --force-reinstall cffi cryptography\n"
+            "    python -m pip install --upgrade --force-reinstall pdfminer.six pdfplumber\n"
+            "Then check: python -c \"import pdfplumber; print(pdfplumber.__version__)\"")
 
     pages: List[PageEvidence] = []
     numeric_tables: List[Dict[str, Any]] = []
