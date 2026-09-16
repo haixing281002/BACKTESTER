@@ -82,8 +82,17 @@ Total runtime: roughly 5–8 minutes on a free Colab CPU runtime. No GPU needed.
 cells.append(md(r"""---
 # SECTION 0 — Setup
 
-Run these three cells in order. Cell 0.1 installs libraries, 0.2 unpacks the engine,
-0.3 loads **both** of your input files."""))
+**Runtime → Run all works.** Cell 0.3 defaults to `SOURCE = "repo"`, which downloads both
+input files automatically — no clicking, no upload dialog.
+
+Run these three in order: **0.1** installs libraries (~90s), **0.2** unpacks the engine,
+**0.3** fetches the data.
+
+> If a cell fails instantly with *"SETUP INCOMPLETE"*, it means an earlier setup cell did not
+> finish. Scroll up, run 0.1 → 0.2 → 0.3 in order, then continue.
+>
+> If cell 0.1 reports imports that failed, do **Runtime → Restart session** and run it again —
+> installing `cvxpy` can swap `numpy` out from under a live kernel."""))
 
 cells.append(code(r'''#@title 0.1 — Install dependencies  { display-mode: "form" }
 # Colab already ships pandas, numpy, scipy, matplotlib, statsmodels and PyYAML.
@@ -101,10 +110,21 @@ if r.returncode != 0:
     raise SystemExit("install failed -- see output above")
 
 import importlib
+failed = []
 for m in ["pandas", "numpy", "scipy", "statsmodels", "cvxpy", "pdfplumber", "yaml",
           "matplotlib", "anthropic", "pydantic"]:
-    mod = importlib.import_module(m)
-    print(f"  ok  {m:<14} {getattr(mod, '__version__', '')}")
+    try:
+        mod = importlib.import_module(m)
+        print(f"  ok  {m:<14} {getattr(mod, '__version__', '')}")
+    except Exception as e:
+        failed.append(m)
+        print(f"  XX  {m:<14} {type(e).__name__}: {e}")
+if failed:
+    raise SystemExit(
+        f"\nThese failed to import: {failed}\n"
+        "Installing cvxpy can replace numpy/scipy underneath a running kernel.\n"
+        "Fix: Runtime > Restart session, then run this cell again (the install is\n"
+        "already done, so it will be quick), then carry on.")
 
 # Confirm the solver actually solves, not just imports.
 import cvxpy as cp, numpy as np
@@ -161,30 +181,58 @@ In the upload dialog you can select both files at once (ctrl-click / cmd-click).
 (Google Drive) is better if you will re-run this often."""))
 
 cells.append(code(r'''#@title 0.3 — Load your data  { display-mode: "form" }
-SOURCE = "upload"  #@param ["upload", "google_drive", "already_here"]
+# Default is "repo": both inputs download automatically from the public
+# repository, so Runtime > Run all works with no interaction. Switch to
+# "upload" only when you want to run YOUR OWN paper or data.
+SOURCE = "repo"  #@param ["repo", "upload", "google_drive", "already_here"]
 DRIVE_FOLDER = "/content/drive/MyDrive/quant_research"  #@param {type:"string"}
 
-import os, shutil, glob
+import os, shutil, glob, urllib.request
 
 WORK = "/content/research_os"
+if not os.path.isdir(WORK):
+    raise SystemExit("SETUP INCOMPLETE -- run cell 0.2 first (it unpacks the engine).")
 os.chdir(WORK)
 XLSX = "data/raw/Factor_Indices_Historical_Price_Data.xlsx"
+PDF = "docs/devanathan_2026_simple_dynamic_sbg.pdf"
+
+RAW = ("https://raw.githubusercontent.com/haixing281002/BACKTESTER/"
+       "claude/sleepy-hypatia-if6kj5/")
 
 def _place(path):
-    """Route an uploaded file to the right folder by extension."""
+    """Route a file to the right folder by extension."""
     low = path.lower()
     if low.endswith((".xlsx", ".xls")):
         shutil.copy(path, XLSX); return f"prices  -> {XLSX}"
     if low.endswith(".pdf"):
-        dst = "docs/devanathan_2026_simple_dynamic_sbg.pdf"
-        shutil.copy(path, dst); return f"paper   -> {dst}"
+        shutil.copy(path, PDF); return f"paper   -> {PDF}"
     return f"ignored -> {os.path.basename(path)} (not .xlsx or .pdf)"
 
-if SOURCE == "upload":
+if SOURCE == "repo":
+    for dst in (XLSX, PDF):
+        os.makedirs(os.path.dirname(dst), exist_ok=True)
+        url = RAW + ("data/raw/Factor_Indices_Historical_Price_Data.xlsx"
+                     if dst == XLSX else "docs/devanathan_2026_simple_dynamic_sbg.pdf")
+        try:
+            urllib.request.urlretrieve(url, dst)
+            print(f"  downloaded -> {dst}  ({os.path.getsize(dst):,} bytes)")
+        except Exception as e:
+            raise SystemExit(
+                f"Could not download {dst}: {type(e).__name__}: {e}\n"
+                "Set SOURCE = 'upload' above and provide the files yourself.")
+
+elif SOURCE == "upload":
     from google.colab import files
+    print("NOTE: this option needs you to pick files, so it does NOT work with")
+    print("'Run all'. Run this cell on its own.\n")
     print("Select BOTH your .xlsx AND the paper .pdf (ctrl-click / cmd-click to")
     print("multi-select), then wait for the upload to finish.\n")
-    for name in files.upload():
+    got = files.upload()
+    if not got:
+        raise SystemExit(
+            "No files were uploaded. If you used 'Run all', the upload widget is\n"
+            "skipped -- set SOURCE = 'repo' above, or run this cell by itself.")
+    for name in got:
         print("  " + _place(name))
 
 elif SOURCE == "google_drive":
@@ -274,6 +322,8 @@ and terrible at spotting an off-by-one in a shift."""))
 
 cells.append(code(r'''#@title 1.1 — Run the full pipeline on all three cards  { display-mode: "form" }
 import os, subprocess, sys, time
+if not os.path.isdir("/content/research_os"):
+    raise SystemExit("SETUP INCOMPLETE -- run cells 0.1, 0.2 and 0.3 first, in order.")
 os.chdir("/content/research_os")
 
 CARDS = [
@@ -334,6 +384,8 @@ the `math density` number."""))
 
 cells.append(code(r'''#@title 2.1 — Ingest the paper  { display-mode: "form" }
 import os
+if not os.path.isdir("/content/research_os"):
+    raise SystemExit("SETUP INCOMPLETE -- run cells 0.1, 0.2 and 0.3 first, in order.")
 os.chdir("/content/research_os")
 from ros.cards.extract import extract_document, summarize
 
@@ -367,6 +419,8 @@ Run the next cell."""))
 
 cells.append(code(r'''#@title 2.2 — Recover the results tables, and find the trap  { display-mode: "form" }
 import os
+if not os.path.isdir("/content/research_os"):
+    raise SystemExit("SETUP INCOMPLETE -- run cells 0.1, 0.2 and 0.3 first, in order.")
 os.chdir("/content/research_os")
 from ros.cards.extract import (extract_document, parse_text_tables,
                                propose_replication_targets, detect_target_conflicts)
@@ -440,6 +494,8 @@ replication could silently diverge."""))
 
 cells.append(code(r'''#@title 3.1 — Inspect the Strategy Card  { display-mode: "form" }
 import os, textwrap
+if not os.path.isdir("/content/research_os"):
+    raise SystemExit("SETUP INCOMPLETE -- run cells 0.1, 0.2 and 0.3 first, in order.")
 os.chdir("/content/research_os")
 from ros.cards.schema import load_card
 
@@ -511,6 +567,8 @@ Four possible resolutions per requirement:
 
 cells.append(code(r'''#@title 4.1 — Feasibility: the source paper  { display-mode: "form" }
 import os
+if not os.path.isdir("/content/research_os"):
+    raise SystemExit("SETUP INCOMPLETE -- run cells 0.1, 0.2 and 0.3 first, in order.")
 os.chdir("/content/research_os")
 from ros.cards.schema import load_card
 from ros.data.firm_registry import build_firm_registry
@@ -537,6 +595,8 @@ point is that it cost seconds to establish rather than days.""")'''))
 
 cells.append(code(r'''#@title 4.2 — Feasibility: the India adaptation  { display-mode: "form" }
 import os
+if not os.path.isdir("/content/research_os"):
+    raise SystemExit("SETUP INCOMPLETE -- run cells 0.1, 0.2 and 0.3 first, in order.")
 os.chdir("/content/research_os")
 from ros.cards.schema import load_card
 from ros.data.firm_registry import build_firm_registry
@@ -609,6 +669,8 @@ are no longer comparable, and the hash tells you that rather than letting you co
 
 cells.append(code(r'''#@title 5.1 — Build the snapshot and run the backtest  { display-mode: "form" }
 import os
+if not os.path.isdir("/content/research_os"):
+    raise SystemExit("SETUP INCOMPLETE -- run cells 0.1, 0.2 and 0.3 first, in order.")
 os.chdir("/content/research_os")
 import pandas as pd
 pd.set_option("display.width", 220)
@@ -764,6 +826,8 @@ interpretation below it — the two most important results are not the obvious o
 
 cells.append(code(r'''#@title 6.1 — Research validation  { display-mode: "form" }
 import os
+if not os.path.isdir("/content/research_os"):
+    raise SystemExit("SETUP INCOMPLETE -- run cells 0.1, 0.2 and 0.3 first, in order.")
 os.chdir("/content/research_os")
 import pandas as pd
 from ros.validation import research as rv
@@ -874,6 +938,8 @@ nothing. That is the most common way a "validated" signal turns out to be worthl
 
 cells.append(code(r'''#@title 7.1 — Portfolio validation  { display-mode: "form" }
 import os
+if not os.path.isdir("/content/research_os"):
+    raise SystemExit("SETUP INCOMPLETE -- run cells 0.1, 0.2 and 0.3 first, in order.")
 os.chdir("/content/research_os")
 import pandas as pd
 from ros.validation import portfolio as pv
@@ -981,6 +1047,8 @@ Three rules make it mean something:
 
 cells.append(code(r'''#@title 8.1 — Gates, ladder and library  { display-mode: "form" }
 import os, json
+if not os.path.isdir("/content/research_os"):
+    raise SystemExit("SETUP INCOMPLETE -- run cells 0.1, 0.2 and 0.3 first, in order.")
 os.chdir("/content/research_os")
 
 for name in ["report_devanathan_2026_india_factor_adaptation.txt",
@@ -1069,6 +1137,8 @@ cells.append(code(r'''#@title 9.1 — Mode and credentials  { display-mode: "for
 MODE = "replay"  #@param ["replay", "live"]
 
 import os
+if not os.path.isdir("/content/research_os"):
+    raise SystemExit("SETUP INCOMPLETE -- run cells 0.1, 0.2 and 0.3 first, in order.")
 os.chdir("/content/research_os")
 
 if MODE == "live":
@@ -1095,6 +1165,8 @@ if MODE == "replay":
 
 cells.append(code(r'''#@title 9.2 — Run the agentic interpretation (steps 01-03)  { display-mode: "form" }
 import os, subprocess, sys
+if not os.path.isdir("/content/research_os"):
+    raise SystemExit("SETUP INCOMPLETE -- run cells 0.1, 0.2 and 0.3 first, in order.")
 os.chdir("/content/research_os")
 
 cmd = [sys.executable, "run_agentic.py",
@@ -1135,6 +1207,8 @@ cells.append(code(r'''#@title 9.3 — Hand the agent-drafted card to the determi
 # The point of the whole design: the model's card re-enters through the SAME
 # front door a human-written card uses. There is no privileged path into the engine.
 import glob, os, subprocess, sys
+if not os.path.isdir("/content/research_os"):
+    raise SystemExit("SETUP INCOMPLETE -- run cells 0.1, 0.2 and 0.3 first, in order.")
 os.chdir("/content/research_os")
 
 cards = sorted(glob.glob("outputs/agentic/*.yaml"))
@@ -1189,6 +1263,8 @@ Whether that line is correct or merely conservative is the biggest open question
 
 cells.append(code(r'''#@title 9.4 — Prove the containment  { display-mode: "form" }
 import os, subprocess, sys
+if not os.path.isdir("/content/research_os"):
+    raise SystemExit("SETUP INCOMPLETE -- run cells 0.1, 0.2 and 0.3 first, in order.")
 os.chdir("/content/research_os")
 
 # The safety tests, not the prose-quality ones. Each answers one question:
@@ -1245,6 +1321,8 @@ trend-following paper cost one template and one branch."""))
 
 cells.append(code(r'''#@title 10.1 — Write and run your own card  { display-mode: "form" }
 import os, subprocess, sys
+if not os.path.isdir("/content/research_os"):
+    raise SystemExit("SETUP INCOMPLETE -- run cells 0.1, 0.2 and 0.3 first, in order.")
 os.chdir("/content/research_os")
 
 MY_CARD = r"""
