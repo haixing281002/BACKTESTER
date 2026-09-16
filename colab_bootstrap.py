@@ -26,7 +26,7 @@ import subprocess
 import sys
 import time
 
-VERSION = "2026-09-16.1"
+VERSION = "2026-09-16.2"
 REPO = "https://github.com/haixing281002/BACKTESTER.git"
 BRANCH = "claude/sleepy-hypatia-if6kj5"
 
@@ -163,6 +163,12 @@ def bootstrap(run_pipeline: bool = True, card: str = "india") -> str:
     # the other two papers
     !python run_pipeline.py --card cards/devanathan_2026_replication.yaml
     !python run_pipeline.py --card cards/moskowitz_2012_tsmom_india.yaml
+
+    # ANALYSE YOUR OWN PAPER -- no LLM, no API key, dataset unchanged
+    from colab_papers import upload_pdf, analyse, compare
+    p = upload_pdf()      # pick any .pdf  (run this cell on its own)
+    analyse(p)            # what the deterministic reader finds
+    compare(p)            # your paper vs the baseline, side by side
 
     # the agentic layer -- Claude reads the paper (no API key needed)
     !python run_agentic.py --pdf docs/devanathan_2026_simple_dynamic_sbg.pdf \\

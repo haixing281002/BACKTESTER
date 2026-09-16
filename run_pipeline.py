@@ -77,6 +77,12 @@ def main(argv=None) -> int:
                     help="tradable ADV of the sleeve basket, INR crore")
     ap.add_argument("--n-boot", type=int, default=2000)
     ap.add_argument("--no-charts", action="store_true")
+    # Gate B is a human decision. These flags are how a named person records it;
+    # without them the run ends at PENDING and the library says so.
+    ap.add_argument("--decision", choices=["APPROVE", "OBSERVE", "FIX", "REJECT"],
+                    help="Gate B ruling. Requires --decided-by.")
+    ap.add_argument("--decided-by", help="Name of the human who owns this decision.")
+    ap.add_argument("--rationale", help="Why. Stored with the decision.")
     args = ap.parse_args(argv)
 
     R = Report()
@@ -146,8 +152,12 @@ def main(argv=None) -> int:
     R.block(ga.render())
 
     if not feas.can_proceed:
-        ga.decision = "REJECT"
-        ga.rationale = "mandatory data unavailable; this is a procurement question, not a research question"
+        # Mechanically blocked, but the CALL is still a human's: reject the paper,
+        # or buy the data. The pipeline must not pre-empt that.
+        ga.decision = "PENDING"
+        ga.rationale = ("evidence supports REJECT or FIX-DATA; mandatory data unavailable. "
+                        "This is a procurement question, not a research question. "
+                        "A named human records the decision.")
         R.h("PIPELINE HALTED AT STEP 03 (FAIL FAST)")
         R.p("  No code was written against this card and no backtest was run.")
         R.p("  Blocking requirements:")
@@ -488,10 +498,36 @@ def main(argv=None) -> int:
     R.h("STEP 08  |  PROMOTION LADDER + STRATEGY LIBRARY")
     R.block(render_ladder(lad))
 
-    outcome = ("PROMOTED" if lad["attained_rung"] in ("PORTFOLIO_USEFUL", "PAPER_TRADED",
-                                                      "LIVE_CANDIDATE")
-               else "REJECTED" if lad["attained_rung"] is None else "HELD")
-    gb.decision = {"PROMOTED": "APPROVE", "HELD": "OBSERVE", "REJECTED": "REJECT"}[outcome]
+    # The ladder is mechanical: it reports which criteria passed. The DECISION
+    # is not mechanical and is never derived from it. A machine that both scores
+    # the evidence and rules on it is not a governed pipeline, whatever its
+    # criteria say. So the pipeline states what the evidence supports and stops.
+    recommendation = ("PROMOTE" if lad["attained_rung"] in ("PORTFOLIO_USEFUL",
+                                                            "PAPER_TRADED", "LIVE_CANDIDATE")
+                      else "REJECT" if lad["attained_rung"] is None else "OBSERVE")
+    if args.decision:
+        if not args.decided_by:
+            raise SystemExit("--decision requires --decided-by (a named human owns every decision)")
+        gb.decision = args.decision
+        gb.rationale = args.rationale or f"recorded by {args.decided_by}"
+        outcome = {"APPROVE": "PROMOTED", "OBSERVE": "HELD",
+                   "REJECT": "REJECTED", "FIX": "HELD"}[args.decision]
+        decided_by = args.decided_by
+    else:
+        gb.decision = "PENDING"
+        outcome = "PENDING_HUMAN"
+        decided_by = ""
+
+    R.h("GATE B DECISION")
+    R.p(f"  evidence supports : {recommendation}")
+    R.p(f"  decision recorded : {gb.decision}"
+        + (f"  by {decided_by}" if decided_by else ""))
+    if gb.decision == "PENDING":
+        R.p("")
+        R.p("  NO DECISION HAS BEEN MADE. The pipeline scored the evidence and stopped.")
+        R.p("  A named human records the call by re-running with, for example:")
+        R.p(f"    python run_pipeline.py --card {args.card} \\")
+        R.p(f"        --decision REJECT --decided-by \"N. Ganesh\" --rationale \"...\"")
 
     eid = make_entry_id(card.paper.id, card.fingerprint())
     entry = LibraryEntry(
@@ -501,6 +537,7 @@ def main(argv=None) -> int:
         snapshot_id=snap.snapshot_id, content_hash=snap.content_hash,
         engine_code_hash=snap.engine_code_hash, git_commit=snap.git_commit,
         outcome=outcome, attained_rung=lad["attained_rung"], stopped_at=lad["stopped_at"],
+        reviewer=decided_by,
         headline_metrics={
             "strategy": primary.name,
             "n_configs_tried": n_trials,
