@@ -56,7 +56,7 @@ def main() -> int:
 
     missing = []
     for m in ("pandas", "numpy", "scipy", "statsmodels", "cvxpy", "clarabel",
-              "pdfplumber", "openpyxl", "yaml", "pydantic"):
+              "pdfplumber", "openpyxl", "yaml", "pydantic", "pytest"):
         try:
             importlib.import_module(m)
         except Exception:                                        # noqa: BLE001

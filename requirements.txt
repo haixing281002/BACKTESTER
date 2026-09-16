@@ -10,3 +10,4 @@ clarabel>=0.9
 matplotlib>=3.7
 anthropic>=1.6
 pydantic>=2.0
+pytest>=7.0
