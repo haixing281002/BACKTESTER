@@ -17,7 +17,7 @@ def code(src, hide=False):
             "outputs": [], "source": src.split("\n")}
 
 subprocess.run(["tar", "czf", BUNDLE, "--exclude=__pycache__",
-                "ros", "run_pipeline.py", "cards", "tests"], check=True)
+                "ros", "run_pipeline.py", "run_agentic.py", "cards", "tests"], check=True)
 b64 = base64.b64encode(open(BUNDLE, "rb").read()).decode()
 chunks = [b64[i:i+100] for i in range(0, len(b64), 100)]
 bundle_literal = "_B64 = (\n" + "\n".join(f'    "{c}"' for c in chunks) + "\n)"
@@ -91,7 +91,8 @@ cells.append(code(r'''#@title 0.1 — Install dependencies  { display-mode: "for
 # pdfplumber (PDF ingestion), openpyxl (your .xlsx).
 import subprocess, sys
 
-PKGS = ["cvxpy>=1.5", "clarabel>=0.9", "pdfplumber>=0.10", "openpyxl>=3.1", "PyYAML>=6.0"]
+PKGS = ["cvxpy>=1.5", "clarabel>=0.9", "pdfplumber>=0.10", "openpyxl>=3.1",
+        "PyYAML>=6.0", "anthropic>=1.6", "pydantic>=2.0"]
 print("Installing (60-90s on a cold runtime)...")
 r = subprocess.run([sys.executable, "-m", "pip", "install", "-q", *PKGS],
                    capture_output=True, text=True)
@@ -100,7 +101,8 @@ if r.returncode != 0:
     raise SystemExit("install failed -- see output above")
 
 import importlib
-for m in ["pandas", "numpy", "scipy", "statsmodels", "cvxpy", "pdfplumber", "yaml", "matplotlib"]:
+for m in ["pandas", "numpy", "scipy", "statsmodels", "cvxpy", "pdfplumber", "yaml",
+          "matplotlib", "anthropic", "pydantic"]:
     mod = importlib.import_module(m)
     print(f"  ok  {m:<14} {getattr(mod, '__version__', '')}")
 
@@ -1008,7 +1010,213 @@ fingerprint and lessons. Two capabilities this unlocks:
     same bet submitted under a different name.""")'''))
 
 cells.append(md(r"""---
-# SECTION 9 — Running YOUR next paper
+# SECTION 9 — The agentic layer
+
+## Everything so far used regex. This section replaces that with Claude.
+
+Steps 01 and 02 have been doing string matching over extracted PDF text. It works, and you saw
+exactly how badly it fails:
+
+| What the regex version did | What it missed |
+|---|---|
+| `extract_tables()` found **0 tables** | The results tables that define replication targets |
+| Read equations as `wspy +wagg +wgld` | Every subscript and superscript |
+| Read figure labels as `nruter evitalumuC` | Which pages are figures vs results |
+| Harvested 64 targets, 22 conflicting | That they sit on **7 different accounting bases** |
+| Matched keywords | The admission that a parameter was chosen by searching the sample |
+
+That last one matters most. **No regex will ever find "after a modest search over various
+values"** — and that phrase is the single most important fact about the paper's headline number,
+because it means the result is *selected* rather than estimated.
+
+## The rule this layer follows
+
+> **Models interpret. Code computes. Humans allocate.**
+
+Seven agents plus a cheap triage pass. Every one sits on the side of that line where a model is
+genuinely better than code — reading documents, judging whether two things mean the same thing,
+spotting a pattern in a diagnostic table. **Arithmetic, portfolio accounting, statistical
+inference and both gates stay deterministic.**
+
+| Agent | Model | Step | Job |
+|---|---|---|---|
+| `TriageAgent` | Haiku 4.5 | 00 | Screen a stack of papers cheaply |
+| `PaperAnalystAgent` | Opus 5 | 01 | Read the rendered PDF natively |
+| `CardDrafterAgent` | Opus 5 | 02 | Draft the Strategy Card |
+| `AmbiguityCriticAgent` | Opus 5 | 02 | **Attack the draft** |
+| `DataMapperAgent` | Opus 5 | 03 | Semantic data matching (advisory) |
+| `TemplateMatcherAgent` | Opus 5 | 05 | Pick an allocator — never write code |
+| `ResultsCriticAgent` | Opus 5 | 06/07 | Attack our own backtest |
+| `LibrarianAgent` | Opus 5 | 08 | Recall past failures |
+
+Triage runs on the cheapest model deliberately: a wrong answer costs one unnecessary full read,
+and the next stage catches it. That is what makes twenty papers a day affordable."""))
+
+cells.append(md(r"""### 9.1 — Choose how to run this
+
+Two modes, and **replay works with no API key at all**:
+
+- **`replay`** — serves recorded fixtures for this paper. Runs the whole orchestration, schema
+  validation, gate logic and review-queue routing with zero API calls. This is what the test
+  suite uses, and what CI would use.
+- **`live`** — real Claude calls. Needs a key from
+  [console.anthropic.com](https://console.anthropic.com/settings/keys).
+
+Start with `replay` to see the shape. Switch to `live` when you want it to read a paper it has
+never seen."""))
+
+cells.append(code(r'''#@title 9.1 — Mode and credentials  { display-mode: "form" }
+MODE = "replay"  #@param ["replay", "live"]
+
+import os
+os.chdir("/content/research_os")
+
+if MODE == "live":
+    from getpass import getpass
+    if not os.environ.get("ANTHROPIC_API_KEY"):
+        # getpass keeps the key out of the notebook's saved output.
+        os.environ["ANTHROPIC_API_KEY"] = getpass("Anthropic API key (sk-ant-...): ").strip()
+    import anthropic
+    try:
+        anthropic.Anthropic().models.retrieve("claude-opus-5")
+        print("credential OK -- live Claude calls enabled")
+    except Exception as e:
+        print(f"credential check failed: {type(e).__name__}: {e}")
+        print("Falling back to replay mode.")
+        MODE = "replay"
+
+FIXTURES = "ros/agents/fixtures/devanathan_2026.json" if MODE == "replay" else None
+print(f"\nmode: {MODE}")
+if MODE == "replay":
+    print("No API calls will be made. The fixtures are hand-written from a real")
+    print("reading of this paper, and a MISSING fixture is an error -- the replay")
+    print("transport refuses to invent an answer, so a green run here means the")
+    print("orchestration genuinely worked rather than a stub returning something.")'''))
+
+cells.append(code(r'''#@title 9.2 — Run the agentic interpretation (steps 01-03)  { display-mode: "form" }
+import os, subprocess, sys
+os.chdir("/content/research_os")
+
+cmd = [sys.executable, "run_agentic.py",
+       "--pdf", "docs/devanathan_2026_simple_dynamic_sbg.pdf",
+       "--mode", "adaptation"]
+if FIXTURES:
+    cmd += ["--replay", FIXTURES]
+
+r = subprocess.run(cmd, capture_output=True, text=True)
+print(r.stdout)
+if r.returncode != 0:
+    print(r.stderr[-3000:])'''))
+
+cells.append(md(r"""### What just happened, and why it differs from Section 2
+
+**The accounting-base problem is solved, not merely detected.** The regex version found 22
+conflicting targets and could only tell you *that* they conflicted. The analyst returns each
+result's **basis** — pre-tax nominal, inflation-adjusted, post-tax bracket B4 — so the card can
+be pinned to exactly one. That turns an unfalsifiable replication test into a falsifiable one.
+
+**In-sample selection is caught from prose.** Both admissions surfaced: the 11-day window chosen
+"after a modest search", and the 7% target asserted then swept 19 ways. Both inflate the trial
+budget for the deflated Sharpe. A keyword scan finds neither.
+
+**Equations are read off the rendered page**, restated in plain notation, each tagged with the
+card field it governs and a confidence rating. Anything below high confidence goes straight to
+the human queue.
+
+**The critic caught the drafter.** Two real omissions that would have survived a single pass:
+the draft ignored the paper's own parameter sweep when counting trials, and it silently
+implemented the *weaker* of the paper's two forecasts while presenting it as the headline
+mechanism. That is the case for pairing a drafter with an adversary.
+
+And the run ends at **Gate A with a human review queue** — 14 items on this paper. Nothing was
+decided by a model."""))
+
+cells.append(code(r'''#@title 9.3 — Hand the agent-drafted card to the deterministic engine  { display-mode: "form" }
+# The point of the whole design: the model's card re-enters through the SAME
+# front door a human-written card uses. There is no privileged path into the engine.
+import glob, os, subprocess, sys
+os.chdir("/content/research_os")
+
+cards = sorted(glob.glob("outputs/agentic/*.yaml"))
+if not cards:
+    raise SystemExit("No agent-drafted card found -- run cell 9.2 first.")
+card = cards[0]
+print(f"agent-drafted card: {card}\n")
+
+from ros.cards.schema import load_card, CardValidationError
+try:
+    c = load_card(card)
+    print(f"validates against the schema: YES   fingerprint {c.fingerprint()}")
+    print(f"  mode={c.intent.mode}  template={c.signal.template}  "
+          f"assets={len(c.universe.assets)}  lag={c.signal.lag_days}d")
+except CardValidationError as e:
+    raise SystemExit(f"card does NOT validate -- the pipeline refuses it:\n{e}")
+
+print("\nrunning the unchanged deterministic pipeline on it...\n")
+r = subprocess.run([sys.executable, "run_pipeline.py", "--card", card, "--n-boot", "1000"],
+                   capture_output=True, text=True)
+out = r.stdout
+for marker in ["PERFORMANCE (net of costs", "PROMOTION LADDER"]:
+    i = out.find(marker)
+    if i > 0:
+        print(out[i:i + 1900]); print()'''))
+
+cells.append(md(r"""### What keeps the model subordinate
+
+This is the part worth scrutinising, because it separates a governed pipeline from a demo. Six
+mechanisms, all in code rather than in prompts:
+
+1. **Every agent output is a Pydantic instance**, never prose that something downstream parses.
+   If the model cannot produce a valid instance, the call fails loudly.
+2. **The drafted card re-enters through `load_card()`** — the same function the human path uses.
+   You just watched that in 9.3. An invalid card stops the run.
+3. **`assess()` still owns the feasibility verdict.** The data mapper's opinion is recorded
+   *beside* it, and where the two disagree, the disagreement is surfaced — never resolved in the
+   model's favour.
+4. **The agent layer cannot write to the data registry.** A model claiming a series exists does
+   not make it exist. There is a test for exactly this.
+5. **Backtesting, bootstrap, deflated Sharpe and both gates never see an LLM.** Every number in
+   the report above was computed deterministically.
+6. **Non-determinism is contained by freezing the card and hashing *that*.** The card is
+   re-derivable even though the model is not — which is the property the engine needs.
+
+The one thing this layer deliberately does **not** do is write engine code. `TemplateMatcherAgent`
+selects from eight audited allocators and, when none fits, writes a ~30-line specification for a
+human engineer. A model that generates allocators produces the one artefact nobody can review at
+twenty papers a day.
+
+Whether that line is correct or merely conservative is the biggest open question in the design."""))
+
+cells.append(code(r'''#@title 9.4 — Prove the containment  { display-mode: "form" }
+import os, subprocess, sys
+os.chdir("/content/research_os")
+
+# The safety tests, not the prose-quality ones. Each answers one question:
+# can a wrong or hostile model output reach something that matters?
+SAFETY = [
+    "test_replay_transport_refuses_to_invent_a_missing_answer",
+    "test_replay_transport_rejects_a_malformed_answer",
+    "test_invalid_drafted_card_is_caught_and_queued_not_executed",
+    "test_agent_cannot_widen_data_access",
+    "test_disagreement_between_model_and_gate_is_surfaced_not_resolved",
+    "test_no_agent_returns_free_text",
+    "test_system_prompt_states_the_paper_is_data",
+]
+r = subprocess.run([sys.executable, "-m", "pytest", "tests/test_agents.py",
+                    "-v", "-k", " or ".join(SAFETY)],
+                   capture_output=True, text=True)
+for line in r.stdout.splitlines():
+    if any(k in line for k in ("PASSED", "FAILED", "passed", "failed")):
+        print(line)
+
+print("""
+The first two matter most for trusting this notebook: the replay transport
+REFUSES to invent a missing fixture and REJECTS a malformed one. A green run
+in replay mode therefore means the orchestration really worked, rather than a
+stub quietly returning something plausible.""")'''))
+
+cells.append(md(r"""---
+# SECTION 10 — Running YOUR next paper
 
 ## The whole point: a new paper is a YAML file
 
@@ -1035,7 +1243,7 @@ engine, not the validation suite, not the gates, not the ladder.
 The third card in this notebook exists to prove exactly that. Supporting a long-short futures
 trend-following paper cost one template and one branch."""))
 
-cells.append(code(r'''#@title 9.1 — Write and run your own card  { display-mode: "form" }
+cells.append(code(r'''#@title 10.1 — Write and run your own card  { display-mode: "form" }
 import os, subprocess, sys
 os.chdir("/content/research_os")
 
@@ -1139,7 +1347,7 @@ for marker in ["STEP 05  |  BUILD", "PROMOTION LADDER"]:
         print(out[i:i + 2600]); print()'''))
 
 cells.append(md(r"""---
-# SECTION 10 — What this means for you
+# SECTION 11 — What this means for you
 
 ## The three findings that should change what you do
 
