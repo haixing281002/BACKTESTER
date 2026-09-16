@@ -12,11 +12,32 @@ Ten minutes, and **no API key**.
 
 ## 2. Clone
 
+**These are TERMINAL commands, not a document.** In VS Code open
+**Terminal → New Terminal**, then paste them there. Do not paste them into a
+`.md` or `.txt` file — a Markdown preview extension will not run anything.
+
+macOS / Linux:
+
 ```bash
 git clone https://github.com/haixing281002/BACKTESTER.git
 cd BACKTESTER
 pip install -r requirements.txt
 ```
+
+Windows (PowerShell) — same, but Python is usually `py`:
+
+```powershell
+git clone https://github.com/haixing281002/BACKTESTER.git
+cd BACKTESTER
+py -m pip install -r requirements.txt
+```
+
+If `git` is not recognised, install it from <https://git-scm.com/downloads> and
+reopen the terminal. If `py` is not recognised, install Python from
+<https://python.org/downloads> and **tick "Add python.exe to PATH"** during setup.
+
+Throughout the rest of this file, Windows users read `py` wherever it says
+`python`.
 
 The repository already contains the price workbook and the test-case paper, so
 there is nothing to download or upload.
@@ -24,7 +45,7 @@ there is nothing to download or upload.
 ## 3. Check it works before involving Claude at all
 
 ```bash
-python -m pytest tests/ -q
+python -m pytest tests/ -q          # Windows: py -m pytest tests/ -q
 python run_pipeline.py --card cards/devanathan_2026_india_factor_adaptation.yaml
 ```
 
@@ -36,8 +57,12 @@ Everything in that run is deterministic Python. **No model was involved.**
 
 ## 4. Add Claude Code
 
-Install the **Claude Code** extension from the VS Code marketplace, then sign in
-with your Claude account when prompted. (Current install and sign-in steps:
+In VS Code open the **Extensions** panel (the squares icon in the left bar) and
+search for exactly **`Claude Code`** — publisher Anthropic. Not a Markdown
+extension, not a debugger; the LLM half of this pipeline is Claude Code and
+nothing else provides it.
+
+Install it, then sign in with your Claude account when prompted. (Current install and sign-in steps:
 <https://code.claude.com/docs>.) There is also a CLI — `npm install -g
 @anthropic-ai/claude-code`, then run `claude` inside the repo — if you prefer the
 terminal.
