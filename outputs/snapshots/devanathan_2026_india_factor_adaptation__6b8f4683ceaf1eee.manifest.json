@@ -1,9 +1,9 @@
 {
   "snapshot_id": "devanathan_2026_india_factor_adaptation__6b8f4683ceaf1eee",
-  "created_utc": "2026-09-15T10:34:25+00:00",
+  "created_utc": "2026-09-16T04:25:34+00:00",
   "content_hash": "84abe49445fb2131d6b251d94b698f1c8a8d779af2a39ce7d205db0f5b92368c",
   "engine_code_hash": "a8b53d961606696fdbde71f3e19749a5b833010b2ecec1c15c0a1252afbe8c42",
-  "git_commit": "b25a645fdd7a0240d1ebb9f6bba51bbc21bbce83",
+  "git_commit": "2001051a5188b87a10eaa6f5302ee7779aa82854",
   "shape": [
     5247,
     7

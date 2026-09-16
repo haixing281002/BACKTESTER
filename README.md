@@ -149,6 +149,56 @@ docs/PIPELINE_REVIEW.md       step-by-step issues, red flags, green flags, findi
 
 ---
 
+## The agentic layer
+
+`ros/agents/` puts Claude where a model is genuinely better than code — reading documents,
+judging whether two things mean the same thing, spotting a pattern in a diagnostic table,
+writing the memo — and nowhere else. Arithmetic, portfolio accounting, statistical inference
+and both gates stay deterministic.
+
+```bash
+# no API key needed -- replays recorded fixtures
+python run_agentic.py --pdf docs/<paper>.pdf --mode adaptation \
+    --replay ros/agents/fixtures/devanathan_2026.json
+
+# live, once ANTHROPIC_API_KEY is set (or `ant auth login`)
+python run_agentic.py --pdf docs/<paper>.pdf --mode adaptation
+```
+
+It stops at Gate A with a human review queue. The deterministic pipeline then runs unchanged
+on the drafted card.
+
+| Agent | Model | Step | Job |
+|---|---|---|---|
+| `TriageAgent` | Haiku 4.5 | 00 | Screen a stack of papers cheaply |
+| `PaperAnalystAgent` | Opus 5 | 01 | Read the rendered PDF: tables, equations, accounting bases |
+| `CardDrafterAgent` | Opus 5 | 02 | Draft the Strategy Card |
+| `AmbiguityCriticAgent` | Opus 5 | 02 | Attack the draft; find what it waved through |
+| `DataMapperAgent` | Opus 5 | 03 | Semantic requirement→registry matching (advisory) |
+| `TemplateMatcherAgent` | Opus 5 | 05 | Pick a registered allocator; never write code |
+| `ResultsCriticAgent` | Opus 5 | 06/07 | Attack our own backtest |
+| `LibrarianAgent` | Opus 5 | 08 | Semantic recall over past failures |
+
+**What keeps the model subordinate:**
+
+- Every output is a Pydantic instance, never prose a parser consumes.
+- A drafted card re-enters through the same `load_card()` the human path uses. Invalid card,
+  no run.
+- `assess()` still owns the feasibility verdict; the model's opinion is recorded alongside it,
+  and disagreements are surfaced, never resolved in the model's favour.
+- The agent layer cannot write to the data registry, so a model cannot conjure data into being.
+- Backtesting, bootstrap, deflated Sharpe and both gates never see an LLM.
+- All agents share one cached system prefix and one cached document block, so a paper is
+  uploaded once and read by seven agents.
+
+Non-determinism is contained by freezing the model's card and hashing *that* — the card is
+re-derivable even though the model is not.
+
+`docs/paper_to_position_pipeline.html` charts every stage, its LLM insertion point and its
+failure modes.
+
+---
+
 ## Running it in Google Colab
 
 `colab/Research_OS_Colab.ipynb` is a **self-contained** notebook: the entire `ros` package is
