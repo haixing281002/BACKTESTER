@@ -2,6 +2,39 @@
 
 Ten minutes, and **no API key**.
 
+## 0. Check the machine has Git and Python — do this first
+
+Paste into VS Code's terminal (**Terminal → New Terminal**):
+
+```powershell
+git --version ; python --version ; py --version
+```
+
+If any says *"is not recognized"*, install it before going further. Everything
+below fails in a confusing cascade otherwise: no Git means no clone, which means
+`cd` fails, which means every Python command fails too — four errors from one
+missing program.
+
+**Windows, fastest route** (winget ships with Windows 10/11):
+
+```powershell
+winget install --id Git.Git -e
+winget install --id Python.Python.3.12 -e
+```
+
+**Or install by hand:** [git-scm.com/downloads](https://git-scm.com/downloads) and
+[python.org/downloads](https://python.org/downloads) — on the Python installer,
+**tick "Add python.exe to PATH"** on the first screen. It is off by default and is
+the single most common reason `python` is not recognised afterwards.
+
+**Then close VS Code completely and reopen it.** A terminal that was already open
+keeps the old PATH and will still say "not recognized" even after a correct
+install. Re-run the check above; all three should print a version.
+
+*Don't want to install anything?* The Colab route needs nothing on your machine —
+see `colab_bootstrap.py`. You lose the Claude Code stages, but the whole
+deterministic pipeline runs.
+
 ## 1. What you need
 
 - **VS Code**
