@@ -1,0 +1,808 @@
+<title>Paper to Position</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+  :root{
+    --ground:#E7ECF1; --surface:#FFFFFF; --surface-2:#F2F5F8;
+    --ink:#111820; --ink-2:#39444F; --muted:#5C6A79; --faint:#8494A3;
+    --rule:#C6D1DC; --rule-soft:#DCE4EB;
+    --det:#2C5B80; --det-bg:#DCE7F0;
+    --llm:#A9640A; --llm-bg:#F6E8D2;
+    --gate:#8A2A3E; --gate-bg:#F4DDE2;
+    --hi:#9E2A1C; --hi-bg:#F6DED9;
+    --md:#A9640A; --lo:#5C6A79;
+    --shadow:0 1px 2px rgba(17,24,32,.06), 0 6px 18px rgba(17,24,32,.05);
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --ground:#0D1218; --surface:#151C24; --surface-2:#1B242E;
+      --ink:#E3EAF1; --ink-2:#BFCBD7; --muted:#8C9BAB; --faint:#6D7C8C;
+      --rule:#283441; --rule-soft:#1F2A35;
+      --det:#7CB0D6; --det-bg:#162A3A;
+      --llm:#E0A03F; --llm-bg:#33260F;
+      --gate:#DE8094; --gate-bg:#35161F;
+      --hi:#E88472; --hi-bg:#351913;
+      --md:#E0A03F; --lo:#8C9BAB;
+      --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 18px rgba(0,0,0,.28);
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#0D1218; --surface:#151C24; --surface-2:#1B242E;
+    --ink:#E3EAF1; --ink-2:#BFCBD7; --muted:#8C9BAB; --faint:#6D7C8C;
+    --rule:#283441; --rule-soft:#1F2A35;
+    --det:#7CB0D6; --det-bg:#162A3A;
+    --llm:#E0A03F; --llm-bg:#33260F;
+    --gate:#DE8094; --gate-bg:#35161F;
+    --hi:#E88472; --hi-bg:#351913;
+    --md:#E0A03F; --lo:#8C9BAB;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 18px rgba(0,0,0,.28);
+  }
+
+  body{background:var(--ground); color:var(--ink);
+       font-family:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+       font-size:15px; line-height:1.55; -webkit-font-smoothing:antialiased;}
+  .wrap{max-width:1180px; margin:0 auto; padding-inline:20px; padding-block:34px 72px;}
+
+  h1,h2,h3,.cond{font-family:"IBM Plex Sans Condensed","IBM Plex Sans",sans-serif;}
+  .mono{font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;}
+
+  /* ---------- header ---------- */
+  header{border-bottom:2px solid var(--ink); padding-bottom:20px; margin-bottom:8px;}
+  .eyebrow{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.14em;
+           text-transform:uppercase; color:var(--muted); display:flex; gap:14px; flex-wrap:wrap;}
+  h1{font-size:clamp(34px,6vw,54px); line-height:1.02; font-weight:700; margin:12px 0 0;
+     letter-spacing:-.02em; text-wrap:balance;}
+  .lede{font-size:17px; color:var(--ink-2); max-width:66ch; margin-top:12px;}
+  .lede strong{color:var(--ink); font-weight:600;}
+
+  /* ---------- legend ---------- */
+  .legend{display:flex; gap:22px; flex-wrap:wrap; margin:26px 0 14px;
+          font-size:12.5px; color:var(--muted);}
+  .legend span{display:flex; align-items:center; gap:8px;}
+  .chip{width:13px; height:13px; border-radius:3px; flex:none;}
+  .chip.det{background:var(--det);} .chip.llm{background:var(--llm);}
+  .chip.gate{background:var(--gate);}
+  .chip.adv{background:transparent; border:1.5px dashed var(--llm);}
+
+  /* ---------- matrix ---------- */
+  .scroller{overflow-x:auto; border:1px solid var(--rule); border-radius:8px;
+            background:var(--surface); box-shadow:var(--shadow); margin-bottom:40px;}
+  .scroller svg{display:block; min-width:940px; width:100%; height:auto;}
+  .cap{font-size:12.5px; color:var(--muted); margin:-30px 0 40px; max-width:70ch;}
+
+  /* ---------- sections ---------- */
+  section{margin-top:52px;}
+  h2{font-size:12px; letter-spacing:.16em; text-transform:uppercase; color:var(--muted);
+     font-weight:600; margin:0 0 6px; font-family:"IBM Plex Mono",monospace;}
+  .h2sub{font-size:clamp(22px,3.4vw,30px); font-weight:700; letter-spacing:-.015em;
+         margin:0 0 20px; font-family:"IBM Plex Sans Condensed",sans-serif; text-wrap:balance;}
+
+  /* ---------- stage rows ---------- */
+  .stage{display:grid; grid-template-columns:76px 1fr; gap:0;
+         background:var(--surface); border:1px solid var(--rule); border-radius:8px;
+         margin-bottom:14px; overflow:hidden; box-shadow:var(--shadow);}
+  .spine{padding:16px 0 16px 14px; border-right:1px solid var(--rule-soft);
+         display:flex; flex-direction:column; align-items:flex-start; gap:8px;}
+  .num{font-family:"IBM Plex Mono",monospace; font-size:19px; font-weight:600; line-height:1;}
+  .bar{width:5px; flex:1; min-height:38px; border-radius:3px;}
+  .stage.det .num{color:var(--det);} .stage.det .bar{background:var(--det);}
+  .stage.llm .num{color:var(--llm);} .stage.llm .bar{background:var(--llm);}
+  .stage.gate .num{color:var(--gate);} .stage.gate .bar{background:var(--gate);}
+  .body{padding:16px 18px 18px;}
+  .stitle{font-family:"IBM Plex Sans Condensed",sans-serif; font-size:21px; font-weight:700;
+          letter-spacing:-.01em; margin:0; display:flex; align-items:baseline;
+          gap:10px; flex-wrap:wrap;}
+  .owner{font-family:"IBM Plex Mono",monospace; font-size:10.5px; letter-spacing:.1em;
+         text-transform:uppercase; padding:3px 7px; border-radius:4px; font-weight:500;}
+  .owner.det{background:var(--det-bg); color:var(--det);}
+  .owner.llm{background:var(--llm-bg); color:var(--llm);}
+  .owner.gate{background:var(--gate-bg); color:var(--gate);}
+  .does{color:var(--ink-2); margin:9px 0 0; max-width:74ch;}
+
+  .agent{margin-top:13px; padding:11px 13px; border-radius:6px;
+         background:var(--llm-bg); border-left:3px solid var(--llm);}
+  .agent .lbl{font-family:"IBM Plex Mono",monospace; font-size:10.5px; letter-spacing:.11em;
+              text-transform:uppercase; color:var(--llm); font-weight:600;}
+  .agent .name{font-family:"IBM Plex Mono",monospace; font-size:13px; font-weight:600;
+               color:var(--ink); margin-top:3px;}
+  .agent p{margin:5px 0 0; font-size:14px; color:var(--ink-2); max-width:72ch;}
+  .noai{margin-top:13px; padding:9px 13px; border-radius:6px; background:var(--surface-2);
+        border-left:3px solid var(--rule); font-size:13.5px; color:var(--muted); max-width:74ch;}
+
+  .risks{list-style:none; padding:0; margin:14px 0 0; display:flex;
+         flex-direction:column; gap:8px;}
+  .risks li{display:grid; grid-template-columns:auto 1fr; gap:10px; align-items:start;
+            font-size:14px; color:var(--ink-2); max-width:78ch;}
+  .sev{font-family:"IBM Plex Mono",monospace; font-size:9.5px; letter-spacing:.08em;
+       text-transform:uppercase; padding:2.5px 6px; border-radius:3px; font-weight:600;
+       white-space:nowrap; margin-top:2px;}
+  .sev.hi{background:var(--hi-bg); color:var(--hi);}
+  .sev.md{background:var(--llm-bg); color:var(--md);}
+  .sev.lo{background:var(--surface-2); color:var(--lo); border:1px solid var(--rule-soft);}
+  .risks b{color:var(--ink); font-weight:600;}
+
+  /* ---------- cross-cutting ---------- */
+  .grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(290px,1fr)); gap:14px;}
+  .xc{background:var(--surface); border:1px solid var(--rule); border-radius:8px;
+      padding:16px 17px; box-shadow:var(--shadow);}
+  .xc h3{font-size:17px; font-weight:700; margin:0 0 7px; letter-spacing:-.01em;}
+  .xc p{margin:0; font-size:14px; color:var(--ink-2);}
+  .xc .tag{font-family:"IBM Plex Mono",monospace; font-size:10px; letter-spacing:.1em;
+           text-transform:uppercase; color:var(--faint); display:block; margin-bottom:6px;}
+
+  /* ---------- questions ---------- */
+  .qgroup{margin-bottom:34px;}
+  .qhead{display:flex; align-items:baseline; gap:12px; border-bottom:1px solid var(--rule);
+         padding-bottom:7px; margin-bottom:16px; flex-wrap:wrap;}
+  .qhead h3{font-size:20px; font-weight:700; margin:0; letter-spacing:-.01em;}
+  .qhead .qn{font-family:"IBM Plex Mono",monospace; font-size:12px; color:var(--faint);}
+  .q{border-left:2px solid var(--rule); padding:2px 0 2px 16px; margin-bottom:17px;}
+  .q.pri{border-left-color:var(--gate);}
+  .q .ask{font-size:16px; font-weight:500; color:var(--ink); margin:0; max-width:72ch;}
+  .q .why{font-size:13.5px; color:var(--muted); margin:6px 0 0; max-width:74ch;}
+  .q .why b{color:var(--ink-2); font-weight:600;}
+  .star{font-family:"IBM Plex Mono",monospace; font-size:10px; letter-spacing:.09em;
+        text-transform:uppercase; color:var(--gate); font-weight:600; margin-right:7px;}
+
+  footer{margin-top:64px; padding-top:18px; border-top:1px solid var(--rule);
+         font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.09em;
+         text-transform:uppercase; color:var(--faint);
+         display:flex; justify-content:space-between; gap:16px; flex-wrap:wrap;}
+
+  @media (max-width:560px){
+    .stage{grid-template-columns:58px 1fr;}
+    .spine{padding-left:11px;}
+    .num{font-size:16px;}
+  }
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;}}
+</style>
+
+<div class="wrap">
+
+<header>
+  <div class="eyebrow">
+    <span>AI Research Operating System</span>
+    <span>Long-only Indian equities / NIFTY500</span>
+    <span>Architecture review</span>
+  </div>
+  <h1>Paper to Position</h1>
+  <p class="lede">Where an LLM belongs in a quant research pipeline, where it must not go, and
+  what can go wrong at each of the eleven checkpoints between reading a paper and allocating
+  capital. <strong>Built and running</strong> — every stage below exists in code; the risks are
+  the ones the build actually surfaced.</p>
+</header>
+
+<div class="legend">
+  <span><i class="chip llm"></i> LLM owns the step</span>
+  <span><i class="chip adv"></i> LLM advises, cannot decide</span>
+  <span><i class="chip det"></i> Deterministic code</span>
+  <span><i class="chip gate"></i> Human decision</span>
+</div>
+
+<div class="scroller">
+<svg viewBox="0 0 1140 258" role="img" aria-label="Responsibility matrix: which of AI, deterministic code, or humans owns each of the eleven pipeline stages.">
+  <g class="mono" font-family="IBM Plex Mono, monospace">
+
+    <!-- row labels -->
+    <text x="14" y="86" font-size="11.5" font-weight="600" fill="var(--llm)" letter-spacing="1">AI INTERPRETS</text>
+    <text x="14" y="146" font-size="11.5" font-weight="600" fill="var(--det)" letter-spacing="1">CODE COMPUTES</text>
+    <text x="14" y="206" font-size="11.5" font-weight="600" fill="var(--gate)" letter-spacing="1">HUMANS GOVERN</text>
+
+    <!-- lane rules -->
+    <line x1="160" y1="102" x2="1128" y2="102" stroke="var(--rule-soft)" stroke-width="1"/>
+    <line x1="160" y1="162" x2="1128" y2="162" stroke="var(--rule-soft)" stroke-width="1"/>
+    <line x1="160" y1="222" x2="1128" y2="222" stroke="var(--rule-soft)" stroke-width="1"/>
+
+    <!-- column headers + cells. x step = 88, first col x=166 -->
+    <!-- 00 TRIAGE : AI owns -->
+    <text x="166" y="30" font-size="10.5" font-weight="600" fill="var(--faint)">00</text>
+    <text x="166" y="46" font-size="11" font-weight="600" fill="var(--ink-2)">TRIAGE</text>
+    <rect x="166" y="60" width="62" height="34" rx="4" fill="var(--llm)"/>
+    <text x="197" y="82" font-size="10" fill="var(--surface)" text-anchor="middle" font-weight="600">OWNS</text>
+
+    <!-- 01 INGEST : AI owns, code stores -->
+    <text x="254" y="30" font-size="10.5" font-weight="600" fill="var(--faint)">01</text>
+    <text x="254" y="46" font-size="11" font-weight="600" fill="var(--ink-2)">INGEST</text>
+    <rect x="254" y="60" width="62" height="34" rx="4" fill="var(--llm)"/>
+    <text x="285" y="82" font-size="10" fill="var(--surface)" text-anchor="middle" font-weight="600">OWNS</text>
+    <rect x="254" y="120" width="62" height="34" rx="4" fill="var(--det-bg)" stroke="var(--det)" stroke-width="1"/>
+    <text x="285" y="142" font-size="9" fill="var(--det)" text-anchor="middle" font-weight="600">HASH</text>
+
+    <!-- 02 CARD : AI owns, code validates -->
+    <text x="342" y="30" font-size="10.5" font-weight="600" fill="var(--faint)">02</text>
+    <text x="342" y="46" font-size="11" font-weight="600" fill="var(--ink-2)">CARD</text>
+    <rect x="342" y="60" width="62" height="34" rx="4" fill="var(--llm)"/>
+    <text x="373" y="82" font-size="10" fill="var(--surface)" text-anchor="middle" font-weight="600">OWNS</text>
+    <rect x="342" y="120" width="62" height="34" rx="4" fill="var(--det-bg)" stroke="var(--det)" stroke-width="1"/>
+    <text x="373" y="142" font-size="9" fill="var(--det)" text-anchor="middle" font-weight="600">SCHEMA</text>
+
+    <!-- GATE A : human -->
+    <text x="430" y="30" font-size="10.5" font-weight="600" fill="var(--gate)">—</text>
+    <text x="430" y="46" font-size="11" font-weight="700" fill="var(--gate)">GATE A</text>
+    <rect x="430" y="180" width="62" height="34" rx="4" fill="var(--gate)"/>
+    <text x="461" y="202" font-size="10" fill="var(--surface)" text-anchor="middle" font-weight="600">DECIDES</text>
+
+    <!-- 03 DATA : AI advises, code binds -->
+    <text x="518" y="30" font-size="10.5" font-weight="600" fill="var(--faint)">03</text>
+    <text x="518" y="46" font-size="11" font-weight="600" fill="var(--ink-2)">DATA</text>
+    <rect x="518" y="60" width="62" height="34" rx="4" fill="none" stroke="var(--llm)" stroke-width="1.5" stroke-dasharray="4 3"/>
+    <text x="549" y="82" font-size="9" fill="var(--llm)" text-anchor="middle" font-weight="600">ADVISES</text>
+    <rect x="518" y="120" width="62" height="34" rx="4" fill="var(--det)"/>
+    <text x="549" y="142" font-size="9" fill="var(--surface)" text-anchor="middle" font-weight="600">BINDS</text>
+
+    <!-- 04 PIT : code only -->
+    <text x="606" y="30" font-size="10.5" font-weight="600" fill="var(--faint)">04</text>
+    <text x="606" y="46" font-size="11" font-weight="600" fill="var(--ink-2)">PIT DATA</text>
+    <rect x="606" y="120" width="62" height="34" rx="4" fill="var(--det)"/>
+    <text x="637" y="142" font-size="10" fill="var(--surface)" text-anchor="middle" font-weight="600">OWNS</text>
+
+    <!-- 05 BUILD : AI advises template, code executes -->
+    <text x="694" y="30" font-size="10.5" font-weight="600" fill="var(--faint)">05</text>
+    <text x="694" y="46" font-size="11" font-weight="600" fill="var(--ink-2)">EXECUTE</text>
+    <rect x="694" y="60" width="62" height="34" rx="4" fill="none" stroke="var(--llm)" stroke-width="1.5" stroke-dasharray="4 3"/>
+    <text x="725" y="82" font-size="9" fill="var(--llm)" text-anchor="middle" font-weight="600">PICKS</text>
+    <rect x="694" y="120" width="62" height="34" rx="4" fill="var(--det)"/>
+    <text x="725" y="142" font-size="10" fill="var(--surface)" text-anchor="middle" font-weight="600">OWNS</text>
+
+    <!-- 06 RESEARCH -->
+    <text x="782" y="30" font-size="10.5" font-weight="600" fill="var(--faint)">06</text>
+    <text x="782" y="46" font-size="11" font-weight="600" fill="var(--ink-2)">RESEARCH</text>
+    <rect x="782" y="60" width="62" height="34" rx="4" fill="none" stroke="var(--llm)" stroke-width="1.5" stroke-dasharray="4 3"/>
+    <text x="813" y="82" font-size="9" fill="var(--llm)" text-anchor="middle" font-weight="600">CRITIQUE</text>
+    <rect x="782" y="120" width="62" height="34" rx="4" fill="var(--det)"/>
+    <text x="813" y="142" font-size="10" fill="var(--surface)" text-anchor="middle" font-weight="600">OWNS</text>
+
+    <!-- 07 PORTFOLIO -->
+    <text x="870" y="30" font-size="10.5" font-weight="600" fill="var(--faint)">07</text>
+    <text x="870" y="46" font-size="11" font-weight="600" fill="var(--ink-2)">PORTFOLIO</text>
+    <rect x="870" y="60" width="62" height="34" rx="4" fill="none" stroke="var(--llm)" stroke-width="1.5" stroke-dasharray="4 3"/>
+    <text x="901" y="82" font-size="9" fill="var(--llm)" text-anchor="middle" font-weight="600">CRITIQUE</text>
+    <rect x="870" y="120" width="62" height="34" rx="4" fill="var(--det)"/>
+    <text x="901" y="142" font-size="10" fill="var(--surface)" text-anchor="middle" font-weight="600">OWNS</text>
+
+    <!-- GATE B -->
+    <text x="958" y="30" font-size="10.5" font-weight="600" fill="var(--gate)">—</text>
+    <text x="958" y="46" font-size="11" font-weight="700" fill="var(--gate)">GATE B</text>
+    <rect x="958" y="180" width="62" height="34" rx="4" fill="var(--gate)"/>
+    <text x="989" y="202" font-size="10" fill="var(--surface)" text-anchor="middle" font-weight="600">DECIDES</text>
+
+    <!-- 08 LIBRARY -->
+    <text x="1046" y="30" font-size="10.5" font-weight="600" fill="var(--faint)">08</text>
+    <text x="1046" y="46" font-size="11" font-weight="600" fill="var(--ink-2)">LIBRARY</text>
+    <rect x="1046" y="60" width="62" height="34" rx="4" fill="none" stroke="var(--llm)" stroke-width="1.5" stroke-dasharray="4 3"/>
+    <text x="1077" y="82" font-size="9" fill="var(--llm)" text-anchor="middle" font-weight="600">RECALL</text>
+    <rect x="1046" y="120" width="62" height="34" rx="4" fill="var(--det)"/>
+    <text x="1077" y="142" font-size="10" fill="var(--surface)" text-anchor="middle" font-weight="600">OWNS</text>
+  </g>
+</svg>
+</div>
+<p class="cap">Read down a column to see who owns that stage. The load-bearing property: <b>no
+column has an LLM in the deciding row</b>. Models read, draft and critique; code computes and
+binds; humans allocate.</p>
+
+<!-- ============================ STAGES ============================ -->
+<section>
+  <h2>The pipeline</h2>
+  <p class="h2sub">Eleven checkpoints, and what breaks at each</p>
+
+  <!-- 00 -->
+  <div class="stage llm">
+    <div class="spine"><span class="num">00</span><span class="bar"></span></div>
+    <div class="body">
+      <h3 class="stitle">Triage <span class="owner llm">LLM owns</span></h3>
+      <p class="does">Screen a day's stack of papers from title and abstract alone. Is the
+      mechanism even capable of surviving a long-only, no-shorting, no-derivatives,
+      daily-data-only mandate?</p>
+      <div class="agent">
+        <div class="lbl">Agent</div>
+        <div class="name mono">TriageAgent · claude-haiku-4-5</div>
+        <p>Cheap model deliberately. A wrong answer costs one unnecessary full read, and the
+        next stage catches it. This is what makes twenty papers a day affordable — most never
+        reach the expensive model.</p>
+      </div>
+      <ul class="risks">
+        <li><span class="sev hi">Blind</span><span><b>False negatives are invisible.</b> A paper
+        wrongly rejected is never audited by anything. We have no feedback loop that would tell
+        us the screen is too tight.</span></li>
+        <li><span class="sev md">Judgement</span><span>The real question — "does this mechanism
+        transfer to our constraints?" — is subtle, and we are asking the cheapest model to
+        answer it.</span></li>
+        <li><span class="sev lo">Input</span><span>Abstracts systematically oversell. The screen
+        reads marketing copy, not results.</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 01 -->
+  <div class="stage llm">
+    <div class="spine"><span class="num">01</span><span class="bar"></span></div>
+    <div class="body">
+      <h3 class="stitle">Ingest <span class="owner llm">LLM owns</span></h3>
+      <p class="does">Read the rendered PDF — layout, tables, equations, figures — and emit a
+      structured, page-anchored analysis of what the paper actually claims.</p>
+      <div class="agent">
+        <div class="lbl">Agent · biggest single upgrade over string matching</div>
+        <div class="name mono">PaperAnalystAgent · claude-opus-5 · native PDF input</div>
+        <p>The string-matching version found <b>zero</b> results tables in a paper full of them,
+        because LaTeX draws no ruling lines. It read equations as <span class="mono">wspy +wagg
+        +wgld</span> with every subscript destroyed, and rotated figure labels backwards as
+        <span class="mono">nruter evitalumuC</span>. It could not tell that the same Sharpe ratio
+        appeared on <b>seven different accounting bases</b>, nor catch the sentence admitting a
+        parameter was chosen "after a modest search over various values" — the single most
+        important fact about the paper's headline number.</p>
+      </div>
+      <ul class="risks">
+        <li><span class="sev hi">Injection</span><span><b>A research PDF is arbitrary untrusted
+        input.</b> Anyone can put text in a paper aimed at the model reading it. Fencing helps;
+        it is not a boundary.</span></li>
+        <li><span class="sev hi">Fabrication</span><span>A hallucinated page citation is worse
+        than no citation — it looks verified. We have no automated way to confirm page 7 says
+        what the model claims it says.</span></li>
+        <li><span class="sev md">Coverage</span><span>Scanned papers, figure-only results, and
+        supplementary appendices hosted elsewhere are all silent gaps.</span></li>
+        <li><span class="sev md">Drift</span><span>Same paper, same prompt, different run — the
+        extraction can differ. The engine downstream is bit-deterministic; this stage is
+        not.</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 02 -->
+  <div class="stage llm">
+    <div class="spine"><span class="num">02</span><span class="bar"></span></div>
+    <div class="body">
+      <h3 class="stitle">Strategy Card <span class="owner llm">LLM owns</span>
+        <span class="owner det">Code validates</span></h3>
+      <p class="does">Draft the card — the only interface between interpretation and the engine —
+      then attack it with a second agent whose sole job is finding what the drafter waved
+      through.</p>
+      <div class="agent">
+        <div class="lbl">Agents · two, adversarially paired</div>
+        <div class="name mono">CardDrafterAgent → AmbiguityCriticAgent · claude-opus-5</div>
+        <p>The drafter is invested in its own card being coherent, so a separate critic with a
+        separate instruction finds things it rationalised. In our test case the critic caught two
+        real omissions: that the draft ignored the paper's own 19-way parameter sweep when
+        counting trials, and that it silently implemented the paper's <em>weaker</em> forecast
+        while presenting it as the headline mechanism.</p>
+      </div>
+      <ul class="risks">
+        <li><span class="sev hi">Correlated</span><span><b>Drafter and critic share a model.</b>
+        Shared blind spots survive both passes, and we would never see it.</span></li>
+        <li><span class="sev hi">Plausible-wrong</span><span>A card that is <em>coherent and
+        wrong</em> is the worst output this system can produce, because everything downstream
+        runs perfectly on it and the result looks clean.</span></li>
+        <li><span class="sev md">False rigour</span><span>The schema constrains shape, not truth.
+        A validated card is not a correct card.</span></li>
+        <li><span class="sev md">Incentive</span><span>A critic rewarded for finding things will
+        find things. We have no measure separating real findings from manufactured ones.</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- GATE A -->
+  <div class="stage gate">
+    <div class="spine"><span class="num">A</span><span class="bar"></span></div>
+    <div class="body">
+      <h3 class="stitle">Gate A — interpretation <span class="owner gate">Human decides</span></h3>
+      <p class="does">A researcher confirms the economics before a line of strategy code runs.
+      Everything up to here is cheap; everything after is not.</p>
+      <div class="noai"><b>No model involved, by design.</b> The model's job was to build the
+      queue: unresolved ambiguities, low-confidence equations, proxy approvals, conflicting
+      accounting bases. On our test paper it produced <b>14 items</b> for a human.</div>
+      <ul class="risks">
+        <li><span class="sev hi">Rubber stamp</span><span><b>14 items × 20 papers a day is not
+        reviewable.</b> The gate degrades into approval-by-default exactly when throughput
+        succeeds — and nothing in the system detects that it has.</span></li>
+        <li><span class="sev hi">Automation bias</span><span>A confident, well-written,
+        page-cited analysis is <em>harder</em> to disagree with than a rough human note, whether
+        or not it is right.</span></li>
+        <li><span class="sev md">Framing</span><span>The model wrote the queue. It cannot queue a
+        concern it did not have.</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 03 -->
+  <div class="stage det">
+    <div class="spine"><span class="num">03</span><span class="bar"></span></div>
+    <div class="body">
+      <h3 class="stitle">Data feasibility <span class="owner det">Code binds</span>
+        <span class="owner llm">LLM advises</span></h3>
+      <p class="does">Resolve every series the paper needs against what the fund actually holds.
+      Fail fast — most papers die here, and should.</p>
+      <div class="agent">
+        <div class="lbl">Agent · advisory only</div>
+        <div class="name mono">DataMapperAgent · claude-opus-5</div>
+        <p>String equality says a series is unavailable. The useful answers are whether anything
+        we hold stands in, what the substitution costs <em>economically</em>, and what to buy —
+        all judgement calls. The model proposed four ranked procurement items and correctly
+        refused a tempting proxy, noting that long-only sleeve returns are dominated by market
+        beta while academic factors are market-neutral by construction.</p>
+      </div>
+      <ul class="risks">
+        <li><span class="sev md">Plausible proxy</span><span>The failure mode is a substitution
+        that reads well and is economically wrong. Deterministic code cannot catch it; only a
+        human who knows the data can.</span></li>
+        <li><span class="sev lo">Contained</span><span>The gate is binding and the registry is
+        not writable by the agent, so a model cannot conjure data into existence. Disagreements
+        are surfaced, never resolved in the model's favour.</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 04 -->
+  <div class="stage det">
+    <div class="spine"><span class="num">04</span><span class="bar"></span></div>
+    <div class="body">
+      <h3 class="stitle">Point-in-time data <span class="owner det">Code only</span></h3>
+      <p class="does">Freeze a hashed snapshot with full lineage: source bytes, materialised
+      frame, engine code, git commit.</p>
+      <div class="noai"><b>Deliberately no model here.</b> This stage exists to make results
+      reproducible, and inserting a non-deterministic component into the reproducibility
+      mechanism would defeat it.</div>
+      <ul class="risks">
+        <li><span class="sev hi">Provenance gap</span><span><b>LLM outputs are not
+        reproducible.</b> We preserve the property by freezing the model's card and hashing
+        <em>that</em> — the card is re-derivable even though the model is not. But the critique,
+        the queue and the reasoning that shaped it are not covered by any hash.</span></li>
+        <li><span class="sev md">Version drift</span><span>A card drafted by one model version
+        and re-drafted by the next are different artefacts. We have no policy for what happens to
+        a two-year-old card when the model that wrote it is retired.</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 05 -->
+  <div class="stage det">
+    <div class="spine"><span class="num">05</span><span class="bar"></span></div>
+    <div class="body">
+      <h3 class="stitle">Build &amp; execute <span class="owner det">Code owns</span>
+        <span class="owner llm">LLM picks a template</span></h3>
+      <p class="does">Run the backtest: daily accounting, costs at the half-spread, look-ahead
+      tripwires, fair alignment of every strategy and benchmark to a common start.</p>
+      <div class="agent">
+        <div class="lbl">Agent · selection, explicitly not code generation</div>
+        <div class="name mono">TemplateMatcherAgent · claude-opus-5</div>
+        <p>Chooses from eight <em>audited</em> allocator templates. When none fits it returns
+        <span class="mono">null</span> and writes a ~30-line specification for a human engineer.
+        <b>It never writes engine code.</b> A model that generates allocators produces the one
+        artefact nobody can review at twenty papers a day.</p>
+      </div>
+      <ul class="risks">
+        <li><span class="sev hi">The temptation</span><span><b>This is where everyone wants to
+        let the model write code, and where we refuse.</b> Whether that is correct or merely
+        conservative is the single biggest open architecture question here.</span></li>
+        <li><span class="sev md">Expressiveness</span><span>Template-constrained means papers
+        needing a genuinely new mechanism queue behind an engineer. That caps throughput in a way
+        we have not measured.</span></li>
+        <li><span class="sev lo">Contained</span><span>Backtest arithmetic never touches a model.
+        Two planted look-ahead leaks are asserted caught on every run.</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 06 -->
+  <div class="stage det">
+    <div class="spine"><span class="num">06</span><span class="bar"></span></div>
+    <div class="body">
+      <h3 class="stitle">Research validation <span class="owner det">Code computes</span>
+        <span class="owner llm">LLM critiques</span></h3>
+      <p class="does">Walk-forward, sub-periods, stationary block bootstrap, deflated Sharpe,
+      and sensitivity sweeps over cost, lag, target volatility and the cash-rate proxy.</p>
+      <div class="agent">
+        <div class="lbl">Agent · interprets numbers it did not compute</div>
+        <div class="name mono">ResultsCriticAgent · claude-opus-5</div>
+        <p>Given the full diagnostic table and no stake in the outcome, this is where a model is
+        genuinely strong. It read a lag-sensitivity curve that <em>rises</em> — Sharpe 0.43 at lag
+        zero, 0.47 at lag ten — and drew the right conclusion: a real timing signal decays, so one
+        that improves when traded ten days late carries no timing information at all. That is
+        pattern recognition over numbers, not arithmetic.</p>
+      </div>
+      <ul class="risks">
+        <li><span class="sev hi">Ownership bias</span><span>Framed as reviewing <em>our</em>
+        result, a model may soften. We mitigate by giving it no stake — but we have not measured
+        whether that works.</span></li>
+        <li><span class="sev md">Judge reliability</span><span>We are using an LLM as a judge on
+        exactly the cases where being wrong is expensive, with no calibration data.</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 07 -->
+  <div class="stage det">
+    <div class="spine"><span class="num">07</span><span class="bar"></span></div>
+    <div class="body">
+      <h3 class="stitle">Portfolio validation <span class="owner det">Code computes</span>
+        <span class="owner llm">LLM writes the memo</span></h3>
+      <p class="does">The step that actually decides: factor fingerprint, orthogonality to the
+      existing book, incremental information ratio, mandate compliance, capacity.</p>
+      <div class="noai"><b>Where the test case died.</b> Alpha of +4.9% against NIFTY 500 became
+      <b>+0.17% with a t-statistic of 0.15</b> once controlled for the factor sleeves the fund
+      already owns — and incremental IR was negative at every sleeve size. The model's job here
+      is to write that up, not to discover it.</div>
+      <ul class="risks">
+        <li><span class="sev md">Narrative</span><span>A fluent memo makes a marginal result read
+        as a considered one. Prose quality and result quality are uncorrelated.</span></li>
+        <li><span class="sev lo">Contained</span><span>Every number in the memo comes from
+        deterministic code and is independently checkable.</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- GATE B -->
+  <div class="stage gate">
+    <div class="spine"><span class="num">B</span><span class="bar"></span></div>
+    <div class="body">
+      <h3 class="stitle">Gate B — investment decision <span class="owner gate">PM / IC decides</span></h3>
+      <p class="does">Allocate, observe, fix or reject. Eight criteria, six of which were failing
+      on the test case.</p>
+      <div class="noai"><b>No model votes.</b> Gate B is a deterministic function over evidence,
+      with a human owner.</div>
+      <ul class="risks">
+        <li><span class="sev hi">Framing</span><span>The model assembled the briefing pack. What
+        it chose to foreground shapes the decision even though it casts no vote.</span></li>
+        <li><span class="sev md">Threshold drift</span><span>Gate thresholds are hand-set
+        constants. Nothing stops them being loosened after a few rejections.</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 08 -->
+  <div class="stage det">
+    <div class="spine"><span class="num">08</span><span class="bar"></span></div>
+    <div class="body">
+      <h3 class="stitle">Strategy library <span class="owner det">Code stores</span>
+        <span class="owner llm">LLM recalls</span></h3>
+      <p class="does">Append-only research graph. Negative results are the asset: they stop the
+      firm paying twice for the same disappointment.</p>
+      <div class="agent">
+        <div class="lbl">Agent · semantic recall over past failures</div>
+        <div class="name mono">LibrarianAgent · claude-opus-5</div>
+        <p>Cosine similarity over factor loadings catches the same bet under a new name. It does
+        not catch <em>"we tested this mechanism two years ago on different sleeves and it failed
+        for a reason that still applies."</em> That needs reading. On the test case the librarian
+        recommended narrowing rather than repeating: the return question is answered twice over,
+        but the drawdown question is not.</p>
+      </div>
+      <ul class="risks">
+        <li><span class="sev md">Scale</span><span>At a thousand entries the library no longer
+        fits in a prompt. Retrieval becomes its own ranking problem with its own failure
+        modes.</span></li>
+        <li><span class="sev hi">Silent suppression</span><span>A librarian that wrongly says
+        "already answered" kills a good idea invisibly. Same shape as triage false negatives, and
+        equally unmeasured.</span></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ CROSS-CUTTING ============================ -->
+<section>
+  <h2>Cross-cutting</h2>
+  <p class="h2sub">Risks that belong to no single stage</p>
+  <div class="grid">
+    <div class="xc"><span class="tag">Reproducibility</span>
+      <h3>A deterministic engine fed by a non-deterministic front end</h3>
+      <p>Solved for the card by freezing and hashing it. Unsolved for everything else the model
+      produced — the critique, the review queue, the reasoning that shaped the card.</p></div>
+    <div class="xc"><span class="tag">Correlated failure</span>
+      <h3>Seven agents, one model</h3>
+      <p>Every agent is the same model with a different instruction. A systematic weakness appears
+      at every stage simultaneously and looks like consensus.</p></div>
+    <div class="xc"><span class="tag">Evaluation</span>
+      <h3>No ground truth anywhere</h3>
+      <p>We cannot currently say whether the extraction is 95% accurate or 70%. Building the
+      answer key means a human doing by hand exactly what we built this to avoid.</p></div>
+    <div class="xc"><span class="tag">Security</span>
+      <h3>Untrusted documents by design</h3>
+      <p>The system's purpose is ingesting PDFs from anywhere. The structural defence — schemas,
+      no execution, no data-access widening, human gates — bounds the damage rather than
+      preventing the attempt.</p></div>
+    <div class="xc"><span class="tag">Human factors</span>
+      <h3>The gate erodes as throughput succeeds</h3>
+      <p>The better the pipeline gets, the more items reach each gate, and the less real scrutiny
+      each receives. Nothing currently measures this.</p></div>
+    <div class="xc"><span class="tag">Selection bias</span>
+      <h3>Trial counting across agents</h3>
+      <p>The deflated Sharpe penalises configurations tried. If an agent silently retries a
+      drafting step with different framing, is that a new trial? We do not count it.</p></div>
+  </div>
+</section>
+
+<!-- ============================ QUESTIONS ============================ -->
+<section>
+  <h2>For the meeting</h2>
+  <p class="h2sub">Questions worth an expert's time</p>
+  <p class="lede" style="margin-bottom:28px;">Ordered by how much a good answer changes what we
+  build. The six marked <span class="star">ask first</span> are the ones where we are genuinely
+  stuck rather than merely curious.</p>
+
+  <div class="qgroup">
+    <div class="qhead"><h3>Evaluation &amp; trust</h3><span class="qn mono">01 — 05</span></div>
+
+    <div class="q pri">
+      <p class="ask"><span class="star">ask first</span>How do I build an evaluation set for
+      paper extraction without hand-labelling hundreds of papers?</p>
+      <p class="why"><b>Why:</b> I cannot currently state an accuracy number for Step 01, so
+      every downstream claim rests on an unmeasured foundation. Hand-labelling is precisely the
+      work the pipeline exists to eliminate. Is there a bootstrapping approach — papers with
+      published replication code as ground truth, or inter-model agreement as a proxy?</p>
+    </div>
+
+    <div class="q pri">
+      <p class="ask"><span class="star">ask first</span>How do I detect a citation that is
+      confidently wrong — where the model cites page 7 and page 7 does not say that?</p>
+      <p class="why"><b>Why:</b> A fabricated page reference is worse than none, because it looks
+      verified and a human skips it. Is there a cheap verification pass — a second model checking
+      the quote against the page, or the citations feature — that catches this at volume?</p>
+    </div>
+
+    <div class="q">
+      <p class="ask">Is an LLM a reliable judge of its own pipeline's statistical output, and how
+      would I calibrate it?</p>
+      <p class="why"><b>Why:</b> The results critic correctly identified that a Sharpe rising
+      with implementation lag means no timing information. That impressed me — which is exactly
+      when I should be suspicious. I have one anecdote, not a calibration curve.</p>
+    </div>
+
+    <div class="q">
+      <p class="ask">How do I measure the failure I structurally cannot see — the good paper my
+      triage agent rejected, or the good idea my librarian said was already answered?</p>
+      <p class="why"><b>Why:</b> Both are silent. Nothing downstream ever audits a rejection.
+      Is periodic sampling of rejects the standard answer, or is there something better?</p>
+    </div>
+
+    <div class="q">
+      <p class="ask">Does confidence self-reporting actually carry information, or am I routing
+      human attention on noise?</p>
+      <p class="why"><b>Why:</b> My whole human-review queue is built on the model's own
+      confidence ratings. If those are uncorrelated with correctness, the queue is arbitrary and
+      I would rather know.</p>
+    </div>
+  </div>
+
+  <div class="qgroup">
+    <div class="qhead"><h3>Architecture</h3><span class="qn mono">06 — 10</span></div>
+
+    <div class="q pri">
+      <p class="ask"><span class="star">ask first</span>I refuse to let the model write engine
+      code, only select from audited templates. Is that the right line, or am I giving up most of
+      the value?</p>
+      <p class="why"><b>Why:</b> It is the largest deliberate constraint in the design. Papers
+      needing a genuinely new mechanism queue behind a human engineer, which caps throughput.
+      <b>If generated code is acceptable, what does the review and sandbox setup have to look
+      like</b> for a strategy that will eventually touch real money?</p>
+    </div>
+
+    <div class="q pri">
+      <p class="ask"><span class="star">ask first</span>My drafter and my critic are the same
+      model with different prompts. Is that adversarial pairing worth anything, or does it just
+      launder correlated errors into apparent consensus?</p>
+      <p class="why"><b>Why:</b> The critic did catch two real omissions. But a shared blind spot
+      survives both passes and I would never see it. Would a different model as critic be
+      materially better, or is prompt diversity enough?</p>
+    </div>
+
+    <div class="q">
+      <p class="ask">Where is the right boundary between structured outputs, tool use, and an
+      agentic loop for this kind of extraction work?</p>
+      <p class="why"><b>Why:</b> Everything is currently one structured call per agent, no loops.
+      It works and it is easy to audit. Am I leaving accuracy on the table by not letting an agent
+      iterate — re-reading sections, checking its own claims against the document?</p>
+    </div>
+
+    <div class="q">
+      <p class="ask">Should the librarian use retrieval or long context as the research graph
+      grows past a thousand entries?</p>
+      <p class="why"><b>Why:</b> Semantic recall over past failures is the compounding asset of
+      the whole system. It currently fits in a prompt. It will not. Retrieval introduces its own
+      ranking failures precisely where a miss is silent.</p>
+    </div>
+
+    <div class="q">
+      <p class="ask">Is my triage model too cheap for the judgement I am asking of it?</p>
+      <p class="why"><b>Why:</b> "Does this mechanism transfer to a long-only mandate?" is subtle,
+      and I am asking the smallest model. Is there a principled way to pick the tier, or is it
+      purely empirical?</p>
+    </div>
+  </div>
+
+  <div class="qgroup">
+    <div class="qhead"><h3>Safety &amp; failure modes</h3><span class="qn mono">11 — 14</span></div>
+
+    <div class="q pri">
+      <p class="ask"><span class="star">ask first</span>My system ingests arbitrary PDFs by
+      design. How seriously should I take prompt injection, and what does a real defence look like
+      beyond fencing and hoping?</p>
+      <p class="why"><b>Why:</b> My structural argument is that the blast radius is bounded —
+      schema-constrained outputs, nothing executed, no data-access widening, human gates. <b>Is
+      that argument actually sound</b>, or am I missing a path from a poisoned paper to a bad
+      allocation?</p>
+    </div>
+
+    <div class="q pri">
+      <p class="ask"><span class="star">ask first</span>How do I stop my human gates degrading
+      into rubber stamps as throughput rises?</p>
+      <p class="why"><b>Why:</b> One paper produced 14 review items. Twenty papers a day is 280.
+      The gate fails exactly when the pipeline succeeds, and automation bias means a confident
+      page-cited analysis is <em>harder</em> to push back on than a rough human note. This worries
+      me more than any technical risk on the list.</p>
+    </div>
+
+    <div class="q">
+      <p class="ask">What does a plausible-but-wrong Strategy Card look like in practice, and can
+      anything but a human catch it?</p>
+      <p class="why"><b>Why:</b> It is the worst output the system can produce: everything
+      downstream runs perfectly, the report looks clean, and the conclusion is wrong. Schema
+      validation constrains shape, not truth.</p>
+    </div>
+
+    <div class="q">
+      <p class="ask">Is a critic agent rewarded for finding problems reliably distinguishable
+      from one manufacturing them?</p>
+      <p class="why"><b>Why:</b> A critic that always finds something is as useless as one that
+      never does, and I have no measure that separates the two.</p>
+    </div>
+  </div>
+
+  <div class="qgroup">
+    <div class="qhead"><h3>Reproducibility &amp; governance</h3><span class="qn mono">15 — 18</span></div>
+
+    <div class="q">
+      <p class="ask">Is freezing and hashing the model's output enough to call a research result
+      reproducible, when the process that produced it is not?</p>
+      <p class="why"><b>Why:</b> My claim is that the <em>card</em> is re-derivable even though
+      the model is not, so the engine keeps its determinism. I want that argument stress-tested by
+      someone who will be harder on it than I am.</p>
+    </div>
+
+    <div class="q">
+      <p class="ask">What happens to a two-year-old Strategy Card when the model that drafted it
+      no longer exists?</p>
+      <p class="why"><b>Why:</b> Compliance will eventually ask how a live strategy was
+      originally derived. I have no versioning or re-validation policy, and model IDs are pinned
+      in code with nothing enforcing it.</p>
+    </div>
+
+    <div class="q">
+      <p class="ask">How should agent-driven work be counted in a selection-bias correction?</p>
+      <p class="why"><b>Why:</b> My deflated Sharpe penalises the number of configurations tried.
+      If an agent quietly re-drafts with different framing, is that a new trial? Agents make
+      trials cheap, which makes the correction matter more and the count harder.</p>
+    </div>
+
+    <div class="q">
+      <p class="ask">Which decisions should a regulated fund <em>never</em> delegate to a model,
+      independent of how good the model gets?</p>
+      <p class="why"><b>Why:</b> I drew my line at "models interpret, code computes, humans
+      allocate". I would like to know whether that is where people who have deployed this in
+      regulated settings actually draw it.</p>
+    </div>
+  </div>
+
+  <div class="qgroup">
+    <div class="qhead"><h3>Operations</h3><span class="qn mono">19 — 20</span></div>
+
+    <div class="q">
+      <p class="ask">At twenty papers a day, what breaks first — and is it anything I have
+      listed?</p>
+      <p class="why"><b>Why:</b> My own profiling says compute is <em>not</em> the constraint:
+      most papers die at the data gate in seconds. I believe the real bottleneck is card authoring
+      and human review. I want that challenged by someone who has run this at volume.</p>
+    </div>
+
+    <div class="q">
+      <p class="ask">What does the monitoring look like — how would I know the pipeline's quality
+      had degraded before a bad strategy reached the IC?</p>
+      <p class="why"><b>Why:</b> I have per-call provenance and token accounting, but no quality
+      signal at all. A silent degradation would show up as a slightly worse hit rate months
+      later, which is far too late.</p>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <span>AI Research Operating System · architecture review</span>
+  <span>11 checkpoints · 7 agents · 20 questions</span>
+</footer>
+
+</div>
