@@ -251,7 +251,7 @@ class StrategyCard:
         return asdict(self)
 
     def to_yaml(self, path: str) -> None:
-        with open(path, "w") as fh:
+        with open(path, "w", encoding="utf-8") as fh:
             yaml.safe_dump(self.to_dict(), fh, sort_keys=False, width=100)
 
 
@@ -270,7 +270,7 @@ def _build(cls, blob, name):
 
 def load_card(path: str) -> StrategyCard:
     """Load and validate a Strategy Card from YAML. Unknown keys are an error."""
-    with open(path) as fh:
+    with open(path, encoding="utf-8") as fh:
         blob = yaml.safe_load(fh) or {}
 
     known = {"paper", "intent", "universe", "signal", "portfolio", "costs",

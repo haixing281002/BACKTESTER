@@ -126,7 +126,7 @@ def record(stage: str, output_path: str, operator: str,
     os.makedirs(outdir, exist_ok=True)
     stamp = rec.created_utc.replace(":", "").replace("-", "")
     path = os.path.join(outdir, f"{stage}__{stamp}.json")
-    with open(path, "w") as fh:
+    with open(path, "w", encoding="utf-8") as fh:
         json.dump(rec.to_dict(), fh, indent=2)
     return path
 
@@ -143,7 +143,7 @@ def validate(path: str, schema_name: str) -> tuple[bool, str]:
     if cls is None:
         return False, f"unknown schema '{schema_name}'"
     try:
-        with open(path) as fh:
+        with open(path, encoding="utf-8") as fh:
             blob = json.load(fh)
     except Exception as e:                                       # noqa: BLE001
         return False, f"not readable JSON: {e}"
@@ -164,7 +164,7 @@ def history(outdir: str = LINEAGE_DIR) -> List[Dict[str, Any]]:
         if not f.endswith(".json"):
             continue
         try:
-            with open(os.path.join(outdir, f)) as fh:
+            with open(os.path.join(outdir, f), encoding="utf-8") as fh:
                 blob = json.load(fh)
         except Exception:                                        # noqa: BLE001
             continue
@@ -205,7 +205,7 @@ def _cli(argv=None) -> int:
         p = record(stage=args.stage, output_path=args.output, operator=args.operator,
                    produced_by=args.produced_by, model=args.model,
                    session_ref=args.session_ref, inputs=args.input, notes=args.notes)
-        rec = json.load(open(p))
+        rec = json.load(open(p, encoding="utf-8"))
         print(f"recorded -> {p}")
         print(f"  stage      : {rec['stage']}")
         print(f"  produced by: {rec['produced_by']}  operator: {rec['operator']}")

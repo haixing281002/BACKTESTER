@@ -18,6 +18,19 @@ from typing import Any, Dict, List, Optional
 import numpy as np
 import pandas as pd
 
+# A research paper carries Greek letters and maths symbols, and they travel all
+# the way through: paper -> card -> report. On Windows sys.stdout defaults to the
+# locale codepage (cp1252), which cannot encode sigma or <=, so printing the
+# report raises UnicodeEncodeError. Worse, when stdout is a PIPE it is block
+# buffered, so the crash discards the buffer and the caller sees NO output at
+# all -- a full run that looks like it produced nothing. Pin the streams to
+# utf-8 and degrade unencodable characters rather than dying on them.
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8", errors="backslashreplace")
+    except (AttributeError, ValueError):  # already detached, or not a TextIO
+        pass
+
 from ros.cards.extract import (
     detect_target_conflicts, extract_document, parse_text_tables,
     propose_replication_targets, summarize)
@@ -60,7 +73,7 @@ class Report:
 
     def save(self, path: str) -> None:
         os.makedirs(os.path.dirname(path), exist_ok=True)
-        with open(path, "w") as fh:
+        with open(path, "w", encoding="utf-8") as fh:
             fh.write(self.text())
 
 
@@ -430,7 +443,18 @@ def main(argv=None) -> int:
 
     sleeves = pd.DataFrame({a: snap.frame[a].pct_change() for a in card.universe.assets}).dropna()
     fp = pv.factor_fingerprint(primary.returns, sleeves, rf_daily=rf)
-    if "error" not in fp:
+    if "error" in fp:
+        # Carry the reason forward so Gate B can show a failed row rather than
+        # quietly dropping the criterion. On this desk the fingerprint is the
+        # decisive test -- it is what separates alpha from sleeves already owned.
+        port["alpha_t_hac_error"] = fp["error"]
+        R.p("")
+        R.p("  FACTOR FINGERPRINT: NOT COMPUTED")
+        R.p(f"    {fp['error']}")
+        R.p("    Gate B will BLOCK on this. The fingerprint is the test that")
+        R.p("    separates real alpha from factor sleeves the fund already owns,")
+        R.p("    so a run without it cannot support an allocation decision.")
+    else:
         port["alpha_t_hac"] = fp["alpha_t_hac"]
         R.p("")
         R.p("  FACTOR FINGERPRINT (HAC / Newey-West):")

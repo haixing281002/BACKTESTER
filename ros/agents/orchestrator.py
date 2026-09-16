@@ -160,7 +160,7 @@ class AgenticPipeline:
         os.makedirs(out_dir, exist_ok=True)
         name = card_name or f"{_slug(res.analysis.title)}_{mode}.yaml"
         res.card_path = os.path.join(out_dir, name)
-        with open(res.card_path, "w") as fh:
+        with open(res.card_path, "w", encoding="utf-8") as fh:
             fh.write(res.proposal.card_yaml)
         try:
             load_card(res.card_path)

@@ -123,6 +123,18 @@ def gate_a(card, feasibility, extraction_quality=None) -> GateResult:
     return GateResult("GATE A -- interpretation", "researcher", c)
 
 
+def _missing(name: str, threshold: Any, why: str) -> Criterion:
+    """A criterion whose evidence never arrived.
+
+    It fails, and it fails *visibly*. The alternative -- omitting the row --
+    makes GateResult.passed an `all()` over a shorter list, so a gate can report
+    PASS precisely because the test that would have blocked it never ran. That
+    is the one failure mode this whole file exists to prevent.
+    """
+    return Criterion(name, False, value="NOT COMPUTED", threshold=threshold,
+                     evidence=f"NO EVIDENCE: {why}")
+
+
 def gate_b(card, research: Dict[str, Any], portfolio: Dict[str, Any],
            thresholds: Optional[Dict[str, float]] = None) -> GateResult:
     """GATE B -- INVESTMENT DECISION. Owned by PM / IC.
@@ -135,6 +147,9 @@ def gate_b(card, research: Dict[str, Any], portfolio: Dict[str, Any],
     t.update(thresholds or {})
     c: List[Criterion] = []
 
+    # Every criterion below appears on the sheet whether or not its evidence
+    # arrived. See _missing(): a checklist that quietly gets shorter is worse
+    # than one that fails, because a human signing it cannot see what is absent.
     dsr = research.get("deflated_sharpe", {})
     if "deflated_sharpe_prob" in dsr:
         c.append(Criterion(
@@ -142,6 +157,9 @@ def gate_b(card, research: Dict[str, Any], portfolio: Dict[str, Any],
             dsr["deflated_sharpe_prob"] >= t["min_dsr"],
             value=f"{dsr['deflated_sharpe_prob']:.2f}", threshold=t["min_dsr"],
             evidence=dsr.get("interpretation", "")))
+    else:
+        c.append(_missing("deflated Sharpe clears selection bias", t["min_dsr"],
+                          dsr.get("error", "the deflated Sharpe calculation did not run")))
 
     oos = research.get("oos_min_sharpe")
     if oos is not None:
@@ -150,6 +168,10 @@ def gate_b(card, research: Dict[str, Any], portfolio: Dict[str, Any],
             oos >= t["min_oos_sharpe"],
             value=f"{oos:.2f}", threshold=t["min_oos_sharpe"],
             evidence="worst walk-forward window"))
+    else:
+        c.append(_missing("positive Sharpe in every out-of-sample window",
+                          t["min_oos_sharpe"],
+                          "the walk-forward analysis did not run"))
 
     sig = research.get("bootstrap_p_not_positive")
     if sig is not None:
@@ -157,7 +179,14 @@ def gate_b(card, research: Dict[str, Any], portfolio: Dict[str, Any],
             "advantage over benchmark is significant",
             sig <= 0.05, value=f"{sig:.3f}", threshold="<=0.05",
             evidence="paired stationary-bootstrap P(Sharpe difference <= 0)"))
+    else:
+        c.append(_missing("advantage over benchmark is significant", "<=0.05",
+                          "the paired bootstrap did not run"))
 
+    # These two compare against what the fund already runs. With an empty book
+    # there is genuinely nothing to compare to -- that is not a failure, but it
+    # is also not a pass, so it is shown as an unmet warning rather than left
+    # off the sheet for a human to not notice.
     corr = portfolio.get("max_corr_to_book")
     if corr is not None:
         c.append(Criterion(
@@ -165,6 +194,11 @@ def gate_b(card, research: Dict[str, Any], portfolio: Dict[str, Any],
             corr <= t["max_corr_to_book"],
             value=f"{corr:.2f}", threshold=f"<={t['max_corr_to_book']}",
             evidence="max correlation to any existing signal"))
+    else:
+        c.append(Criterion(
+            "differentiated from existing book", False, blocking=False,
+            value="NO COMPARISON", threshold=f"<={t['max_corr_to_book']}",
+            evidence="nothing else in the book to compare against"))
 
     dir_ = portfolio.get("best_delta_ir")
     if dir_ is not None:
@@ -173,6 +207,11 @@ def gate_b(card, research: Dict[str, Any], portfolio: Dict[str, Any],
             dir_ >= t["min_delta_ir"],
             value=f"{dir_:+.3f}", threshold=f">={t['min_delta_ir']}",
             evidence="incremental IR at a realistic sleeve size"))
+    else:
+        c.append(Criterion(
+            "improves the book's information ratio", False, blocking=False,
+            value="NO COMPARISON", threshold=f">={t['min_delta_ir']}",
+            evidence="nothing else in the book to measure an increment against"))
 
     at = portfolio.get("alpha_t_hac")
     if at is not None:
@@ -181,6 +220,16 @@ def gate_b(card, research: Dict[str, Any], portfolio: Dict[str, Any],
             abs(at) >= t["min_alpha_t"],
             value=f"{at:.2f}", threshold=f"|t|>={t['min_alpha_t']}",
             evidence="HAC t-stat of alpha vs known factor sleeves"))
+    else:
+        # A test that could not be run is NOT a test that passed. Dropping the
+        # row would shrink the checklist silently and let `passed` go True
+        # having never asked the question that matters most on this desk --
+        # whether the alpha is anything more than sleeves the fund already owns.
+        c.append(Criterion(
+            "alpha survives the factor fingerprint", False,
+            value="NOT COMPUTED", threshold=f"|t|>={t['min_alpha_t']}",
+            evidence=portfolio.get("alpha_t_hac_error",
+                                   "the factor regression did not run")))
 
     mand = portfolio.get("mandate", {})
     if mand:

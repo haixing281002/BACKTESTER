@@ -123,7 +123,7 @@ class Snapshot:
                 "round-tripping through text is lossy; re-loading this file may not "
                 "reproduce the content hash. Install pyarrow for exact lineage.")
         path = os.path.join(outdir, f"{self.snapshot_id}.manifest.json")
-        with open(path, "w") as fh:
+        with open(path, "w", encoding="utf-8") as fh:
             json.dump(self.manifest(), fh, indent=2, default=str)
         return path
 

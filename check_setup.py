@@ -92,7 +92,11 @@ def main() -> int:
     papers = [f for f in os.listdir("docs/papers") if f.endswith(".pdf")] if os.path.isdir("docs/papers") else []
     print(f"{OK if pdfs else WARN}papers       {len(pdfs)} in docs/, {len(papers)} in docs/papers/")
 
-    if not missing and have_data:
+    # Gated on the data and on nothing else. Whether a card loads has nothing to
+    # do with statsmodels being present, and skipping the check because some
+    # unrelated package is absent makes the report go quiet exactly when the
+    # person reading it needs more information, not less.
+    if have_data:
         try:
             from ros.cards.schema import load_card
             c = load_card("cards/devanathan_2026_india_factor_adaptation.yaml")

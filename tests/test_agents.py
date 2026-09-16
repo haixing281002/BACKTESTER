@@ -19,7 +19,7 @@ FIX = "ros/agents/fixtures/devanathan_2026.json"
 
 
 def _fixtures():
-    return json.load(open(FIX))
+    return json.load(open(FIX, encoding="utf-8"))
 
 
 def test_every_fixture_validates_against_its_schema():

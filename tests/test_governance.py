@@ -29,7 +29,7 @@ def _run(*extra):
 
 
 def _latest(outdir):
-    entries = [json.load(open(p)) for p in (outdir / "library").glob("*.json")]
+    entries = [json.load(open(p, encoding="utf-8")) for p in (outdir / "library").glob("*.json")]
     assert entries, f"no library entry written to {outdir}"
     return max(entries, key=lambda x: x["created_utc"])
 
@@ -133,8 +133,73 @@ def test_no_module_derives_a_decision_from_evidence():
     for p in pathlib.Path(".").rglob("*.py"):
         if "test" in p.parts or ".git" in p.parts:
             continue
-        for i, line in enumerate(p.read_text().splitlines(), 1):
+        for i, line in enumerate(p.read_text(encoding="utf-8").splitlines(), 1):
             if re.search(r"\b(ga|gb|gate\w*)\.decision\s*=", line):
                 if "args.decision" not in line and '"PENDING"' not in line:
                     offenders.append(f"{p}:{i}: {line.strip()}")
     assert not offenders, "a decision is being assigned from evidence:\n" + "\n".join(offenders)
+
+
+# ---------------------------------------------------------------------------
+# A checklist that silently gets SHORTER is the other way a gate stops governing.
+#
+# Every Gate B criterion used to be appended only `if <evidence> is not None`.
+# So when the factor regression could not run -- statsmodels absent, or too
+# little overlap -- the row "alpha survives the factor fingerprint" did not fail;
+# it disappeared. GateResult.passed is all() over the criteria present, and
+# all() over a shorter list is easier to satisfy. The gate could therefore
+# report PASS *because* the test that would have blocked it never ran, and the
+# human signing the sheet had nothing on the page telling them so.
+# ---------------------------------------------------------------------------
+
+_FULL_PORT = {"alpha_t_hac": 4.0, "max_corr_to_book": 0.10, "best_delta_ir": 0.20}
+_FULL_RESEARCH = {"deflated_sharpe": {"deflated_sharpe_prob": 0.99},
+                  "oos_min_sharpe": 0.80, "bootstrap_p_not_positive": 0.01}
+
+
+def _names(gr):
+    return [c.name for c in gr.criteria]
+
+
+def test_a_passing_sheet_is_possible_at_all():
+    """Guard the guard: if this fails the negative controls below prove nothing."""
+    gr = gate_b(load_card(CARD), _FULL_RESEARCH, _FULL_PORT)
+    assert gr.passed, [c.name for c in gr.criteria if not c.passed and c.blocking]
+
+
+@pytest.mark.parametrize("drop", ["alpha_t_hac", "max_corr_to_book", "best_delta_ir"])
+def test_missing_portfolio_evidence_never_shortens_the_checklist(drop):
+    port = {k: v for k, v in _FULL_PORT.items() if k != drop}
+    full = gate_b(load_card(CARD), _FULL_RESEARCH, _FULL_PORT)
+    thin = gate_b(load_card(CARD), _FULL_RESEARCH, port)
+    assert _names(thin) == _names(full), (
+        f"dropping {drop} removed a row from the sheet instead of failing it")
+
+
+@pytest.mark.parametrize("drop", ["deflated_sharpe", "oos_min_sharpe",
+                                  "bootstrap_p_not_positive"])
+def test_missing_research_evidence_never_shortens_the_checklist(drop):
+    research = {k: v for k, v in _FULL_RESEARCH.items() if k != drop}
+    full = gate_b(load_card(CARD), _FULL_RESEARCH, _FULL_PORT)
+    thin = gate_b(load_card(CARD), _FULL_RESEARCH if False else research, _FULL_PORT)
+    assert _names(thin) == _names(full), (
+        f"dropping {drop} removed a row from the sheet instead of failing it")
+
+
+def test_an_uncomputed_fingerprint_blocks_gate_b():
+    """The planted regression: statsmodels missing must not buy a free pass."""
+    port = {k: v for k, v in _FULL_PORT.items() if k != "alpha_t_hac"}
+    port["alpha_t_hac_error"] = "statsmodels unavailable -- ModuleNotFoundError"
+    gr = gate_b(load_card(CARD), _FULL_RESEARCH, port)
+    assert not gr.passed, "a gate passed without ever running the factor regression"
+    row = next(c for c in gr.criteria if c.name == "alpha survives the factor fingerprint")
+    assert row.blocking and not row.passed
+    assert "statsmodels" in row.evidence, "the reason it did not run must reach the human"
+
+
+def test_uncomputed_evidence_is_never_reported_as_a_pass():
+    gr = gate_b(load_card(CARD), {}, {})
+    assert not gr.passed
+    for c in gr.criteria:
+        if c.value == "NOT COMPUTED":
+            assert not c.passed, f"{c.name!r} was scored as passing without evidence"
