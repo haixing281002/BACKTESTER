@@ -172,4 +172,4 @@ PIPELINE HALTED AT STEP 03 (FAIL FAST)
   This is a SUCCESSFUL outcome for the pipeline: the paper was screened,
   carded, and rejected on data grounds in minutes rather than days.
   The finding is stored so nobody re-derives it.
-  library entry: devanathan_2026_sbg_replication__67beb9452d34c0e2__20260915T103419
+  library entry: devanathan_2026_sbg_replication__67beb9452d34c0e2__20260916T071730

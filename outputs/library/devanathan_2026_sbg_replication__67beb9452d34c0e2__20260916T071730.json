@@ -1,0 +1,106 @@
+{
+  "entry_id": "devanathan_2026_sbg_replication__67beb9452d34c0e2__20260916T071730",
+  "card_id": "devanathan_2026_sbg_replication",
+  "mode": "replication",
+  "created_utc": "2026-09-16T07:17:30.046201+00:00",
+  "card_fingerprint": "67beb9452d34c0e2",
+  "snapshot_id": null,
+  "content_hash": null,
+  "engine_code_hash": null,
+  "git_commit": null,
+  "outcome": "FAIL_FAST_DATA",
+  "attained_rung": null,
+  "stopped_at": "STEP_03_FEASIBILITY",
+  "headline_metrics": {
+    "n_configs_tried": 40
+  },
+  "factor_fingerprint": {},
+  "gates": [
+    {
+      "gate": "GATE A -- interpretation",
+      "owner": "researcher",
+      "decision": "PENDING",
+      "passed": false,
+      "rationale": "evidence supports REJECT or FIX-DATA; mandatory data unavailable. This is a procurement question, not a research question. A named human records the decision.",
+      "criteria": [
+        {
+          "name": "card validates against schema",
+          "passed": true,
+          "evidence": "schema clean",
+          "value": null,
+          "threshold": null,
+          "blocking": true
+        },
+        {
+          "name": "all ambiguities resolved",
+          "passed": true,
+          "evidence": "7 ambiguities logged and resolved",
+          "value": 0,
+          "threshold": 0,
+          "blocking": true
+        },
+        {
+          "name": "no low-confidence material interpretation",
+          "passed": true,
+          "evidence": "none",
+          "value": 0,
+          "threshold": 0,
+          "blocking": false
+        },
+        {
+          "name": "data feasibility resolved",
+          "passed": false,
+          "evidence": "SPY_adj_close (price) is mandatory and unavailable; AGG_adj_close (price) is mandatory and unavailable; GLD_adj_close (price) is mandatory and unavailable; SPY_volume (volume) is mandatory and unavailable; AGG_volume (volume) is mandatory and unavailable; GLD_volume (volume) is mandatory and unavailable; DFF_fed_funds (risk_free_rate) is mandatory and unavailable; UST_yield_curve (macro) is mandatory and unavailable; UST_10y_real_yield (macro) is mandatory and unavailable; UST_10y_breakeven (macro) is mandatory and unavailable; VIX (macro) is mandatory and unavailable; broad_dollar_index (macro) is mandatory and unavailable; fama_french_factors (factor_return) is mandatory and unavailable",
+          "value": "FAIL_FAST",
+          "threshold": "GO or GO_WITH_PROXY",
+          "blocking": true
+        },
+        {
+          "name": "replication targets defined",
+          "passed": true,
+          "evidence": "targets pinned to a single accounting basis",
+          "value": 10,
+          "threshold": ">=1",
+          "blocking": true
+        },
+        {
+          "name": "source text is machine-readable",
+          "passed": true,
+          "evidence": "Math-bearing lines on 7% of lines. Equations are unreliable after extraction -- any card field derived from a formula needs human verification against the rendered page.; Reversed (rotated) text on pages [10, 12, 13, 15, 16, 30]: figure axis labels. Numbers must not be read off these pages.",
+          "value": null,
+          "threshold": null,
+          "blocking": true
+        },
+        {
+          "name": "equations verified against rendered page",
+          "passed": false,
+          "evidence": "high math density: formulas were hand-checked, not trusted from text",
+          "value": "7.2%",
+          "threshold": "<5%",
+          "blocking": false
+        }
+      ]
+    }
+  ],
+  "lessons": [
+    "SPY_adj_close (price) is mandatory and unavailable",
+    "AGG_adj_close (price) is mandatory and unavailable",
+    "GLD_adj_close (price) is mandatory and unavailable",
+    "SPY_volume (volume) is mandatory and unavailable",
+    "AGG_volume (volume) is mandatory and unavailable",
+    "GLD_volume (volume) is mandatory and unavailable",
+    "DFF_fed_funds (risk_free_rate) is mandatory and unavailable",
+    "UST_yield_curve (macro) is mandatory and unavailable",
+    "UST_10y_real_yield (macro) is mandatory and unavailable",
+    "UST_10y_breakeven (macro) is mandatory and unavailable",
+    "VIX (macro) is mandatory and unavailable",
+    "broad_dollar_index (macro) is mandatory and unavailable",
+    "fama_french_factors (factor_return) is mandatory and unavailable"
+  ],
+  "reuse_notes": [
+    "Reusable if US ETF prices + FRED + Kenneth French data are ever licensed.",
+    "The mechanism was carded successfully; only the data is missing.",
+    "An adaptation card testing the same mechanism on held data is the cheaper path."
+  ],
+  "reviewer": ""
+}
