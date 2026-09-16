@@ -1484,6 +1484,6 @@ nb = {
     "cells": cells,
 }
 os.makedirs("colab", exist_ok=True)
-with open(OUT, "w") as fh:
+with open(OUT, "w", encoding="utf-8") as fh:
     json.dump(nb, fh, indent=1)
 print(f"wrote {OUT}  ({os.path.getsize(OUT)/1024:.0f} KB, {len(cells)} cells)")

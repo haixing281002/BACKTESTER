@@ -25,7 +25,7 @@ from ros.feasibility import assess
 
 
 def _fixtures(path: Optional[str]) -> Optional[Dict[str, Any]]:
-    return json.load(open(path)) if path else None
+    return json.load(open(path, encoding="utf-8")) if path else None
 
 
 def main(argv=None) -> int:
@@ -123,7 +123,7 @@ def main(argv=None) -> int:
 
     os.makedirs(args.outdir, exist_ok=True)
     trace = os.path.join(args.outdir, "agentic_trace.json")
-    with open(trace, "w") as fh:
+    with open(trace, "w", encoding="utf-8") as fh:
         json.dump(res.to_dict(), fh, indent=2, default=str)
     print(f"\n  card written  : {res.card_path}")
     print(f"  trace written : {trace}")

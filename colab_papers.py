@@ -467,7 +467,7 @@ notes: >
   beat NIFTY 500 AND the free MQVLV index after costs, with alpha that survives
   the factor fingerprint.
 """
-    with open(out, "w") as fh:
+    with open(out, "w", encoding="utf-8") as fh:
         fh.write(yaml_text)
 
     from ros.cards.schema import CardValidationError, load_card

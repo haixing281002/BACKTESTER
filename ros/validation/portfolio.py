@@ -20,10 +20,16 @@ import pandas as pd
 
 from ros.validation.metrics import ANN, ann_vol, cagr, cvar, max_drawdown
 
+# Keep the REAL import failure, the same way ros/cards/extract.py does. An
+# absent statsmodels and a statsmodels whose numpy/scipy underneath it is broken
+# are different problems with different fixes, and reporting the second as the
+# first sends people in a circle.
+sm = None
+_SM_ERROR = None
 try:
     import statsmodels.api as sm
-except ImportError:  # pragma: no cover
-    sm = None
+except Exception as _exc:  # noqa: BLE001 - any failure here must be reportable
+    _SM_ERROR = _exc
 
 
 def _align(a: pd.Series, b: pd.Series):
@@ -80,7 +86,8 @@ def factor_fingerprint(strategy_ret: pd.Series, factor_rets: pd.DataFrame,
     different names: two cards with the same loading vector are the same trade.
     """
     if sm is None:
-        return {"error": "statsmodels not installed"}
+        return {"error": f"statsmodels unavailable -- "
+                         f"{type(_SM_ERROR).__name__}: {_SM_ERROR}"}
     df = pd.concat([strategy_ret.rename("y"), factor_rets], axis=1).dropna()
     if len(df) < 200:
         return {"error": f"insufficient overlap ({len(df)})"}

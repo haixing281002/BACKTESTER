@@ -71,7 +71,7 @@ class StrategyLibrary:
 
     def write(self, entry: LibraryEntry) -> str:
         p = self._path(entry.entry_id)
-        with open(p, "w") as fh:
+        with open(p, "w", encoding="utf-8") as fh:
             json.dump(entry.to_dict(), fh, indent=2, default=_jsonable)
         return p
 
@@ -79,7 +79,7 @@ class StrategyLibrary:
         out = []
         for f in sorted(os.listdir(self.root)):
             if f.endswith(".json"):
-                with open(os.path.join(self.root, f)) as fh:
+                with open(os.path.join(self.root, f), encoding="utf-8") as fh:
                     out.append(json.load(fh))
         return out
 

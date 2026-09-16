@@ -195,12 +195,12 @@ def test_engine_rejects_nan_prices():
 def test_card_rejects_unknown_keys_and_unresolved_ambiguity(tmp_path):
     from ros.cards.schema import CardValidationError, load_card
     p = tmp_path / "c.yaml"
-    p.write_text("paper: {id: x}\nnot_a_section: 1\n")
+    p.write_text("paper: {id: x}\nnot_a_section: 1\n", encoding="utf-8")
     with pytest.raises(CardValidationError, match="unknown top-level"):
         load_card(str(p))
     p.write_text(
         "paper: {id: x}\nintent: {mode: adaptation, transferred_mechanism: m}\n"
         "universe: {assets: [A]}\nsignal: {template: fixed_weight}\n"
-        "ambiguities:\n  - {field: f, issue: i}\n")
+        "ambiguities:\n  - {field: f, issue: i}\n", encoding="utf-8")
     with pytest.raises(CardValidationError, match="no resolution"):
         load_card(str(p))
