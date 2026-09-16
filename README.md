@@ -21,6 +21,9 @@ humans govern.** A paper enters the system as a *card* (data), never as code.
 
 ## Quick start
 
+New here, or setting this up on someone else's machine? **`SETUP.md`** is the
+ten-minute version.
+
 ```bash
 pip install -r requirements.txt
 
