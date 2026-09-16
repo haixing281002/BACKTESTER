@@ -149,6 +149,49 @@ docs/PIPELINE_REVIEW.md       step-by-step issues, red flags, green flags, findi
 
 ---
 
+## Running it in VS Code (no API key)
+
+`CLAUDE.md` and `.claude/commands/` turn every LLM-owned stage in the chart into a
+slash command. **In the editor, Claude Code is the model** — the same seven roles,
+performed in session, with no API key and better context than the API agents get.
+
+```
+/paper docs/papers/your_paper.pdf     # the whole chain, stopping at both gates
+```
+
+or stage by stage:
+
+| Command | Stage | Owner |
+|---|---|---|
+| `/triage` | 00 | LLM owns |
+| `/ingest` | 01 | LLM owns — reads the **rendered** PDF |
+| `/draft-card` → `/critique-card` | 02 | LLM owns, code validates |
+| `/gate-a` | Gate A | **assembles the queue; does not decide** |
+| `/map-data` | 03 | code binds, LLM advises |
+| `/run` | 03–08 | code owns |
+| `/critique-results` | 06–07 | code computes, LLM critiques |
+| `/gate-b` | Gate B | **assembles the brief; does not vote** |
+| `/librarian` | 08 | code stores, LLM recalls |
+
+Both paths emit the **same artifacts against the same schemas** in
+`ros/agents/schemas.py`. The producer is recorded, never special-cased:
+
+```bash
+python -m ros.interpretation history
+```
+```
+stage         by           operator     valid  artifact
+01_ingest     claude-code  N. Ganesh    True   outputs/interpretation/x__analysis.json
+02_card       claude-code  N. Ganesh    None   cards/x_adaptation.yaml
+02_critique   claude-code  N. Ganesh    True   outputs/interpretation/x__critique.json
+```
+
+Every record hashes its artifact and its inputs, names the **person** accountable
+(an unnamed operator is refused), and validates the artifact against its schema —
+so an invalid one is recorded as `valid=False` rather than passing quietly.
+
+---
+
 ## The agentic layer
 
 `ros/agents/` puts Claude where a model is genuinely better than code — reading documents,

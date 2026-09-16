@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python run_pipeline.py:*)",
+      "Bash(python run_agentic.py:*)",
+      "Bash(python -m ros.interpretation:*)",
+      "Bash(python -m pytest:*)",
+      "Bash(python -c:*)",
+      "Read(//home/user/BACKTESTER/**)",
+      "Glob(//home/user/BACKTESTER/**)",
+      "Grep(//home/user/BACKTESTER/**)"
+    ]
+  }
+}
