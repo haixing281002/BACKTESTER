@@ -26,7 +26,7 @@ import subprocess
 import sys
 import time
 
-VERSION = "2026-09-16.3"
+VERSION = "2026-09-16.4"
 REPO = "https://github.com/haixing281002/BACKTESTER.git"
 BRANCH = "claude/sleepy-hypatia-if6kj5"
 
@@ -176,11 +176,18 @@ def bootstrap(run_pipeline: bool = True, card: str = "india") -> str:
     !python run_pipeline.py --card cards/devanathan_2026_replication.yaml
     !python run_pipeline.py --card cards/moskowitz_2012_tsmom_india.yaml
 
-    # ANALYSE YOUR OWN PAPER -- no LLM, no API key, dataset unchanged
-    from colab_papers import upload_pdf, analyse, compare
+    # YOUR OWN PAPER, END TO END -- no LLM, no API key, dataset unchanged
+    from colab_papers import upload_pdf, backtest
     p = upload_pdf()      # pick any .pdf  (run this cell on its own)
+    backtest(p)           # read it, draft a card, run the full backtest
+
+    # or step by step, if you want to edit the card in between
+    from colab_papers import analyse, compare, draft_card, run
     analyse(p)            # what the deterministic reader finds
     compare(p)            # your paper vs the baseline, side by side
+    c = draft_card(p)     # writes cards/<your_paper>_adaptation.yaml
+    # ... open that file, fix the lines marked CONFIRM ...
+    run(c)                # backtest it
 
     # the agentic layer -- Claude reads the paper (no API key needed)
     !python run_agentic.py --pdf docs/devanathan_2026_simple_dynamic_sbg.pdf \\
