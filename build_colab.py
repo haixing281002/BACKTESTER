@@ -82,203 +82,139 @@ Total runtime: roughly 5–8 minutes on a free Colab CPU runtime. No GPU needed.
 cells.append(md(r"""---
 # SECTION 0 — Setup
 
-**Runtime → Run all works.** Cell 0.3 defaults to `SOURCE = "repo"`, which downloads both
-input files automatically — no clicking, no upload dialog.
+## One cell. Press play, wait about two minutes.
 
-Run these three in order: **0.1** installs libraries (~90s), **0.2** unpacks the engine,
-**0.3** fetches the data.
+**Runtime → Run all** works from a cold start. The single setup cell below installs the
+libraries, unpacks the engine and downloads both input files by itself. Nothing to click,
+nothing to upload, no ordering to get wrong.
 
-> If a cell fails instantly with *"SETUP INCOMPLETE"*, it means an earlier setup cell did not
-> finish. Scroll up, run 0.1 → 0.2 → 0.3 in order, then continue.
->
-> If cell 0.1 reports imports that failed, do **Runtime → Restart session** and run it again —
-> installing `cvxpy` can swap `numpy` out from under a live kernel."""))
+> **If you have run this notebook before, read this.** Colab may have saved a *Copy to Drive*
+> of an older version, and that saved copy is what reopens — so you would be running the old
+> broken setup no matter how many times the original is fixed. The setup cell prints a
+> **VERSION** line. If it does not say `single-cell-setup`, you are on a stale copy: close the
+> tab, re-open from the original link and decline the saved copy, or upload the `.ipynb` file
+> fresh.
 
-cells.append(code(r'''#@title 0.1 — Install dependencies  { display-mode: "form" }
-# Colab already ships pandas, numpy, scipy, matplotlib, statsmodels and PyYAML.
-# We add: cvxpy + clarabel (the convex solver the source paper itself uses),
-# pdfplumber (PDF ingestion), openpyxl (your .xlsx).
-import subprocess, sys
+*Want to run your own paper or data instead?* There is an optional cell at the end of this
+section. Run the default first so you have a working baseline to compare against."""))
 
-PKGS = ["cvxpy>=1.5", "clarabel>=0.9", "pdfplumber>=0.10", "openpyxl>=3.1",
-        "PyYAML>=6.0", "anthropic>=1.6", "pydantic>=2.0"]
-print("Installing (60-90s on a cold runtime)...")
+cells.append(code(bundle_literal + r'''
+# ============================================================================
+#  SETUP - run this one cell. No uploads, no dropdowns, no ordering to get
+#  wrong. It installs dependencies, unpacks the engine, downloads both input
+#  files, and verifies all of it before letting you continue.
+# ============================================================================
+NOTEBOOK_VERSION = "2026-09-16 / single-cell-setup"
+
+import base64, importlib, io, os, subprocess, sys, tarfile, urllib.request
+
+WORK = "/content/research_os"
+RAW  = ("https://raw.githubusercontent.com/haixing281002/BACKTESTER/"
+        "claude/sleepy-hypatia-if6kj5/")
+
+print(f"VERSION: {NOTEBOOK_VERSION}")
+print("=" * 72)
+
+# -- 1. dependencies -------------------------------------------------------
+# Colab ships pandas/numpy/scipy/statsmodels/matplotlib/pydantic/PyYAML.
+# We add the convex solver the paper itself uses, the PDF reader, the xlsx
+# reader, and the Anthropic SDK for Section 9.
+PKGS = ["cvxpy>=1.5", "clarabel>=0.9", "pdfplumber>=0.10",
+        "openpyxl>=3.1", "PyYAML>=6.0", "anthropic>=1.6", "pydantic>=2.0"]
+print("\n[1/4] installing dependencies (60-90s on a cold runtime)...")
 r = subprocess.run([sys.executable, "-m", "pip", "install", "-q", *PKGS],
                    capture_output=True, text=True)
 if r.returncode != 0:
-    print(r.stdout[-2000:]); print(r.stderr[-2000:])
-    raise SystemExit("install failed -- see output above")
+    print(r.stdout[-1500:]); print(r.stderr[-1500:])
+    raise SystemExit("pip install failed -- see the output above.")
+print("      done")
 
-import importlib
-failed = []
-for m in ["pandas", "numpy", "scipy", "statsmodels", "cvxpy", "pdfplumber", "yaml",
-          "matplotlib", "anthropic", "pydantic"]:
-    try:
-        mod = importlib.import_module(m)
-        print(f"  ok  {m:<14} {getattr(mod, '__version__', '')}")
-    except Exception as e:
-        failed.append(m)
-        print(f"  XX  {m:<14} {type(e).__name__}: {e}")
-if failed:
-    raise SystemExit(
-        f"\nThese failed to import: {failed}\n"
-        "Installing cvxpy can replace numpy/scipy underneath a running kernel.\n"
-        "Fix: Runtime > Restart session, then run this cell again (the install is\n"
-        "already done, so it will be quick), then carry on.")
-
-# Confirm the solver actually solves, not just imports.
-import cvxpy as cp, numpy as np
-w = cp.Variable(3)
-cp.Problem(cp.Maximize(np.array([.1, .2, .05]) @ w), [w >= 0, cp.sum(w) <= 1]).solve(solver=cp.CLARABEL)
-print(f"\n  solver check: CLARABEL returned {np.round(w.value, 3)}  (expected [0. 1. 0.])")
-print("\nSetup complete.")'''))
-
-cells.append(code(bundle_literal + r'''
-
-#@title 0.2 — Unpack the Research OS engine  { display-mode: "form" }
-# The whole package is embedded above as a base64 tarball so this notebook is
-# self-contained: no GitHub access, no external downloads, nothing to go stale.
-import base64, io, os, sys, tarfile
-
-WORK = "/content/research_os"
+# -- 2. unpack the engine --------------------------------------------------
+# The whole package is embedded in this cell as a base64 tarball, so the
+# notebook is self-contained: no clone, no external download, nothing to go
+# stale.
+print("\n[2/4] unpacking the Research OS engine...")
 os.makedirs(WORK, exist_ok=True)
-os.chdir(WORK)
-
 with tarfile.open(fileobj=io.BytesIO(base64.b64decode(_B64)), mode="r:gz") as tf:
     tf.extractall(WORK)
-
-for d in ["data/raw", "docs", "outputs"]:
+for d in ("data/raw", "docs", "outputs"):
     os.makedirs(os.path.join(WORK, d), exist_ok=True)
+os.chdir(WORK)
 if WORK not in sys.path:
     sys.path.insert(0, WORK)
+# Drop stale imports so re-running this cell picks up edits you make later.
+for mod in [m for m in list(sys.modules) if m == "ros" or m.startswith("ros.")]:
+    del sys.modules[mod]
+print(f"      done -> {WORK}")
 
-# Drop any stale imports so re-running this cell picks up edits you make later.
-for m in [m for m in list(sys.modules) if m == "ros" or m.startswith("ros.")]:
-    del sys.modules[m]
+# -- 3. fetch the inputs ---------------------------------------------------
+# Downloaded rather than uploaded, so 'Run all' needs no human.
+XLSX = "data/raw/Factor_Indices_Historical_Price_Data.xlsx"
+PDF  = "docs/devanathan_2026_simple_dynamic_sbg.pdf"
+print("\n[3/4] downloading the two input files...")
+for dst, src in ((XLSX, "data/raw/Factor_Indices_Historical_Price_Data.xlsx"),
+                 (PDF,  "docs/devanathan_2026_simple_dynamic_sbg.pdf")):
+    if os.path.exists(dst) and os.path.getsize(dst) > 1000:
+        print(f"      already present -> {dst}")
+        continue
+    try:
+        urllib.request.urlretrieve(RAW + src, dst)
+        print(f"      {os.path.getsize(dst):>9,} bytes -> {dst}")
+    except Exception as e:
+        raise SystemExit(
+            f"Could not download {dst}\n  {type(e).__name__}: {e}\n\n"
+            "Check the runtime has internet, or use the optional cell at the\n"
+            "end of Section 0 to supply the files yourself.")
 
+# -- 4. verify -------------------------------------------------------------
+print("\n[4/4] verifying...")
+failed = []
+for m in ("pandas", "numpy", "scipy", "statsmodels", "cvxpy", "pdfplumber",
+          "yaml", "matplotlib", "anthropic", "pydantic"):
+    try:
+        importlib.import_module(m)
+    except Exception as e:
+        failed.append(f"{m} ({type(e).__name__})")
+if failed:
+    raise SystemExit(
+        f"      these failed to import: {failed}\n\n"
+        "Installing cvxpy can replace numpy underneath a running kernel.\n"
+        "FIX: Runtime > Restart session, then run this cell again. The install\n"
+        "and the download are already done, so the re-run takes seconds.")
+
+import cvxpy as cp, numpy as np
+w = cp.Variable(3)
+cp.Problem(cp.Maximize(np.array([.1, .2, .05]) @ w),
+           [w >= 0, cp.sum(w) <= 1]).solve(solver=cp.CLARABEL)
+assert np.allclose(w.value, [0, 1, 0], atol=1e-6), "solver check failed"
+
+from ros.data.loaders import audit_frame, load_nse_factor_workbook
+from ros.cards.extract import extract_document
 from ros.engine.primitives import list_primitives
 from ros.engine.templates import list_templates
-
-print(f"engine unpacked to {WORK}\n")
-print("allocator templates :", ", ".join(list_templates()))
-print("signal primitives   :", ", ".join(list_primitives()))
-print("\nstrategy cards:")
-for f in sorted(os.listdir("cards")):
-    print("   cards/" + f)'''))
-
-cells.append(md(r"""### 0.3 — Load your data (both files required)
-
-Upload **both**:
-
-1. **`Factor_Indices_Historical_Price_Data.xlsx`** — your NSE factor index price history
-2. **the research paper `.pdf`** — the paper being evaluated
-
-The cell hard-fails if either is missing. That is deliberate: a Strategy Card with no source
-document cannot cite page evidence, so Gate A has nothing to check the interpretation against.
-An uncitable card is exactly the failure mode this system exists to prevent.
-
-In the upload dialog you can select both files at once (ctrl-click / cmd-click). Option B
-(Google Drive) is better if you will re-run this often."""))
-
-cells.append(code(r'''#@title 0.3 — Load your data  { display-mode: "form" }
-# Default is "repo": both inputs download automatically from the public
-# repository, so Runtime > Run all works with no interaction. Switch to
-# "upload" only when you want to run YOUR OWN paper or data.
-SOURCE = "repo"  #@param ["repo", "upload", "google_drive", "already_here"]
-DRIVE_FOLDER = "/content/drive/MyDrive/quant_research"  #@param {type:"string"}
-
-import os, shutil, glob, urllib.request
-
-WORK = "/content/research_os"
-if not os.path.isdir(WORK):
-    raise SystemExit("SETUP INCOMPLETE -- run cell 0.2 first (it unpacks the engine).")
-os.chdir(WORK)
-XLSX = "data/raw/Factor_Indices_Historical_Price_Data.xlsx"
-PDF = "docs/devanathan_2026_simple_dynamic_sbg.pdf"
-
-RAW = ("https://raw.githubusercontent.com/haixing281002/BACKTESTER/"
-       "claude/sleepy-hypatia-if6kj5/")
-
-def _place(path):
-    """Route a file to the right folder by extension."""
-    low = path.lower()
-    if low.endswith((".xlsx", ".xls")):
-        shutil.copy(path, XLSX); return f"prices  -> {XLSX}"
-    if low.endswith(".pdf"):
-        shutil.copy(path, PDF); return f"paper   -> {PDF}"
-    return f"ignored -> {os.path.basename(path)} (not .xlsx or .pdf)"
-
-if SOURCE == "repo":
-    for dst in (XLSX, PDF):
-        os.makedirs(os.path.dirname(dst), exist_ok=True)
-        url = RAW + ("data/raw/Factor_Indices_Historical_Price_Data.xlsx"
-                     if dst == XLSX else "docs/devanathan_2026_simple_dynamic_sbg.pdf")
-        try:
-            urllib.request.urlretrieve(url, dst)
-            print(f"  downloaded -> {dst}  ({os.path.getsize(dst):,} bytes)")
-        except Exception as e:
-            raise SystemExit(
-                f"Could not download {dst}: {type(e).__name__}: {e}\n"
-                "Set SOURCE = 'upload' above and provide the files yourself.")
-
-elif SOURCE == "upload":
-    from google.colab import files
-    print("NOTE: this option needs you to pick files, so it does NOT work with")
-    print("'Run all'. Run this cell on its own.\n")
-    print("Select BOTH your .xlsx AND the paper .pdf (ctrl-click / cmd-click to")
-    print("multi-select), then wait for the upload to finish.\n")
-    got = files.upload()
-    if not got:
-        raise SystemExit(
-            "No files were uploaded. If you used 'Run all', the upload widget is\n"
-            "skipped -- set SOURCE = 'repo' above, or run this cell by itself.")
-    for name in got:
-        print("  " + _place(name))
-
-elif SOURCE == "google_drive":
-    from google.colab import drive
-    drive.mount("/content/drive")
-    hits = glob.glob(os.path.join(DRIVE_FOLDER, "*.xlsx")) + glob.glob(os.path.join(DRIVE_FOLDER, "*.pdf"))
-    if not hits:
-        raise FileNotFoundError(f"No .xlsx or .pdf found in {DRIVE_FOLDER}")
-    for h in hits:
-        print("  " + _place(h))
-
-print()
-PDF = "docs/devanathan_2026_simple_dynamic_sbg.pdf"
-missing = []
-if not os.path.exists(XLSX):
-    missing.append("  - the price workbook  (Factor_Indices_Historical_Price_Data.xlsx)")
-if not os.path.exists(PDF):
-    missing.append("  - the research paper  (any .pdf)")
-if missing:
-    raise FileNotFoundError(
-        "BOTH input files are required. Missing:\n" + "\n".join(missing) +
-        "\n\nRe-run this cell and select both at once (ctrl-click / cmd-click "
-        "in the upload dialog).")
-
-# Validate the file before anything downstream trusts it.
-from ros.data.loaders import load_nse_factor_workbook, audit_frame
 import pandas as pd
 pd.set_option("display.width", 200)
 
 frame, prov = load_nse_factor_workbook(XLSX)
-print(f"loaded {prov['n_series']} series x {prov['n_rows']} rows   "
-      f"{prov['date_min']} -> {prov['date_max']}")
-print(f"source sha256: {prov['sha256'][:32]}\n")
-print("DATA AUDIT (runs before any backtest touches the frame):")
-print(audit_frame(frame).to_string(index=False))
-
-# Validate the PDF too -- a file with a .pdf extension is not necessarily readable.
-from ros.cards.extract import extract_document
 doc = extract_document(PDF)
-print(f"\npaper loaded : {doc.quality.n_pages} pages, {doc.quality.n_chars:,} chars, "
-      f"sha256 {doc.sha256[:16]}")
 if doc.quality.is_scanned:
-    raise ValueError(
-        "This PDF is scanned (near-zero extractable text). It cannot be carded "
+    raise SystemExit(
+        "The PDF is scanned (near-zero extractable text). It cannot be carded\n"
         "without OCR -- which is itself a Step 01 finding, not a bug.")
-print("both inputs present and readable.")'''))
+
+print("      solver  : CLARABEL OK")
+print(f"      prices  : {prov['n_series']} series x {prov['n_rows']} rows  "
+      f"{prov['date_min']} -> {prov['date_max']}")
+print(f"      paper   : {doc.quality.n_pages} pages, {doc.quality.n_chars:,} chars")
+print(f"      engine  : {len(list_templates())} templates, "
+      f"{len(list_primitives())} primitives")
+
+print("\n" + "=" * 72)
+print("READY. Run the rest of the notebook top to bottom.")
+print("=" * 72)
+print("\nDATA AUDIT (runs before any backtest touches the frame):")
+print(audit_frame(frame).to_string(index=False))
+'''))
 
 cells.append(md(r"""#### What just happened, and why the audit matters
 
@@ -295,6 +231,42 @@ Your data comes back clean on all four. That is genuinely good and worth knowing
 **But look at `first_value`.** Every factor index starts at exactly **1000.00**. Hold that
 thought — it turns out to be the single most important fact about this dataset, and Step 03
 is where we deal with it."""))
+
+cells.append(md(r"""### Optional — run YOUR own paper and data
+
+Skip this on a first pass. Run it only when you want to point the pipeline at a different
+paper or a different price workbook.
+
+This cell uses Colab's upload widget, which needs you to pick files — so it **does not work
+with Runtime → Run all**. Run it on its own, then re-run the cells below it."""))
+
+cells.append(code(r'''#@title Optional - upload your own paper / data  { display-mode: "form" }
+import os, shutil
+if not os.path.isdir("/content/research_os"):
+    raise SystemExit("Run the SETUP cell first.")
+os.chdir("/content/research_os")
+
+from google.colab import files
+print("Pick a .xlsx (prices) and/or a .pdf (paper). Both are optional -- whatever")
+print("you upload replaces the default; anything you skip keeps what is there.\n")
+
+got = files.upload()
+if not got:
+    print("Nothing uploaded. The defaults from the SETUP cell are still in place.")
+for name in got:
+    low = name.lower()
+    if low.endswith((".xlsx", ".xls")):
+        shutil.copy(name, "data/raw/Factor_Indices_Historical_Price_Data.xlsx")
+        print(f"  prices -> replaced from {name}")
+    elif low.endswith(".pdf"):
+        shutil.copy(name, "docs/devanathan_2026_simple_dynamic_sbg.pdf")
+        print(f"  paper  -> replaced from {name}")
+    else:
+        print(f"  ignored {name} (not .xlsx or .pdf)")
+
+if got:
+    print("\nRe-run the cells below to analyse the new inputs.")
+'''))
 
 cells.append(md(r"""---
 # SECTION 1 — The pipeline, end to end
