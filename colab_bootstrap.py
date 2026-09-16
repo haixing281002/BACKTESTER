@@ -26,7 +26,7 @@ import subprocess
 import sys
 import time
 
-VERSION = "2026-09-16.2"
+VERSION = "2026-09-16.3"
 REPO = "https://github.com/haixing281002/BACKTESTER.git"
 BRANCH = "claude/sleepy-hypatia-if6kj5"
 
@@ -51,6 +51,12 @@ def bootstrap(run_pipeline: bool = True, card: str = "india") -> str:
     than duplicated, so a second run picks up any new commits.
     """
     t0 = time.time()
+    # A previous run may have deleted the directory this process is standing in,
+    # in which case os.getcwd() itself raises. Step somewhere real first.
+    try:
+        os.getcwd()
+    except (FileNotFoundError, OSError):
+        os.chdir("/")
     base = "/content" if os.path.isdir("/content") else os.getcwd()
     work = os.path.join(base, "BACKTESTER")
 
@@ -71,9 +77,15 @@ def bootstrap(run_pipeline: bool = True, card: str = "india") -> str:
     # A shallow clone brings the engine, the strategy cards, the price workbook
     # and the paper in one step, so there is nothing left to upload.
     print(f"\n[2/5] cloning the repository (branch {BRANCH})...")
-    if os.path.isdir(os.path.join(work, ".git")):
+    # Step OUT of the tree before deleting it. On a re-run this process is
+    # sitting inside `work` from last time, and removing the directory you are
+    # standing in leaves the process with no working directory at all -- git
+    # then fails with "Unable to read current working directory", which looks
+    # like a network problem and is not one.
+    os.chdir(base)
+    if os.path.isdir(work):
         shutil.rmtree(work, ignore_errors=True)   # always start clean
-    r = _run(["git", "clone", "--depth", "1", "--branch", BRANCH, REPO, work])
+    r = _run(["git", "clone", "--depth", "1", "--branch", BRANCH, REPO, work], cwd=base)
     if r.returncode != 0:
         print(r.stderr[-2000:])
         raise SystemExit("git clone failed -- check the runtime has internet.")
