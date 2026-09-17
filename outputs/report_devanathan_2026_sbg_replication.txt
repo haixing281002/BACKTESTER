@@ -74,6 +74,255 @@ STEP 02  |  STRATEGY CARD
            resolved: Implement with the stated t-100 cutoff and verify with an explicit look-ahead tripwire against same-bar returns before trusting any output.
 
 ====================================================================================================
+STEP 02c  |  UNIVERSE TRANSLATION + STRATEGY RECONSTRUCTION
+====================================================================================================
+  source universe : US multi-asset (equity / bond / gold)
+  target universe : (none proposed)
+  resolution      : infeasible
+  instruments MISSING (4):
+      - SPY_adj_close
+      - AGG_adj_close
+      - GLD_adj_close
+      - DFF_fed_funds
+  ! DIVERGENCE: the card proposes '' for 'US multi-asset (equity / bond / gold)', which is not a recorded correspondence. Recorded: NSE factor sleeves (loose)
+  note: No Indian analogue was proposed. If the paper's MECHANISM is security-level it may still be testable on an Indian cross-section; if it depends on cross-country dispersion, it does not transfer.
+  what a human is signing for:
+      - LONG-ONLY: this fund cannot short. Most academic factor premia are reported as long-short spreads, and the long leg alone has historically captured only part of the spread while carrying far more market beta. A long-only version of a long-short paper is a DIFFERENT strategy and must never be scored against the paper's numbers.
+      - SHORT-LEG ALPHA: where a paper reports leg-level returns, the short leg often carries the larger and more reliable half. Discarding it is not a haircut on the result; it can remove most of it.
+
+  STRATEGY AS RECONSTRUCTED FROM THE PAPER:
+    name        : markowitz_l1_with_ridge_forecast
+    definition  : Monthly mean-variance optimisation maximising the forecast next-month return net of a half-spread cost, subject to long-only, unlevered, an l1 leash of 1.0 to the 50/30/20 relative mix, and a hard 7% ex-ante volatility cap. Paper eq. (3), reproduced without adaptation.
+    type        : time-series (times one stream)
+    formation   : No selection. All three assets are always candidates and the optimiser sets every weight within the l1 leash.
+    weighting   : convex optimisation output, long-only, gross at most 1
+    rebalance   : monthly   holding: one month
+    inputs      : daily adjusted close of SPY, AGG, GLD, the effective federal funds rate as the cash numeraire
+    constraint  : long-only: w >= 0
+    constraint  : unlevered: 1'w <= 1
+    constraint  : ex-ante vol cap: 7%
+    constraint  : l1 leash to 50/30/20, budget 1.0
+    engine      : markowitz_l1   confidence: high   pages: [3, 11]
+
+====================================================================================================
+GATE A  |  HUMAN INTERPRETATION CONTROL
+====================================================================================================
+  GATE A -- interpretation (owner: researcher) -> BLOCKED
+    [PASS] card validates against schema
+           schema clean
+    [PASS] universe translation recorded  [US multi-asset (equity / bond / gold) -> (none) vs None]
+           This is the REPLICATION card: it deliberately keeps the paper's own assets so the pipeline is tested against the published numbers rather than an adaptation of them. There is no Indian analogue because none is wanted here -- the whole point of this card is to stay in the paper's universe. The fund holds no US ETF history, so Step 03 fails fast, which is the correct and intended outcome: it proves the data gate stops work before code is written.
+    [warn] source universe is a recorded correspondence  [recognised vs None]
+           the card proposes '' for 'US multi-asset (equity / bond / gold)', which is not a recorded correspondence. Recorded: NSE factor sleeves (loose)
+    [FAIL] the fund can obtain this universe  [infeasible vs direct or sleeve_proxy]
+           missing: SPY_adj_close, AGG_adj_close, GLD_adj_close, DFF_fed_funds
+    [PASS] translation risks acknowledged  [2 vs >=1]
+           a translation with nothing to lose has not been examined
+    [PASS] strategy reconstructed to an executable level  [markowitz_l1_with_ridge_forecast vs None]
+           Monthly mean-variance optimisation maximising the forecast next-month return net of a half-spread cost, subject to long-only, unlevered, an l1 leash of 1.0 to the 50/30/20 relative mix, and a hard 7% 
+    [PASS] long-only adaptation stated  [already long-only vs None]
+           paper is long-only; nothing to adapt
+    [PASS] the engine can express this strategy  [markowitz_l1 vs None]
+           maps to a registered allocator template
+    [PASS] strategy read with confidence  [high vs high]
+           pages [3, 11]
+    [PASS] all ambiguities resolved  [0 vs 0]
+           7 ambiguities logged and resolved
+    [PASS] no low-confidence material interpretation  [0 vs 0]
+           none
+    [FAIL] data feasibility resolved  [FAIL_FAST vs GO or GO_WITH_PROXY]
+           SPY_adj_close (price) is mandatory and unavailable; AGG_adj_close (price) is mandatory and unavailable; GLD_adj_close (price) is mandatory and unavailable; SPY_volume (volume) is mandatory and unavailable; AGG_volume (volume) is mandatory and unavailable; GLD_volume (volume) is mandatory and unavailable; DFF_fed_funds (risk_free_rate) is mandatory and unavailable; UST_yield_curve (macro) is mandatory and unavailable; UST_10y_real_yield (macro) is mandatory and unavailable; UST_10y_breakeven (macro) is mandatory and unavailable; VIX (macro) is mandatory and unavailable; broad_dollar_index (macro) is mandatory and unavailable; fama_french_factors (factor_return) is mandatory and unavailable
+    [PASS] replication targets defined  [10 vs >=1]
+           targets pinned to a single accounting basis
+    [PASS] source text is machine-readable
+           Math-bearing lines on 7% of lines. Equations are unreliable after extraction -- any card field derived from a formula needs human verification against the rendered page.; Reversed (rotated) text on pages [10, 12, 13, 15, 16, 30]: figure axis labels. Numbers must not be read off these pages.
+    [warn] equations verified against rendered page  [7.2% vs <5%]
+           high math density: formulas were hand-checked, not trusted from text
+    decision: PENDING
+
+  TO SUPPLY THIS DATA AND CONTINUE
+
+  1. Put the file(s) in data/raw/
+  2. Declare each series in data/raw/MANIFEST.yaml, under a top-level `series:` list.
+     The awkward fields are mandatory on purpose -- they travel with
+     every result computed from the series.
+
+  - name: SPY_adj_close
+    kind: price                      # corporate_action / factor_return / fundamental / macro / membership / price / publication_date / risk_free_rate / total_return_index / volume
+    frequency: daily
+    file: <your_file.xlsx|csv>        # relative to data/raw/
+    sheet: 0                          # xlsx only; omit for csv
+    date_column: Date
+    pit_status: backfilled            # point_in_time / backfilled / restated / unknown  <- be honest
+    licence: "<who owns this and what may we do with it>"
+    coverage_note: "<what is IN the file: adjusted? dividends? volume?>"
+    caveats:
+      - "<what would mislead someone reading a result built on this>"
+
+  - name: AGG_adj_close
+    kind: price                      # corporate_action / factor_return / fundamental / macro / membership / price / publication_date / risk_free_rate / total_return_index / volume
+    frequency: daily
+    file: <your_file.xlsx|csv>        # relative to data/raw/
+    sheet: 0                          # xlsx only; omit for csv
+    date_column: Date
+    pit_status: backfilled            # point_in_time / backfilled / restated / unknown  <- be honest
+    licence: "<who owns this and what may we do with it>"
+    coverage_note: "<what is IN the file: adjusted? dividends? volume?>"
+    caveats:
+      - "<what would mislead someone reading a result built on this>"
+
+  - name: GLD_adj_close
+    kind: price                      # corporate_action / factor_return / fundamental / macro / membership / price / publication_date / risk_free_rate / total_return_index / volume
+    frequency: daily
+    file: <your_file.xlsx|csv>        # relative to data/raw/
+    sheet: 0                          # xlsx only; omit for csv
+    date_column: Date
+    pit_status: backfilled            # point_in_time / backfilled / restated / unknown  <- be honest
+    licence: "<who owns this and what may we do with it>"
+    coverage_note: "<what is IN the file: adjusted? dividends? volume?>"
+    caveats:
+      - "<what would mislead someone reading a result built on this>"
+
+  - name: DFF_fed_funds
+    kind: price                      # corporate_action / factor_return / fundamental / macro / membership / price / publication_date / risk_free_rate / total_return_index / volume
+    frequency: daily
+    file: <your_file.xlsx|csv>        # relative to data/raw/
+    sheet: 0                          # xlsx only; omit for csv
+    date_column: Date
+    pit_status: backfilled            # point_in_time / backfilled / restated / unknown  <- be honest
+    licence: "<who owns this and what may we do with it>"
+    coverage_note: "<what is IN the file: adjusted? dividends? volume?>"
+    caveats:
+      - "<what would mislead someone reading a result built on this>"
+
+  - name: SPY_volume
+    kind: price                      # corporate_action / factor_return / fundamental / macro / membership / price / publication_date / risk_free_rate / total_return_index / volume
+    frequency: daily
+    file: <your_file.xlsx|csv>        # relative to data/raw/
+    sheet: 0                          # xlsx only; omit for csv
+    date_column: Date
+    pit_status: backfilled            # point_in_time / backfilled / restated / unknown  <- be honest
+    licence: "<who owns this and what may we do with it>"
+    coverage_note: "<what is IN the file: adjusted? dividends? volume?>"
+    caveats:
+      - "<what would mislead someone reading a result built on this>"
+
+  - name: AGG_volume
+    kind: price                      # corporate_action / factor_return / fundamental / macro / membership / price / publication_date / risk_free_rate / total_return_index / volume
+    frequency: daily
+    file: <your_file.xlsx|csv>        # relative to data/raw/
+    sheet: 0                          # xlsx only; omit for csv
+    date_column: Date
+    pit_status: backfilled            # point_in_time / backfilled / restated / unknown  <- be honest
+    licence: "<who owns this and what may we do with it>"
+    coverage_note: "<what is IN the file: adjusted? dividends? volume?>"
+    caveats:
+      - "<what would mislead someone reading a result built on this>"
+
+  - name: GLD_volume
+    kind: price                      # corporate_action / factor_return / fundamental / macro / membership / price / publication_date / risk_free_rate / total_return_index / volume
+    frequency: daily
+    file: <your_file.xlsx|csv>        # relative to data/raw/
+    sheet: 0                          # xlsx only; omit for csv
+    date_column: Date
+    pit_status: backfilled            # point_in_time / backfilled / restated / unknown  <- be honest
+    licence: "<who owns this and what may we do with it>"
+    coverage_note: "<what is IN the file: adjusted? dividends? volume?>"
+    caveats:
+      - "<what would mislead someone reading a result built on this>"
+
+  - name: CPILFESL_core_cpi
+    kind: price                      # corporate_action / factor_return / fundamental / macro / membership / price / publication_date / risk_free_rate / total_return_index / volume
+    frequency: daily
+    file: <your_file.xlsx|csv>        # relative to data/raw/
+    sheet: 0                          # xlsx only; omit for csv
+    date_column: Date
+    pit_status: backfilled            # point_in_time / backfilled / restated / unknown  <- be honest
+    licence: "<who owns this and what may we do with it>"
+    coverage_note: "<what is IN the file: adjusted? dividends? volume?>"
+    caveats:
+      - "<what would mislead someone reading a result built on this>"
+
+  - name: UST_yield_curve
+    kind: price                      # corporate_action / factor_return / fundamental / macro / membership / price / publication_date / risk_free_rate / total_return_index / volume
+    frequency: daily
+    file: <your_file.xlsx|csv>        # relative to data/raw/
+    sheet: 0                          # xlsx only; omit for csv
+    date_column: Date
+    pit_status: backfilled            # point_in_time / backfilled / restated / unknown  <- be honest
+    licence: "<who owns this and what may we do with it>"
+    coverage_note: "<what is IN the file: adjusted? dividends? volume?>"
+    caveats:
+      - "<what would mislead someone reading a result built on this>"
+
+  - name: UST_10y_real_yield
+    kind: price                      # corporate_action / factor_return / fundamental / macro / membership / price / publication_date / risk_free_rate / total_return_index / volume
+    frequency: daily
+    file: <your_file.xlsx|csv>        # relative to data/raw/
+    sheet: 0                          # xlsx only; omit for csv
+    date_column: Date
+    pit_status: backfilled            # point_in_time / backfilled / restated / unknown  <- be honest
+    licence: "<who owns this and what may we do with it>"
+    coverage_note: "<what is IN the file: adjusted? dividends? volume?>"
+    caveats:
+      - "<what would mislead someone reading a result built on this>"
+
+  - name: UST_10y_breakeven
+    kind: price                      # corporate_action / factor_return / fundamental / macro / membership / price / publication_date / risk_free_rate / total_return_index / volume
+    frequency: daily
+    file: <your_file.xlsx|csv>        # relative to data/raw/
+    sheet: 0                          # xlsx only; omit for csv
+    date_column: Date
+    pit_status: backfilled            # point_in_time / backfilled / restated / unknown  <- be honest
+    licence: "<who owns this and what may we do with it>"
+    coverage_note: "<what is IN the file: adjusted? dividends? volume?>"
+    caveats:
+      - "<what would mislead someone reading a result built on this>"
+
+  - name: VIX
+    kind: price                      # corporate_action / factor_return / fundamental / macro / membership / price / publication_date / risk_free_rate / total_return_index / volume
+    frequency: daily
+    file: <your_file.xlsx|csv>        # relative to data/raw/
+    sheet: 0                          # xlsx only; omit for csv
+    date_column: Date
+    pit_status: backfilled            # point_in_time / backfilled / restated / unknown  <- be honest
+    licence: "<who owns this and what may we do with it>"
+    coverage_note: "<what is IN the file: adjusted? dividends? volume?>"
+    caveats:
+      - "<what would mislead someone reading a result built on this>"
+
+  - name: broad_dollar_index
+    kind: price                      # corporate_action / factor_return / fundamental / macro / membership / price / publication_date / risk_free_rate / total_return_index / volume
+    frequency: daily
+    file: <your_file.xlsx|csv>        # relative to data/raw/
+    sheet: 0                          # xlsx only; omit for csv
+    date_column: Date
+    pit_status: backfilled            # point_in_time / backfilled / restated / unknown  <- be honest
+    licence: "<who owns this and what may we do with it>"
+    coverage_note: "<what is IN the file: adjusted? dividends? volume?>"
+    caveats:
+      - "<what would mislead someone reading a result built on this>"
+
+  - name: fama_french_factors
+    kind: price                      # corporate_action / factor_return / fundamental / macro / membership / price / publication_date / risk_free_rate / total_return_index / volume
+    frequency: daily
+    file: <your_file.xlsx|csv>        # relative to data/raw/
+    sheet: 0                          # xlsx only; omit for csv
+    date_column: Date
+    pit_status: backfilled            # point_in_time / backfilled / restated / unknown  <- be honest
+    licence: "<who owns this and what may we do with it>"
+    coverage_note: "<what is IN the file: adjusted? dividends? volume?>"
+    caveats:
+      - "<what would mislead someone reading a result built on this>"
+
+  3. Re-run. Step 03 resolves against the enlarged registry.
+
+  If the data does not exist or cannot be licensed, that is a finding
+  worth recording: it says what the fund would have to buy to answer
+  this question, which is a procurement decision rather than a
+  research one.
+
+====================================================================================================
 STEP 03  |  DATA FEASIBILITY
 ====================================================================================================
 STEP 03 -- DATA FEASIBILITY
@@ -131,26 +380,6 @@ STEP 03 -- DATA FEASIBILITY
     - 0/13 mandatory requirements are clean-AVAILABLE.
 
 ====================================================================================================
-GATE A  |  HUMAN INTERPRETATION CONTROL
-====================================================================================================
-  GATE A -- interpretation (owner: researcher) -> BLOCKED
-    [PASS] card validates against schema
-           schema clean
-    [PASS] all ambiguities resolved  [0 vs 0]
-           7 ambiguities logged and resolved
-    [PASS] no low-confidence material interpretation  [0 vs 0]
-           none
-    [FAIL] data feasibility resolved  [FAIL_FAST vs GO or GO_WITH_PROXY]
-           SPY_adj_close (price) is mandatory and unavailable; AGG_adj_close (price) is mandatory and unavailable; GLD_adj_close (price) is mandatory and unavailable; SPY_volume (volume) is mandatory and unavailable; AGG_volume (volume) is mandatory and unavailable; GLD_volume (volume) is mandatory and unavailable; DFF_fed_funds (risk_free_rate) is mandatory and unavailable; UST_yield_curve (macro) is mandatory and unavailable; UST_10y_real_yield (macro) is mandatory and unavailable; UST_10y_breakeven (macro) is mandatory and unavailable; VIX (macro) is mandatory and unavailable; broad_dollar_index (macro) is mandatory and unavailable; fama_french_factors (factor_return) is mandatory and unavailable
-    [PASS] replication targets defined  [10 vs >=1]
-           targets pinned to a single accounting basis
-    [PASS] source text is machine-readable
-           Math-bearing lines on 7% of lines. Equations are unreliable after extraction -- any card field derived from a formula needs human verification against the rendered page.; Reversed (rotated) text on pages [10, 12, 13, 15, 16, 30]: figure axis labels. Numbers must not be read off these pages.
-    [warn] equations verified against rendered page  [7.2% vs <5%]
-           high math density: formulas were hand-checked, not trusted from text
-    decision: PENDING
-
-====================================================================================================
 PIPELINE HALTED AT STEP 03 (FAIL FAST)
 ====================================================================================================
   No code was written against this card and no backtest was run.
@@ -172,4 +401,4 @@ PIPELINE HALTED AT STEP 03 (FAIL FAST)
   This is a SUCCESSFUL outcome for the pipeline: the paper was screened,
   carded, and rejected on data grounds in minutes rather than days.
   The finding is stored so nobody re-derives it.
-  library entry: devanathan_2026_sbg_replication__67beb9452d34c0e2__20260916T071730
+  library entry: devanathan_2026_sbg_replication__67beb9452d34c0e2__20260917T092609

@@ -64,17 +64,90 @@ class GateResult:
                 "criteria": [asdict(c) for c in self.criteria]}
 
 
-def gate_a(card, feasibility, extraction_quality=None) -> GateResult:
+def gate_a(card, feasibility, extraction_quality=None,
+           translation_check=None) -> GateResult:
     """GATE A -- HUMAN INTERPRETATION CONTROL.
 
     Owned by the researcher. Confirms we understand the paper before we spend a
     day coding it. Everything here is cheap; everything after it is not.
+
+    Two questions dominate the rest and are asked first: WHICH UNIVERSE will
+    this be tested on, and WHAT EXACTLY is the strategy? Both are Stage 01
+    interpretation, both are wrong often enough to matter, and both are far
+    cheaper to correct here than after a run.
     """
     c: List[Criterion] = []
 
     c.append(Criterion(
         "card validates against schema", not card.validate(),
         evidence="; ".join(card.validate()) or "schema clean"))
+
+    # ---- what are we testing this on? ------------------------------------
+    ut = getattr(card, "universe_translation", None)
+    if ut is None:
+        c.append(_missing(
+            "universe translation recorded", "a source and a target universe",
+            "the card does not say which universe the paper studied or which "
+            "Indian universe replaces it. Without that, the choice of tickers "
+            "is an unrecorded judgement nobody signed for"))
+    else:
+        c.append(Criterion(
+            "universe translation recorded", True,
+            value=f"{ut.source_universe} -> {ut.target_universe or '(none)'}",
+            evidence=" ".join((ut.rationale or "no rationale given").split())))
+
+        if translation_check is not None:
+            tc = translation_check
+            c.append(Criterion(
+                "source universe is a recorded correspondence",
+                tc.recognised_source and not tc.divergences,
+                value=("recognised" if tc.recognised_source else "UNKNOWN"),
+                evidence="; ".join(tc.divergences) or
+                         "matches ros/data/universes.py",
+                blocking=False))
+            c.append(Criterion(
+                "the fund can obtain this universe",
+                not tc.missing,
+                value=tc.computed_resolution,
+                threshold="direct or sleeve_proxy",
+                evidence=(f"missing: {', '.join(tc.missing)}" if tc.missing
+                          else f"{len(tc.held)} instruments held")))
+            c.append(Criterion(
+                "translation risks acknowledged", bool(tc.caveats),
+                value=len(tc.caveats), threshold=">=1", blocking=False,
+                evidence="a translation with nothing to lose has not been examined"))
+
+    # ---- what exactly is the strategy? -----------------------------------
+    st = getattr(card, "strategy", None)
+    if st is None:
+        c.append(_missing(
+            "strategy reconstructed", "an executable restatement",
+            "the card names a template but never states, in words a second "
+            "person could implement from, what the paper's strategy IS"))
+    else:
+        errs = st.validate()
+        c.append(Criterion(
+            "strategy reconstructed to an executable level", not errs,
+            value=st.signal_name or "(unnamed)",
+            evidence="; ".join(errs) or " ".join(st.signal_definition.split())[:200]))
+        c.append(Criterion(
+            "long-only adaptation stated",
+            not st.is_long_short or bool(st.long_only_adaptation.strip()),
+            value="long-short source" if st.is_long_short else "already long-only",
+            evidence=(" ".join(st.long_only_adaptation.split()) if st.is_long_short
+                      else "paper is long-only; nothing to adapt")))
+        c.append(Criterion(
+            "the engine can express this strategy",
+            st.engine_template != "NEEDS_NEW_TEMPLATE",
+            value=st.engine_template or "(unset)",
+            evidence=(" ".join(st.template_gap.split())
+                      if st.engine_template == "NEEDS_NEW_TEMPLATE"
+                      else "maps to a registered allocator template")))
+        c.append(Criterion(
+            "strategy read with confidence", st.confidence == "high",
+            value=st.confidence, threshold="high", blocking=False,
+            evidence=f"pages {st.evidence_pages}" if st.evidence_pages
+                     else "no page citations -- unverifiable"))
 
     unresolved = card.unresolved_ambiguities
     c.append(Criterion(

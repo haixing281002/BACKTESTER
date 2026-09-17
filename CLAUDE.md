@@ -24,8 +24,9 @@ Read that as three prohibitions, because that is how it is enforced:
 | # | Stage | Owner | Command |
 |---|---|---|---|
 | 00 | Triage | **LLM owns** | `/triage` |
-| 01 | Ingest | **LLM owns** | `/ingest` |
+| 01 | Ingest — incl. **universe + strategy** | **LLM owns** | `/ingest` |
 | 02 | Strategy Card | **LLM owns**, code validates | `/draft-card`, `/critique-card` |
+| 02c | Universe translation check | Code checks the LLM's proposal | — |
 | — | **Gate A** | **HUMAN decides** | `/gate-a` |
 | 03 | Data feasibility | Code binds, LLM advises | `/map-data` |
 | 04 | Point-in-time data | Code only | — |
@@ -40,6 +41,33 @@ roles reached through the API; the commands in `.claude/commands/` are those rol
 performed by you, in session, with no API key. Both write the **same artifacts**,
 validated against the **same schemas** in `ros/agents/schemas.py`.
 
+## Stage 01 carries the weight
+
+Two decisions dominate everything downstream, and both are made by reading the
+paper: **which universe we test on** and **what the strategy actually is**.
+
+A paper sorts S&P 500 constituents; this fund is long-only NIFTY 500. The model
+*identifies* the source universe, `ros/data/universes.py` *holds* the recorded
+correspondence, and a human *signs* it at Gate A. The model never invents a
+mapping — the same paper read twice must produce the same universe, or the
+strategy library stops being comparable across entries.
+
+Both land on the card as `universe_translation` and `strategy`. Gate A leads
+with them, and blocks without them.
+
+**Gate A now comes BEFORE the data gate binds.** That ordering is the point: it
+is the last cheap moment, so a researcher who learns the translation needs data
+the fund lacks can supply it there — drop the file in `data/raw/`, declare it in
+`data/raw/MANIFEST.yaml`, re-run. The manifest's awkward fields (`pit_status`,
+`licence`, `caveats`) are mandatory and travel with every result computed from
+the series.
+
+**This fund cannot short.** A long-short paper must state `long_only_adaptation`
+explicitly; the schema rejects the card without it. Dropping the short leg is
+never a haircut — academic factor premia often live substantially in it — so the
+long-only version is a DIFFERENT strategy and is never scored against the
+paper's numbers.
+
 ## Architecture
 
 ```
@@ -48,6 +76,8 @@ ros/
                        and the engine. A card is data, never code.
       extract.py       deterministic PDF reader (regex + text-geometry tables)
   data/                registry (what the fund holds), loaders, PIT snapshots
+      universes.py     source universe -> Indian analogue, as recorded decisions
+      intake.py        supplying data at Gate A (manifest-declared, never sniffed)
   engine/              primitives, allocator templates, backtester
   validation/          metrics, research validation, portfolio validation
   governance/          gates, promotion ladder, strategy library
@@ -63,7 +93,8 @@ run_agentic.py         steps 01-03 via the API
 python run_pipeline.py --card cards/<card>.yaml          # ends at Gate B PENDING
 python run_pipeline.py --card cards/<card>.yaml \
     --decision REJECT --decided-by "Name" --rationale "…"  # a human rules
-python -m pytest tests/ -q                                # 41 tests
+python -m pytest tests/ -q                                # 107 tests
+python validate/cross_check.py --excel                    # engine vs clean-room impl
 python -m ros.interpretation history                      # who interpreted what
 ```
 

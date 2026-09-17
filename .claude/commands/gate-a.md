@@ -10,9 +10,66 @@ count: assemble everything they must personally confirm before a line of strateg
 code runs. Everything up to this point is cheap; everything after is not.
 
 Read the card `$1`, its analysis and critique in `outputs/interpretation/`, and
-the deterministic feasibility verdict. Then produce
-`outputs/interpretation/<slug>__gate_a_queue.md` listing, each with a page
-citation and one sentence on why it matters:
+the deterministic feasibility verdict.
+
+## Lead with the two that dominate everything else
+
+A reviewer who reads only the first two items must still catch the expensive
+mistakes. Put these at the top of the queue, in this order:
+
+**1. THE UNIVERSE.** State it as a sentence a PM can rule on in one read:
+
+> *"The paper studies <source, as constructed>. We propose to test it on
+> <target>, a <grade> correspondence. The risk that most worries me is <one>."*
+
+Then show what the code found, not what you believe:
+
+```bash
+python -c "
+from ros.cards.schema import load_card
+from ros.data.firm_registry import build_firm_registry
+from ros.data.intake import extend_registry
+from ros.data.universes import check_translation
+c = load_card('$1'); r, _ = extend_registry(build_firm_registry())
+print(check_translation(c.universe_translation, r, long_only=c.portfolio.long_only).render())"
+```
+
+Any **DIVERGENCE** line is a top-of-queue item: the card claims something the
+registry does not support, and the registry decides. If the source universe is
+unrecognised, say so — that means a human either adds it to
+`ros/data/universes.py` or corrects the reading.
+
+**2. THE STRATEGY.** One sentence a PM would recognise, then `cross_sectional`,
+then — if the source is long-short — exactly what was dropped and what it
+plausibly cost. That last point is where most of a long-short paper's result
+goes, so it is never a footnote.
+
+If `engine_template` is `NEEDS_NEW_TEMPLATE`, that is a build decision and it
+belongs here, with the spec, before anyone spends a day on it.
+
+## Then the data shortfall — this is the moment it can still be fixed
+
+Gate A is the last cheap point. If the translation needs instruments the fund
+does not hold, print the shortfall block and say plainly that supplying the data
+here is a five-minute fix, whereas discovering it after a run is not:
+
+```bash
+python -c "
+from ros.data.intake import describe_shortfall; print(describe_shortfall(['<missing>']))"
+```
+
+The manifest's awkward fields — `pit_status`, `licence`, `caveats` — are
+mandatory on purpose and travel with every result computed from the series.
+A researcher tempted to type `point_in_time` without checking should be told
+that this is the field that decides whether any live claim may rest on the work.
+
+If the data cannot be licensed, that is itself a finding worth recording: it
+says what the fund would have to buy, which is a procurement decision rather
+than a research one.
+
+## Then the rest of the queue
+
+Each with a page citation and one sentence on why it matters:
 
 1. Every ambiguity you marked **material** or resolved at low confidence
 2. Every equation whose confidence is below `high` — "verify eq 3 on p8, it

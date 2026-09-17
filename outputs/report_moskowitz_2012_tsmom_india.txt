@@ -36,6 +36,84 @@ STEP 02  |  STRATEGY CARD
     - POINT-IN-TIME: same NSE backfill and price-return caveats as the first card.
 
 ====================================================================================================
+STEP 02c  |  UNIVERSE TRANSLATION + STRATEGY RECONSTRUCTION
+====================================================================================================
+  source universe : Global futures (multi-asset)
+  target universe : NSE factor sleeves
+  recorded grade  : loose
+  rationale       : Trend and carry studies run on dozens of futures markets across equities, bonds, currencies and commodities. A long-only Indian equity fund holds none of them. Where the mechanism is asset-agnostic -- a per-stream signal sized by trailing risk -- the fund's factor sleeves are such a set of streams and the mechanism can be tested on them.
+  resolution      : sleeve_proxy
+  instruments held    (5): NIFTY500 MOMENTUM 50, NIFTY500 QUALITY 50, NIFTY500 VALUE 50, NIFTY500 LOW VOLATILITY 50, NIFTY ALPHA 50
+  what a human is signing for:
+      - The original result rests on 50+ weakly correlated markets. Five single-country equity sleeves correlate 0.74-0.94, so the diversification that carried the paper is simply absent.
+      - Futures are deep and cheap and permit shorting. Indian sleeve replication is cash equity, long-only, at far higher cost.
+      - A trend signal that may go short earns on both sides. Truncating at zero removes roughly half the signal's opportunity set.
+      - FREE FLOAT: median promoter holding in NIFTY 500 names is roughly half the share count. The investable universe is materially smaller than the name count suggests, and capacity binds earlier than a US study would imply.
+      - DEPTH: traded value in the lower half of NIFTY 500 is a small fraction of the equivalent Russell names. A signal that rebalances into small names at US turnover rates is not executable here at the printed price.
+      - CIRCUIT LIMITS: individual scrips halt at price bands. Momentum and reversal signals cannot transact on exactly the moves that generate them, and a backtest using the close will silently assume they could.
+      - CORPORATE ACTIONS: bonus, split and demerger density is high. An unadjusted or partially adjusted price series breaks any cross-sectional signal, usually by manufacturing a spurious extreme.
+      - SAMPLE LENGTH: reliable NSE history begins around 2003-2005. US studies routinely use 1926 onward. A twenty-year Indian sample contains far fewer independent regimes, so the same t-statistic carries less evidence.
+      - COSTS: STT, stamp duty, exchange charges and impact. 30bp round trip is a floor for index sleeves and optimistic for single-stock rotation at mid-cap depth. A paper's 5bp assumption never transfers.
+      - MEMBERSHIP HISTORY: point-in-time index constituents are not freely available. Reconstructing who was in NIFTY 500 on a past date is the single hardest data problem in this translation, and getting it wrong imports survivorship bias that flatters every result.
+      - LONG-ONLY: this fund cannot short. Most academic factor premia are reported as long-short spreads, and the long leg alone has historically captured only part of the spread while carrying far more market beta. A long-only version of a long-short paper is a DIFFERENT strategy and must never be scored against the paper's numbers.
+      - SHORT-LEG ALPHA: where a paper reports leg-level returns, the short leg often carries the larger and more reliable half. Discarding it is not a haircut on the result; it can remove most of it.
+
+  STRATEGY AS RECONSTRUCTED FROM THE PAPER:
+    name        : ts_momentum_sleeves
+    definition  : For each sleeve, compute the trailing 12-month total return skipping the most recent month (252-day window, 21-day skip). The paper goes long positive-signal markets and short negative-signal ones, sizing each position inverse to its trailing volatility, then scales the book to a volatility target.
+    type        : time-series (times one stream)
+    formation   : Sign filter per stream, not a cross-sectional rank: each sleeve is judged against zero on its own trailing return, independently of the others.
+    weighting   : Inverse trailing volatility among the sleeves that pass the filter, then scaled so ex-ante portfolio vol meets the 18% target, capped at unlevered.
+    rebalance   : monthly   holding: one month
+    inputs      : daily close of each sleeve
+    LONG-SHORT SOURCE -- this fund cannot short.
+    adaptation  : The short leg is DROPPED, not replaced. A sleeve with a negative 12-1 return is held at zero weight instead of short, and the freed capital is either held in cash (faithful variant) or spread across the surviving sleeves (mandate variant). This removes roughly half the signal's opportunity set and leaves a strategy with materially higher market beta than the paper's, which was approximately market-neutral by construction. It must never be scored against the paper's reported numbers.
+    This is a DIFFERENT strategy from the paper's and must never
+    be scored against the paper's numbers.
+    constraint  : long-only: no sleeve may take a negative weight
+    constraint  : unlevered: gross exposure at most 1
+    constraint  : ex-ante vol target 18%, scale capped at 1
+    constraint  : at least one sleeve must pass the filter or the book goes to cash
+    engine      : ts_momentum   confidence: high   pages: [2, 5]
+
+====================================================================================================
+GATE A  |  HUMAN INTERPRETATION CONTROL
+====================================================================================================
+  GATE A -- interpretation (owner: researcher) -> PASS
+    [PASS] card validates against schema
+           schema clean
+    [PASS] universe translation recorded  [Global futures (multi-asset) -> NSE factor sleeves vs None]
+           The fund trades none of these markets and cannot short. The mechanism -- a per-stream trend signal sized inverse to trailing risk -- is asset-agnostic and can be tested on the five NSE factor sleeves, which are the only set of long-only return streams the fund holds daily history for.
+    [PASS] source universe is a recorded correspondence  [recognised vs None]
+           matches ros/data/universes.py
+    [PASS] the fund can obtain this universe  [sleeve_proxy vs direct or sleeve_proxy]
+           5 instruments held
+    [PASS] translation risks acknowledged  [12 vs >=1]
+           a translation with nothing to lose has not been examined
+    [PASS] strategy reconstructed to an executable level  [ts_momentum_sleeves vs None]
+           For each sleeve, compute the trailing 12-month total return skipping the most recent month (252-day window, 21-day skip). The paper goes long positive-signal markets and short negative-signal ones, si
+    [PASS] long-only adaptation stated  [long-short source vs None]
+           The short leg is DROPPED, not replaced. A sleeve with a negative 12-1 return is held at zero weight instead of short, and the freed capital is either held in cash (faithful variant) or spread across the surviving sleeves (mandate variant). This removes roughly half the signal's opportunity set and leaves a strategy with materially higher market beta than the paper's, which was approximately market-neutral by construction. It must never be scored against the paper's reported numbers.
+    [PASS] the engine can express this strategy  [ts_momentum vs None]
+           maps to a registered allocator template
+    [PASS] strategy read with confidence  [high vs high]
+           pages [2, 5]
+    [PASS] all ambiguities resolved  [0 vs 0]
+           3 ambiguities logged and resolved
+    [PASS] no low-confidence material interpretation  [0 vs 0]
+           none
+    [PASS] data feasibility resolved  [GO_WITH_PROXY vs GO or GO_WITH_PROXY]
+           no blocking data gaps
+    [PASS] transferred mechanism stated
+           Hold only sleeves with positive 12-month trailing return (skipping the most recent month), size inverse to trailing volatility, scale to a volatility target, rebalance monthly, long-only and unlevered.
+
+    [PASS] broken source assumptions enumerated  [3 vs >=1]
+           The source paper is a LONG-SHORT study across 58 futures markets spanning equities, bonds, currencies and commodities. Long-only, single-country, five correlated equity sleeves removes both the short leg and the diversification that carried the original result.
+; The original trades deep, cheap futures. Indian factor-sleeve replication is cash equity with materially higher round-trip costs.
+; POINT-IN-TIME: same NSE backfill and price-return caveats as the first card.
+    decision: PENDING
+
+====================================================================================================
 STEP 03  |  DATA FEASIBILITY
 ====================================================================================================
 STEP 03 -- DATA FEASIBILITY
@@ -103,33 +181,12 @@ STEP 03 -- DATA FEASIBILITY
     - 0/8 mandatory requirements are clean-AVAILABLE.
 
 ====================================================================================================
-GATE A  |  HUMAN INTERPRETATION CONTROL
-====================================================================================================
-  GATE A -- interpretation (owner: researcher) -> PASS
-    [PASS] card validates against schema
-           schema clean
-    [PASS] all ambiguities resolved  [0 vs 0]
-           3 ambiguities logged and resolved
-    [PASS] no low-confidence material interpretation  [0 vs 0]
-           none
-    [PASS] data feasibility resolved  [GO_WITH_PROXY vs GO or GO_WITH_PROXY]
-           no blocking data gaps
-    [PASS] transferred mechanism stated
-           Hold only sleeves with positive 12-month trailing return (skipping the most recent month), size inverse to trailing volatility, scale to a volatility target, rebalance monthly, long-only and unlevered.
-
-    [PASS] broken source assumptions enumerated  [3 vs >=1]
-           The source paper is a LONG-SHORT study across 58 futures markets spanning equities, bonds, currencies and commodities. Long-only, single-country, five correlated equity sleeves removes both the short leg and the diversification that carried the original result.
-; The original trades deep, cheap futures. Indian factor-sleeve replication is cash equity with materially higher round-trip costs.
-; POINT-IN-TIME: same NSE backfill and price-return caveats as the first card.
-    decision: PENDING
-
-====================================================================================================
 STEP 04  |  POINT-IN-TIME DATA + LINEAGE
 ====================================================================================================
   snapshot_id   : moskowitz_2012_tsmom_india__1bf41cb0afd2fb8d
   content_hash  : 84abe49445fb2131d6b251d94b698f1c
-  engine_code   : a8b53d961606696fdbde71f3e19749a5
-  git_commit    : b25a645fdd7a
+  engine_code   : 00b20ff7eb6386099695868ce2b30eb3
+  git_commit    : f0678a471d83
   shape         : (5247, 7)  2005-04-01 -> 2026-05-29
   pit_status    : backfilled
   verify()      : True
@@ -198,25 +255,25 @@ STEP 06  |  RESEARCH VALIDATION
     2018-11-28..2022-08-28 929 0.200 0.189   0.746   0.333
     2022-08-28..2026-05-29 929 0.196 0.154   0.890   0.228
 
-  STATIONARY BLOCK BOOTSTRAP  (3000 reps, mean block 21d, paired draws):
+  STATIONARY BLOCK BOOTSTRAP  (200 reps, mean block 21d, paired draws):
                                         portfolio   sharpe_ci95     cagr_ci95     maxdd_ci95
-                              ts_momentum_sleeves [-0.10, 1.04] [4.3%, 20.9%] [23.0%, 57.3%]
-    ts_momentum_sleeves [mandate: fully invested] [-0.03, 1.20] [5.3%, 28.2%] [28.7%, 68.2%]
-                             Equal-weight sleeves [-0.08, 1.18] [4.3%, 28.5%] [30.3%, 71.5%]
-                               Vol-target overlay [-0.02, 1.21] [5.5%, 25.3%] [24.6%, 59.9%]
-                                      Inverse vol [-0.06, 1.19] [4.5%, 27.8%] [29.3%, 69.8%]
-                                        NIFTY 500 [-0.25, 0.89] [0.7%, 23.3%] [30.2%, 75.6%]
-                    NIFTY500 MULTIFACTOR MQVLV 50  [0.02, 1.28] [6.2%, 27.2%] [26.4%, 62.5%]
+                              ts_momentum_sleeves [-0.06, 1.18] [5.0%, 22.1%] [21.6%, 56.0%]
+    ts_momentum_sleeves [mandate: fully invested] [-0.03, 1.28] [5.3%, 28.7%] [29.1%, 68.1%]
+                             Equal-weight sleeves [-0.09, 1.22] [4.1%, 28.7%] [31.7%, 70.5%]
+                               Vol-target overlay [-0.01, 1.22] [5.8%, 24.7%] [25.1%, 60.2%]
+                                      Inverse vol [-0.07, 1.26] [4.3%, 28.3%] [30.1%, 69.5%]
+                                        NIFTY 500 [-0.27, 0.93] [0.1%, 23.3%] [31.5%, 72.2%]
+                    NIFTY500 MULTIFACTOR MQVLV 50  [0.02, 1.40] [6.2%, 28.2%] [26.7%, 63.6%]
 
   PAIRED SHARPE DIFFERENCE: (ts_momentum_sleeves [mandate: fully invested]) minus each comparator
                        comparator mean_diff           ci95 P(diff<=0)
-              ts_momentum_sleeves     +0.13 [-0.15, +0.43]      0.192
-             Equal-weight sleeves     +0.04 [-0.04, +0.12]      0.157
-               Vol-target overlay     -0.01 [-0.22, +0.19]      0.532
-                      Inverse vol     +0.03 [-0.03, +0.08]      0.173
-                        NIFTY 500     +0.27 [+0.10, +0.44]      0.001
-    NIFTY500 MULTIFACTOR MQVLV 50     -0.06 [-0.20, +0.08]      0.801
-    worst-case P(no advantage) across comparators = 0.801
+              ts_momentum_sleeves     +0.12 [-0.18, +0.45]      0.215
+             Equal-weight sleeves     +0.04 [-0.04, +0.11]      0.125
+               Vol-target overlay     -0.00 [-0.21, +0.19]      0.485
+                      Inverse vol     +0.03 [-0.04, +0.08]      0.175
+                        NIFTY 500     +0.28 [+0.13, +0.46]      0.000
+    NIFTY500 MULTIFACTOR MQVLV 50     -0.06 [-0.20, +0.06]      0.820
+    worst-case P(no advantage) across comparators = 0.820
 
   DEFLATED SHARPE RATIO (Bailey & Lopez de Prado):
     sharpe_ann                  : 0.5867
@@ -324,7 +381,7 @@ GATE B  |  INVESTMENT DECISION
            After penalising 5 configuration(s) tried, the threshold Sharpe is 1.19; observed 0.59; P(skill) = 0.4%.
     [FAIL] positive Sharpe in every out-of-sample window  [-0.01 vs 0.3]
            worst walk-forward window
-    [FAIL] advantage over benchmark is significant  [0.801 vs <=0.05]
+    [FAIL] advantage over benchmark is significant  [0.820 vs <=0.05]
            paired stationary-bootstrap P(Sharpe difference <= 0)
     [FAIL] differentiated from existing book  [0.99 vs <=0.8]
            max correlation to any existing signal
@@ -353,5 +410,19 @@ STEP 08 -- PROMOTION LADDER
       [FAIL] beats every free alternative the fund already has  [-0.06 vs > 0 Sharpe]
              worst Sharpe margin vs NIFTY 500, NIFTY500 MULTIFACTOR MQVLV 50, Equal-weight sleeves
 
-  library entry : moskowitz_2012_tsmom_india__1bf41cb0afd2fb8d__20260915T103631
+====================================================================================================
+GATE B DECISION
+====================================================================================================
+  evidence supports : REJECT
+  decision recorded : PENDING
+
+  NO DECISION HAS BEEN MADE. The pipeline scored the evidence and stopped.
+  A named human records the call by re-running with, for example:
+    python run_pipeline.py --card cards/moskowitz_2012_tsmom_india.yaml \
+        --decision REJECT --decided-by "N. Ganesh" --rationale "..."
+
+  library entry : moskowitz_2012_tsmom_india__1bf41cb0afd2fb8d__20260917T092602
+  ! this exact experiment has been run 1 time(s) before; the trial budget above already counts them
+  ! 1 prior entr(ies) share this factor fingerprint (cos >= 0.90):
+      moskowitz_2012_tsmom_india  cos=1.0  outcome=REJECTED
   charts written to outputs/charts_moskowitz_2012_tsmom_india.png

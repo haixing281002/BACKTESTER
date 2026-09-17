@@ -95,6 +95,76 @@ class EquationFinding(BaseModel):
     confidence: Confidence
 
 
+class UniverseTranslationFinding(BaseModel):
+    """Which universe the paper studied, and which Indian one replaces it.
+
+    The model IDENTIFIES the source and proposes a target; the recorded
+    correspondences live in ros/data/universes.py and the code checks the
+    proposal against them. Inventing a mapping here would mean the same paper
+    read twice produces two different universes, and the strategy library stops
+    being comparable across entries.
+    """
+    source_universe: str = Field(
+        description="As the paper CONSTRUCTS it, not as its abstract summarises "
+                    "it: 'S&P 500 ex-financials, NYSE breakpoints', not 'US stocks'")
+    source_breadth: Optional[int] = Field(
+        default=None, description="How many securities the paper's universe holds")
+    source_selection_rule: str = Field(
+        description="How the paper picks from its universe, or 'none' if fixed")
+    target_universe: str = Field(
+        description="The Indian analogue, named exactly as ros/data/universes.py "
+                    "does. Empty if no honest correspondence exists.")
+    grade: str = Field(description="exact / close / loose / none")
+    rationale: str = Field(description="Why this target, and what drove the choice "
+                                       "when several were available")
+    transfer_risks: List[str] = Field(
+        description="What breaks in THIS translation specifically. The generic "
+                    "India caveats attach automatically -- do not repeat them.")
+    required_instruments: List[str] = Field(
+        description="What a faithful test needs, in the fund's vocabulary")
+    evidence_page: Optional[int] = None
+    confidence: Confidence
+
+
+class StrategyReconstructionFinding(BaseModel):
+    """The paper's strategy, mechanical enough that a second person could
+    implement it from these words alone and get the same portfolio."""
+    signal_name: str
+    signal_definition: str = Field(
+        description="Every window, lag and skip. How ties break. What happens to "
+                    "missing data. Vagueness here is an Ambiguity, not a guess.")
+    inputs_required: List[str] = Field(
+        description="Data fields consumed, specifically: 'daily adjusted close', "
+                    "'as-reported EPS with publication date'")
+    cross_sectional: bool = Field(
+        description="True if it RANKS securities against each other; False if it "
+                    "times one stream against its own history")
+    formation_rule: str = Field(description="How the signal becomes a selection")
+    weighting_rule: str = Field(description="How the selection becomes weights")
+    holding_period: str
+    rebalance_frequency: str
+    is_long_short: bool = Field(
+        description="True if the headline result involves a short leg. This fund "
+                    "cannot short, so this forces an explicit adaptation.")
+    long_only_adaptation: str = Field(
+        default="",
+        description="REQUIRED when is_long_short. What was dropped and what it "
+                    "plausibly cost -- the short leg often carries the larger half "
+                    "of the spread, so this is not a haircut, it can remove most "
+                    "of the result.")
+    constraints: List[str]
+    engine_template: str = Field(
+        description="A template from ros.engine.templates.list_templates(), or "
+                    "NEEDS_NEW_TEMPLATE. Do not force a bad fit.")
+    template_gap: str = Field(
+        default="",
+        description="REQUIRED when engine_template is NEEDS_NEW_TEMPLATE: a spec "
+                    "a human can implement from -- inputs, outputs, constraints, "
+                    "objective")
+    evidence_pages: List[int]
+    confidence: Confidence
+
+
 class PaperAnalysis(BaseModel):
     """What Step 01 produces instead of a bag of regex hits."""
     title: str
@@ -122,6 +192,10 @@ class PaperAnalysis(BaseModel):
 
     sample_start: Optional[str] = None
     sample_end: Optional[str] = None
+
+    # Stage 01's two heaviest outputs. See .claude/commands/ingest.md.
+    universe_translation: Optional[UniverseTranslationFinding] = None
+    strategy: Optional[StrategyReconstructionFinding] = None
 
     data_requirements: List[DataRequirementFinding]
     reported_results: List[ReportedResult]

@@ -24,6 +24,61 @@ universe:
   benchmark: "60/40"
   cash_asset: DFF
 
+universe_translation:
+  source_universe: "US multi-asset (equity / bond / gold)"
+  source_breadth: 3
+  source_selection_rule: >
+    None. SPY, AGG and GLD are fixed by the paper; there is no selection step.
+  target_universe: ""
+  grade: none
+  resolution: infeasible
+  rationale: >
+    This is the REPLICATION card: it deliberately keeps the paper's own assets
+    so the pipeline is tested against the published numbers rather than an
+    adaptation of them. There is no Indian analogue because none is wanted here
+    -- the whole point of this card is to stay in the paper's universe. The fund
+    holds no US ETF history, so Step 03 fails fast, which is the correct and
+    intended outcome: it proves the data gate stops work before code is written.
+  transfer_risks:
+    - >
+      No translation is attempted. Nothing on this card may inform an Indian
+      allocation decision; it exists to exercise the replication path and the
+      fail-fast gate.
+  required_instruments:
+    - SPY_adj_close
+    - AGG_adj_close
+    - GLD_adj_close
+    - DFF_fed_funds
+
+strategy:
+  signal_name: markowitz_l1_with_ridge_forecast
+  signal_definition: >
+    Monthly mean-variance optimisation maximising the forecast next-month return
+    net of a half-spread cost, subject to long-only, unlevered, an l1 leash of
+    1.0 to the 50/30/20 relative mix, and a hard 7% ex-ante volatility cap.
+    Paper eq. (3), reproduced without adaptation.
+  inputs_required:
+    - daily adjusted close of SPY, AGG, GLD
+    - the effective federal funds rate as the cash numeraire
+  cross_sectional: false
+  formation_rule: >
+    No selection. All three assets are always candidates and the optimiser sets
+    every weight within the l1 leash.
+  weighting_rule: convex optimisation output, long-only, gross at most 1
+  holding_period: one month
+  rebalance_frequency: monthly
+  is_long_short: false
+  long_only_adaptation: ""
+  constraints:
+    - "long-only: w >= 0"
+    - "unlevered: 1'w <= 1"
+    - "ex-ante vol cap: 7%"
+    - "l1 leash to 50/30/20, budget 1.0"
+  engine_template: markowitz_l1
+  template_gap: ""
+  confidence: high
+  evidence_pages: [3, 11]
+
 signal:
   name: markowitz_l1_with_ridge_forecast
   template: markowitz_l1
