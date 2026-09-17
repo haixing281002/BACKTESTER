@@ -95,6 +95,97 @@ class ReplicationTarget:
 
 
 @dataclass
+class UniverseTranslation:
+    """What the paper studied, and what we will actually test it on.
+
+    A paper sorts S&P 500 constituents; this fund is long-only NIFTY 500.
+    Somebody has to decide the Indian analogue and own what breaks on the way.
+    Recording that decision ON THE CARD -- rather than leaving it implicit in a
+    choice of tickers -- is what lets two papers be compared later, and what
+    lets a reader six months on see which correspondence was approved and why.
+
+    `grade` and `resolution` come from ros/data/universes.py, which holds the
+    correspondences as recorded institutional decisions rather than re-deriving
+    them per paper. `transfer_risks` is what a human signs for at Gate A.
+    """
+    source_universe: str = ""          # as the paper describes it
+    source_breadth: Optional[int] = None
+    source_selection_rule: str = ""    # how the paper picks from its universe
+    target_universe: str = ""          # the Indian analogue
+    grade: str = ""                    # exact | close | loose | none
+    resolution: str = ""               # direct | sleeve_proxy | needs_data | infeasible
+    rationale: str = ""
+    transfer_risks: List[str] = field(default_factory=list)
+    required_instruments: List[str] = field(default_factory=list)
+    evidence_page: Optional[int] = None
+
+    def validate(self, ctx: str = "universe_translation") -> List[str]:
+        from ros.data.universes import GRADES, RESOLUTIONS, NONE
+        errs = []
+        if not self.source_universe:
+            errs.append(f"{ctx}: source_universe is required")
+        if self.grade and self.grade not in GRADES:
+            errs.append(f"{ctx}: grade '{self.grade}' not in {GRADES}")
+        if self.resolution and self.resolution not in RESOLUTIONS:
+            errs.append(f"{ctx}: resolution '{self.resolution}' not in {RESOLUTIONS}")
+        if self.grade and self.grade != NONE and not self.target_universe:
+            errs.append(f"{ctx}: grade '{self.grade}' requires a target_universe")
+        # A translation with no stated risk is not a clean translation; it is an
+        # unexamined one. Every recorded correspondence in universes.py carries
+        # at least one, so an empty list means nobody looked.
+        if self.target_universe and not self.transfer_risks:
+            errs.append(f"{ctx}: no transfer_risks listed -- a translation with "
+                        f"nothing to lose has not been examined")
+        return errs
+
+
+@dataclass
+class StrategyReconstruction:
+    """The paper's strategy, restated mechanically enough to be executable.
+
+    Stage 01's real output. Prose like "we buy cheap stocks" is not a strategy;
+    this is the level of detail at which a template can be chosen, or a human
+    told exactly what is missing.
+
+    `long_only_adaptation` is mandatory when the paper is long-short, because
+    this fund cannot short. Dropping the short leg is not a haircut -- academic
+    factor premia often live substantially in it -- so the adaptation is
+    recorded, not assumed.
+    """
+    signal_name: str = ""
+    signal_definition: str = ""        # unambiguous, executable prose
+    inputs_required: List[str] = field(default_factory=list)
+    cross_sectional: bool = False      # ranks securities vs times one series
+    formation_rule: str = ""           # how the signal becomes a selection
+    weighting_rule: str = ""           # how selection becomes weights
+    holding_period: str = ""
+    rebalance_frequency: str = ""
+    is_long_short: bool = False
+    long_only_adaptation: str = ""     # required when is_long_short
+    constraints: List[str] = field(default_factory=list)
+    engine_template: str = ""          # a registered template, or NEEDS_NEW_TEMPLATE
+    template_gap: str = ""             # spec for a human, when no template fits
+    confidence: str = "low"
+    evidence_pages: List[int] = field(default_factory=list)
+
+    def validate(self, ctx: str = "strategy") -> List[str]:
+        errs = []
+        if self.confidence not in CONFIDENCE:
+            errs.append(f"{ctx}: confidence '{self.confidence}' not in {sorted(CONFIDENCE)}")
+        if not self.signal_definition.strip():
+            errs.append(f"{ctx}: signal_definition is required -- prose like "
+                        f"'buy cheap stocks' is not a strategy")
+        if self.is_long_short and not self.long_only_adaptation.strip():
+            errs.append(f"{ctx}: paper is long-short and this fund cannot short. "
+                        f"State long_only_adaptation explicitly; dropping the "
+                        f"short leg silently changes the strategy")
+        if self.engine_template == "NEEDS_NEW_TEMPLATE" and not self.template_gap.strip():
+            errs.append(f"{ctx}: engine_template is NEEDS_NEW_TEMPLATE but "
+                        f"template_gap does not say what to build")
+        return errs
+
+
+@dataclass
 class Universe:
     description: str = ""
     asset_class: str = "equity"
@@ -170,6 +261,10 @@ class StrategyCard:
     signal: Signal
     portfolio: PortfolioSpec
     costs: CostSpec
+    # Stage 01 outputs. Optional so cards written before this existed still
+    # load, but Gate A reports their absence rather than passing over it.
+    universe_translation: Optional[UniverseTranslation] = None
+    strategy: Optional[StrategyReconstruction] = None
     data_requirements: List[DataRequirement] = field(default_factory=list)
     ambiguities: List[Ambiguity] = field(default_factory=list)
     replication_targets: List[ReplicationTarget] = field(default_factory=list)
@@ -209,6 +304,10 @@ class StrategyCard:
             errs += a.validate(f"ambiguities[{i}]")
         if self.intent.mode == "replication" and not self.replication_targets:
             errs.append("replication cards must carry at least one replication_target")
+        if self.universe_translation is not None:
+            errs += self.universe_translation.validate()
+        if self.strategy is not None:
+            errs += self.strategy.validate()
         return errs
 
     def require_valid(self) -> "StrategyCard":
@@ -275,7 +374,8 @@ def load_card(path: str) -> StrategyCard:
 
     known = {"paper", "intent", "universe", "signal", "portfolio", "costs",
              "data_requirements", "ambiguities", "replication_targets",
-             "benchmark_templates", "n_configs_tried", "notes", "card_version"}
+             "benchmark_templates", "n_configs_tried", "notes", "card_version",
+             "universe_translation", "strategy"}
     unknown = set(blob) - known
     if unknown:
         raise CardValidationError(f"card has unknown top-level keys: {sorted(unknown)}")
@@ -299,5 +399,11 @@ def load_card(path: str) -> StrategyCard:
         n_configs_tried=blob.get("n_configs_tried", 1),
         notes=blob.get("notes", ""),
         card_version=blob.get("card_version", "1.0"),
+        universe_translation=(
+            _build(UniverseTranslation, blob["universe_translation"],
+                   "universe_translation")
+            if blob.get("universe_translation") else None),
+        strategy=(_build(StrategyReconstruction, blob["strategy"], "strategy")
+                  if blob.get("strategy") else None),
     )
     return card.require_valid()

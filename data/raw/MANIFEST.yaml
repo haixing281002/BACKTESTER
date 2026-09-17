@@ -1,0 +1,26 @@
+# Data supplied at Gate A.
+#
+# Gate A is the last cheap moment in the pipeline. When a paper's universe
+# translation needs a series the fund does not hold, this is where you hand it
+# over instead of abandoning the paper: drop the file in data/raw/, declare it
+# below, re-run. Step 03 then resolves against the enlarged registry.
+#
+# WHY THE AWKWARD FIELDS ARE MANDATORY
+#
+# ros/data/firm_registry.py says, correctly, that an over-generous registry
+# turns a fail-fast into three wasted days and a result nobody can defend. A
+# file's existence tells you nothing about whether its history was knowable
+# as-was on past dates. So `pit_status`, `licence` and `caveats` are required,
+# and they travel with every result computed from the series.
+#
+# `pit_status: point_in_time` is the field that decides whether a live claim may
+# rest on this work. Typing it without checking is the single easiest way to
+# mislead everyone downstream, including yourself.
+#
+# Get the stanza for a series you are missing:
+#     python -c "from ros.data.intake import manifest_stanza; print(manifest_stanza('<name>'))"
+#
+# A supplied series may not share a name with one the fund already holds -- that
+# is an error, not an override.
+
+series: []

@@ -36,10 +36,12 @@ from ros.cards.extract import (
     propose_replication_targets, summarize)
 from ros.cards.schema import load_card
 from ros.data.firm_registry import build_firm_registry
+from ros.data.intake import MANIFEST, describe_shortfall, extend_registry
+from ros.data.universes import check_translation
 from ros.data.loaders import audit_frame, load_nse_factor_workbook
 from ros.data.snapshot import SnapshotBuilder
 from ros.engine.backtest import LookaheadError, assert_causal
-from ros.feasibility import assess
+from ros.feasibility import UNAVAILABLE, assess
 from ros.governance.gates import (
     Criterion, evaluate_ladder, gate_a, gate_b, render_ladder)
 from ros.governance.library import LibraryEntry, StrategyLibrary, make_entry_id
@@ -154,15 +156,84 @@ def main(argv=None) -> int:
         for b in card.intent.broken_assumptions:
             R.p(f"    - {' '.join(b.split())}")
 
-    # ---------------- STEP 03 : DATA FEASIBILITY -------------------------
+    # ---------------- STEP 02c : UNIVERSE + STRATEGY ---------------------
+    # Gate A's two dominant questions, asked BEFORE the data gate binds: what
+    # are we testing this on, and what exactly is the strategy? Both are Stage
+    # 01 interpretation and both are far cheaper to correct here than after a
+    # run -- and if the answer needs data we lack, this is the moment a human
+    # can still supply it.
     registry = build_firm_registry()
-    feas = assess(card, registry)
-    R.h("STEP 03  |  DATA FEASIBILITY")
-    R.block(feas.render())
+    registry, supplied = extend_registry(registry)
+    if supplied:
+        R.h("DATA SUPPLIED AT INTAKE")
+        R.p(f"  {len(supplied)} series declared in {MANIFEST} and added to the registry:")
+        for name in supplied:
+            cap = registry.get(name)
+            R.p(f"    {name:<38} kind={cap.kind:<14} pit={cap.pit_status}")
+        R.p("  Provenance is the manifest entry. Every result below carries it.")
 
-    ga = gate_a(card, feas, doc.quality if doc else None)
+    tc = None
+    R.h("STEP 02c  |  UNIVERSE TRANSLATION + STRATEGY RECONSTRUCTION")
+    if card.universe_translation is not None:
+        tc = check_translation(card.universe_translation, registry,
+                               long_only=card.portfolio.long_only)
+        R.block(tc.render())
+    else:
+        R.p("  NO UNIVERSE TRANSLATION ON THIS CARD.")
+        R.p("  The card names assets directly, so which universe the paper studied")
+        R.p("  -- and why these assets replace it -- is an unrecorded judgement.")
+        R.p("  Gate A will flag it. Add a `universe_translation:` section, or run")
+        R.p("  /ingest to have it read from the paper.")
+
+    R.p("")
+    if card.strategy is not None:
+        st = card.strategy
+        R.p("  STRATEGY AS RECONSTRUCTED FROM THE PAPER:")
+        R.p(f"    name        : {st.signal_name or '(unnamed)'}")
+        R.p(f"    definition  : {' '.join(st.signal_definition.split())}")
+        R.p(f"    type        : "
+            f"{'cross-sectional (ranks securities)' if st.cross_sectional else 'time-series (times one stream)'}")
+        if st.formation_rule:
+            R.p(f"    formation   : {' '.join(st.formation_rule.split())}")
+        if st.weighting_rule:
+            R.p(f"    weighting   : {' '.join(st.weighting_rule.split())}")
+        R.p(f"    rebalance   : {st.rebalance_frequency or card.portfolio.rebalance}"
+            f"   holding: {st.holding_period or 'n/a'}")
+        R.p(f"    inputs      : {', '.join(st.inputs_required) or '(none listed)'}")
+        if st.is_long_short:
+            R.p("    LONG-SHORT SOURCE -- this fund cannot short.")
+            R.p(f"    adaptation  : {' '.join(st.long_only_adaptation.split()) or 'NOT STATED'}")
+            R.p("    This is a DIFFERENT strategy from the paper's and must never")
+            R.p("    be scored against the paper's numbers.")
+        for k in st.constraints:
+            R.p(f"    constraint  : {' '.join(k.split())}")
+        R.p(f"    engine      : {st.engine_template or '(unset)'}"
+            f"   confidence: {st.confidence}   pages: {st.evidence_pages or 'none cited'}")
+        if st.engine_template == "NEEDS_NEW_TEMPLATE":
+            R.p("    NO REGISTERED TEMPLATE FITS. A human implements this before")
+            R.p("    the pipeline can run it. The specification:")
+            R.p(f"      {' '.join(st.template_gap.split())}")
+    else:
+        R.p("  NO STRATEGY RECONSTRUCTION ON THIS CARD.")
+        R.p("  The card names a template, but not what the paper's strategy IS in")
+        R.p("  terms a second person could implement from. Gate A will flag it.")
+
+    # ---------------- GATE A ---------------------------------------------
+    feas = assess(card, registry)
+    ga = gate_a(card, feas, doc.quality if doc else None, translation_check=tc)
     R.h("GATE A  |  HUMAN INTERPRETATION CONTROL")
     R.block(ga.render())
+
+    shortfall = list(tc.missing) if tc else []
+    shortfall += [r.requirement for r in feas.resolutions
+                  if r.status == UNAVAILABLE and r.requirement not in shortfall]
+    if shortfall:
+        R.p("")
+        R.block(describe_shortfall(shortfall))
+
+    # ---------------- STEP 03 : DATA FEASIBILITY -------------------------
+    R.h("STEP 03  |  DATA FEASIBILITY")
+    R.block(feas.render())
 
     if not feas.can_proceed:
         # Mechanically blocked, but the CALL is still a human's: reject the paper,

@@ -47,6 +47,75 @@ universe:
   benchmark: NIFTY 500
   cash_asset: CASH_PROXY
 
+universe_translation:
+  source_universe: "Global futures (multi-asset)"
+  source_breadth: 58
+  source_selection_rule: >
+    All 58 liquid futures markets are held continuously; the signal decides the
+    SIGN and SIZE of each position rather than selecting which markets to hold.
+  target_universe: "NSE factor sleeves"
+  grade: loose
+  resolution: sleeve_proxy
+  rationale: >
+    The fund trades none of these markets and cannot short. The mechanism --
+    a per-stream trend signal sized inverse to trailing risk -- is asset-agnostic
+    and can be tested on the five NSE factor sleeves, which are the only set of
+    long-only return streams the fund holds daily history for.
+  transfer_risks:
+    - >
+      The original result rests on 50+ weakly correlated markets across four
+      asset classes. Five single-country equity sleeves correlate 0.74-0.94, so
+      the diversification that carried the paper is absent, not merely reduced.
+    - >
+      Futures are deep, cheap and shortable. Indian sleeve replication is cash
+      equity, long-only, at materially higher round-trip cost.
+    - >
+      Truncating the trend signal at zero removes roughly half its opportunity
+      set. The long-only version is a different strategy, not a haircut.
+  required_instruments:
+    - NIFTY500 MOMENTUM 50
+    - NIFTY500 QUALITY 50
+    - NIFTY500 VALUE 50
+    - NIFTY500 LOW VOLATILITY 50
+    - NIFTY ALPHA 50
+
+strategy:
+  signal_name: ts_momentum_sleeves
+  signal_definition: >
+    For each sleeve, compute the trailing 12-month total return skipping the most
+    recent month (252-day window, 21-day skip). The paper goes long positive-signal
+    markets and short negative-signal ones, sizing each position inverse to its
+    trailing volatility, then scales the book to a volatility target.
+  inputs_required:
+    - daily close of each sleeve
+  cross_sectional: false
+  formation_rule: >
+    Sign filter per stream, not a cross-sectional rank: each sleeve is judged
+    against zero on its own trailing return, independently of the others.
+  weighting_rule: >
+    Inverse trailing volatility among the sleeves that pass the filter, then
+    scaled so ex-ante portfolio vol meets the 18% target, capped at unlevered.
+  holding_period: one month
+  rebalance_frequency: monthly
+  is_long_short: true
+  long_only_adaptation: >
+    The short leg is DROPPED, not replaced. A sleeve with a negative 12-1 return
+    is held at zero weight instead of short, and the freed capital is either held
+    in cash (faithful variant) or spread across the surviving sleeves (mandate
+    variant). This removes roughly half the signal's opportunity set and leaves a
+    strategy with materially higher market beta than the paper's, which was
+    approximately market-neutral by construction. It must never be scored against
+    the paper's reported numbers.
+  constraints:
+    - "long-only: no sleeve may take a negative weight"
+    - "unlevered: gross exposure at most 1"
+    - "ex-ante vol target 18%, scale capped at 1"
+    - "at least one sleeve must pass the filter or the book goes to cash"
+  engine_template: ts_momentum
+  template_gap: ""
+  confidence: high
+  evidence_pages: [2, 5]
+
 signal:
   name: ts_momentum_sleeves
   template: ts_momentum

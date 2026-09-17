@@ -64,6 +64,71 @@ universe:
   benchmark: NIFTY 500
   cash_asset: CASH_PROXY
 
+universe_translation:
+  source_universe: "US multi-asset (equity / bond / gold)"
+  source_breadth: 3
+  source_selection_rule: >
+    None. The paper fixes three ETFs (SPY, AGG, GLD) up front and allocates
+    across them; there is no cross-sectional selection step to transfer.
+  target_universe: "NSE factor sleeves"
+  grade: loose
+  resolution: sleeve_proxy
+  rationale: >
+    A long-only Indian equity fund holds no bonds and no gold, so the paper's
+    assets do not transfer at all. Its MECHANISM does: allocate across a small
+    set of long-only return streams under a hard risk cap and an l1 leash to a
+    strategic mix. The fund's five NSE factor sleeves are exactly such a set.
+    We test the mechanism, never the paper's numbers.
+  transfer_risks:
+    - >
+      The paper's lift comes from SPY/AGG/GLD being weakly or negatively
+      correlated. Five single-country equity sleeves correlate 0.74-0.94
+      pairwise, so a risk-constrained optimiser has far less to work with.
+    - >
+      The paper de-risks into cash and that is where its drawdown control comes
+      from. A fully-invested mandate cannot do it, so the mandate variant is a
+      materially different strategy and is run separately.
+  required_instruments:
+    - NIFTY500 MOMENTUM 50
+    - NIFTY500 QUALITY 50
+    - NIFTY500 VALUE 50
+    - NIFTY500 LOW VOLATILITY 50
+    - NIFTY ALPHA 50
+  evidence_page: 3
+
+strategy:
+  signal_name: dynamic_factor_sleeve_allocation
+  signal_definition: >
+    At each monthly rebalance, choose weights w maximising alpha'w + rf(1 - 1'w)
+    minus half-spread turnover cost, subject to: w >= 0; 1'w <= 1; the l1
+    distance between w and the strategic mix scaled by 1'w is at most the l1
+    budget; and ex-ante volatility sqrt(w' Sigma w) is at most the target. alpha
+    is an EWMA of past daily returns (halflife 252d) scaled to a 21-day horizon;
+    Sigma is an 11-day rolling covariance, annualised. Paper eq. (3).
+  inputs_required:
+    - daily close of each sleeve
+    - a cash rate for the un-invested residual
+  cross_sectional: false
+  formation_rule: >
+    No selection step. All five sleeves are always candidates; the optimiser sets
+    every weight, and the l1 leash bounds how far the mix may stray from 20/20/20/20/20.
+  weighting_rule: >
+    Convex optimisation output, long-only, gross at most 1. The residual sits in
+    cash in the faithful variant, and is renormalised away in the mandate variant.
+  holding_period: one month
+  rebalance_frequency: monthly
+  is_long_short: false
+  long_only_adaptation: ""
+  constraints:
+    - "long-only: w >= 0"
+    - "unlevered: 1'w <= 1"
+    - "ex-ante vol cap: sqrt(w' Sigma w) <= 18%"
+    - "l1 leash to the strategic mix, budget 1.0"
+  engine_template: markowitz_l1
+  template_gap: ""
+  confidence: high
+  evidence_pages: [3, 4, 11]
+
 signal:
   name: dynamic_factor_sleeve_allocation
   template: markowitz_l1
