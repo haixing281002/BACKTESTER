@@ -41,6 +41,33 @@ roles reached through the API; the commands in `.claude/commands/` are those rol
 performed by you, in session, with no API key. Both write the **same artifacts**,
 validated against the **same schemas** in `ros/agents/schemas.py`.
 
+## Always ask which paper
+
+**There is no default paper.** Every run analyses one paper, named explicitly. If
+someone asks you to run the pipeline without naming a PDF, show them
+`python -c "from ros.papers import ask_for_a_paper; print(ask_for_a_paper())"`
+and wait. Never fall back to a paper already in `docs/` — a run that quietly
+analysed the wrong PDF looks exactly like one that analysed theirs, and that only
+surfaces after a Gate A queue has been signed against the wrong work.
+
+New papers go in `docs/papers/`. Artifacts are keyed by the paper's slug and its
+sha256 travels on the card, so a result can always be traced to specific bytes.
+
+## Stages 00 to Gate A need NO MARKET DATA
+
+```bash
+python run_interpret.py --pdf docs/papers/<your_paper>.pdf
+```
+
+Reading a paper, choosing the universe, reconstructing the strategy and
+assembling the Gate A queue touch no price series. So any paper can reach Gate A
+today, and the output includes **exactly which series would have to be supplied**
+for that specific paper to become testable.
+
+A data shortfall there is a deliverable, not a failure: the fund buys data
+because a named paper needs it. `run_pipeline.py` is the other half — it needs
+data and produces numbers.
+
 ## Stage 01 carries the weight
 
 Two decisions dominate everything downstream, and both are made by reading the
@@ -100,17 +127,20 @@ ros/
   governance/          gates, promotion ladder, strategy library
   agents/              the same roles via the Claude API (needs a key)
   interpretation.py    lineage for work done HERE, in the editor
-run_pipeline.py        steps 03-08, fully deterministic
+  papers.py            finding and REQUIRING the paper; there is no default
+run_interpret.py       stages 00 to Gate A. No market data. Any paper, today.
+run_pipeline.py        steps 03-08, fully deterministic (needs data)
 run_agentic.py         steps 01-03 via the API
 ```
 
 ## Commands you will actually use
 
 ```bash
+python run_interpret.py --pdf docs/papers/<paper>.pdf     # 00 -> Gate A, NO DATA NEEDED
 python run_pipeline.py --card cards/<card>.yaml          # ends at Gate B PENDING
 python run_pipeline.py --card cards/<card>.yaml \
     --decision REJECT --decided-by "Name" --rationale "…"  # a human rules
-python -m pytest tests/ -q                                # 140 tests
+python -m pytest tests/ -q                                # 156 tests
 python validate/cross_check.py --excel                    # engine vs clean-room impl
 python -m ros.interpretation history                      # who interpreted what
 ```

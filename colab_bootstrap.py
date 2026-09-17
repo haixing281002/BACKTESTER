@@ -26,7 +26,7 @@ import subprocess
 import sys
 import time
 
-VERSION = "2026-09-16.4"
+VERSION = "2026-09-17.1"
 REPO = "https://github.com/haixing281002/BACKTESTER.git"
 BRANCH = "claude/sleepy-hypatia-if6kj5"
 
@@ -44,8 +44,17 @@ def _hr(ch="="):
     print(ch * 74)
 
 
-def bootstrap(run_pipeline: bool = True, card: str = "india") -> str:
-    """Install, fetch the repo and data, verify, and optionally run the pipeline.
+def bootstrap(run_pipeline: bool = False, card: str = None) -> str:
+    """Install, fetch the repo and data, verify, and stop.
+
+    It deliberately does NOT run a paper. There is no default paper: the whole
+    point of the pipeline is that it analyses the one YOU bring, and a bootstrap
+    that helpfully backtests a bundled example teaches the wrong habit -- the
+    output looks like a result about your research when it is a result about
+    somebody else's.
+
+    Pass a card explicitly (bootstrap(run_pipeline=True, card="cards/x.yaml"))
+    if you want the old behaviour.
 
     Returns the working directory. Safe to re-run: the clone is refreshed rather
     than duplicated, so a second run picks up any new commits.
@@ -98,13 +107,13 @@ def bootstrap(run_pipeline: bool = True, card: str = "india") -> str:
     print(f"      done -> {work}   commit {commit}")
 
     # -- 3. confirm the inputs are present ---------------------------------
+    # The workbook ships with the repo. The PAPER does not default to anything:
+    # whichever paper you are analysing is the one you upload below.
     print("\n[3/5] checking inputs...")
     xlsx = "data/raw/Factor_Indices_Historical_Price_Data.xlsx"
-    pdf = "docs/devanathan_2026_simple_dynamic_sbg.pdf"
-    for p in (xlsx, pdf):
-        if not os.path.exists(p):
-            raise SystemExit(f"expected input missing from the repo: {p}")
-        print(f"      {os.path.getsize(p):>9,} bytes  {p}")
+    if not os.path.exists(xlsx):
+        raise SystemExit(f"expected input missing from the repo: {xlsx}")
+    print(f"      {os.path.getsize(xlsx):>9,} bytes  {xlsx}")
 
     # -- 4. verify the environment actually works --------------------------
     print("\n[4/5] verifying...")
@@ -129,19 +138,19 @@ def bootstrap(run_pipeline: bool = True, card: str = "india") -> str:
                [w >= 0, cp.sum(w) <= 1]).solve(solver=cp.CLARABEL)
     assert np.allclose(w.value, [0, 1, 0], atol=1e-6), "solver check failed"
 
-    from ros.cards.extract import extract_document
     from ros.data.loaders import load_nse_factor_workbook
+    from ros.papers import find_papers
     from ros.engine.primitives import list_primitives
     from ros.engine.templates import list_templates
 
     frame, prov = load_nse_factor_workbook(xlsx)
-    doc = extract_document(pdf)
     print("      solver  : CLARABEL OK")
     print(f"      prices  : {prov['n_series']} series x {prov['n_rows']} rows  "
           f"{prov['date_min']} -> {prov['date_max']}")
-    print(f"      paper   : {doc.quality.n_pages} pages, {doc.quality.n_chars:,} chars")
     print(f"      engine  : {len(list_templates())} templates, "
           f"{len(list_primitives())} primitives")
+    print(f"      papers  : {len(find_papers())} PDFs in the repo; "
+          f"the one you analyse is the one you upload")
 
     if not run_pipeline:
         _hr()
@@ -149,16 +158,51 @@ def bootstrap(run_pipeline: bool = True, card: str = "india") -> str:
         _hr()
         return work
 
-    # -- 5. run it ---------------------------------------------------------
-    cards = {
-        "india": "cards/devanathan_2026_india_factor_adaptation.yaml",
-        "replication": "cards/devanathan_2026_replication.yaml",
-        "tsmom": "cards/moskowitz_2012_tsmom_india.yaml",
-    }
-    path = cards.get(card, card)
-    print(f"\n[5/5] running the pipeline on {path}")
+    # -- 5. hand over -------------------------------------------------------
+    if not run_pipeline or not card:
+        _hr()
+        print(f"  READY in {time.time() - t0:.0f}s.  Working directory: {work}")
+        _hr()
+        print("""
+  NOW UPLOAD THE PAPER YOU WANT TO ANALYSE
+
+    from google.colab import files
+    import shutil, os
+    os.makedirs("docs/papers", exist_ok=True)
+    up = files.upload()                      # pick your .pdf
+    paper = "docs/papers/" + list(up)[0]
+    shutil.move(list(up)[0], paper)
+    print("uploaded ->", paper)
+
+  THEN TAKE IT TO GATE A -- this needs NO market data at all
+
+    !python run_interpret.py --pdf "$paper"
+
+  It prints what the deterministic reader can see, the universe the card
+  chose against its ranked alternatives, the strategy, the Gate A checklist,
+  and exactly which data series would have to be supplied for THIS paper to
+  become testable. A shortfall there is the deliverable, not a failure.
+
+  The interpretation itself -- reading the paper, choosing the universe,
+  reconstructing the strategy -- is a model's job. Open this folder in VS Code
+  with Claude Code and run:
+
+    /paper docs/papers/<your_paper>.pdf
+
+  WHAT ELSE IS HERE
+
+    !python -m pytest tests/ -q              # the engine's own correctness tests
+    !python validate/cross_check.py          # engine vs a clean-room reimplementation
+    !python check_setup.py                   # what is ready, what is not
+
+    # the worked examples that ship with the repo, if you want a reference run
+    !ls cards/
+""")
+        return work
+
+    print(f"\n[5/5] running the pipeline on {card}")
     print("      (this takes 2-4 minutes and prints nothing until it finishes)\n")
-    r = _run([sys.executable, "run_pipeline.py", "--card", path, "--n-boot", "2000"])
+    r = _run([sys.executable, "run_pipeline.py", "--card", card, "--n-boot", "2000"])
     if r.returncode != 0:
         print(r.stdout[-4000:]); print(r.stderr[-4000:])
         raise SystemExit("pipeline failed -- output above.")
@@ -166,40 +210,8 @@ def bootstrap(run_pipeline: bool = True, card: str = "india") -> str:
 
     _hr()
     print(f"  DONE in {time.time() - t0:.0f}s.  Working directory: {work}")
-    print("  Full reports, charts and the research library are in:")
-    print(f"    {work}/outputs/")
+    print(f"  Reports, charts and the research library are in {work}/outputs/")
     _hr()
-    print("""
-  WHAT TO RUN NEXT (paste any of these into a new cell)
-
-    # the other two papers
-    !python run_pipeline.py --card cards/devanathan_2026_replication.yaml
-    !python run_pipeline.py --card cards/moskowitz_2012_tsmom_india.yaml
-
-    # YOUR OWN PAPER, END TO END -- no LLM, no API key, dataset unchanged
-    from colab_papers import upload_pdf, backtest
-    p = upload_pdf()      # pick any .pdf  (run this cell on its own)
-    backtest(p)           # read it, draft a card, run the full backtest
-
-    # or step by step, if you want to edit the card in between
-    from colab_papers import analyse, compare, draft_card, run
-    analyse(p)            # what the deterministic reader finds
-    compare(p)            # your paper vs the baseline, side by side
-    c = draft_card(p)     # writes cards/<your_paper>_adaptation.yaml
-    # ... open that file, fix the lines marked CONFIRM ...
-    run(c)                # backtest it
-
-    # the agentic layer -- Claude reads the paper (no API key needed)
-    !python run_agentic.py --pdf docs/devanathan_2026_simple_dynamic_sbg.pdf \\
-        --mode adaptation --replay ros/agents/fixtures/devanathan_2026.json
-
-    # the engine's own correctness tests
-    !python -m pytest tests/ -q
-
-    # show the four diagnostic charts inline
-    from IPython.display import Image, display
-    display(Image("outputs/charts_devanathan_2026_india_factor_adaptation.png"))
-""")
     return work
 
 

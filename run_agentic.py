@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Agentic front half of the pipeline: paper in, validated Strategy Card proposal out.
 
-    python run_agentic.py --pdf docs/paper.pdf --mode adaptation
-    python run_agentic.py --pdf docs/paper.pdf --mode adaptation \
-        --replay ros/agents/fixtures/devanathan_2026.json     # no API key needed
+    python run_agentic.py --pdf docs/papers/<your_paper>.pdf --mode adaptation
+    python run_agentic.py --pdf docs/papers/<your_paper>.pdf --mode adaptation \
+        --replay ros/agents/fixtures/<fixture>.json           # no API key needed
 
 It stops at Gate A. A human reviews the queue, then the deterministic pipeline
 runs unchanged:
