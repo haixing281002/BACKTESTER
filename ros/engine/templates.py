@@ -48,6 +48,12 @@ class AllocatorContext:
     cov: Optional[np.ndarray]         # annualised covariance matrix
     alpha: Optional[np.ndarray]       # expected return over the rebalance horizon
     rf_period: float = 0.0            # risk-free return over the rebalance horizon
+    # Cross-sectional fields. A 500-name universe cannot use `cov`: a 500x500
+    # rolling covariance is gigabytes of matrices a ranking allocator never
+    # reads. Cross-sectional templates get per-asset vols and an eligibility
+    # mask instead. Both are already lag-shifted by the time they arrive here.
+    eligible: Optional[np.ndarray] = None   # bool: investable, as known on this date
+    vols: Optional[np.ndarray] = None       # per-asset trailing vol, annualised
     extras: Dict[str, Any] = None
 
 
@@ -365,3 +371,109 @@ class TimeSeriesMomentum(Allocator):
             return np.zeros(self.n)
         w = w / w.sum()
         return _scale_to_vol(w, cov, self.target_vol)
+
+
+@template("cross_sectional")
+class CrossSectional(Allocator):
+    """Rank a cross-section, hold the top slice, weight it. Long-only.
+
+    The shape almost every equity anomaly paper takes: score every security,
+    sort, buy the winners, sell the losers, rebalance. This fund cannot sell
+    the losers, so only the long leg is built -- and that is a DIFFERENT
+    STRATEGY from the paper's, never to be scored against its numbers. The card
+    must say so in `strategy.long_only_adaptation`; the schema refuses it
+    otherwise.
+
+    Parameters
+    ----------
+    n_hold      : how many names to hold. Mutually exclusive with `quantile`.
+    quantile    : top fraction to hold (0.1 = top decile).
+    weighting   : equal | signal | inverse_vol
+    max_weight  : per-name cap, applied after weighting and renormalised.
+    ascending   : True if a LOW score is good (cheapness, low vol).
+    min_names   : refuse to trade below this many eligible names.
+
+    What this deliberately does NOT do
+    ----------------------------------
+    It does not neutralise sector, size or beta. A long-only top-decile book
+    built on almost any score is a large active bet on whatever the score
+    correlates with, and reporting its return as alpha is the single most
+    common way a cross-sectional backtest misleads. Stage 07's factor
+    fingerprint exists to catch exactly that, and it is where this template's
+    output has to survive.
+    """
+    requires = ("alpha", "eligible")
+
+    def __init__(self, assets, n_hold=None, quantile=None, weighting="equal",
+                 max_weight=None, ascending=False, min_names=10, **kw):
+        super().__init__(assets, n_hold=n_hold, quantile=quantile,
+                         weighting=weighting, max_weight=max_weight,
+                         ascending=ascending, min_names=min_names, **kw)
+        if (n_hold is None) == (quantile is None):
+            raise ValueError("cross_sectional needs exactly one of n_hold or quantile")
+        if weighting not in ("equal", "signal", "inverse_vol"):
+            raise ValueError(f"unknown weighting '{weighting}'")
+        self.n_hold = int(n_hold) if n_hold is not None else None
+        self.quantile = float(quantile) if quantile is not None else None
+        self.weighting = weighting
+        self.max_weight = float(max_weight) if max_weight is not None else None
+        self.ascending = bool(ascending)
+        self.min_names = int(min_names)
+        self._skipped = 0
+        self._held: List[int] = []
+
+    def target_weights(self, ctx: AllocatorContext) -> np.ndarray:
+        score = np.asarray(ctx.alpha, dtype=float)
+        ok = np.asarray(ctx.eligible, dtype=bool) & np.isfinite(score)
+        n_ok = int(ok.sum())
+
+        # Too thin a cross-section is not a portfolio. Ranking 4 names into
+        # deciles produces weights, and they mean nothing.
+        if n_ok < self.min_names:
+            self._skipped += 1
+            return ctx.current_weights.copy()
+
+        k = self.n_hold if self.n_hold is not None else max(
+            1, int(round(self.quantile * n_ok)))
+        k = min(k, n_ok)
+
+        idx = np.flatnonzero(ok)
+        s = score[idx]
+        # Rank by score. argsort is ascending, so a "high is good" signal is
+        # negated rather than reversed -- reversing would make ties break the
+        # opposite way and quietly change the book at every rebalance.
+        order = np.argsort(s if self.ascending else -s, kind="stable")
+        chosen = idx[order[:k]]
+        self._held.append(k)
+
+        w = np.zeros(self.n)
+        if self.weighting == "equal":
+            w[chosen] = 1.0 / k
+        elif self.weighting == "signal":
+            v = score[chosen]
+            v = (v.max() - v) if self.ascending else (v - v.min())
+            # A flat or single-name slice has no spread to weight by; fall back
+            # to equal rather than dividing by zero.
+            w[chosen] = (v / v.sum()) if v.sum() > 0 else 1.0 / k
+        else:                                          # inverse_vol
+            if ctx.vols is None:
+                w[chosen] = 1.0 / k
+            else:
+                sd = np.asarray(ctx.vols, dtype=float)[chosen]
+                inv = np.where(np.isfinite(sd) & (sd > 0), 1.0 / sd, np.nan)
+                w[chosen] = (np.nan_to_num(inv) / np.nansum(inv)
+                             if np.isfinite(inv).any() else 1.0 / k)
+
+        if self.max_weight is not None:
+            # One pass of cap-and-redistribute. Not iterated to a fixed point:
+            # a second pass can re-breach the cap, and silently looping would
+            # hide a cap set too tight for the number of names held.
+            w = np.minimum(w, self.max_weight)
+            tot = w.sum()
+            if tot > 0:
+                w = w / tot
+        return w
+
+    def diagnostics(self) -> Dict[str, Any]:
+        return {"rebalances_skipped_thin_universe": self._skipped,
+                "mean_names_held": (float(np.mean(self._held)) if self._held else 0.0)}
