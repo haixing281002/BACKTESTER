@@ -45,6 +45,7 @@ from ros.feasibility import UNAVAILABLE, assess
 from ros.governance.gates import (
     Criterion, evaluate_ladder, gate_a, gate_b, render_ladder)
 from ros.governance.library import LibraryEntry, StrategyLibrary, make_entry_id
+from ros.india_requirements import derive as derive_india_requirements
 from ros.runner import align_runs, execute_card
 from ros.validation import portfolio as pv
 from ros.validation import research as rv
@@ -223,6 +224,9 @@ def main(argv=None) -> int:
     ga = gate_a(card, feas, doc.quality if doc else None, translation_check=tc)
     R.h("GATE A  |  HUMAN INTERPRETATION CONTROL")
     R.block(ga.render())
+
+    R.h("WHAT IT TAKES TO RUN THIS IN INDIA")
+    R.block(derive_india_requirements(card, tc).render())
 
     shortfall = list(tc.missing) if tc else []
     shortfall += [r.requirement for r in feas.resolutions

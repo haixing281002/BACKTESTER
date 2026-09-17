@@ -68,6 +68,14 @@ A data shortfall there is a deliverable, not a failure: the fund buys data
 because a named paper needs it. `run_pipeline.py` is the other half — it needs
 data and produces numbers.
 
+Gate A also prints **what it takes to run this specific strategy in India**:
+which fields with which adjustments, what the lag must respect, the execution
+hazards that apply to this signal shape, which cost components must be charged,
+and what would invalidate the test. Derived by `ros/india_requirements.py` from
+the Stage 01 reconstruction — the model says what the strategy is, the rules say
+what India demands of it. Works for any strategy, including one no template can
+run yet: "what would it take" is answerable before "can we run it".
+
 ## Stage 01 carries the weight
 
 Two decisions dominate everything downstream, and both are made by reading the
@@ -128,6 +136,8 @@ ros/
   agents/              the same roles via the Claude API (needs a key)
   interpretation.py    lineage for work done HERE, in the editor
   papers.py            finding and REQUIRING the paper; there is no default
+  india_requirements.py  what it takes to backtest THIS strategy in India --
+                       derived from the reconstruction, shown at Gate A
 run_interpret.py       stages 00 to Gate A. No market data. Any paper, today.
 run_pipeline.py        steps 03-08, fully deterministic (needs data)
 run_agentic.py         steps 01-03 via the API
@@ -140,7 +150,7 @@ python run_interpret.py --pdf docs/papers/<paper>.pdf     # 00 -> Gate A, NO DAT
 python run_pipeline.py --card cards/<card>.yaml          # ends at Gate B PENDING
 python run_pipeline.py --card cards/<card>.yaml \
     --decision REJECT --decided-by "Name" --rationale "…"  # a human rules
-python -m pytest tests/ -q                                # 156 tests
+python -m pytest tests/ -q                                # 180 tests
 python validate/cross_check.py --excel                    # engine vs clean-room impl
 python -m ros.interpretation history                      # who interpreted what
 ```

@@ -46,6 +46,7 @@ from ros.data.intake import MANIFEST, describe_shortfall, extend_registry
 from ros.data.universes import INDIAN_UNIVERSES, check_translation
 from ros.feasibility import UNAVAILABLE, assess
 from ros.governance.gates import gate_a
+from ros.india_requirements import derive
 from ros.papers import artifact_paths, require_paper
 
 
@@ -204,6 +205,9 @@ def main() -> int:
     shortfall = list(tc.missing) if tc else []
     shortfall += [r.requirement for r in feas.resolutions
                   if r.status == UNAVAILABLE and r.requirement not in shortfall]
+
+    head("WHAT IT TAKES TO RUN THIS IN INDIA")
+    para(derive(card, tc).render(), indent="")
 
     head("WHAT THIS PAPER WOULD NEED FROM YOU")
     if not shortfall:
