@@ -93,6 +93,14 @@ LONG_ONLY_CAVEATS = [
 ]
 
 
+# Cap segments, deepest to shallowest. Used to judge whether a universe matches
+# the segment a paper studied: a small-cap anomaly tested on NIFTY 50 is not a
+# test of it, and a large-cap result measured on micro caps is not either.
+SEGMENTS = ("mega", "large", "large_mid", "mid", "mid_small", "small", "micro", "all")
+_SEG_RANK = {"mega": 0, "large": 1, "large_mid": 1.5, "mid": 2,
+             "mid_small": 2.5, "small": 3, "micro": 4, "all": 2}
+
+
 @dataclass
 class UniverseDef:
     """An investable universe, ours or a paper's."""
@@ -102,6 +110,11 @@ class UniverseDef:
     approx_breadth: Optional[int] = None
     asset_class: str = "equity"
     caveats: List[str] = field(default_factory=list)
+    cap_segment: str = "all"
+    sector: Optional[str] = None      # None = broad market
+    in_mandate: bool = True           # may the fund HOLD it, not merely test on it
+    history_from: str = "2005-04-01"
+    required_instruments: List[str] = field(default_factory=list)
 
 
 @dataclass
@@ -127,38 +140,105 @@ class Translation:
 # The fund's own universes. What we could test, given the right data -- NOT a
 # claim that we hold the data. ros/data/firm_registry.py owns that question.
 # ---------------------------------------------------------------------------
-INDIAN_UNIVERSES: Dict[str, UniverseDef] = {
-    "NIFTY 500 constituents": UniverseDef(
-        name="NIFTY 500 constituents", market="IN", approx_breadth=500,
-        description="The fund's mandate universe: roughly 93% of NSE free-float "
-                    "market cap, spanning large, mid and small caps.",
-        caveats=INDIA_EQUITY_CAVEATS),
-    "NIFTY 100 constituents": UniverseDef(
-        name="NIFTY 100 constituents", market="IN", approx_breadth=100,
-        description="Large-cap subset. Closest in concentration and liquidity to "
-                    "the S&P 500's role in the US market.",
-        caveats=INDIA_EQUITY_CAVEATS),
-    "NIFTY 50 constituents": UniverseDef(
-        name="NIFTY 50 constituents", market="IN", approx_breadth=50,
-        description="Headline large-cap index. The analogue of a Nikkei 225 or "
-                    "FTSE 100 in role, not in breadth.",
-        caveats=INDIA_EQUITY_CAVEATS),
-    "NIFTY Midcap 150 constituents": UniverseDef(
-        name="NIFTY Midcap 150 constituents", market="IN", approx_breadth=150,
-        description="Mid-cap segment; inside the fund's NIFTY 500 scope.",
-        caveats=INDIA_EQUITY_CAVEATS),
-    "NIFTY Smallcap 250 constituents": UniverseDef(
-        name="NIFTY Smallcap 250 constituents", market="IN", approx_breadth=250,
-        description="Small-cap segment. Inside NIFTY 500 by construction but the "
-                    "depth caveats bind hardest here.",
-        caveats=INDIA_EQUITY_CAVEATS),
-    "NSE factor sleeves": UniverseDef(
+def _slug(name: str) -> str:
+    return (name.lower().replace(" constituents", "").replace(" ", "_")
+            .replace("-", "_"))
+
+
+def _u(name, breadth, segment, desc, in_mandate=True, sector=None,
+       history_from="2005-04-01", instruments=None) -> UniverseDef:
+    return UniverseDef(
+        name=name, market="IN", description=desc, approx_breadth=breadth,
+        cap_segment=segment, sector=sector, in_mandate=in_mandate,
+        history_from=history_from,
+        required_instruments=list(instruments) if instruments else [
+            f"{_slug(name)}_constituent_prices",
+            f"{_slug(name)}_membership_history",
+            f"{_slug(name)}_free_float_marketcap"],
+        caveats=INDIA_EQUITY_CAVEATS)
+
+
+# The Indian equity universes this fund could test on.
+#
+# `in_mandate` says whether the fund may HOLD it. Everything here may be TESTED
+# on, because establishing that a mechanism is REAL is a different question from
+# being allowed to run it. A paper validated on Microcap 250 tells you the effect
+# exists AND that this fund cannot harvest it -- both worth recording, and the
+# second only discoverable if the first was allowed to run.
+#
+# This list is meant to grow. Adding a universe is a data-owner decision: one
+# entry here and every future paper can be routed to it.
+INDIAN_UNIVERSES: Dict[str, UniverseDef] = {u.name: u for u in [
+    # ---- broad market, by depth ----
+    _u("NIFTY 50 constituents", 50, "mega",
+       "Headline large-cap index. Fifty names supports very few independent "
+       "cross-sectional bets: a decile is five stocks."),
+    _u("NIFTY Next 50 constituents", 50, "large",
+       "Ranks 51-100. Often where a large-cap anomaly actually lives, because "
+       "NIFTY 50 is too concentrated to disperse."),
+    _u("NIFTY 100 constituents", 100, "large",
+       "Closest in concentration and liquidity to the S&P 500's role in the US "
+       "market. The default for a large-cap paper."),
+    _u("NIFTY 200 constituents", 200, "large_mid",
+       "Large and upper-mid. Doubles the cross-section of NIFTY 100 while "
+       "staying comfortably liquid."),
+    _u("NIFTY 500 constituents", 500, "all",
+       "The fund's mandate universe: roughly 93% of NSE free-float market cap. "
+       "The default when a mechanism needs breadth."),
+    _u("NIFTY Total Market constituents", 750, "all",
+       "Ranks 1-750. The broadest investable Indian cross-section and the "
+       "closest analogue to a CRSP-style 'all stocks' universe.",
+       in_mandate=False),
+    # ---- cap segments ----
+    _u("NIFTY Midcap 150 constituents", 150, "mid",
+       "Ranks 101-250. Inside the mandate, and where a great many Indian "
+       "anomalies concentrate."),
+    _u("NIFTY Smallcap 250 constituents", 250, "small",
+       "Ranks 251-500. Inside the mandate by construction, but the depth and "
+       "circuit-limit caveats bind hardest here."),
+    _u("NIFTY Microcap 250 constituents", 250, "micro",
+       "Ranks 501-750. Outside the mandate. Useful chiefly to establish whether "
+       "an effect is a micro-cap artefact -- which is what a great many "
+       "published small-cap anomalies turn out to be.",
+       in_mandate=False),
+    _u("NIFTY LargeMidcap 250 constituents", 250, "large_mid",
+       "Top 100 plus Midcap 150. A liquidity-aware broad universe."),
+    _u("NIFTY MidSmallcap 400 constituents", 400, "mid_small",
+       "Midcap 150 plus Smallcap 250. Excludes the mega caps that dominate "
+       "cap-weighted results."),
+    # ---- sector ----
+    _u("NIFTY Bank constituents", 12, "large",
+       "Banking. Twelve names: far too thin for a cross-sectional sort, usable "
+       "only for a sector-level timing mechanism.", sector="financials"),
+    _u("NIFTY Financial Services constituents", 20, "large",
+       "Banks, NBFCs and insurers. Still thin for a sort.", sector="financials"),
+    _u("NIFTY IT constituents", 10, "large",
+       "Ten names. Sector timing only.", sector="technology"),
+    _u("NIFTY Pharma constituents", 20, "large_mid",
+       "Pharmaceuticals and healthcare.", sector="healthcare"),
+    _u("NIFTY FMCG constituents", 15, "large",
+       "Consumer staples.", sector="consumer_staples"),
+    _u("NIFTY Auto constituents", 15, "large_mid",
+       "Automobiles and components.", sector="consumer_discretionary"),
+    _u("NIFTY Metal constituents", 15, "mid",
+       "Metals and mining. Highly cyclical; results are regime-dependent.",
+       sector="materials"),
+    _u("NIFTY Energy constituents", 10, "large",
+       "Oil, gas and power. Dominated by two or three names.", sector="energy"),
+    # ---- what we actually hold today ----
+    UniverseDef(
         name="NSE factor sleeves", market="IN", approx_breadth=8,
+        cap_segment="all", sector=None, in_mandate=True,
+        history_from="2005-04-01",
         description="The eight NSE single- and multi-factor indices the fund "
-                    "holds daily closes for. Not a cross-section of stocks: a "
-                    "small set of pre-built return streams.",
+                    "holds daily closes for. NOT a cross-section of stocks: a "
+                    "small set of pre-built long-only return streams. The only "
+                    "universe in this catalogue testable TODAY.",
+        required_instruments=["NIFTY500 MOMENTUM 50", "NIFTY500 QUALITY 50",
+                              "NIFTY500 VALUE 50", "NIFTY500 LOW VOLATILITY 50",
+                              "NIFTY ALPHA 50"],
         caveats=INDIA_EQUITY_CAVEATS),
-}
+]}
 
 FUND_MANDATE_UNIVERSE = "NIFTY 500 constituents"
 
@@ -404,6 +484,11 @@ class TranslationCheck:
     claimed_resolution: str = ""
     caveats: List[str] = field(default_factory=list)
     notes: List[str] = field(default_factory=list)
+    target_is_known: bool = False
+    recorded_pair: bool = False
+    requirements: Optional["MechanismRequirements"] = None
+    fit: Optional["UniverseFit"] = None
+    ranked: List["UniverseFit"] = field(default_factory=list)
 
     @property
     def needs_human(self) -> bool:
@@ -417,6 +502,20 @@ class TranslationCheck:
         if self.registry_match:
             L.append(f"  recorded grade  : {self.registry_match.grade}")
             L.append(f"  rationale       : {' '.join(self.registry_match.rationale.split())}")
+        elif self.target_is_known:
+            L.append("  correspondence  : model-chosen (not the recorded default)")
+        if self.fit is not None:
+            L.append(f"  fit for this mechanism : score {self.fit.score:.0f}")
+            for r in self.fit.reasons_for:
+                L.append(f"      for    : {' '.join(r.split())}")
+            for r in self.fit.reasons_against:
+                L.append(f"      against: {' '.join(r.split())}")
+        if self.ranked:
+            L.append("  alternatives the code ranked:")
+            for f in self.ranked:
+                mark = " <- chosen" if f.universe.name == self.target else ""
+                flag = "" if f.usable else "  [disqualified]"
+                L.append(f"      {f.score:6.1f}  {f.universe.name}{flag}{mark}")
         L.append(f"  resolution      : {self.computed_resolution}"
                  + (f"   (card claimed: {self.claimed_resolution})"
                     if self.claimed_resolution
@@ -458,22 +557,82 @@ def check_translation(translation, registry, long_only: bool = True) -> Translat
 
     if canon is None:
         chk.notes.append(
-            "This source universe is not in ros/data/universes.py. The table is "
-            "matched exactly rather than fuzzily, because guessing wrong here "
-            "silently backtests the wrong universe. Either the paper studies "
-            "something genuinely new -- in which case a human adds it to the "
-            "table -- or Stage 01 described it in unfamiliar words.")
-    elif match is None:
-        recorded = ", ".join(f"{t.target} ({t.grade})" for t in options) or "none"
+            "This source universe is not in the translation table. Matching is "
+            "exact rather than fuzzy, because guessing wrong silently backtests "
+            "the wrong universe. Either the paper studies something genuinely "
+            "new -- in which case a human adds it -- or Stage 01 described it in "
+            "unfamiliar words. Either way the universe CHOICE below still "
+            "stands on its own: an unrecognised source does not invalidate a "
+            "well-argued target.")
+
+    # A target that is not a recorded pair is NOT an error. The recorded pairs
+    # are defaults, not a whitelist: the same S&P 500 paper belongs on NIFTY 100
+    # for large-cap purity, NIFTY 500 for breadth, or Microcap 250 if the
+    # question is whether the effect is an artefact. What must hold is that the
+    # target is a real Indian universe and that the choice fits the mechanism.
+    if tgt and tgt not in INDIAN_UNIVERSES:
         chk.divergences.append(
-            f"the card proposes '{tgt}' for '{canon}', which is not a recorded "
-            f"correspondence. Recorded: {recorded}")
+            f"'{tgt}' is not an Indian universe this fund knows. Add it to "
+            f"INDIAN_UNIVERSES in ros/data/universes.py, or pick from: "
+            f"{', '.join(sorted(INDIAN_UNIVERSES)[:6])}, ...")
+    elif tgt:
+        chk.target_is_known = True
+        chk.recorded_pair = match is not None
+        if match is None and options:
+            chk.notes.append(
+                f"'{tgt}' is a model-chosen target rather than the default for "
+                f"'{canon}' (default: "
+                f"{', '.join(t.target for t in options if t.target)}). That is "
+                f"allowed and often right -- but the fit below, not the table, "
+                f"is what justifies it.")
+
+    # Score the choice against what the mechanism was said to need.
+    needs = getattr(translation, "mechanism_needs", None)
+    if needs is not None and tgt in INDIAN_UNIVERSES:
+        req = MechanismRequirements(
+            needs_cross_section=needs.needs_cross_section,
+            min_names=needs.min_names, cap_segment=needs.cap_segment,
+            sector=needs.sector, min_history_years=needs.min_history_years,
+            must_be_in_mandate=needs.must_be_in_mandate, notes=needs.notes)
+        chk.requirements = req
+        chk.fit = score_universe(INDIAN_UNIVERSES[tgt], req)
+        ranked = propose_universes(req, include_unusable=True)
+        # Always show the chosen one, even when it ranks below the cut. A
+        # reviewer comparing it to the alternatives needs both on the page.
+        top = ranked[:5]
+        if all(f.universe.name != tgt for f in top):
+            top += [f for f in ranked if f.universe.name == tgt]
+        chk.ranked = top
+        if chk.fit.disqualifying:
+            chk.divergences.append(
+                f"the chosen universe is disqualified for this mechanism: "
+                f"{'; '.join(chk.fit.disqualifying)}")
+        else:
+            best = next((f for f in ranked if f.usable), None)
+            if best and best.universe.name != tgt and best.score > chk.fit.score + 15:
+                chk.notes.append(
+                    f"'{best.universe.name}' scores {best.score:.0f} against "
+                    f"{chk.fit.score:.0f} for the chosen '{tgt}'. Not wrong, but "
+                    f"the card should say why the better-fitting option was "
+                    f"passed over.")
+        if not INDIAN_UNIVERSES[tgt].in_mandate:
+            chk.notes.append(
+                "OUT OF MANDATE. A result here establishes whether the effect is "
+                "real; it is not something this fund can run, and must never be "
+                "reported as though it were.")
 
     # Which instruments would a faithful test need? Prefer the registry's list
     # over the card's -- the card is the model's proposal, the table is the
     # institution's decision.
-    needed = list(match.required_instruments) if match else list(
-        getattr(translation, "required_instruments", []) or [])
+    # What a faithful test needs, in order of authority: the recorded pair, then
+    # the target universe's own entry, then whatever the card claimed. The card
+    # is the model's proposal and ranks last on purpose.
+    if match:
+        needed = list(match.required_instruments)
+    elif tgt in INDIAN_UNIVERSES and INDIAN_UNIVERSES[tgt].required_instruments:
+        needed = list(INDIAN_UNIVERSES[tgt].required_instruments)
+    else:
+        needed = list(getattr(translation, "required_instruments", []) or [])
     for inst in needed:
         (chk.held if registry.get(inst) is not None else chk.missing).append(inst)
 
@@ -501,3 +660,211 @@ def check_translation(translation, registry, long_only: bool = True) -> Translat
         chk.caveats.extend(match.transfer_risks)
     chk.caveats.extend(caveats_for(tgt, long_only=long_only))
     return chk
+
+
+# ---------------------------------------------------------------------------
+# CHOOSING a universe, rather than looking one up
+#
+# A fixed source->target table cannot answer "where is this paper best tested?"
+# The same S&P 500 paper belongs on NIFTY 100 if it needs large-cap purity, on
+# NIFTY 500 if it needs breadth, and on Microcap 250 if the question is whether
+# the effect is a micro-cap artefact. That is a judgement about the MECHANISM,
+# not about the index.
+#
+# So the split is: the model reads the paper and states what the mechanism
+# NEEDS; this code scores every Indian universe against those needs and ranks
+# them; the model picks from the ranked list and justifies; a human signs at
+# Gate A. The choice is open. The justification is checked.
+# ---------------------------------------------------------------------------
+@dataclass
+class MechanismRequirements:
+    """What a paper's mechanism needs from a universe, as read at Stage 01.
+
+    Every field is a claim about the PAPER, not about India. Getting these right
+    is the whole job: they are what the ranking below consumes.
+    """
+    needs_cross_section: bool = True
+    # How many names the sort needs to mean anything. A top-decile strategy
+    # wants ~10 names in the held bucket, so 10 buckets x 10 names = 100. State
+    # the number the paper's construction implies, not a round guess.
+    min_names: int = 100
+    cap_segment: str = "all"            # the segment the PAPER studied
+    sector: Optional[str] = None        # set only for a sector-specific paper
+    min_history_years: float = 10.0
+    must_be_in_mandate: bool = False    # True only if the run must be holdable
+    notes: str = ""
+
+    def validate(self) -> List[str]:
+        errs = []
+        if self.cap_segment not in SEGMENTS:
+            errs.append(f"cap_segment '{self.cap_segment}' not in {SEGMENTS}")
+        if self.min_names < 1:
+            errs.append("min_names must be >= 1")
+        return errs
+
+
+@dataclass
+class UniverseFit:
+    universe: UniverseDef
+    score: float
+    reasons_for: List[str] = field(default_factory=list)
+    reasons_against: List[str] = field(default_factory=list)
+    disqualifying: List[str] = field(default_factory=list)
+
+    @property
+    def usable(self) -> bool:
+        return not self.disqualifying
+
+    def render(self) -> str:
+        head = (f"  {self.universe.name:<42} score {self.score:5.1f}"
+                f"   n~{self.universe.approx_breadth}"
+                f"   {'in mandate' if self.universe.in_mandate else 'OUT OF MANDATE'}")
+        L = [head]
+        for r in self.disqualifying:
+            L.append(f"      DISQUALIFIED: {r}")
+        for r in self.reasons_against:
+            L.append(f"      against: {r}")
+        for r in self.reasons_for:
+            L.append(f"      for    : {r}")
+        return "\n".join(L)
+
+
+def _years_since(date_str: str) -> float:
+    from datetime import date
+    try:
+        y, m, d = (int(x) for x in date_str.split("-"))
+    except (ValueError, AttributeError):
+        return 0.0
+    return (date.today() - date(y, m, d)).days / 365.25
+
+
+def score_universe(u: UniverseDef, req: MechanismRequirements) -> UniverseFit:
+    """Score one universe against a mechanism's needs. Deterministic and stated.
+
+    The score is only a ranking aid. What matters is `reasons_against` and
+    `disqualifying`, which is what a human reads at Gate A.
+    """
+    fit = UniverseFit(universe=u, score=0.0)
+    n = u.approx_breadth or 0
+
+    # --- breadth --------------------------------------------------------
+    if req.needs_cross_section:
+        if n >= req.min_names * 2:
+            fit.score += 25
+            fit.reasons_for.append(
+                f"{n} names against {req.min_names} needed: room for the sort to "
+                f"disperse and for buckets to stay populated as names drop out")
+        elif n >= req.min_names:
+            fit.score += 15
+            fit.reasons_for.append(f"{n} names meets the {req.min_names} needed")
+        elif n >= req.min_names * 0.5:
+            fit.score -= 10
+            fit.reasons_against.append(
+                f"only {n} names against {req.min_names} needed. Buckets will be "
+                f"thin and a single stock can move the result")
+        else:
+            fit.disqualifying.append(
+                f"{n} names cannot support a sort needing {req.min_names}. "
+                f"Ranking this few into buckets produces weights that mean nothing")
+    elif n <= 12:
+        fit.score += 10
+        fit.reasons_for.append(
+            f"{n} streams suits a time-series mechanism, which judges each "
+            f"series against its own history rather than against its peers")
+
+    # --- cap segment ----------------------------------------------------
+    gap = abs(_SEG_RANK.get(u.cap_segment, 2) - _SEG_RANK.get(req.cap_segment, 2))
+    if gap == 0:
+        fit.score += 20
+        fit.reasons_for.append(f"matches the paper's {req.cap_segment} segment")
+    elif gap <= 1:
+        fit.score += 8
+        fit.reasons_for.append(
+            f"{u.cap_segment} is adjacent to the paper's {req.cap_segment}")
+    else:
+        fit.score -= 12 * gap
+        fit.reasons_against.append(
+            f"{u.cap_segment} is far from the paper's {req.cap_segment}. An "
+            f"effect measured in one cap segment routinely fails in another, so "
+            f"a null here would not disprove the paper")
+
+    # --- sector ---------------------------------------------------------
+    if req.sector:
+        if u.sector == req.sector:
+            fit.score += 25
+            fit.reasons_for.append(f"sector-specific paper, sector-matched universe")
+        elif u.sector is None:
+            fit.score -= 5
+            fit.reasons_against.append(
+                f"broad universe for a {req.sector}-specific mechanism: the "
+                f"effect would be diluted by everything that is not {req.sector}")
+        else:
+            fit.disqualifying.append(
+                f"{u.sector} universe for a {req.sector} paper: wrong sector")
+    elif u.sector is not None:
+        fit.score -= 20
+        fit.reasons_against.append(
+            f"a {u.sector} universe narrows a broad-market mechanism to one "
+            f"sector, which tests something the paper did not claim")
+
+    # --- history --------------------------------------------------------
+    yrs = _years_since(u.history_from)
+    if yrs >= req.min_history_years:
+        fit.score += 10
+    else:
+        fit.score -= 8
+        fit.reasons_against.append(
+            f"~{yrs:.0f}y of history against {req.min_history_years:.0f}y wanted")
+
+    # --- mandate --------------------------------------------------------
+    if u.in_mandate:
+        fit.score += 10
+        fit.reasons_for.append("inside the fund's mandate: a positive result is "
+                               "directly actionable")
+    else:
+        if req.must_be_in_mandate:
+            fit.disqualifying.append(
+                "outside the mandate, and this run was required to be holdable")
+        else:
+            fit.reasons_against.append(
+                "OUTSIDE the mandate. Valid for establishing whether the effect "
+                "is real; a positive result here is NOT something this fund can "
+                "run, and must never be reported as though it were")
+    return fit
+
+
+def propose_universes(req: MechanismRequirements,
+                      include_unusable: bool = False) -> List[UniverseFit]:
+    """Rank every Indian universe against a mechanism's needs, best first."""
+    errs = req.validate()
+    if errs:
+        raise ValueError("MechanismRequirements is not usable: " + "; ".join(errs))
+    fits = [score_universe(u, req) for u in INDIAN_UNIVERSES.values()]
+    if not include_unusable:
+        fits = [f for f in fits if f.usable]
+    return sorted(fits, key=lambda f: -f.score)
+
+
+def render_proposal(req: MechanismRequirements, top: int = 5) -> str:
+    """The block Gate A shows: what was needed, and where it could be tested."""
+    L = ["  WHAT THE MECHANISM NEEDS",
+         f"    cross-sectional : {req.needs_cross_section}",
+         f"    names for the sort: {req.min_names}",
+         f"    cap segment     : {req.cap_segment}",
+         f"    sector          : {req.sector or 'broad market'}",
+         f"    history wanted  : {req.min_history_years:.0f} years",
+         f"    must be holdable: {req.must_be_in_mandate}"]
+    if req.notes:
+        L.append(f"    note            : {' '.join(req.notes.split())}")
+    L.append("")
+    L.append(f"  BEST-FITTING INDIAN UNIVERSES (of {len(INDIAN_UNIVERSES)} known)")
+    for f in propose_universes(req)[:top]:
+        L.append(f.render())
+    rejected = [f for f in propose_universes(req, include_unusable=True)
+                if not f.usable]
+    if rejected:
+        L.append("")
+        L.append(f"  RULED OUT ({len(rejected)}):")
+        for f in rejected[:6]:
+            L.append(f"    {f.universe.name:<42} {f.disqualifying[0]}")
+    return "\n".join(L)

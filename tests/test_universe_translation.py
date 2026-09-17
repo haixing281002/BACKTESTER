@@ -96,12 +96,30 @@ def test_an_overclaimed_resolution_is_reported_not_reconciled(registry):
     assert any("claims resolution" in d for d in chk.divergences)
 
 
-def test_an_unrecorded_target_is_a_divergence(registry):
+def test_a_model_chosen_target_is_allowed_not_rejected(registry):
+    """The recorded pairs are defaults, not a whitelist.
+
+    The same S&P 500 paper belongs on NIFTY 100 for large-cap purity, NIFTY 500
+    for breadth, or Microcap 250 if the question is whether the effect is an
+    artefact. Forcing one answer would make the pipeline test the wrong thing
+    confidently, which is worse than testing the right thing with a caveat.
+    """
     ut = UniverseTranslation(
         source_universe="S&P 500", target_universe="NIFTY Smallcap 250 constituents",
+        grade="close", resolution="needs_data", transfer_risks=["x"])
+    chk = check_translation(ut, registry)
+    assert not chk.divergences, chk.divergences
+    assert chk.target_is_known and not chk.recorded_pair
+    assert any("model-chosen" in n for n in chk.notes)
+
+
+def test_a_target_that_is_not_an_indian_universe_is_a_divergence(registry):
+    """Open choice still means choosing from somewhere real."""
+    ut = UniverseTranslation(
+        source_universe="S&P 500", target_universe="FTSE All-Share",
         grade="close", resolution="direct", transfer_risks=["x"])
     chk = check_translation(ut, registry)
-    assert any("not a recorded correspondence" in d for d in chk.divergences)
+    assert any("not an Indian universe" in d for d in chk.divergences)
 
 
 def test_no_analogue_is_infeasible_not_silently_empty(registry):
@@ -274,3 +292,141 @@ def test_a_manifest_missing_the_honesty_fields_is_refused(tmp_path, registry):
         assert "pit_status" in str(e.value) and "licence" in str(e.value)
     finally:
         intake.RAW_DIR = old
+
+
+# ---------------------------------------------------------------------------
+# Choosing a universe by FIT, rather than looking one up
+#
+# The catalogue is open: any Indian equity universe may be chosen, including one
+# the fund cannot hold, because establishing that a mechanism is REAL is a
+# different question from being allowed to run it. What is not open is choosing
+# without justification -- the fit is recomputed by code and shown at Gate A.
+# ---------------------------------------------------------------------------
+from ros.cards.schema import MechanismNeeds
+from ros.data.universes import (INDIAN_UNIVERSES, MechanismRequirements,
+                                propose_universes, score_universe)
+
+
+def test_the_catalogue_spans_the_indian_market():
+    """Cap segments and sectors both, or the choice is not really open."""
+    segs = {u.cap_segment for u in INDIAN_UNIVERSES.values()}
+    assert {"mega", "large", "mid", "small", "micro", "all"} <= segs, segs
+    assert any(u.sector for u in INDIAN_UNIVERSES.values()), "no sector universes"
+    assert any(not u.in_mandate for u in INDIAN_UNIVERSES.values()), (
+        "every universe is in-mandate, so the fund could never test whether an "
+        "effect it cannot hold is nonetheless real")
+    for u in INDIAN_UNIVERSES.values():
+        assert u.market == "IN"
+        assert u.required_instruments, f"{u.name} names no instruments"
+
+
+@pytest.mark.parametrize("req,expected", [
+    # a decile sort on large caps wants the large-cap cross-section
+    (MechanismRequirements(min_names=100, cap_segment="large"),
+     "NIFTY 100 constituents"),
+    # a bank-specific signal wants a financials universe
+    (MechanismRequirements(min_names=10, cap_segment="large", sector="financials"),
+     "NIFTY Financial Services constituents"),
+    # a small-cap anomaly wants small caps
+    (MechanismRequirements(min_names=100, cap_segment="small"),
+     "NIFTY Smallcap 250 constituents"),
+    # "is this just a micro-cap artefact?" wants micro caps
+    (MechanismRequirements(min_names=100, cap_segment="micro"),
+     "NIFTY Microcap 250 constituents"),
+    # a time-series mechanism over a handful of streams wants what we hold
+    (MechanismRequirements(needs_cross_section=False, min_names=5),
+     "NSE factor sleeves"),
+])
+def test_the_best_fitting_universe_is_the_obvious_one(req, expected):
+    assert propose_universes(req)[0].universe.name == expected
+
+
+def test_a_universe_too_thin_for_the_sort_is_disqualified():
+    req = MechanismRequirements(min_names=100, cap_segment="large")
+    fit = score_universe(INDIAN_UNIVERSES["NIFTY IT constituents"], req)
+    assert fit.disqualifying and not fit.usable
+    assert "cannot support a sort" in fit.disqualifying[0]
+
+
+def test_a_broad_paper_is_steered_away_from_sector_universes():
+    req = MechanismRequirements(min_names=10, cap_segment="large", sector=None)
+    broad = score_universe(INDIAN_UNIVERSES["NIFTY 100 constituents"], req)
+    sector = score_universe(INDIAN_UNIVERSES["NIFTY Pharma constituents"], req)
+    assert broad.score > sector.score
+    assert any("narrows a broad-market mechanism" in r
+               for r in sector.reasons_against)
+
+
+def test_a_sector_paper_will_not_accept_the_wrong_sector():
+    req = MechanismRequirements(min_names=5, cap_segment="large", sector="financials")
+    fit = score_universe(INDIAN_UNIVERSES["NIFTY Pharma constituents"], req)
+    assert fit.disqualifying and "wrong sector" in fit.disqualifying[0]
+
+
+def test_out_of_mandate_is_testable_but_flagged():
+    """The distinction the fund needs: real, versus runnable here."""
+    req = MechanismRequirements(min_names=100, cap_segment="micro")
+    fits = propose_universes(req)
+    micro = next(f for f in fits
+                 if f.universe.name == "NIFTY Microcap 250 constituents")
+    assert micro.usable, "a fund must be able to test what it cannot hold"
+    assert any("OUTSIDE the mandate" in r for r in micro.reasons_against)
+
+
+def test_requiring_a_holdable_run_removes_out_of_mandate_universes():
+    req = MechanismRequirements(min_names=100, cap_segment="all",
+                                must_be_in_mandate=True)
+    names = [f.universe.name for f in propose_universes(req)]
+    assert "NIFTY Total Market constituents" not in names
+    assert "NIFTY Microcap 250 constituents" not in names
+    assert "NIFTY 500 constituents" in names
+
+
+def test_a_disqualified_choice_is_a_divergence(registry):
+    """Open choice does not mean unchecked choice."""
+    ut = UniverseTranslation(
+        source_universe="S&P 500", target_universe="NIFTY IT constituents",
+        grade="loose", resolution="needs_data", transfer_risks=["x"],
+        mechanism_needs=MechanismNeeds(min_names=100, cap_segment="large"))
+    chk = check_translation(ut, registry)
+    assert any("disqualified" in d for d in chk.divergences), chk.divergences
+
+
+def test_a_clearly_better_alternative_is_surfaced(registry):
+    """Not an error -- but the card should say why it was passed over."""
+    ut = UniverseTranslation(
+        source_universe="S&P 500", target_universe="NIFTY Metal constituents",
+        grade="loose", resolution="needs_data", transfer_risks=["x"],
+        mechanism_needs=MechanismNeeds(min_names=10, cap_segment="large"))
+    chk = check_translation(ut, registry)
+    assert any("scores" in n and "passed over" in n for n in chk.notes), chk.notes
+
+
+def test_the_chosen_universe_is_always_shown_against_its_rivals(registry):
+    ut = UniverseTranslation(
+        source_universe="S&P 500",
+        target_universe="NIFTY Midcap 150 constituents",
+        grade="loose", resolution="needs_data", transfer_risks=["x"],
+        mechanism_needs=MechanismNeeds(min_names=100, cap_segment="large"))
+    chk = check_translation(ut, registry)
+    assert any(f.universe.name == ut.target_universe for f in chk.ranked), (
+        "the chosen universe fell off the ranked list, so a reviewer cannot "
+        "compare it to the alternatives")
+    assert "<- chosen" in chk.render()
+
+
+def test_the_catalogue_knows_what_data_each_universe_needs(registry):
+    """A chosen universe names its own instruments, so Stage 03 can resolve it
+    and Gate A can print exactly what to supply."""
+    ut = UniverseTranslation(
+        source_universe="Russell 1000",
+        target_universe="NIFTY Midcap 150 constituents",
+        grade="loose", resolution="needs_data", transfer_risks=["x"])
+    chk = check_translation(ut, registry)
+    assert "nifty_midcap_150_constituent_prices" in chk.missing
+    assert "nifty_midcap_150_membership_history" in chk.missing
+
+
+def test_mechanism_needs_reject_an_unknown_segment():
+    assert any("cap_segment" in e
+               for e in MechanismNeeds(cap_segment="enormous").validate())

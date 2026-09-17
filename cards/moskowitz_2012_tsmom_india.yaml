@@ -72,6 +72,26 @@ universe_translation:
     - >
       Truncating the trend signal at zero removes roughly half its opportunity
       set. The long-only version is a different strategy, not a haircut.
+  mechanism_needs:
+    needs_cross_section: false
+    min_names: 5
+    cap_segment: all
+    sector: null
+    min_history_years: 15.0
+    must_be_in_mandate: true
+    notes: >
+      Time-series momentum judges each stream against its own trailing return,
+      never against its peers, so breadth buys nothing. What it needs is several
+      weakly correlated streams -- which is exactly what the Indian sleeves fail
+      to provide, and that failure is the finding rather than a flaw in the test.
+  alternatives_considered:
+    - NIFTY 500 constituents
+    - NIFTY Total Market constituents
+  why_not_alternatives: >
+    Running a per-stream trend filter over 500 stocks would be cross-sectional
+    momentum, which is a different and much better-studied strategy. The paper's
+    claim is about time-series trend across weakly correlated markets, and
+    testing it on a stock cross-section would answer a question nobody asked.
   required_instruments:
     - NIFTY500 MOMENTUM 50
     - NIFTY500 QUALITY 50
