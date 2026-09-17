@@ -22,52 +22,101 @@ actually is**.
 
 ## A. THE UNIVERSE  →  `universe_translation` on the card
 
-A paper sorts S&P 500 constituents. This fund is long-only NIFTY 500. Someone has
-to decide the Indian analogue and own what breaks on the way.
+A paper sorts S&P 500 constituents. This fund is Indian equity, long-only. Your
+job is not to find "the" Indian equivalent — there isn't one. It is to pick the
+**best place in the Indian market to find out whether this mechanism is real**,
+and to say why that place and not the others.
 
-**You identify. The table decides. A human signs.**
+**You choose. The code checks the fit. A human signs.**
 
-1. **Name the source universe exactly as the paper constructs it** — not as its
-   abstract summarises it. "S&P 500 constituents ex-financials, 1963–2016,
-   NYSE breakpoints" is the answer; "US stocks" is not. Record `source_breadth`
-   (how many securities) and `source_selection_rule` (how the paper picks from
-   them). Cite the page.
+### 1. Name the source universe exactly as the paper CONSTRUCTS it
 
-2. **Look up the correspondence.** Run:
+Not as its abstract summarises it. "S&P 500 ex-financials, 1963–2016, NYSE
+breakpoints" is the answer; "US stocks" is not. Record `source_breadth` and
+`source_selection_rule`. Cite the page.
 
-   ```bash
-   python -c "from ros.data.universes import known_sources, translations_for; print(known_sources())"
-   python -c "from ros.data.universes import translations_for; [print(t.target, t.grade, t.rationale) for t in translations_for('S&P 500')]"
-   ```
+### 2. State what the MECHANISM needs — `mechanism_needs`
 
-   `ros/data/universes.py` holds the fund's recorded correspondences. **Do not
-   invent one.** The same paper read twice must produce the same universe, or the
-   strategy library stops being comparable across entries — which is the only
-   reason to keep one.
+This is the real work, and everything after it is mechanical. Each field is a
+claim about the paper:
 
-3. **If several targets are recorded, choose and justify.** S&P 500 maps to both
-   NIFTY 100 (`close` — matching concentration) and NIFTY 500 (`loose` — matching
-   the mandate, deeper into mid-caps). Pick on the mechanism: a decile sort
-   starves at 100 names; a large-cap-purity result is corrupted by small caps.
-   Say which consideration drove it.
+- **`min_names`** — how many names the sort needs to mean anything. Derive it
+  from the paper's own construction: ten deciles wanting ten names each is 100.
+  **Do not pick a number that makes a preferred universe win.** If the paper
+  sorts into quintiles and holds the top one, say so and compute it.
+- **`cap_segment`** — which segment the paper studied. `mega | large |
+  large_mid | mid | mid_small | small | micro | all`. An effect measured in one
+  segment routinely fails in another, so a null in the wrong segment would not
+  disprove the paper — it would just be a different experiment.
+- **`sector`** — set it **only** for a genuinely sector-specific mechanism.
+- **`min_history_years`** — how much history the claim needs to be testable.
+- **`must_be_in_mandate`** — `true` only when the run has to be something the
+  fund could actually hold. Usually `false`, and that is the point of the next
+  section.
+- **`needs_cross_section`** — does it RANK securities, or time one stream?
 
-4. **If the source universe is not in the table**, say so plainly and put it in
-   the Gate A queue. Never force it to the nearest entry. An unrecognised
-   universe routed to a human costs five minutes; a wrong one silently
-   backtests a different question and nobody finds out.
+### 3. Let the code rank the candidates
 
-5. **Fill `transfer_risks` with what breaks in THIS translation specifically.**
-   The generic India caveats (free float, depth, circuit limits, sample length,
-   membership history) attach automatically — do not repeat them. Add what is
-   particular to this paper: a result that rests on 500 names having 100 here, a
-   price-weighted source index, a mechanism that needs cross-country dispersion.
+```bash
+python -c "
+from ros.data.universes import MechanismRequirements, render_proposal
+print(render_proposal(MechanismRequirements(
+    min_names=100, cap_segment='large', sector=None,
+    needs_cross_section=True, must_be_in_mandate=False)))"
+```
 
-6. **`required_instruments`** is what a faithful test would need, in the fund's
-   vocabulary. If it names things the fund does not hold, that is not a failure —
-   it is the finding Gate A exists to surface, and a human can supply the data
-   there.
+You get every Indian universe scored against those needs, with reasons for and
+against, and the ones ruled out with the reason. Twenty are catalogued: the
+broad ladder (NIFTY 50 → Next 50 → 100 → 200 → 500 → Total Market), the cap
+segments (Midcap 150, Smallcap 250, Microcap 250, LargeMidcap 250,
+MidSmallcap 400), eight sector indices, and the factor sleeves the fund holds.
 
----
+### 4. Pick, and justify — including against the runners-up
+
+Take the ranking as advice, not instruction. It scores fit; it does not read
+the paper. If you have a reason to pass over the top-ranked universe, **take it
+and write the reason** in `why_not_alternatives`, and list what you considered in
+`alternatives_considered`. A choice with no recorded runners-up is a choice
+nobody can audit later.
+
+The code flags it when a materially better-fitting option was passed over
+silently. That is a note, not an error — but it goes to Gate A.
+
+### 5. Testing outside the mandate is allowed, and often the right call
+
+**"Is this effect real?" and "can this fund run it?" are different questions,
+and conflating them loses information.**
+
+NIFTY Total Market and Microcap 250 sit outside the fund's NIFTY 500 mandate.
+You may still choose them, and sometimes should:
+
+- A published small-cap anomaly is very often a **micro-cap artefact**. Testing
+  it on Microcap 250 *and* on Smallcap 250 answers that directly, and a null in
+  the mandate segment then means something specific rather than "didn't work".
+- A mechanism that needs 750 names to disperse has nowhere else to go.
+
+What you must never do is report an out-of-mandate result as though the fund
+could run it. The check marks it `OUT OF MANDATE` and Gate A shows it; say it
+plainly in your own summary too.
+
+**Consider proposing two runs** where it helps: the in-mandate universe that
+governs the decision, and a wider one that establishes whether the effect exists
+at all. A mechanism that works on Microcap 250 and dies on NIFTY 100 has told
+you something precise about liquidity and capacity.
+
+### 6. Fill `transfer_risks` with what breaks in THIS translation
+
+The generic India caveats — free float, depth, circuit limits, corporate
+actions, sample length, costs, membership history — attach automatically. Do
+not repeat them. Add what is particular to this paper: a result resting on 500
+names having 100 here, a price-weighted source index, a mechanism needing
+cross-country dispersion, a sort that assumed daily rebalancing.
+
+### 7. If the source universe is unrecognised, say so
+
+Matching is exact, never fuzzy: guessing wrong silently backtests a different
+question. An unrecognised source does **not** invalidate a well-argued target —
+the fit stands on its own — but it belongs in the Gate A queue.
 
 ## B. THE STRATEGY  →  `strategy` on the card
 

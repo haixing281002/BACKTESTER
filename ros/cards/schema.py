@@ -95,6 +95,34 @@ class ReplicationTarget:
 
 
 @dataclass
+class MechanismNeeds:
+    """What the PAPER's mechanism needs from a universe, read at Stage 01.
+
+    Every field is a claim about the paper, not about India. They are what
+    ros/data/universes.py scores the catalogue against, so getting them right is
+    the whole job: `min_names` in particular should be what the paper's own
+    construction implies (ten buckets wanting ten names each is 100), not a
+    round number picked to make a preferred universe win.
+    """
+    needs_cross_section: bool = True
+    min_names: int = 100
+    cap_segment: str = "all"            # mega|large|large_mid|mid|mid_small|small|micro|all
+    sector: Optional[str] = None        # set only for a sector-specific paper
+    min_history_years: float = 10.0
+    must_be_in_mandate: bool = False    # True only if the run must be holdable
+    notes: str = ""
+
+    def validate(self, ctx: str = "mechanism_needs") -> List[str]:
+        from ros.data.universes import SEGMENTS
+        errs = []
+        if self.cap_segment not in SEGMENTS:
+            errs.append(f"{ctx}: cap_segment '{self.cap_segment}' not in {SEGMENTS}")
+        if self.min_names < 1:
+            errs.append(f"{ctx}: min_names must be >= 1")
+        return errs
+
+
+@dataclass
 class UniverseTranslation:
     """What the paper studied, and what we will actually test it on.
 
@@ -118,6 +146,12 @@ class UniverseTranslation:
     transfer_risks: List[str] = field(default_factory=list)
     required_instruments: List[str] = field(default_factory=list)
     evidence_page: Optional[int] = None
+    # What the mechanism needed, and what else was on the table. Recording the
+    # runners-up is what stops a universe choice being unfalsifiable later: a
+    # reader can see the alternatives were considered rather than assumed away.
+    mechanism_needs: Optional[MechanismNeeds] = None
+    alternatives_considered: List[str] = field(default_factory=list)
+    why_not_alternatives: str = ""
 
     def validate(self, ctx: str = "universe_translation") -> List[str]:
         from ros.data.universes import GRADES, RESOLUTIONS, NONE
@@ -136,6 +170,8 @@ class UniverseTranslation:
         if self.target_universe and not self.transfer_risks:
             errs.append(f"{ctx}: no transfer_risks listed -- a translation with "
                         f"nothing to lose has not been examined")
+        if self.mechanism_needs is not None:
+            errs += self.mechanism_needs.validate()
         return errs
 
 
@@ -354,6 +390,10 @@ class StrategyCard:
             yaml.safe_dump(self.to_dict(), fh, sort_keys=False, width=100)
 
 
+# Sections that themselves contain a dataclass, so _build knows to descend.
+_NESTED = {}
+
+
 def _build(cls, blob, name):
     if blob is None:
         return cls() if name != "paper" else None
@@ -364,7 +404,17 @@ def _build(cls, blob, name):
     if unknown:
         # Silent key-drop is how a card and a run diverge. Refuse instead.
         raise CardValidationError(f"card section '{name}' has unknown keys: {sorted(unknown)}")
-    return cls(**blob)
+    kw = dict(blob)
+    # One level of nesting, declared explicitly. A generic recursive builder
+    # would have to guess from type hints, and guessing wrong here silently
+    # hands the engine a dict where it expects a dataclass.
+    for key, sub in _NESTED.get(cls, {}).items():
+        if isinstance(kw.get(key), dict):
+            kw[key] = _build(sub, kw[key], f"{name}.{key}")
+    return cls(**kw)
+
+
+_NESTED[UniverseTranslation] = {"mechanism_needs": MechanismNeeds}
 
 
 def load_card(path: str) -> StrategyCard:

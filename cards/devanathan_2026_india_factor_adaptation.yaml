@@ -88,6 +88,29 @@ universe_translation:
       The paper de-risks into cash and that is where its drawdown control comes
       from. A fully-invested mandate cannot do it, so the mandate variant is a
       materially different strategy and is run separately.
+  mechanism_needs:
+    needs_cross_section: false
+    min_names: 3
+    cap_segment: all
+    sector: null
+    min_history_years: 15.0
+    must_be_in_mandate: true
+    notes: >
+      The paper allocates across three fixed assets under a risk cap; it never
+      ranks securities against each other. So the universe needs a handful of
+      long-only return streams, not breadth. The fund's five factor sleeves are
+      such a set and are the only Indian universe testable today. must_be_in_mandate
+      is true because this run is meant to govern an allocation decision, not
+      merely establish that the mechanism exists.
+  alternatives_considered:
+    - NIFTY 500 constituents
+    - NIFTY 100 constituents
+  why_not_alternatives: >
+    A stock-level cross-section would be a different experiment. The paper's
+    mechanism operates on a small set of pre-built streams under a covariance
+    estimate; running it on 500 names would test an optimiser we did not read
+    about, and the 11-day covariance the paper uses is near-singular well before
+    500 assets.
   required_instruments:
     - NIFTY500 MOMENTUM 50
     - NIFTY500 QUALITY 50

@@ -46,11 +46,23 @@ validated against the **same schemas** in `ros/agents/schemas.py`.
 Two decisions dominate everything downstream, and both are made by reading the
 paper: **which universe we test on** and **what the strategy actually is**.
 
-A paper sorts S&P 500 constituents; this fund is long-only NIFTY 500. The model
-*identifies* the source universe, `ros/data/universes.py` *holds* the recorded
-correspondence, and a human *signs* it at Gate A. The model never invents a
-mapping — the same paper read twice must produce the same universe, or the
-strategy library stops being comparable across entries.
+A paper sorts S&P 500 constituents; this fund is Indian equity, long-only. There
+is no single "Indian equivalent" — the right answer is the best place in the
+Indian market to find out whether the mechanism is real, and that depends on the
+mechanism.
+
+So: the model states what the mechanism NEEDS (`mechanism_needs` — names for the
+sort, cap segment, sector, history, whether the run must be holdable);
+`ros/data/universes.py` scores all 20 catalogued Indian universes against those
+needs and ranks them; the model picks and justifies, recording the runners-up;
+a human signs at Gate A. **The choice is open. The justification is checked.**
+
+**Testing outside the mandate is allowed.** "Is this effect real?" and "can this
+fund run it?" are different questions. NIFTY Total Market and Microcap 250 sit
+outside NIFTY 500 and may still be chosen — a published small-cap anomaly is
+very often a micro-cap artefact, and testing both segments answers that. An
+out-of-mandate result is flagged `OUT OF MANDATE` and must never be reported as
+something the fund could run.
 
 Both land on the card as `universe_translation` and `strategy`. Gate A leads
 with them, and blocks without them.
@@ -76,7 +88,8 @@ ros/
                        and the engine. A card is data, never code.
       extract.py       deterministic PDF reader (regex + text-geometry tables)
   data/                registry (what the fund holds), loaders, PIT snapshots
-      universes.py     source universe -> Indian analogue, as recorded decisions
+      universes.py     20 Indian universes + mechanism-fit ranking; the
+                       model chooses, the code scores, a human signs
       intake.py        supplying data at Gate A (manifest-declared, never sniffed)
   engine/              primitives, allocator templates, backtester
       templates.py     9 allocators; `cross_sectional` ranks a changing universe
@@ -97,7 +110,7 @@ run_agentic.py         steps 01-03 via the API
 python run_pipeline.py --card cards/<card>.yaml          # ends at Gate B PENDING
 python run_pipeline.py --card cards/<card>.yaml \
     --decision REJECT --decided-by "Name" --rationale "…"  # a human rules
-python -m pytest tests/ -q                                # 123 tests
+python -m pytest tests/ -q                                # 140 tests
 python validate/cross_check.py --excel                    # engine vs clean-room impl
 python -m ros.interpretation history                      # who interpreted what
 ```
