@@ -48,6 +48,14 @@ def rebalance_dates(index: pd.DatetimeIndex, freq: str) -> pd.DatetimeIndex:
     return pd.DatetimeIndex(s.groupby(index.to_period(codes[freq])).last().values)
 
 
+def _alpha_row(alp, date, cross_sectional: bool):
+    """The allocator's alpha vector for `date`, or None if it must not trade."""
+    row = alp.loc[date]
+    if not cross_sectional and row.isna().any():
+        return None
+    return row.to_numpy(dtype=float)
+
+
 @dataclass
 class BacktestResult:
     name: str
@@ -77,17 +85,36 @@ class Backtester:
         lag_days: int = 0,
         allow_cash: bool = True,
         ann: int = 252,
+        membership: Optional[pd.DataFrame] = None,
     ):
         missing = [a for a in assets if a not in prices.columns]
         if missing:
             raise KeyError(f"prices frame is missing assets: {missing}")
         self.assets = list(assets)
         self.prices = prices[self.assets].copy()
-        if self.prices.isna().any().any():
+
+        # A fixed sleeve set must be complete: a NaN there is a data fault and
+        # silently tolerating it would let the investable universe drift.
+        #
+        # A CROSS-SECTION cannot be complete. Stocks list, delist, merge and get
+        # suspended, so a 500-name price frame is NaN wherever a name did not
+        # trade. Passing `membership` is the caller declaring that this is a
+        # changing universe and that the gaps are meaningful rather than broken.
+        self.membership = None
+        if membership is not None:
+            miss = [a for a in self.assets if a not in membership.columns]
+            if miss:
+                raise KeyError(f"membership frame is missing assets: {miss}")
+            self.membership = (membership[self.assets]
+                               .reindex(self.prices.index).fillna(False).astype(bool))
+        elif self.prices.isna().any().any():
             raise ValueError(
                 "price frame contains NaNs for the investable set. Resolve this in the "
-                "snapshot (require_complete) so the investable universe is fixed up front.")
-        self.returns = self.prices.pct_change()
+                "snapshot (require_complete) so the investable universe is fixed up front.\n"
+                "If this IS a changing cross-section (stocks listing and delisting), pass "
+                "`membership=` -- a boolean frame saying who was investable when -- so the "
+                "gaps are declared rather than inferred.")
+        self.returns = self.prices.pct_change(fill_method=None)
         self.rf = (rf_daily.reindex(self.prices.index).fillna(0.0)
                    if rf_daily is not None else pd.Series(0.0, index=self.prices.index))
         self.half_spread = float(spread_bps) / 1e4 / 2.0
@@ -113,6 +140,7 @@ class Backtester:
         alpha: Optional[pd.DataFrame] = None,
         cov: Optional[Dict[pd.Timestamp, np.ndarray]] = None,
         cov_cols: Optional[List[str]] = None,
+        vols: Optional[pd.DataFrame] = None,
         rf_horizon_days: int = 21,
         name: str = "strategy",
         warmup: int = 0,
@@ -138,6 +166,20 @@ class Backtester:
                 if j >= 0 and idx[j] in cov:
                     cov_shift[d] = cov[idx[j]]
 
+        vol_shift = self._shift_causal(vols[self.assets]) if vols is not None else None
+
+        # Eligibility is a SIGNAL and gets the same causal shift as any other:
+        # index membership is known only after it is announced, and a backtest
+        # that selects from tomorrow's constituents is reading the future.
+        # Shifting also means a delisting is acted on one bar late, which costs
+        # the strategy rather than flattering it -- the correct direction for a
+        # bias we cannot remove.
+        elig_arr = None
+        if self.membership is not None:
+            elig = self._shift_causal(self.membership).fillna(False).astype(bool)
+            # A name with no price cannot be traded whatever the index says.
+            elig_arr = (elig & self.prices.notna()).to_numpy(dtype=bool)
+
         rf_period = (1.0 + self.rf).rolling(rf_horizon_days).apply(np.prod, raw=True) - 1.0
         rf_period = rf_period.fillna(0.0)
 
@@ -147,6 +189,8 @@ class Backtester:
 
         vals, wts, tos, cst, csh = [], [], [], [], []
         used_rebals: List[pd.Timestamp] = []
+        stale = 0            # held names marked flat because they did not trade
+        n_forced = 0         # positions sold because they left the universe
         rets_arr = self.returns.to_numpy(dtype=float)
 
         for i, date in enumerate(idx):
@@ -154,16 +198,39 @@ class Backtester:
             if i == 0 or not first_rebal_done:
                 gross_ret = 0.0
             else:
-                r = rets_arr[i]
+                # A held name that did not trade today carries at its last price.
+                # That is the standard stale-price treatment and it is a real
+                # assumption: a suspended stock is marked flat, not to whatever
+                # it reopens at. Where suspension precedes bad news, this
+                # flatters the run, which is why `stale_marks` is reported.
+                r = np.nan_to_num(rets_arr[i], nan=0.0)
                 cash_w = 1.0 - w.sum()
                 gross = float(np.dot(w, 1.0 + r) + cash_w * (1.0 + self.rf.iloc[i]))
                 new_V = V * gross
                 w = (V * w * (1.0 + r)) / new_V
                 gross_ret = new_V / V - 1.0
                 V = new_V
+                if elig_arr is not None:
+                    stale += int(np.count_nonzero((w > 0) & np.isnan(rets_arr[i])))
 
             day_to = 0.0
             day_cost = 0.0
+
+            # ---- 1b. forced exit ---------------------------------------------
+            # A position that has left the investable universe is SOLD, at cost,
+            # on the day we learn of it. It is not dropped and it is not left to
+            # the next rebalance. Quietly zeroing a weight and renormalising the
+            # rest is survivorship bias in its purest form: the book would exit
+            # every delisting for free, which is the opposite of what happens.
+            if elig_arr is not None and first_rebal_done:
+                dead = (w > 1e-12) & ~elig_arr[i]
+                if dead.any():
+                    forced = float(w[dead].sum())
+                    day_cost += self.half_spread * forced
+                    day_to += 0.5 * forced
+                    V *= (1.0 - self.half_spread * forced)
+                    w = np.where(dead, 0.0, w)
+                    n_forced += int(dead.sum())
 
             # ---- 2. rebalance ------------------------------------------------
             if date in rebal and i >= warmup:
@@ -173,8 +240,16 @@ class Backtester:
                     sigma_bench=(float(sig.loc[date]) if sig is not None
                                  and pd.notna(sig.loc[date]) else None),
                     cov=(cov_shift.get(date) if cov_shift is not None else None),
-                    alpha=(alp.loc[date].to_numpy(dtype=float)
-                           if alp is not None and not alp.loc[date].isna().any() else None),
+                    # A fixed sleeve set requires every alpha to be finite: a
+                    # NaN there means the estimator has not warmed up and the
+                    # allocator must not trade. A CROSS-SECTION is never all
+                    # finite -- newly listed names have no history yet -- so
+                    # there the mask decides who is selectable, not the NaNs.
+                    alpha=(_alpha_row(alp, date, elig_arr is not None)
+                           if alp is not None else None),
+                    eligible=(elig_arr[i] if elig_arr is not None else None),
+                    vols=(vol_shift.iloc[i].to_numpy(dtype=float)
+                          if vol_shift is not None else None),
                     rf_period=float(rf_period.iloc[i]),
                     extras={},
                 )
@@ -214,6 +289,13 @@ class Backtester:
                 "rebalance": rebalance, "lag_days": self.lag_days,
                 "spread_bps": self.half_spread * 2 * 1e4, "allow_cash": self.allow_cash,
                 "n_rebalances": len(used_rebals), "warmup_days": warmup}
+        if elig_arr is not None:
+            # Both of these are ways a cross-sectional backtest can flatter
+            # itself, so they are reported rather than left implicit.
+            meta["changing_universe"] = True
+            meta["forced_exits"] = n_forced
+            meta["stale_marks"] = stale
+            meta["mean_eligible"] = float(elig_arr.sum(axis=1).mean())
         if hasattr(allocator, "diagnostics"):
             meta["allocator_diagnostics"] = allocator.diagnostics()
 
