@@ -98,9 +98,16 @@ def main() -> int:
     # person reading it needs more information, not less.
     if have_data:
         try:
+            import glob
             from ros.cards.schema import load_card
-            c = load_card("cards/devanathan_2026_india_factor_adaptation.yaml")
-            print(f"{OK}engine       card loads, fingerprint {c.fingerprint()}")
+            # Any card proves the engine loads one. Naming a specific paper here
+            # would make this check fail the day someone deletes the example.
+            cards = sorted(glob.glob("cards/*.yaml"))
+            if not cards:
+                raise FileNotFoundError("no cards in cards/")
+            c = load_card(cards[0])
+            print(f"{OK}engine       {len(cards)} card(s); {os.path.basename(cards[0])} "
+                  f"loads, fingerprint {c.fingerprint()}")
         except Exception as e:                                   # noqa: BLE001
             print(f"{BAD}engine       {type(e).__name__}: {e}")
             problems.append("The engine could not load a card. Run from the repo root.")
@@ -165,9 +172,12 @@ def main() -> int:
   clone -- a clone carries the ENGINE and the COMMANDS, never the judgement.
   The LLM work is not a file you copy; it is done per paper, in session.
 
-  To do it: open this folder in VS Code with Claude Code and run
-      /paper docs/devanathan_2026_simple_dynamic_sbg.pdf
-  then re-run this check. Stages will flip to DONE as artifacts appear.""")
+  To do it: put a paper in docs/papers/, open this folder in VS Code with
+  Claude Code, and run
+      /paper docs/papers/<your_paper>.pdf
+  then re-run this check. Stages will flip to DONE as artifacts appear.
+
+  There is no default paper: the pipeline analyses the one you name.""")
     else:
         bad_schema = [s for s, r in done.items() if r.get("schema_valid") is False]
         if bad_schema:
@@ -181,7 +191,8 @@ def main() -> int:
             print(f"    - {p}")
     else:
         print("  DETERMINISTIC HALF: READY")
-        print("    python run_pipeline.py --card cards/devanathan_2026_india_factor_adaptation.yaml")
+        print("    python run_interpret.py --pdf docs/papers/<paper>.pdf   # -> Gate A, no data needed")
+        print("    python run_pipeline.py  --card cards/<card>.yaml        # -> Gate B, needs data")
         if done:
             print(f"  INTERPRETATION HALF: {len(done)} stage(s) recorded on this machine")
         else:
