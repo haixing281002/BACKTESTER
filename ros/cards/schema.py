@@ -29,6 +29,21 @@ DATA_KINDS = {
 }
 
 
+def _wrap(text: str, width: int) -> List[str]:
+    """Soft-wrap for the human-facing blocks. Long prose in a terminal is prose
+    nobody reads, and these blocks exist to be read."""
+    words, lines, cur = text.split(" "), [], ""
+    for w in words:
+        if cur and len(cur) + 1 + len(w) > width:
+            lines.append(cur)
+            cur = w
+        else:
+            cur = f"{cur} {w}".strip()
+    if cur:
+        lines.append(cur)
+    return lines or [""]
+
+
 class CardValidationError(ValueError):
     """Raised when a card is structurally unusable. Never downgraded to a warning."""
 
@@ -92,6 +107,77 @@ class ReplicationTarget:
     tolerance: float = 0.10       # relative tolerance unless absolute_tolerance set
     absolute_tolerance: Optional[float] = None
     evidence_page: Optional[int] = None
+
+
+PRIORITIES = {"blocking", "high", "nice_to_have"}
+ASK_OF = {"data_owner", "pm", "researcher", "anyone"}
+
+
+@dataclass
+class DataRequest:
+    """Something the model wants FROM YOU, in order to test this properly.
+
+    Distinct from `data_requirements`, which says what the PAPER needs and is
+    resolved mechanically against the registry. A DataRequest is addressed to a
+    human: here is what I would ask for, here is what it buys, and here is what
+    I will do instead if you say no.
+
+    That last field is the one that matters. A request with no stated fallback
+    is a demand, and a demand at Gate A stops the work. A request that says
+    "without it I will use a flat 6% proxy and sweep 4-8%, which makes every
+    cash result rate-dependent" lets a human decide whether that is good enough
+    for the question being asked.
+    """
+    item: str = ""
+    why: str = ""                       # what the mechanism needs it for
+    unlocks: str = ""                   # what becomes possible with it
+    without_it: str = ""                # the fallback, and what it costs
+    priority: str = "high"              # blocking | high | nice_to_have
+    format_hint: str = ""               # so a human knows what to send
+    evidence_page: Optional[int] = None
+
+    def validate(self, ctx: str) -> List[str]:
+        errs = []
+        if not self.item.strip():
+            errs.append(f"{ctx}: item is required")
+        if self.priority not in PRIORITIES:
+            errs.append(f"{ctx}: priority '{self.priority}' not in {sorted(PRIORITIES)}")
+        if not self.without_it.strip():
+            errs.append(f"{ctx}: state `without_it` -- a request with no fallback "
+                        f"is a demand, and a demand at Gate A stops the work")
+        return errs
+
+
+@dataclass
+class OpenQuestion:
+    """Something the model cannot settle from the paper and is asking a human.
+
+    An Ambiguity carries a resolution the model chose. An OpenQuestion is the
+    honest other case: the paper does not say, the choice is the fund's to make,
+    and the model has taken a position it wants confirmed rather than assumed.
+
+    `what_i_assumed` is mandatory. A question with no working assumption blocks
+    the pipeline for no reason -- the run can proceed under a stated guess, and
+    a human can overturn it. A question with no assumption is the model asking
+    someone else to do its job.
+    """
+    question: str = ""
+    why_it_matters: str = ""
+    what_i_assumed: str = ""
+    ask_of: str = "researcher"          # data_owner | pm | researcher | anyone
+    blocks_run: bool = False
+    evidence_page: Optional[int] = None
+
+    def validate(self, ctx: str) -> List[str]:
+        errs = []
+        if not self.question.strip():
+            errs.append(f"{ctx}: question is required")
+        if self.ask_of not in ASK_OF:
+            errs.append(f"{ctx}: ask_of '{self.ask_of}' not in {sorted(ASK_OF)}")
+        if not self.blocks_run and not self.what_i_assumed.strip():
+            errs.append(f"{ctx}: state `what_i_assumed` or set blocks_run -- a "
+                        f"question with neither stalls the run for no reason")
+        return errs
 
 
 @dataclass
@@ -305,6 +391,11 @@ class StrategyCard:
     ambiguities: List[Ambiguity] = field(default_factory=list)
     replication_targets: List[ReplicationTarget] = field(default_factory=list)
     benchmark_templates: List[Dict[str, Any]] = field(default_factory=list)
+    # What the model wants FROM a human, and what it cannot settle alone. These
+    # are the card's two outward-facing sections: everything else describes the
+    # paper, these describe what is still needed to do it justice.
+    data_requests: List[DataRequest] = field(default_factory=list)
+    open_questions: List[OpenQuestion] = field(default_factory=list)
     n_configs_tried: int = 1     # feeds the deflated Sharpe ratio; understating it is a lie
     notes: str = ""
     card_version: str = "1.0"
@@ -344,7 +435,19 @@ class StrategyCard:
             errs += self.universe_translation.validate()
         if self.strategy is not None:
             errs += self.strategy.validate()
+        for i, r in enumerate(self.data_requests):
+            errs += r.validate(f"data_requests[{i}]")
+        for i, q in enumerate(self.open_questions):
+            errs += q.validate(f"open_questions[{i}]")
         return errs
+
+    @property
+    def blocking_requests(self) -> List[DataRequest]:
+        return [r for r in self.data_requests if r.priority == "blocking"]
+
+    @property
+    def blocking_questions(self) -> List[OpenQuestion]:
+        return [q for q in self.open_questions if q.blocks_run]
 
     def require_valid(self) -> "StrategyCard":
         errs = self.validate()
@@ -455,6 +558,59 @@ class StrategyCard:
         L.append("  " + "-" * W)
         return "\n".join(L)
 
+    def asks(self) -> str:
+        """What the model wants from a human, formatted for Gate A.
+
+        Gate A is a conversation, not a form. This is the model's half of it:
+        here is what I would ask you for, what it buys, and what I will do if
+        you say no; and here is what the paper does not settle, with the
+        position I have taken meanwhile.
+        """
+        if not self.data_requests and not self.open_questions:
+            return ("  NOTHING IS BEING ASKED FOR.\n"
+                    "  No data request and no open question on this card. That "
+                    "is a strong claim --\n  it says no further data would "
+                    "improve this test and the paper settled everything.\n"
+                    "  Worth confirming rather than assuming nobody looked.")
+
+        W = 96
+        L = ["  " + "=" * W, "  WHAT WOULD MAKE THIS TEST BETTER", "  " + "=" * W]
+        order = {"blocking": 0, "high": 1, "nice_to_have": 2}
+        for r in sorted(self.data_requests, key=lambda x: order.get(x.priority, 9)):
+            tag = {"blocking": "BLOCKING", "high": "would help",
+                   "nice_to_have": "optional"}.get(r.priority, r.priority)
+            L.append("")
+            L.append(f"  [{tag}] {r.item}")
+            for label, val in (("why", r.why), ("unlocks", r.unlocks),
+                               ("if declined", r.without_it),
+                               ("format", r.format_hint)):
+                if str(val or "").strip():
+                    for i, line in enumerate(_wrap(" ".join(str(val).split()), W - 18)):
+                        L.append(f"      {label if i == 0 else '':<12} {line}")
+
+        if self.open_questions:
+            L.append("")
+            L.append("  " + "-" * W)
+            L.append("  QUESTIONS THE PAPER DOES NOT SETTLE")
+            L.append("  " + "-" * W)
+            for q in self.open_questions:
+                who = {"pm": "for the PM", "data_owner": "for the data owner",
+                       "researcher": "for the researcher"}.get(q.ask_of, "for anyone")
+                stop = "  [BLOCKS THE RUN]" if q.blocks_run else ""
+                L.append("")
+                for i, line in enumerate(_wrap(" ".join(q.question.split()), W - 8)):
+                    L.append(f"  {'Q:' if i == 0 else '  '} {line}")
+                L.append(f"      {who}{stop}")
+                for label, val in (("matters because", q.why_it_matters),
+                                   ("I assumed", q.what_i_assumed)):
+                    if str(val or "").strip():
+                        for i, line in enumerate(
+                                _wrap(" ".join(str(val).split()), W - 22)):
+                            L.append(f"      {label if i == 0 else '':<16} {line}")
+        L.append("")
+        L.append("  " + "=" * W)
+        return "\n".join(L)
+
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
 
@@ -498,7 +654,8 @@ def load_card(path: str) -> StrategyCard:
     known = {"paper", "intent", "universe", "signal", "portfolio", "costs",
              "data_requirements", "ambiguities", "replication_targets",
              "benchmark_templates", "n_configs_tried", "notes", "card_version",
-             "universe_translation", "strategy"}
+             "universe_translation", "strategy", "data_requests",
+             "open_questions"}
     unknown = set(blob) - known
     if unknown:
         raise CardValidationError(f"card has unknown top-level keys: {sorted(unknown)}")
@@ -528,5 +685,9 @@ def load_card(path: str) -> StrategyCard:
             if blob.get("universe_translation") else None),
         strategy=(_build(StrategyReconstruction, blob["strategy"], "strategy")
                   if blob.get("strategy") else None),
+        data_requests=[_build(DataRequest, r, f"data_requests[{i}]")
+                       for i, r in enumerate(blob.get("data_requests") or [])],
+        open_questions=[_build(OpenQuestion, q, f"open_questions[{i}]")
+                        for i, q in enumerate(blob.get("open_questions") or [])],
     )
     return card.require_valid()

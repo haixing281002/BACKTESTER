@@ -34,6 +34,7 @@ for _stream in (sys.stdout, sys.stderr):
 from ros.cards.extract import (
     detect_target_conflicts, extract_document, parse_text_tables,
     propose_replication_targets, summarize)
+from ros.cards.completeness import assess as card_completeness
 from ros.cards.schema import load_card
 from ros.data.firm_registry import build_firm_registry
 from ros.data.intake import MANIFEST, describe_shortfall, extend_registry
@@ -222,11 +223,16 @@ def main(argv=None) -> int:
     # ---------------- GATE A ---------------------------------------------
     R.p("")
     R.block(card.at_a_glance())
+    R.p("")
+    R.block(card_completeness(card).render(only_missing=True))
 
     feas = assess(card, registry)
     ga = gate_a(card, feas, doc.quality if doc else None, translation_check=tc)
     R.h("GATE A  |  HUMAN INTERPRETATION CONTROL")
     R.block(ga.render())
+
+    R.h("WHAT THE MODEL IS ASKING YOU FOR")
+    R.block(card.asks())
 
     R.h("WHAT IT TAKES TO RUN THIS IN INDIA")
     R.block(derive_india_requirements(card, tc).render())

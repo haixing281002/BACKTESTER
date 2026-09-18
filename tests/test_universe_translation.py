@@ -572,3 +572,157 @@ def test_at_a_glance_surfaces_unresolved_ambiguities():
     card = load_card("examples/cards/moskowitz_2012_tsmom_india.yaml")
     card.ambiguities[0].resolution = ""
     assert "UNRESOLVED" in card.at_a_glance()
+
+
+# ---------------------------------------------------------------------------
+# The card's two outward-facing sections
+#
+# Everything else on a card describes the paper. These describe what is still
+# needed to do it justice: what the model would ask the fund for, and what the
+# paper does not settle. Both are easy to leave empty, so both are checked.
+# ---------------------------------------------------------------------------
+from ros.cards.schema import DataRequest, OpenQuestion
+from ros.cards.completeness import assess as card_completeness
+
+EXEMPLAR = "examples/cards/devanathan_2026_india_factor_adaptation.yaml"
+
+
+def test_a_request_without_a_fallback_is_refused():
+    """A request with no fallback is a demand, and a demand at Gate A stops the
+    work instead of informing it."""
+    r = DataRequest(item="an Indian T-bill series", why="numeraire",
+                    unlocks="a defensible Sharpe", without_it="")
+    assert any("without_it" in e for e in r.validate("data_requests[0]"))
+
+
+def test_a_request_with_a_fallback_passes():
+    r = DataRequest(item="x", why="y", unlocks="z",
+                    without_it="flat 6% proxy, swept 4-8%, reported as "
+                               "rate-dependent")
+    assert not r.validate("data_requests[0]")
+
+
+def test_an_unknown_priority_is_refused():
+    r = DataRequest(item="x", without_it="y", priority="urgent")
+    assert any("priority" in e for e in r.validate("d"))
+
+
+def test_a_question_needs_an_assumption_or_must_declare_it_blocks():
+    """Otherwise it stalls the run for no reason -- the model asking someone
+    else to do its job."""
+    q = OpenQuestion(question="what vol target?", why_it_matters="it binds",
+                     what_i_assumed="", blocks_run=False)
+    assert any("what_i_assumed" in e for e in q.validate("open_questions[0]"))
+    q.blocks_run = True
+    assert not q.validate("open_questions[0]")
+
+
+def test_a_question_is_addressed_to_someone():
+    q = OpenQuestion(question="q", what_i_assumed="a", ask_of="the board")
+    assert any("ask_of" in e for e in q.validate("q"))
+
+
+def test_the_exemplar_card_asks_for_things_and_says_what_it_would_do_instead():
+    card = load_card(EXEMPLAR)
+    assert len(card.data_requests) >= 3
+    assert len(card.open_questions) >= 2
+    assert all(r.without_it.strip() for r in card.data_requests)
+    assert all(q.what_i_assumed.strip() for q in card.open_questions)
+    assert not card.blocking_requests and not card.blocking_questions
+
+
+def test_the_asks_block_shows_priority_fallback_and_who_to_ask():
+    txt = load_card(EXEMPLAR).asks()
+    assert "WHAT WOULD MAKE THIS TEST BETTER" in txt
+    assert "if declined" in txt, "the fallback must reach the reader"
+    assert "for the PM" in txt, "a PM should not read the data owner's queue"
+    assert "I assumed" in txt
+
+
+def test_an_empty_asks_block_says_so_rather_than_printing_nothing():
+    """Silence reads as nobody having looked."""
+    card = load_card(EXEMPLAR)
+    card.data_requests, card.open_questions = [], []
+    txt = card.asks()
+    assert "NOTHING IS BEING ASKED FOR" in txt
+    assert "strong claim" in txt
+
+
+def test_gate_a_blocks_on_a_blocking_request(registry):
+    card = load_card(EXEMPLAR)
+    card.data_requests[0].priority = "blocking"
+    gr = gate_a(card, _Feas())
+    row = next(c for c in gr.criteria if c.name == "no request is blocking")
+    assert row.blocking and not row.passed
+    assert card.data_requests[0].item in row.evidence
+
+
+def test_gate_a_blocks_on_a_blocking_question(registry):
+    card = load_card(EXEMPLAR)
+    card.open_questions[0].blocks_run = True
+    gr = gate_a(card, _Feas())
+    row = next(c for c in gr.criteria if c.name == "no question blocks the run")
+    assert row.blocking and not row.passed
+
+
+def test_gate_a_blocks_a_request_with_no_fallback(registry):
+    card = load_card(EXEMPLAR)
+    card.data_requests[0].without_it = ""
+    gr = gate_a(card, _Feas())
+    row = next(c for c in gr.criteria if c.name == "data requests carry a fallback")
+    assert row.blocking and not row.passed
+
+
+# ---------------------------------------------------------------------------
+# Completeness: a card that validates is not a card that is any good
+# ---------------------------------------------------------------------------
+def test_the_exemplar_scores_near_full():
+    r = card_completeness(load_card(EXEMPLAR))
+    assert r.score > 0.95, [m.name for m in r.missing]
+    assert not r.serious, [m.name for m in r.serious]
+
+
+def test_a_card_that_merely_validates_scores_badly():
+    """The whole point: the schema cannot tell six cited ambiguities from none."""
+    from ros.cards.schema import (CostSpec, Intent, Paper, PortfolioSpec,
+                                  Signal, StrategyCard, Universe)
+    bare = StrategyCard(
+        paper=Paper(id="x", title="x"),
+        intent=Intent(mode="adaptation", transferred_mechanism="m"),
+        universe=Universe(assets=["A"]), signal=Signal(template="fixed_weight"),
+        portfolio=PortfolioSpec(), costs=CostSpec(spread_bps=5.0))
+    assert not bare.validate(), "this card is structurally valid"
+    r = card_completeness(bare)
+    assert r.score < 0.35, r.score
+    assert len(r.serious) >= 8
+
+
+def test_completeness_catches_a_cost_copied_from_the_paper():
+    card = load_card(EXEMPLAR)
+    card.costs.spread_bps = 5.0
+    r = card_completeness(card)
+    bad = [c for c in r.missing if "cost not copied" in c.name]
+    assert bad and bad[0].weight >= 3
+
+
+def test_completeness_catches_a_zero_lag():
+    card = load_card(EXEMPLAR)
+    card.signal.lag_days = 0
+    assert any("lag" in c.name for c in card_completeness(card).missing)
+
+
+def test_completeness_catches_a_translation_with_no_argument():
+    card = load_card(EXEMPLAR)
+    card.universe_translation.rationale = "seems right"
+    card.universe_translation.why_not_alternatives = ""
+    missing = [c.name for c in card_completeness(card).missing]
+    assert "rationale for the target" in missing
+    assert "why not the alternatives" in missing
+
+
+def test_every_completeness_check_says_what_it_prevents():
+    """A check that cannot say why it exists is a house-style rule."""
+    r = card_completeness(load_card(EXEMPLAR))
+    for c in r.checks:
+        assert c.matters.strip(), f"{c.section}/{c.name} has no stated rationale"
+        assert 1 <= c.weight <= 3
