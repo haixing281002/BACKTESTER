@@ -259,3 +259,59 @@ def test_a_fully_declared_master_loads(tmp_path):
         assert mu.prices.shape[1] == 40
     finally:
         intake.RAW_DIR = old
+
+
+# ---------------------------------------------------------------------------
+# pit_status had TWO vocabularies, and the documented one crashed
+# ---------------------------------------------------------------------------
+def test_the_documented_pit_spelling_actually_works(tmp_path):
+    """The README, the CLI stanza and master/README all say `point_in_time`.
+    The registry only accepted `true_pit`, so a manifest written exactly as
+    instructed died with a bare ValueError -- on the one field that decides
+    whether a live claim may rest on the data."""
+    from ros.data import intake
+    from ros.data.registry import DataRegistry
+    (tmp_path / "x.csv").write_text("Date,v\n2020-01-01,1\n", encoding="utf-8")
+    man = tmp_path / "MANIFEST.yaml"
+    man.write_text("series:\n  - name: foo\n    kind: price\n    frequency: daily\n"
+                   "    file: x.csv\n    pit_status: point_in_time\n"
+                   '    licence: "t"\n', encoding="utf-8")
+    old = intake.RAW_DIR
+    try:
+        intake.RAW_DIR = str(tmp_path)
+        reg, added = intake.extend_registry(DataRegistry(), str(man))
+        assert added == ["foo"]
+        assert reg.get("foo").pit_status == "true_pit"
+    finally:
+        intake.RAW_DIR = old
+
+
+@pytest.mark.parametrize("spelling,canonical", [
+    ("point_in_time", "true_pit"), ("point-in-time", "true_pit"),
+    ("PIT", "true_pit"), ("as_was", "true_pit"), ("true_pit", "true_pit"),
+    ("back-filled", "backfilled"), ("backfilled", "backfilled"),
+    ("restated", "restated"), ("unknown", "unknown"),
+])
+def test_pit_spellings_normalise_to_one_vocabulary(spelling, canonical):
+    from ros.data.registry import DataCapability, normalise_pit_status
+    assert normalise_pit_status(spelling) == canonical
+    cap = DataCapability(name="x", kind="price", pit_status=spelling)
+    assert cap.pit_status == canonical and not cap.validate()
+
+
+def test_an_unknown_pit_status_is_still_refused_and_lists_the_options():
+    """Normalising must not become accepting anything."""
+    from ros.data.registry import DataCapability
+    errs = DataCapability(name="x", kind="price", pit_status="probably fine").validate()
+    assert errs and "true_pit" in errs[0] and "point_in_time" in errs[0]
+
+
+def test_the_intake_and_registry_vocabularies_cannot_drift_again():
+    """Every spelling the manifest advertises must survive the registry."""
+    from ros.data.intake import PIT_STATUSES
+    from ros.data.registry import DataCapability
+    for spelling in PIT_STATUSES:
+        cap = DataCapability(name="x", kind="price", pit_status=spelling)
+        assert not cap.validate(), (
+            f"the manifest advertises pit_status '{spelling}' but the registry "
+            f"rejects it: {cap.validate()}")

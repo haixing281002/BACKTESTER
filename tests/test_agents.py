@@ -78,7 +78,7 @@ def test_disagreement_between_model_and_gate_is_surfaced_not_resolved():
     from ros.data.firm_registry import build_firm_registry
     from ros.feasibility import assess
 
-    card = load_card("cards/devanathan_2026_replication.yaml")
+    card = load_card("examples/cards/devanathan_2026_replication.yaml")
     det = assess(card, build_firm_registry())
     assert det.verdict == "FAIL_FAST"
 

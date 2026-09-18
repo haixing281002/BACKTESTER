@@ -382,6 +382,79 @@ class StrategyCard:
         blob = yaml.safe_dump(econ, sort_keys=True).encode()
         return hashlib.sha256(blob).hexdigest()[:16]
 
+    def at_a_glance(self) -> str:
+        """The nine fields a reviewer checks first, on one screen.
+
+        Gate A's job is to make five minutes count. A reviewer who reads only
+        this block should be able to say "that is not the strategy I expected"
+        or "that lag cannot be right" -- which are the two objections that are
+        cheap here and expensive after a run.
+
+        Every value is read off the card. Nothing is defaulted for display: a
+        blank means the card does not say, and a card that does not say is a
+        Gate A item rather than something to fill in politely.
+        """
+        ut, st = self.universe_translation, self.strategy
+        unset = "-- not stated --"
+
+        universe = (ut.target_universe if ut and ut.target_universe
+                    else (self.universe.description.split(".")[0][:46]
+                          if self.universe.description else unset))
+        source = f"  (from: {ut.source_universe})" if ut and ut.source_universe else ""
+        signal = st.signal_name if st and st.signal_name else (
+            self.signal.name or self.signal.template or unset)
+        kind = ("cross-sectional" if st and st.cross_sectional else
+                "time-series" if st else "?")
+        lookback = (f"{self.signal.lookback_days}d" if self.signal.lookback_days
+                    else unset)
+        lag = f"{self.signal.lag_days}d"
+        weights = (" ".join(st.weighting_rule.split())[:60] if st and st.weighting_rule
+                   else self.signal.template or unset)
+        rebalance = (st.rebalance_frequency if st and st.rebalance_frequency
+                     else self.portfolio.rebalance)
+        benchmark = self.universe.benchmark or unset
+        costs = (f"{self.costs.spread_bps:.0f}bp round trip ({self.costs.cost_model})"
+                 if self.costs.spread_bps else unset)
+
+        n_amb = len(self.ambiguities)
+        unresolved = len(self.unresolved_ambiguities)
+        material = len(self.material_ambiguities)
+        low = [a.field for a in self.material_ambiguities if a.confidence == "low"]
+        amb = (f"{n_amb} logged, {material} material, {unresolved} UNRESOLVED"
+               if unresolved else f"{n_amb} logged, {material} material, all resolved")
+        conf = st.confidence if st else unset
+
+        mandate = []
+        if self.portfolio.long_only:
+            mandate.append("long-only")
+        if st and st.is_long_short:
+            mandate.append("SOURCE IS LONG-SHORT")
+        if self.portfolio.mandate_allow_cash is False and self.portfolio.allow_cash:
+            mandate.append("mandate forbids cash; paper uses it")
+
+        W = 96
+        L = ["  " + "-" * W,
+             f"  STRATEGY CARD AT A GLANCE   {self.paper.id}",
+             "  " + "-" * W,
+             f"    universe   : {universe}{source}",
+             f"    signal     : {signal}   [{kind}]",
+             f"    lookback   : {lookback:<14} lag: {lag}",
+             f"    weights    : {weights}",
+             f"    rebalance  : {rebalance:<14} benchmark: {benchmark}",
+             f"    costs      : {costs}",
+             f"    ambiguities: {amb}",
+             f"    confidence : {conf}"]
+        if low:
+            L.append(f"                 LOW on: {', '.join(low)}")
+        if mandate:
+            L.append(f"    mandate    : {'; '.join(mandate)}")
+        if st and st.engine_template:
+            L.append(f"    engine     : {st.engine_template}"
+                     + ("   NO TEMPLATE FITS -- a human must build one first"
+                        if st.engine_template == "NEEDS_NEW_TEMPLATE" else ""))
+        L.append("  " + "-" * W)
+        return "\n".join(L)
+
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
 

@@ -39,9 +39,10 @@ GRADES = (EXACT, CLOSE, LOOSE, NONE)
 # How we would actually represent the target universe with data.
 DIRECT = "direct"                 # we hold exactly these instruments
 SLEEVE_PROXY = "sleeve_proxy"     # stand in with factor sleeves we hold
+EXPOSURE_PROXY = "exposure_proxy" # equities whose earnings track the paper's asset
 NEEDS_DATA = "needs_data"         # real, testable, but we must acquire data
 INFEASIBLE = "infeasible"         # cannot be tested by this fund at all
-RESOLUTIONS = (DIRECT, SLEEVE_PROXY, NEEDS_DATA, INFEASIBLE)
+RESOLUTIONS = (DIRECT, SLEEVE_PROXY, EXPOSURE_PROXY, NEEDS_DATA, INFEASIBLE)
 
 
 # ---------------------------------------------------------------------------
@@ -78,6 +79,33 @@ INDIA_EQUITY_CAVEATS = [
     "available. Reconstructing who was in NIFTY 500 on a past date is the "
     "single hardest data problem in this translation, and getting it wrong "
     "imports survivorship bias that flatters every result.",
+]
+
+EXPOSURE_PROXY_CAVEATS = [
+    "AN EQUITY IS NOT THE ASSET. A gold financier is a credit business whose "
+    "collateral happens to be gold; a jewellery retailer is a consumer business "
+    "whose input cost happens to be gold. Their short-run returns are dominated "
+    "by operating leverage, management, balance sheet and sentiment, not by the "
+    "commodity. Beta to the underlying is low, unstable, and regime-dependent.",
+
+    "THE SIGN CAN INVERT. Rising gold helps a lender's collateral cover and "
+    "HURTS a jeweller's volumes. A basket mixing both can show no relationship "
+    "while each half has a strong one, and a paper that is right about the "
+    "commodity can be exactly wrong about the equities.",
+
+    "TOO FEW NAMES FOR A SORT. These baskets are a handful of stocks. They can "
+    "carry a TIMING mechanism -- is the exposure attractive now -- but a "
+    "cross-sectional rank over five names is not a cross-section.",
+
+    "IDIOSYNCRATIC DRIVERS DOMINATE. Import duty changes, LTV caps, GST, "
+    "hallmarking rules and single-company credit events move these names hard "
+    "and have nothing to do with the paper's mechanism. Over a 20-year Indian "
+    "sample there are enough of these to produce or destroy a result on their own.",
+
+    "YOU STILL NEED THE UNDERLYING SERIES. Testing whether a gold mechanism "
+    "transfers requires the gold price to compute the signal. The equities are "
+    "what you HOLD; the commodity is what you SIGNAL on. Supplying only the "
+    "equities tests nothing.",
 ]
 
 LONG_ONLY_CAVEATS = [
@@ -225,6 +253,46 @@ INDIAN_UNIVERSES: Dict[str, UniverseDef] = {u.name: u for u in [
        sector="materials"),
     _u("NIFTY Energy constituents", 10, "large",
        "Oil, gas and power. Dominated by two or three names.", sector="energy"),
+    # ---- thematic: equities that PROXY a non-equity exposure ----
+    # For a paper about an asset a long-only equity fund cannot hold. You do not
+    # buy the asset; you buy the listed businesses whose earnings track it, and
+    # you accept that this is a different bet. See EXPOSURE_PROXY_CAVEATS.
+    _u("Gold-linked Indian equities", 8, "large_mid",
+       "Listed gold financiers (loan-against-gold NBFCs) and organised "
+       "jewellery retail. The only way a long-only equity fund takes a view on "
+       "gold. Note the two halves respond to gold with OPPOSITE sign: rising "
+       "gold improves a lender's collateral cover and suppresses a jeweller's "
+       "volumes.",
+       sector="gold_linked",
+       instruments=["gold_linked_equities_constituent_prices",
+                    "gold_linked_equities_membership_history",
+                    "gold_price_inr"]),
+    _u("Crude-linked Indian equities", 10, "large",
+       "Upstream producers, refiners and marketers. Sign flips across the "
+       "chain: a crude rise helps upstream realisations and compresses "
+       "marketing margins, and administered pricing decouples both from the "
+       "screen price for long stretches.",
+       sector="crude_linked",
+       instruments=["crude_linked_equities_constituent_prices",
+                    "crude_linked_equities_membership_history",
+                    "crude_price_inr"]),
+    _u("Rate-sensitive Indian equities", 20, "large",
+       "Banks, NBFCs and rate-geared cyclicals, for a paper whose mechanism is "
+       "about the rate cycle. A long-only equity fund cannot express a duration "
+       "view directly; this is the equity expression of one.",
+       sector="rate_sensitive",
+       instruments=["rate_sensitive_equities_constituent_prices",
+                    "rate_sensitive_equities_membership_history",
+                    "india_policy_rate", "india_gsec_yield_10y"]),
+    _u("USD-revenue Indian equities", 15, "large",
+       "IT services and pharma exporters, for a paper about the currency. "
+       "Hedging policy sits between the rate and reported earnings and differs "
+       "by company, so the pass-through is partial and lagged.",
+       sector="usd_revenue",
+       instruments=["usd_revenue_equities_constituent_prices",
+                    "usd_revenue_equities_membership_history",
+                    "usdinr_spot"]),
+
     # ---- what we actually hold today ----
     UniverseDef(
         name="NSE factor sleeves", market="IN", approx_breadth=8,
@@ -354,6 +422,66 @@ _TRANSLATIONS: List[Translation] = [
                     "NIFTY500 VALUE 50", "NIFTY500 LOW VOLATILITY 50",
                     "NIFTY ALPHA 50"]),
 
+    # ---- non-equity assets a long-only equity fund cannot hold ----
+    # These translations are the honest answer to "there is a paper about gold".
+    # You cannot buy gold. You can buy the listed businesses whose earnings
+    # track it, and test whether the MECHANISM survives that move -- while
+    # recording that it is a different bet with a possibly inverted sign.
+    _t("Gold (spot or futures)", "Gold-linked Indian equities", LOOSE,
+       "A long-only Indian equity fund holds no gold. The mechanism can still "
+       "be tested on the listed businesses whose earnings track the gold price: "
+       "loan-against-gold NBFCs and organised jewellery retail. The gold price "
+       "series is still required -- it is what the signal is computed on; the "
+       "equities are what is held.",
+       risks=["Rising gold HELPS a gold financier's collateral cover and HURTS "
+              "a jeweller's volumes. A basket holding both can show no "
+              "relationship while each half has a strong one, so the legs must "
+              "be reported separately or the test is uninterpretable.",
+              "Eight names cannot support a cross-sectional sort. Only a timing "
+              "mechanism transfers.",
+              "Import duty, LTV caps and hallmarking rules move these names "
+              "independently of gold, and over a 20-year Indian sample there "
+              "are enough such events to create or destroy a result alone."],
+       instruments=["gold_linked_equities_constituent_prices",
+                    "gold_linked_equities_membership_history",
+                    "gold_price_inr"]),
+
+    _t("Crude oil", "Crude-linked Indian equities", LOOSE,
+       "No direct exposure is available to this fund. Upstream producers, "
+       "refiners and marketers are the equity expression of a crude view.",
+       risks=["The sign flips along the chain: upstream gains on a crude rise, "
+              "marketing margins compress. Holding both nets to noise.",
+              "Administered pricing decouples Indian oil marketers from the "
+              "screen price for long stretches, and those stretches are "
+              "policy-driven rather than random."],
+       instruments=["crude_linked_equities_constituent_prices",
+                    "crude_linked_equities_membership_history",
+                    "crude_price_inr"]),
+
+    _t("Government bonds / duration", "Rate-sensitive Indian equities", LOOSE,
+       "A long-only equity fund cannot express duration directly. Banks, NBFCs "
+       "and rate-geared cyclicals are the equity expression of a rate view.",
+       risks=["An equity rate-proxy carries full equity beta on top of the rate "
+              "exposure, so most of its variance has nothing to do with the "
+              "paper's mechanism.",
+              "Bank earnings respond to the SHAPE of the curve and to credit "
+              "cost, not to the level alone. A paper about level does not "
+              "transfer cleanly."],
+       instruments=["rate_sensitive_equities_constituent_prices",
+                    "rate_sensitive_equities_membership_history",
+                    "india_policy_rate", "india_gsec_yield_10y"]),
+
+    _t("FX (USD)", "USD-revenue Indian equities", LOOSE,
+       "IT services and pharma exporters are the listed expression of a rupee "
+       "view for a fund that cannot trade currency.",
+       risks=["Company hedging policy sits between the exchange rate and "
+              "reported earnings, so pass-through is partial, lagged and "
+              "differs by name.",
+              "These are also the highest-quality large caps in the index, so a "
+              "basket of them is a quality factor bet wearing a currency label."],
+       instruments=["usd_revenue_equities_constituent_prices",
+                    "usd_revenue_equities_membership_history", "usdinr_spot"]),
+
     _t("MSCI World", "", NONE,
        "A single-country long-only Indian fund has no analogue for a global "
        "developed-market universe. A paper whose mechanism depends on "
@@ -416,6 +544,19 @@ _ALIASES: Dict[str, str] = {
     "58 futures markets": "Global futures (multi-asset)",
     "futures markets": "Global futures (multi-asset)",
     "cta universe": "Global futures (multi-asset)",
+    # non-equity assets
+    "gold": "Gold (spot or futures)", "gold spot": "Gold (spot or futures)",
+    "gold futures": "Gold (spot or futures)", "xau": "Gold (spot or futures)",
+    "xauusd": "Gold (spot or futures)", "gld": "Gold (spot or futures)",
+    "bullion": "Gold (spot or futures)", "gold price": "Gold (spot or futures)",
+    "crude": "Crude oil", "crude oil": "Crude oil", "brent": "Crude oil",
+    "wti": "Crude oil", "oil": "Crude oil",
+    "treasuries": "Government bonds / duration",
+    "government bonds": "Government bonds / duration",
+    "gsec": "Government bonds / duration", "duration": "Government bonds / duration",
+    "bonds": "Government bonds / duration",
+    "usd": "FX (USD)", "usdinr": "FX (USD)", "dollar": "FX (USD)",
+    "fx": "FX (USD)", "currency": "FX (USD)",
 }
 
 
@@ -452,12 +593,17 @@ def target_universe(name: str) -> Optional[UniverseDef]:
     return INDIAN_UNIVERSES.get(name)
 
 
+EXPOSURE_SECTORS = {"gold_linked", "crude_linked", "rate_sensitive", "usd_revenue"}
+
+
 def caveats_for(target: str, long_only: bool = True) -> List[str]:
     """Everything a human should see before approving a translation."""
     out: List[str] = []
     u = INDIAN_UNIVERSES.get(target)
     if u:
         out.extend(u.caveats)
+        if u.sector in EXPOSURE_SECTORS:
+            out.extend(EXPOSURE_PROXY_CAVEATS)
     if long_only:
         out.extend(LONG_ONLY_CAVEATS)
     return out
@@ -646,8 +792,11 @@ def check_translation(translation, registry, long_only: bool = True) -> Translat
         chk.computed_resolution = NEEDS_DATA
         chk.notes.append("No instruments named, so nothing could be resolved.")
     elif not chk.missing:
-        chk.computed_resolution = (SLEEVE_PROXY if tgt == "NSE factor sleeves"
-                                   else DIRECT)
+        u = INDIAN_UNIVERSES.get(tgt)
+        chk.computed_resolution = (
+            SLEEVE_PROXY if tgt == "NSE factor sleeves"
+            else EXPOSURE_PROXY if u and u.sector in EXPOSURE_SECTORS
+            else DIRECT)
     else:
         chk.computed_resolution = NEEDS_DATA
 

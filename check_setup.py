@@ -100,14 +100,20 @@ def main() -> int:
         try:
             import glob
             from ros.cards.schema import load_card
-            # Any card proves the engine loads one. Naming a specific paper here
-            # would make this check fail the day someone deletes the example.
-            cards = sorted(glob.glob("cards/*.yaml"))
-            if not cards:
-                raise FileNotFoundError("no cards in cards/")
-            c = load_card(cards[0])
-            print(f"{OK}engine       {len(cards)} card(s); {os.path.basename(cards[0])} "
-                  f"loads, fingerprint {c.fingerprint()}")
+            # Self-test against an EXAMPLE, never against the user's own cards.
+            # This used to glob cards/*.yaml and load the first alphabetically,
+            # which meant every setup check silently read a card about somebody
+            # else's paper. cards/ is the user's space and is left alone.
+            mine = sorted(glob.glob("cards/*.yaml"))
+            examples = sorted(glob.glob("examples/cards/*.yaml"))
+            if not examples:
+                raise FileNotFoundError("no example cards in examples/cards/")
+            c = load_card(examples[0])
+            print(f"{OK}engine       schema loads (self-test on an example), "
+                  f"fingerprint {c.fingerprint()}")
+            print(f"{OK}your cards   {len(mine)} in cards/"
+                  + (f": {', '.join(os.path.basename(m) for m in mine[:4])}"
+                     if mine else " -- none yet, which is expected on a fresh clone"))
         except Exception as e:                                   # noqa: BLE001
             print(f"{BAD}engine       {type(e).__name__}: {e}")
             problems.append("The engine could not load a card. Run from the repo root.")

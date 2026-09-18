@@ -31,7 +31,6 @@ import os
 import shutil
 from typing import Optional
 
-BASELINE = "docs/devanathan_2026_simple_dynamic_sbg.pdf"
 PAPER_DIR = "docs/papers"
 
 
@@ -158,17 +157,19 @@ def analyse(pdf: str = BASELINE):
     return doc
 
 
-def compare(pdf: str, baseline: str = BASELINE):
-    """Your paper against the bundled baseline, side by side.
+def compare(pdf: str, other: str):
+    """Two papers you name, side by side on what the reader could extract.
 
-    The comparison is the useful part: it shows how much of what the pipeline
-    achieved on the baseline was the pipeline, and how much was that paper being
-    unusually well behaved.
+    Useful for calibration: it shows how much of an extraction result was the
+    pipeline and how much was one paper being unusually well behaved. Both
+    papers are named by you -- there is no bundled baseline, because a default
+    comparator quietly becomes the standard everything is judged against.
     """
     import pandas as pd
 
     rows = []
-    for label, path in (("BASELINE (Devanathan)", baseline), ("YOUR PAPER", pdf)):
+    for label, path in ((f"A: {os.path.basename(pdf)}", pdf),
+                        (f"B: {os.path.basename(other)}", other)):
         if not os.path.exists(path):
             cand = os.path.join(PAPER_DIR, os.path.basename(path))
             path = cand if os.path.exists(cand) else path
@@ -516,8 +517,12 @@ def run(card: str, n_boot: int = 2000, show: bool = True):
     import subprocess
     import sys
     if not os.path.exists(card):
-        raise SystemExit(f"card not found: {card}\n"
-                         f"Available: {sorted(glob.glob('cards/*.yaml'))}")
+        mine = sorted(glob.glob("cards/*.yaml"))
+        raise SystemExit(
+            f"card not found: {card}\n"
+            f"Your cards: {mine or '(none yet -- run /draft-card after /ingest)'}\n"
+            f"Worked examples, for reference only: "
+            f"{sorted(glob.glob('examples/cards/*.yaml'))}")
     r = subprocess.run([sys.executable, "run_pipeline.py", "--card", card,
                         "--n-boot", str(n_boot)], capture_output=True, text=True)
     if r.returncode != 0:

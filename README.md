@@ -28,13 +28,13 @@ ten-minute version.
 pip install -r requirements.txt
 
 # a US multi-asset paper we cannot get data for -> fails fast at Step 03, in seconds
-python run_pipeline.py --card cards/devanathan_2026_replication.yaml
+python run_pipeline.py --card examples/cards/devanathan_2026_replication.yaml
 
 # the same mechanism adapted to NIFTY500 factor sleeves -> full 8-step run
-python run_pipeline.py --card cards/devanathan_2026_india_factor_adaptation.yaml
+python run_pipeline.py --card examples/cards/devanathan_2026_india_factor_adaptation.yaml
 
 # a structurally different paper (trend following) -> proves the engine is paper-agnostic
-python run_pipeline.py --card cards/moskowitz_2012_tsmom_india.yaml
+python run_pipeline.py --card examples/cards/moskowitz_2012_tsmom_india.yaml
 
 pytest tests/ -q
 ```
@@ -268,7 +268,7 @@ cell where you write and run your own Strategy Card.
 **Regenerating the notebook** after changing the engine:
 
 ```bash
-python build_colab.py     # re-tars the package and rebuilds the .ipynb
+# colab_bootstrap.py is the Colab path; build_colab.py is retired to examples/legacy/
 ```
 
 Every code cell is executed end to end as a verification step before release.

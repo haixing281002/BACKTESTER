@@ -15,7 +15,28 @@ from __future__ import annotations
 from dataclasses import dataclass, field, asdict
 from typing import Any, Dict, List, Optional
 
-PIT_STATUS = {"true_pit", "backfilled", "unknown"}
+# ONE vocabulary for the field that decides whether a live claim may rest on a
+# series. `restated` is distinct from `backfilled`: the history existed, it was
+# later corrected, and using the correction leaks hindsight backwards.
+PIT_STATUS = {"true_pit", "backfilled", "restated", "unknown"}
+
+# Spellings that mean the same thing. This exists because there WERE two
+# vocabularies: the registry said `true_pit` while the intake manifest and its
+# documentation said `point_in_time`, so a manifest written exactly as the README
+# instructed died with a bare ValueError from the registry. One normaliser, used
+# by both, rather than two lists that drift apart again.
+PIT_ALIASES = {
+    "point_in_time": "true_pit", "point-in-time": "true_pit", "pit": "true_pit",
+    "as_was": "true_pit", "as-was": "true_pit", "true-pit": "true_pit",
+    "back_filled": "backfilled", "back-filled": "backfilled",
+    "restated_history": "restated",
+}
+
+
+def normalise_pit_status(value: str) -> str:
+    """Canonical pit_status, or the input unchanged so validate() can reject it."""
+    key = str(value or "").strip().lower().replace(" ", "_")
+    return PIT_ALIASES.get(key, key)
 
 
 @dataclass
@@ -31,9 +52,14 @@ class DataCapability:
     is_proxy_for: List[str] = field(default_factory=list)
     caveats: List[str] = field(default_factory=list)
 
+    def __post_init__(self):
+        self.pit_status = normalise_pit_status(self.pit_status)
+
     def validate(self) -> List[str]:
         if self.pit_status not in PIT_STATUS:
-            return [f"{self.name}: pit_status '{self.pit_status}' not in {sorted(PIT_STATUS)}"]
+            return [f"{self.name}: pit_status '{self.pit_status}' not in "
+                    f"{sorted(PIT_STATUS)} (accepted spellings also include "
+                    f"{sorted(PIT_ALIASES)})"]
         return []
 
 

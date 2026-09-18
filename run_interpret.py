@@ -196,6 +196,11 @@ def main() -> int:
             print(f"      {' '.join(st.template_gap.split())}")
 
     # ---- GATE A ---------------------------------------------------------
+    # The nine fields first. A reviewer who reads only this should be able to
+    # say "that is not the strategy I expected" -- cheap here, expensive later.
+    print()
+    print(card.at_a_glance())
+
     feas = assess(card, registry)
     ga = gate_a(card, feas, doc.quality, translation_check=tc)
     head("GATE A  |  HUMAN INTERPRETATION CONTROL")

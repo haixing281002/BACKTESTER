@@ -87,20 +87,62 @@ def test_no_entry_point_hardcodes_a_specific_paper():
     `cards/` and `outputs/` legitimately name papers -- a card IS about one
     paper. Entry points and bootstraps must not.
     """
+    # Every top-level script plus the ros/ package, scanned rather than listed.
+    # A hand-maintained list is a list someone forgets to extend, and the last
+    # sweep of this missed four files for exactly that reason.
+    targets = sorted(ROOT.glob("*.py")) + sorted(ROOT.glob("ros/**/*.py"))
     offenders = []
-    for name in ("run_interpret.py", "run_pipeline.py", "run_agentic.py",
-                 "colab_bootstrap.py", "check_setup.py", "ros/papers.py"):
-        f = ROOT / name
-        if not f.exists():
+    for f in targets:
+        if "examples" in f.parts or "__pycache__" in f.parts:
             continue
+        name = f.relative_to(ROOT).as_posix()
         for i, line in enumerate(f.read_text(encoding="utf-8").splitlines(), 1):
             low = line.lower()
+            # A PATH or filename naming a paper is hardcoding. A prose citation
+            # is correct attribution -- `ts_momentum` should say whose strategy
+            # it implements, and stripping that would make the code worse.
+            named = ("devanathan" in low or "moskowitz" in low)
+            is_reference = any(x in low for x in
+                               (".pdf", ".yaml", ".json", "cards/", "docs/"))
+            if named and is_reference:
+                offenders.append(f"{name}:{i}: {line.strip()}")
             if ".pdf" in low and "default" in low:
                 offenders.append(f"{name}:{i}: {line.strip()}")
-            if "devanathan" in low:
-                offenders.append(f"{name}:{i}: {line.strip()}")
-    assert not offenders, "an entry point still names a specific paper:\n  " + \
-                          "\n  ".join(offenders)
+    assert not offenders, (
+        "code on a live path still names a specific paper. Worked examples "
+        "belong in examples/, which this scan skips:\n  " + "\n  ".join(offenders))
+
+
+def test_the_users_card_folder_ships_empty():
+    """cards/ is the user's own work. Shipping examples in it meant every
+    check_setup run globbed cards/*.yaml and loaded somebody else's paper."""
+    shipped = sorted(p.name for p in (ROOT / "cards").glob("*.yaml"))
+    assert not shipped, (
+        f"cards/ ships with {shipped}. Move worked examples to examples/cards/ "
+        f"so nothing picks one up by globbing.")
+    assert (ROOT / "examples/cards").is_dir(), "the examples went missing"
+    assert list((ROOT / "examples/cards").glob("*.yaml")), "no examples left"
+
+
+def test_nothing_on_a_live_path_globs_the_users_cards_and_loads_one():
+    """Listing cards/ to help someone is fine. Loading cards[0] is not."""
+    import re
+    bad = []
+    for f in sorted(ROOT.glob("*.py")) + sorted(ROOT.glob("ros/**/*.py")):
+        if "examples" in f.parts or "__pycache__" in f.parts:
+            continue
+        text = f.read_text(encoding="utf-8")
+        # Follow the assignment: flag only when the variable bound to a
+        # cards/ glob is the one indexed and loaded. Proximity alone flagged
+        # check_setup.py, which globs cards/ to COUNT them and loads an example.
+        for m in re.finditer(
+                r"(\w+)\s*=\s*sorted\(\s*glob\.glob\(\s*['\"]cards/\*", text):
+            var = m.group(1)
+            line = text[:m.start()].count("\n") + 1
+            if re.search(rf"load_card\(\s*{var}\[0\]", text):
+                bad.append(f"{f.relative_to(ROOT).as_posix()}:{line}")
+    assert not bad, ("this loads whichever card sorts first, which is how a run "
+                     f"silently read the wrong paper: {bad}")
 
 
 def test_the_paper_command_tells_the_model_to_ask():
@@ -128,7 +170,7 @@ def test_run_interpret_reaches_gate_a_with_the_workbook_absent(tmp_path):
         xlsx.rename(stash)
     try:
         r = _run("run_interpret.py", "--pdf", EXAMPLE,
-                 "--card", "cards/devanathan_2026_india_factor_adaptation.yaml")
+                 "--card", "examples/cards/devanathan_2026_india_factor_adaptation.yaml")
         assert r.returncode == 0, r.stdout[-3000:] + r.stderr[-3000:]
         assert "GATE A" in r.stdout
         assert "decision: PENDING" in r.stdout
@@ -157,7 +199,7 @@ def test_run_interpret_never_imports_a_data_loader():
 def test_it_says_what_to_supply_when_data_is_missing(tmp_path):
     """A shortfall is the deliverable of this script, so it must be printed."""
     r = _run("run_interpret.py", "--pdf", EXAMPLE,
-             "--card", "cards/devanathan_2026_replication.yaml")
+             "--card", "examples/cards/devanathan_2026_replication.yaml")
     assert "WHAT THIS PAPER WOULD NEED FROM YOU" in r.stdout
     assert "MANIFEST.yaml" in r.stdout
     assert "pit_status" in r.stdout, "the honesty field must reach the operator"

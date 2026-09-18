@@ -217,8 +217,8 @@ def test_a_strategy_with_no_template_still_gets_its_requirements():
 
 
 def test_the_shipped_cards_produce_a_coherent_block():
-    for path in ("cards/devanathan_2026_india_factor_adaptation.yaml",
-                 "cards/moskowitz_2012_tsmom_india.yaml"):
+    for path in ("examples/cards/devanathan_2026_india_factor_adaptation.yaml",
+                 "examples/cards/moskowitz_2012_tsmom_india.yaml"):
         r = derive(load_card(path))
         assert r.requirements
         assert "WHAT IT TAKES" in r.render()
