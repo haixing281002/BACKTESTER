@@ -3,3 +3,17 @@ __pycache__/
 .pytest_cache/
 .ipynb_checkpoints/
 .venv/
+
+# Run artifacts. Everything under outputs/ belongs to the run that made it, on
+# the machine that made it.
+#
+# These were committed once, and the consequence was worse than clutter: a fresh
+# clone arrived with ten strategy-library entries about somebody else's paper.
+# The library exists to answer "has this question been asked before", and
+# trials_for_family feeds the deflated Sharpe trial count -- so a shipped
+# library makes a new fund inherit another research programme's trial budget
+# and prior answers. The worked examples are kept, for reference, in
+# examples/outputs/.
+outputs/*
+!outputs/.gitkeep
+!outputs/README.md
