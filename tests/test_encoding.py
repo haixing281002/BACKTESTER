@@ -103,7 +103,7 @@ def test_the_repo_is_readable_as_cp1252_would_never_manage():
 def test_a_card_round_trips_symbols_from_a_paper(tmp_path, sym):
     """sigma, <=, -> and alpha survive save/load. On Windows they used to not."""
     from ros.cards.schema import load_card
-    card = load_card("cards/devanathan_2026_india_factor_adaptation.yaml")
+    card = load_card("examples/cards/devanathan_2026_india_factor_adaptation.yaml")
     # rationale and title are free text lifted straight out of the paper, so
     # they are exactly where a sigma or a <= arrives from.
     card.intent.rationale = f"target {sym} vol; weights {sym} 1"

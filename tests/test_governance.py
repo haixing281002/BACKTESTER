@@ -18,7 +18,7 @@ import pytest
 from ros.cards.schema import load_card
 from ros.governance.gates import GateResult, Criterion, gate_a, gate_b
 
-CARD = "cards/devanathan_2026_india_factor_adaptation.yaml"
+CARD = "examples/cards/devanathan_2026_india_factor_adaptation.yaml"
 
 
 def _run(*extra):

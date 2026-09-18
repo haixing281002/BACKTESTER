@@ -35,7 +35,9 @@ from ros.data.registry import DataCapability, DataRegistry
 RAW_DIR = "data/raw"
 MANIFEST = os.path.join(RAW_DIR, "MANIFEST.yaml")
 
-PIT_STATUSES = ("point_in_time", "backfilled", "restated", "unknown")
+# Accepted spellings for the manifest. ros/data/registry.py owns the canonical
+# set and normalises these; `point_in_time` and `true_pit` are the same thing.
+PIT_STATUSES = ("point_in_time", "true_pit", "backfilled", "restated", "unknown")
 
 REQUIRED_FIELDS = ("name", "kind", "frequency", "file", "pit_status", "licence")
 

@@ -220,6 +220,9 @@ def main(argv=None) -> int:
         R.p("  terms a second person could implement from. Gate A will flag it.")
 
     # ---------------- GATE A ---------------------------------------------
+    R.p("")
+    R.block(card.at_a_glance())
+
     feas = assess(card, registry)
     ga = gate_a(card, feas, doc.quality if doc else None, translation_check=tc)
     R.h("GATE A  |  HUMAN INTERPRETATION CONTROL")

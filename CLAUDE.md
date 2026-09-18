@@ -53,6 +53,19 @@ surfaces after a Gate A queue has been signed against the wrong work.
 New papers go in `docs/papers/`. Artifacts are keyed by the paper's slug and its
 sha256 travels on the card, so a result can always be traced to specific bytes.
 
+**`cards/` ships EMPTY and is yours.** The three worked examples live in
+`examples/cards/`, off every code path. They used to sit in `cards/`, and the
+consequence was that `check_setup.py` globbed `cards/*.yaml`, took the first
+alphabetically, and read a card about somebody else's paper on every run. Read
+an example for its shape; never copy one and edit it — a card carries a paper's
+sha256 and its own ambiguities.
+
+**Gate A opens with the card at a glance**: universe | signal | lookback | lag,
+weights | rebalance | benchmark, costs | ambiguities | confidence, plus the
+mandate conflicts. A reviewer who reads only that block should be able to say
+"that is not the strategy I expected", which is cheap there and expensive after
+a run. A blank reads `-- not stated --` rather than a polite default.
+
 ## Stages 00 to Gate A need NO MARKET DATA
 
 ```bash
@@ -92,6 +105,15 @@ sort, cap segment, sector, history, whether the run must be holdable);
 needs and ranks them; the model picks and justifies, recording the runners-up;
 a human signs at Gate A. **The choice is open. The justification is checked.**
 
+**A paper about an asset the fund cannot hold still has an answer.** Gold, crude,
+duration and FX map to the listed Indian businesses whose earnings track them —
+gold financiers and jewellers for gold, and so on. The resolution is
+`exposure_proxy`, and it carries its own caveats because an equity is not the
+asset: rising gold helps a lender's collateral cover and *hurts* a jeweller's
+volumes, so a basket of both can net to noise while each half has a strong
+effect. The underlying price series is still required — the equities are what
+you hold, the commodity is what you signal on.
+
 **Testing outside the mandate is allowed.** "Is this effect real?" and "can this
 fund run it?" are different questions. NIFTY Total Market and Microcap 250 sit
 outside NIFTY 500 and may still be chosen — a published small-cap anomaly is
@@ -123,8 +145,10 @@ ros/
                        and the engine. A card is data, never code.
       extract.py       deterministic PDF reader (regex + text-geometry tables)
   data/                registry (what the fund holds), loaders, PIT snapshots
-      universes.py     20 Indian universes + mechanism-fit ranking; the
-                       model chooses, the code scores, a human signs
+      universes.py     24 Indian universes + mechanism-fit ranking; the
+                       model chooses, the code scores, a human signs. Includes
+                       EXPOSURE PROXIES: a gold paper maps to listed gold
+                       financiers and jewellers, whose sign may be inverted.
       intake.py        supplying data at Gate A (manifest-declared, never sniffed)
       master.py        the master universe: one long CSV in, engine panels out.
                        Refuses a survivor-only file -- see its README.
@@ -152,7 +176,7 @@ python run_interpret.py --pdf docs/papers/<paper>.pdf     # 00 -> Gate A, NO DAT
 python run_pipeline.py --card cards/<card>.yaml          # ends at Gate B PENDING
 python run_pipeline.py --card cards/<card>.yaml \
     --decision REJECT --decided-by "Name" --rationale "…"  # a human rules
-python -m pytest tests/ -q                                # 201 tests
+python -m pytest tests/ -q                                # 243 tests
 python validate/cross_check.py --excel                    # engine vs clean-room impl
 python -m ros.interpretation history                      # who interpreted what
 ```

@@ -16,7 +16,7 @@ from ros.data.universes import (DIRECT, GRADES, INFEASIBLE, NEEDS_DATA,
                                 translations_for)
 from ros.governance.gates import gate_a
 
-CARD = "cards/devanathan_2026_india_factor_adaptation.yaml"
+CARD = "examples/cards/devanathan_2026_india_factor_adaptation.yaml"
 
 
 @pytest.fixture(scope="module")
@@ -226,8 +226,8 @@ def test_gate_a_blocks_when_the_fund_cannot_obtain_the_universe(registry):
 
 def test_the_shipped_cards_clear_gate_a_on_these_criteria(registry):
     """If the repo's own worked examples cannot pass, the criteria are wrong."""
-    for path in ("cards/devanathan_2026_india_factor_adaptation.yaml",
-                 "cards/moskowitz_2012_tsmom_india.yaml"):
+    for path in ("examples/cards/devanathan_2026_india_factor_adaptation.yaml",
+                 "examples/cards/moskowitz_2012_tsmom_india.yaml"):
         card = load_card(path)
         chk = check_translation(card.universe_translation, registry,
                                 long_only=card.portfolio.long_only)
@@ -430,3 +430,145 @@ def test_the_catalogue_knows_what_data_each_universe_needs(registry):
 def test_mechanism_needs_reject_an_unknown_segment():
     assert any("cap_segment" in e
                for e in MechanismNeeds(cap_segment="enormous").validate())
+
+
+# ---------------------------------------------------------------------------
+# A paper about an asset the fund cannot hold
+#
+# "There is a paper about gold." You cannot buy gold. You CAN buy the listed
+# businesses whose earnings track it -- and that is a different bet whose sign
+# may be inverted. The translation exists so that trade-off is recorded rather
+# than either refused outright or waved through.
+# ---------------------------------------------------------------------------
+from ros.data.universes import EXPOSURE_PROXY, EXPOSURE_SECTORS, caveats_for
+
+
+@pytest.mark.parametrize("spelling", ["gold", "Gold", "bullion", "XAU", "GLD",
+                                      "gold futures", "gold price"])
+def test_gold_resolves_to_a_source_universe(spelling):
+    assert canonical_source(spelling) == "Gold (spot or futures)"
+
+
+@pytest.mark.parametrize("spelling,expected", [
+    ("Brent", "Crude oil"), ("WTI", "Crude oil"), ("crude oil", "Crude oil"),
+    ("usdinr", "FX (USD)"), ("dollar", "FX (USD)"),
+    ("gsec", "Government bonds / duration"),
+    ("treasuries", "Government bonds / duration"),
+])
+def test_other_non_equity_assets_resolve(spelling, expected):
+    assert canonical_source(spelling) == expected
+
+
+def test_a_gold_paper_routes_to_gold_linked_equities():
+    t = translations_for("gold")[0]
+    assert t.target == "Gold-linked Indian equities"
+    assert t.grade == "loose", "this is never a close correspondence"
+
+
+def test_the_gold_translation_still_requires_the_gold_price():
+    """The equities are what you HOLD; the commodity is what you SIGNAL on.
+    Supplying only the equities tests nothing."""
+    t = translations_for("gold")[0]
+    assert any("gold_price" in i for i in t.required_instruments)
+    assert any("constituent_prices" in i for i in t.required_instruments)
+    assert any("membership_history" in i for i in t.required_instruments)
+
+
+def test_the_inverted_sign_is_stated_not_left_to_be_discovered():
+    """Rising gold helps a lender's collateral and hurts a jeweller's volumes.
+    A basket of both can net to noise while each half has a strong effect."""
+    t = translations_for("gold")[0]
+    risks = " ".join(t.transfer_risks).lower()
+    assert "opposite" in risks or "hurts" in risks
+    assert "separately" in risks or "uninterpretable" in risks
+
+
+def test_an_exposure_proxy_carries_its_own_caveats(registry):
+    cav = " ".join(caveats_for("Gold-linked Indian equities")).lower()
+    assert "an equity is not the asset" in cav
+    assert "sign can invert" in cav
+    assert "too few names for a sort" in cav
+
+
+def test_an_exposure_proxy_is_resolved_as_such_not_as_direct(registry):
+    from ros.data.registry import DataCapability
+    ut = UniverseTranslation(
+        source_universe="gold", target_universe="Gold-linked Indian equities",
+        grade="loose", transfer_risks=["x"])
+    # pretend the three series were supplied
+    for name in translations_for("gold")[0].required_instruments:
+        registry.add(DataCapability(name=name, kind="price", frequency="daily",
+                                    pit_status="point_in_time", licence="test"))
+    chk = check_translation(ut, registry)
+    assert chk.computed_resolution == EXPOSURE_PROXY, chk.computed_resolution
+    assert not chk.missing
+
+
+def test_a_gold_timing_mechanism_ranks_the_gold_basket_first():
+    req = MechanismRequirements(needs_cross_section=False, min_names=5,
+                                cap_segment="large_mid", sector="gold_linked")
+    assert propose_universes(req)[0].universe.name == "Gold-linked Indian equities"
+
+
+def test_a_gold_cross_sectional_sort_is_disqualified():
+    """Eight names cannot support a decile sort, whatever the paper did."""
+    req = MechanismRequirements(min_names=100, cap_segment="large_mid",
+                                sector="gold_linked")
+    fit = score_universe(INDIAN_UNIVERSES["Gold-linked Indian equities"], req)
+    assert fit.disqualifying and "cannot support a sort" in fit.disqualifying[0]
+
+
+def test_every_exposure_universe_names_its_underlying_series():
+    """An exposure proxy without the underlying is untestable by construction."""
+    for u in INDIAN_UNIVERSES.values():
+        if u.sector in EXPOSURE_SECTORS:
+            inst = " ".join(u.required_instruments)
+            assert "constituent_prices" in inst, u.name
+            assert any(k in inst for k in ("price_inr", "spot", "rate", "yield")), (
+                f"{u.name} names no underlying series to signal on")
+
+
+# ---------------------------------------------------------------------------
+# The card at a glance -- the nine fields a reviewer checks first
+# ---------------------------------------------------------------------------
+def test_at_a_glance_shows_every_field_a_reviewer_needs():
+    card = load_card("examples/cards/moskowitz_2012_tsmom_india.yaml")
+    txt = card.at_a_glance()
+    for label in ("universe", "signal", "lookback", "lag", "weights",
+                  "rebalance", "benchmark", "costs", "ambiguities", "confidence"):
+        assert label in txt, label
+
+
+def test_at_a_glance_names_both_ends_of_the_translation():
+    card = load_card("examples/cards/moskowitz_2012_tsmom_india.yaml")
+    txt = card.at_a_glance()
+    assert "NSE factor sleeves" in txt
+    assert "from: Global futures" in txt
+
+
+def test_at_a_glance_flags_a_long_short_source_and_a_cash_conflict():
+    card = load_card("examples/cards/moskowitz_2012_tsmom_india.yaml")
+    txt = card.at_a_glance()
+    assert "SOURCE IS LONG-SHORT" in txt
+    assert "mandate forbids cash" in txt
+
+
+def test_at_a_glance_says_not_stated_rather_than_inventing_a_default():
+    """A blank is a Gate A item, not something to fill in politely."""
+    card = load_card("examples/cards/moskowitz_2012_tsmom_india.yaml")
+    card.signal.lookback_days = None
+    card.universe.benchmark = None
+    txt = card.at_a_glance()
+    assert txt.count("not stated") >= 2
+
+
+def test_at_a_glance_shouts_when_no_template_fits():
+    card = load_card("examples/cards/moskowitz_2012_tsmom_india.yaml")
+    card.strategy.engine_template = "NEEDS_NEW_TEMPLATE"
+    assert "NO TEMPLATE FITS" in card.at_a_glance()
+
+
+def test_at_a_glance_surfaces_unresolved_ambiguities():
+    card = load_card("examples/cards/moskowitz_2012_tsmom_india.yaml")
+    card.ambiguities[0].resolution = ""
+    assert "UNRESOLVED" in card.at_a_glance()
