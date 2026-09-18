@@ -434,12 +434,24 @@ def main(argv=None) -> int:
             research["bootstrap_p_not_positive"] = float(worst)
             R.p(f"    worst-case P(no advantage) across comparators = {worst:.3f}")
 
+    # The factor fingerprint is computed HERE, ahead of the deflated Sharpe,
+    # because the trial budget needs it. A prior experiment counts against this
+    # run when it was the same bet, and "the same bet" is a statement about
+    # factor loadings, not about what the card was called. STEP 07 reports this
+    # object; nothing recomputes it.
+    sleeves = pd.DataFrame({a: snap.frame[a].pct_change()
+                            for a in card.universe.assets}).dropna()
+    fp = pv.factor_fingerprint(primary.returns, sleeves, rf_daily=rf)
+    this_fingerprint = fp.get("fingerprint", {}) if isinstance(fp, dict) else {}
+
     lib = StrategyLibrary(os.path.join(args.outdir, "library"))
-    prior = lib.trials_for_family(card.paper.id.split("__")[0],
-                                  exclude_fingerprint=card.fingerprint())
-    n_trials = max(card.n_configs_tried, runset.n_configs_run) + prior
+    prior = lib.prior_trials(card.paper.id.split("__")[0],
+                             factor_fingerprint=this_fingerprint,
+                             exclude_fingerprint=card.fingerprint())
+    n_trials = max(card.n_configs_tried, runset.n_configs_run) + prior["n_trials"]
     dsr = rv.deflated_sharpe(primary.returns, n_trials=n_trials, rf_daily=rf)
     research["deflated_sharpe"] = dsr
+    research["prior_trials"] = prior
     R.p("")
     R.p("  DEFLATED SHARPE RATIO (Bailey & Lopez de Prado):")
     for k in ("sharpe_ann", "n_trials", "selection_threshold_sharpe",
@@ -450,7 +462,19 @@ def main(argv=None) -> int:
     if "interpretation" in dsr:
         R.p(f"    -> {dsr['interpretation']}")
     R.p(f"    trial budget = card({card.n_configs_tried}) + this run({runset.n_configs_run})"
-        f" + library history({prior})")
+        f" + library history({prior['n_trials']})")
+    R.p(f"      library history = {prior['from_same_paper']} config(s) on this paper"
+        f" + {prior['from_same_bet']} elsewhere at factor cosine >= "
+        f"{prior['cosine_threshold']:.2f}")
+    if prior["from_same_bet"]:
+        R.p("      counted as the same bet under another name:")
+        for h in prior["matches"][:5]:
+            R.p(f"        {h['card_id']}  cos = {h['cosine']:.3f}"
+                f"  outcome = {h.get('outcome')}")
+    if not this_fingerprint:
+        R.p("      ! no factor fingerprint for this run, so the same-bet route")
+        R.p("        could not be checked. The budget counts only this paper's")
+        R.p("        own prior configs and is a LOWER BOUND.")
 
     # ---- sensitivities ----
     run_one = inp["run_one"]
@@ -528,8 +552,7 @@ def main(argv=None) -> int:
         for k, v in br.items():
             R.p(f"    {k:<22}: {v:.4f}" if isinstance(v, float) else f"    {k:<22}: {v}")
 
-    sleeves = pd.DataFrame({a: snap.frame[a].pct_change() for a in card.universe.assets}).dropna()
-    fp = pv.factor_fingerprint(primary.returns, sleeves, rf_daily=rf)
+    # sleeves / fp were computed before STEP 06 -- the trial budget needed them.
     if "error" in fp:
         # Carry the reason forward so Gate B can show a failed row rather than
         # quietly dropping the criterion. On this desk the fingerprint is the

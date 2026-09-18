@@ -124,6 +124,7 @@ class StrategyLibrary:
             cos = float(a @ b / (na * nb))
             if cos >= threshold:
                 hits.append({"entry_id": e["entry_id"], "card_id": e.get("card_id"),
+                             "card_fingerprint": e.get("card_fingerprint"),
                              "cosine": round(cos, 4), "outcome": e.get("outcome")})
         return sorted(hits, key=lambda h: -h["cosine"])
 
@@ -142,6 +143,55 @@ class StrategyLibrary:
         fps.discard(None)
         fps.discard(exclude_fingerprint)
         return len(fps)
+
+    # A run counts against the trial budget when it was THE SAME BET, however it
+    # was named. 0.95 is stricter than the 0.90 used to surface neighbours for a
+    # human -- that report wants to show near-misses, this must only count
+    # experiments that really were the same one. Over-counting makes a skill
+    # claim harder, which is the safe direction; under-counting is the dangerous
+    # one and is what was happening.
+    SAME_BET_COSINE = 0.95
+
+    def prior_trials(self, card_id_prefix: str,
+                     factor_fingerprint: Optional[Dict[str, float]] = None,
+                     threshold: Optional[float] = None,
+                     exclude_fingerprint: Optional[str] = None) -> Dict[str, Any]:
+        """Distinct prior configurations that count against this run's trial budget.
+
+        trials_for_family() alone matched on the card id, so two cards ABOUT THE
+        SAME BET under different names counted as zero prior trials. That is
+        precisely the leak its own docstring warns about, and it fired in
+        practice: a card found seven library entries at cosine >= 0.99 while its
+        deflated Sharpe was computed as though nothing had been tried before.
+
+        The union of both routes is the honest n. De-duplicated by card
+        fingerprint, because re-running an identical configuration is not a new
+        trial -- no selection happened.
+        """
+        thr = self.SAME_BET_COSINE if threshold is None else threshold
+        family = {e.get("card_fingerprint") for e in self.all()
+                  if str(e.get("card_id", "")).startswith(card_id_prefix)}
+        family.discard(None)
+        family.discard(exclude_fingerprint)
+
+        same_bet = set()
+        hits = []
+        if factor_fingerprint:
+            hits = [h for h in self.similar_by_fingerprint(factor_fingerprint,
+                                                           threshold=thr)
+                    if h.get("card_fingerprint") != exclude_fingerprint]
+            same_bet = {h.get("card_fingerprint") for h in hits}
+            same_bet.discard(None)
+            same_bet.discard(exclude_fingerprint)
+
+        union = family | same_bet
+        return {
+            "n_trials": len(union),
+            "from_same_paper": len(family),
+            "from_same_bet": len(same_bet - family),
+            "cosine_threshold": thr,
+            "matches": sorted(hits, key=lambda h: -h["cosine"])[:10],
+        }
 
     def summary(self) -> List[Dict[str, Any]]:
         return [{"entry_id": e["entry_id"], "card": e.get("card_id"),
