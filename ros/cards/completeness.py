@@ -247,6 +247,95 @@ def assess(card) -> Completeness:
     check("honesty", "promotion question stated", len(_txt(card.notes)) > 60, 1, "",
           "one line on what would make this worth running")
 
+    # ---- the dataset this paper deserves --------------------------------
+    dp = getattr(card, "data_plan", None)
+    check("data plan", "dataset designed from the paper", dp is not None, 3, "",
+          "without it the card can only shop from what the fund already holds, "
+          "and a paper quietly becomes whatever the existing data can answer")
+    if dp is not None:
+        check("data plan", "fields specified", len(dp.ideal) >= 1, 3,
+              f"{len(dp.ideal)} field(s)", "nothing to procure against")
+        check("data plan", "granularity argued",
+              all(_txt(d.why_granularity) for d in dp.ideal) and bool(dp.ideal), 3,
+              "", "granularity is where cost and correctness trade off hardest "
+                  "and it is usually chosen by habit: a 21-day skip cannot be "
+                  "computed monthly, and tick data answers nobody's question here")
+        check("data plan", "history argued",
+              all(_txt(d.why_history) for d in dp.ideal) and bool(dp.ideal), 2,
+              "", "a start date nobody argued for is a start date that was "
+                  "chosen by what the vendor happened to sell")
+        check("data plan", "adjustments named",
+              all(_txt(d.adjustments) for d in dp.ideal) and bool(dp.ideal), 2,
+              "", "two vendors sell a file with the same NAME and only one lets "
+                  "you run the strategy; the adjustments are the difference")
+        check("data plan", "minimum viable subset marked",
+              any(d.minimum_viable for d in dp.ideal), 3,
+              f"{sum(1 for d in dp.ideal if d.minimum_viable)} of {len(dp.ideal)}",
+              "without a smallest honest subset every request reads as essential "
+              "and none can be traded off against cost")
+        check("data plan", "alternatives rejected", len(dp.rejected_alternatives) >= 1, 2,
+              f"{len(dp.rejected_alternatives)} considered",
+              "a dataset with no rejected alternative was not designed, it was "
+              "assumed")
+        check("data plan", "optimality argued", len(_txt(dp.optimality_argument)) > 80, 3,
+              "", "the section exists to answer 'are we testing this properly or "
+                  "testing what we own'. Without the argument it answers neither")
+        check("data plan", "what would change the answer",
+              bool(_txt(dp.what_would_change_the_answer)), 1, "",
+              "names the data that would overturn the conclusion, so a null "
+              "result can be told apart from an underpowered one")
+
+    # ---- which securities, and on whose word ----------------------------
+    sel = getattr(card, "selection", None)
+    check("selection", "rule stated", sel is not None and bool(_txt(sel.rule)), 3, "",
+          "a selection nobody can re-derive on another date is not a strategy")
+    if sel is not None and sel.explicit_securities:
+        # Same name as the Gate A criterion on purpose: one concern should not
+        # have two labels across the two surfaces a reviewer reads.
+        check("selection", "named securities are verified",
+              sel.verified_against not in ("", "UNVERIFIED"), 3,
+              f"{len(sel.explicit_securities)} names, "
+              f"verified_against={sel.verified_against or 'MISSING'}",
+              "a model naming Indian stocks from memory produces a plausible, "
+              "unverifiable list -- worse than no list, because it looks checked")
+        check("selection", "named securities are dated", bool(sel.as_of), 2,
+              sel.as_of or "", "index membership is true on a date, not in general")
+
+    # ---- what will actually be run --------------------------------------
+    bp = getattr(card, "backtest_plan", None)
+    check("backtest plan", "plan present", bp is not None, 3, "",
+          "if a human has to work out the window, the warmup or the benchmarks "
+          "then Stage 02 did not finish and Gate A is doing the work")
+    if bp is not None:
+        check("backtest plan", "sample window argued",
+              bool(bp.sample_start and bp.sample_end and _txt(bp.why_this_window)), 3,
+              f"{bp.sample_start or '?'} -> {bp.sample_end or '?'}",
+              "an unargued sample is the easiest place to pick a period that "
+              "flatters the result")
+        check("backtest plan", "warmup stated", bp.warmup_days is not None, 2,
+              f"{bp.warmup_days}d" if bp.warmup_days is not None else "",
+              "without it the estimator's burn-in silently becomes part of the "
+              "track record, and runs start on different dates")
+        check("backtest plan", "weights rule", bool(_txt(bp.weights_rule)), 3, "",
+              "how a selection becomes a portfolio is half the result")
+        check("backtest plan", "benchmarks with reasons",
+              bool(bp.benchmarks) and all(b.get("why_this") for b in bp.benchmarks), 3,
+              f"{len(bp.benchmarks)} named",
+              "the promotion question is whether this beats what the fund can "
+              "already do for nothing, so the comparator needs an argument")
+        check("backtest plan", "must-beat list", len(bp.must_beat) >= 1, 2,
+              f"{len(bp.must_beat)} named",
+              "naming what it has to beat BEFORE the run is what stops the bar "
+              "moving afterwards")
+        check("backtest plan", "failure is defined",
+              bool(_txt(bp.success_looks_like)) and bool(_txt(bp.failure_looks_like)), 3,
+              "", "a plan that cannot fail is not a test, and a success criterion "
+                  "written after the numbers is not a criterion")
+        check("backtest plan", "failure modes anticipated",
+              len(bp.known_failure_modes) >= 1, 1,
+              f"{len(bp.known_failure_modes)} listed",
+              "the ways this specific mechanism is known to break in India")
+
     # ---- what the model is asking for ----------------------------------
     check("asks", "data requests recorded", len(card.data_requests) >= 1, 2,
           f"{len(card.data_requests)} request(s)",

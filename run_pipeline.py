@@ -231,6 +231,9 @@ def main(argv=None) -> int:
     R.h("GATE A  |  HUMAN INTERPRETATION CONTROL")
     R.block(ga.render())
 
+    R.h("STAGE 02  |  THE PLAN GATE A VERIFIES")
+    R.block(card.plan())
+
     R.h("WHAT THE MODEL IS ASKING YOU FOR")
     R.block(card.asks())
 

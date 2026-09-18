@@ -21,7 +21,7 @@ Two conventions run through all of these:
 from __future__ import annotations
 
 from enum import Enum
-from typing import List, Literal, Optional
+from typing import Dict, List, Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -165,6 +165,85 @@ class StrategyReconstructionFinding(BaseModel):
     confidence: Confidence
 
 
+class DataSpecFinding(BaseModel):
+    """One field of the dataset this paper DESERVES, designed from the paper.
+
+    Not selected from what the fund holds. Design first, check availability
+    after -- inverting that reshapes a paper into whatever the existing data can
+    answer, which is a different paper with the same title.
+    """
+    field: str
+    granularity: str = Field(description="tick / minute / daily / weekly / monthly / quarterly")
+    history_from: str
+    why: str = Field(description="what the MECHANISM needs it for")
+    why_granularity: str = Field(
+        description="why not coarser AND why not finer. The choice that decides "
+                    "what the data costs, and it is usually made by habit")
+    why_history: str = Field(description="why this start date; what the window includes")
+    adjustments: str = Field(
+        description="corporate actions, free float, publication dates. Two vendors "
+                    "sell a file with the same NAME and only one lets you run it")
+    minimum_viable: bool = Field(
+        description="True only if the answer is NOT INTERPRETABLE without it. Most "
+                    "fields improve what you may CLAIM, not what the answer is")
+
+
+class DataPlanFinding(BaseModel):
+    ideal: List[DataSpecFinding]
+    rejected_alternatives: List[Dict[str, str]] = Field(
+        description="each {option, why_not}. A dataset with no rejected "
+                    "alternative was not designed, it was assumed")
+    granularity_verdict: str
+    optimality_argument: str = Field(
+        description="why THIS dataset is the right way to test THIS paper in "
+                    "Indian equities -- optimal, not merely sufficient")
+    what_would_change_the_answer: str = Field(
+        description="which fields could move the verdict, versus which only "
+                    "change what may be claimed from it")
+
+
+class SecuritySelectionFinding(BaseModel):
+    rule: str = Field(description="always required; a named list without a rule "
+                                  "cannot be re-derived on another date")
+    explicit_securities: List[str] = Field(
+        default_factory=list,
+        description="optional and dangerous. Naming stocks from memory produces a "
+                    "plausible unverifiable list, which is WORSE than no list "
+                    "because it looks checked")
+    verified_against: str = Field(
+        default="",
+        description="paper / master_universe / firm_registry / index_factsheet / "
+                    "supplied_by_human / UNVERIFIED. Use UNVERIFIED honestly "
+                    "rather than naming a source you did not check")
+    as_of: str = Field(default="",
+                       description="membership is true on a DATE, not in general")
+    why_these: str = ""
+
+
+class BacktestPlanFinding(BaseModel):
+    """Exactly what will be run, so Gate A verifies rather than designs."""
+    sample_start: str
+    sample_end: str
+    why_this_window: str = Field(
+        description="an unargued sample is the easiest place to pick a period "
+                    "that flatters the result")
+    warmup_days: Optional[int] = None
+    why_warmup: str = ""
+    rebalance_rule: str
+    weights_rule: str
+    explicit_weights: Dict[str, float] = Field(default_factory=dict)
+    benchmarks: List[Dict[str, str]] = Field(
+        description="each {name, why_this}. Name the do-nothing option, the "
+                    "off-the-shelf product that would replace this for zero "
+                    "turnover, and a stripped-down version isolating the machinery")
+    must_beat: List[str] = Field(
+        description="named BEFORE the run, so the bar cannot move afterwards")
+    success_looks_like: str
+    failure_looks_like: str = Field(
+        description="mandatory. A plan that cannot fail is not a test")
+    known_failure_modes: List[str]
+
+
 class PaperAnalysis(BaseModel):
     """What Step 01 produces instead of a bag of regex hits."""
     title: str
@@ -196,6 +275,10 @@ class PaperAnalysis(BaseModel):
     # Stage 01's two heaviest outputs. See .claude/commands/ingest.md.
     universe_translation: Optional[UniverseTranslationFinding] = None
     strategy: Optional[StrategyReconstructionFinding] = None
+    # Stage 02's deliverable. See .claude/commands/draft-card.md.
+    data_plan: Optional[DataPlanFinding] = None
+    selection: Optional[SecuritySelectionFinding] = None
+    backtest_plan: Optional[BacktestPlanFinding] = None
 
     data_requirements: List[DataRequirementFinding]
     reported_results: List[ReportedResult]

@@ -117,6 +117,77 @@ def gate_a(card, feasibility, extraction_quality=None,
                 value=len(tc.caveats), threshold=">=1", blocking=False,
                 evidence="a translation with nothing to lose has not been examined"))
 
+    # ---- is Gate A verifying, or designing? ------------------------------
+    # These three exist so a human at Gate A confirms a plan rather than filling
+    # one in. Stage 02 is where the work happens; if the card cannot say what
+    # dataset it wants, which securities, and what will be run, it is not done.
+    dp = getattr(card, "data_plan", None)
+    if dp is None:
+        c.append(_missing(
+            "dataset designed from the paper", "a data plan",
+            "the card names no dataset of its own, so it can only shop from what "
+            "the fund already holds -- and a paper reshaped to fit the available "
+            "data is a different paper"))
+    else:
+        errs = dp.validate()
+        c.append(Criterion(
+            "dataset designed from the paper", not errs,
+            value=f"{len(dp.ideal)} field(s), "
+                  f"{sum(1 for d in dp.ideal if d.minimum_viable)} minimum-viable",
+            evidence="; ".join(errs) or
+                     " ".join(dp.granularity_verdict.split())[:140]))
+        c.append(Criterion(
+            "alternatives were rejected, not skipped",
+            len(dp.rejected_alternatives) >= 1,
+            value=len(dp.rejected_alternatives), threshold=">=1", blocking=False,
+            evidence="; ".join(r.get("option", "?") for r in
+                               dp.rejected_alternatives)
+                     or "a dataset with no rejected alternative was assumed"))
+
+    sel = getattr(card, "selection", None)
+    if sel is None or not sel.rule.strip():
+        c.append(_missing(
+            "securities selection stated", "a rule",
+            "a selection nobody can re-derive on another date is not a strategy"))
+    else:
+        c.append(Criterion(
+            "securities selection stated", True,
+            value=(f"{len(sel.explicit_securities)} named"
+                   if sel.explicit_securities else "rule only"),
+            evidence=" ".join(sel.rule.split())[:150]))
+        if sel.explicit_securities:
+            verified = sel.verified_against not in ("", "UNVERIFIED")
+            c.append(Criterion(
+                "named securities are verified", verified,
+                value=sel.verified_against or "NOTHING",
+                threshold="not UNVERIFIED",
+                evidence=(f"{len(sel.explicit_securities)} names as of "
+                          f"{sel.as_of or 'no date'}") if verified else
+                         "a list recalled rather than checked is plausible and "
+                         "unverifiable, which is worse than no list"))
+
+    bp = getattr(card, "backtest_plan", None)
+    if bp is None:
+        c.append(_missing(
+            "the run is specified", "a backtest plan",
+            "without it Gate A is designing the run rather than verifying it: "
+            "the window, the warmup, the benchmarks and the failure criteria are "
+            "all still open"))
+    else:
+        errs = bp.validate()
+        c.append(Criterion(
+            "the run is specified", not errs,
+            value=f"{bp.sample_start} -> {bp.sample_end}",
+            evidence="; ".join(errs) or
+                     f"{len(bp.benchmarks)} benchmark(s), "
+                     f"{len(bp.must_beat)} must-beat"))
+        c.append(Criterion(
+            "failure is defined before the run",
+            bool(bp.failure_looks_like.strip()),
+            evidence=" ".join(bp.failure_looks_like.split())[:150] or
+                     "a plan that cannot fail is not a test, and a criterion "
+                     "written after the numbers is not a criterion"))
+
     # ---- what is the model asking a human for? ---------------------------
     reqs = getattr(card, "data_requests", []) or []
     qs = getattr(card, "open_questions", []) or []

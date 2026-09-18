@@ -109,6 +109,169 @@ class ReplicationTarget:
     evidence_page: Optional[int] = None
 
 
+GRANULARITIES = {"tick", "minute", "daily", "weekly", "monthly", "quarterly"}
+VERIFY_SOURCES = {"paper", "master_universe", "firm_registry", "index_factsheet",
+                  "supplied_by_human", "UNVERIFIED"}
+
+
+@dataclass
+class DataSpec:
+    """One field of the dataset this paper DESERVES, designed from the paper.
+
+    Not selected from what the fund happens to hold. The order matters: design
+    the right dataset first, then discover what is available. Inverting that --
+    starting from the eight series on the shelf -- is how a paper gets quietly
+    reshaped into whatever the existing data can answer, which is a different
+    paper.
+
+    `why_granularity` and `why_history` exist because those two choices are
+    where cost and correctness trade off hardest, and both are usually made by
+    habit. A 21-day skip cannot be computed from monthly closes; twenty years of
+    tick data answers a question nobody asked.
+    """
+    field: str = ""
+    granularity: str = "daily"
+    history_from: str = ""
+    why: str = ""                      # what the mechanism needs it for
+    why_granularity: str = ""          # why not coarser, why not finer
+    why_history: str = ""              # why this start date
+    adjustments: str = ""              # corporate actions, float, publication date
+    minimum_viable: bool = False       # in the smallest honest subset?
+
+    def validate(self, ctx: str) -> List[str]:
+        errs = []
+        if not self.field.strip():
+            errs.append(f"{ctx}: field is required")
+        if self.granularity not in GRANULARITIES:
+            errs.append(f"{ctx}: granularity '{self.granularity}' not in "
+                        f"{sorted(GRANULARITIES)}")
+        if not self.why.strip():
+            errs.append(f"{ctx}: say what the mechanism needs this for")
+        if not self.why_granularity.strip():
+            errs.append(f"{ctx}: say why this granularity and not coarser -- it "
+                        f"is the choice that decides what the data costs")
+        return errs
+
+
+@dataclass
+class DataPlan:
+    """The dataset this paper deserves, and the argument that it is the right one.
+
+    The section a human reads to answer "are we testing this properly, or
+    testing what we happen to own?"
+    """
+    ideal: List[DataSpec] = field(default_factory=list)
+    rejected_alternatives: List[Dict[str, str]] = field(default_factory=list)
+    optimality_argument: str = ""
+    granularity_verdict: str = ""      # the headline call, with its reason
+    what_would_change_the_answer: str = ""
+
+    def validate(self, ctx: str = "data_plan") -> List[str]:
+        errs = []
+        if not self.ideal:
+            errs.append(f"{ctx}: ideal is empty -- the card must say what dataset "
+                        f"this paper deserves before anyone checks what we hold")
+        for i, d in enumerate(self.ideal):
+            errs += d.validate(f"{ctx}.ideal[{i}]")
+        if not self.optimality_argument.strip():
+            errs.append(f"{ctx}: state why THIS dataset is the right way to test "
+                        f"this paper in Indian equities")
+        if not any(d.minimum_viable for d in self.ideal) and self.ideal:
+            errs.append(f"{ctx}: mark at least one field minimum_viable -- without "
+                        f"a smallest honest subset, every request reads as essential "
+                        f"and none can be traded off")
+        for i, r in enumerate(self.rejected_alternatives):
+            if not isinstance(r, dict) or not r.get("option") or not r.get("why_not"):
+                errs.append(f"{ctx}.rejected_alternatives[{i}]: needs 'option' "
+                            f"and 'why_not'")
+        return errs
+
+
+@dataclass
+class SecuritySelection:
+    """How securities are chosen, and -- if named -- which ones and on whose word.
+
+    A rule is always required. An explicit list is optional and dangerous: a
+    model naming Indian stocks from memory produces a plausible, unverifiable
+    list, which is worse than no list because it looks checked. So a list must
+    say what confirmed it, and `UNVERIFIED` is a legal value that the
+    completeness check and Gate A both surface rather than a field to leave blank.
+    """
+    rule: str = ""                     # how the cross-section is selected
+    explicit_securities: List[str] = field(default_factory=list)
+    verified_against: str = ""         # see VERIFY_SOURCES
+    as_of: str = ""                    # membership is a date-dependent fact
+    why_these: str = ""
+
+    def validate(self, ctx: str = "selection") -> List[str]:
+        errs = []
+        if not self.rule.strip():
+            errs.append(f"{ctx}: rule is required -- a named list without a rule "
+                        f"cannot be re-derived on any other date")
+        if self.explicit_securities:
+            if not self.verified_against:
+                errs.append(f"{ctx}: a named list needs verified_against (use "
+                            f"'UNVERIFIED' if nothing confirmed it -- a list that "
+                            f"looks checked and is not is the worse failure)")
+            elif self.verified_against not in VERIFY_SOURCES:
+                errs.append(f"{ctx}: verified_against '{self.verified_against}' "
+                            f"not in {sorted(VERIFY_SOURCES)}")
+            if not self.as_of:
+                errs.append(f"{ctx}: a named list needs as_of -- index membership "
+                            f"is true on a date, not in general")
+        return errs
+
+
+@dataclass
+class BacktestPlan:
+    """Exactly what will be run, so Gate A is verification and not design.
+
+    If a human has to work out the sample window, the warmup, the benchmarks or
+    what would count as failure, then Stage 02 did not finish and Gate A is
+    doing the work. This section is where that stops.
+    """
+    sample_start: str = ""
+    sample_end: str = ""
+    why_this_window: str = ""
+    warmup_days: Optional[int] = None
+    why_warmup: str = ""
+    rebalance_rule: str = ""
+    weights_rule: str = ""
+    explicit_weights: Dict[str, float] = field(default_factory=dict)
+    benchmarks: List[Dict[str, str]] = field(default_factory=list)
+    must_beat: List[str] = field(default_factory=list)
+    success_looks_like: str = ""
+    failure_looks_like: str = ""
+    known_failure_modes: List[str] = field(default_factory=list)
+
+    def validate(self, ctx: str = "backtest_plan") -> List[str]:
+        errs = []
+        for f_ in ("sample_start", "sample_end", "rebalance_rule", "weights_rule"):
+            if not str(getattr(self, f_) or "").strip():
+                errs.append(f"{ctx}: {f_} is required")
+        if not self.why_this_window.strip():
+            errs.append(f"{ctx}: say why this window -- an unargued sample is the "
+                        f"easiest place to pick a period that flatters the result")
+        if not self.benchmarks:
+            errs.append(f"{ctx}: name at least one benchmark, with why_this. The "
+                        f"promotion question is never 'is the Sharpe good'")
+        for i, b in enumerate(self.benchmarks):
+            if not isinstance(b, dict) or not b.get("name") or not b.get("why_this"):
+                errs.append(f"{ctx}.benchmarks[{i}]: needs 'name' and 'why_this'")
+        if not self.success_looks_like.strip() or not self.failure_looks_like.strip():
+            errs.append(f"{ctx}: state success_looks_like AND failure_looks_like. "
+                        f"A plan that cannot fail is not a test")
+        if self.explicit_weights:
+            tot = sum(self.explicit_weights.values())
+            if tot > 1.0 + 1e-6:
+                errs.append(f"{ctx}: explicit_weights sum to {tot:.4f}; this fund "
+                            f"is unlevered")
+            if any(w < 0 for w in self.explicit_weights.values()):
+                errs.append(f"{ctx}: a negative explicit weight -- this fund "
+                            f"cannot short")
+        return errs
+
+
 PRIORITIES = {"blocking", "high", "nice_to_have"}
 ASK_OF = {"data_owner", "pm", "researcher", "anyone"}
 
@@ -387,6 +550,11 @@ class StrategyCard:
     # load, but Gate A reports their absence rather than passing over it.
     universe_translation: Optional[UniverseTranslation] = None
     strategy: Optional[StrategyReconstruction] = None
+    # Stage 02's job: design the dataset, name the securities, state the plan.
+    # If a human has to supply any of these at Gate A, Stage 02 did not finish.
+    data_plan: Optional[DataPlan] = None
+    selection: Optional[SecuritySelection] = None
+    backtest_plan: Optional[BacktestPlan] = None
     data_requirements: List[DataRequirement] = field(default_factory=list)
     ambiguities: List[Ambiguity] = field(default_factory=list)
     replication_targets: List[ReplicationTarget] = field(default_factory=list)
@@ -439,6 +607,9 @@ class StrategyCard:
             errs += r.validate(f"data_requests[{i}]")
         for i, q in enumerate(self.open_questions):
             errs += q.validate(f"open_questions[{i}]")
+        for section in (self.data_plan, self.selection, self.backtest_plan):
+            if section is not None:
+                errs += section.validate()
         return errs
 
     @property
@@ -611,6 +782,119 @@ class StrategyCard:
         L.append("  " + "=" * W)
         return "\n".join(L)
 
+    def plan(self) -> str:
+        """The dataset, the securities and the run -- what Gate A verifies.
+
+        Stage 02's deliverable. If a human reading this has to work out the
+        window, the warmup, the benchmarks or what would count as failure, then
+        Stage 02 did not finish and Gate A is doing the design.
+        """
+        W = 96
+        dp, sel, bp = self.data_plan, self.selection, self.backtest_plan
+        L = ["  " + "=" * W, "  THE DATASET THIS PAPER DESERVES", "  " + "=" * W]
+
+        if dp is None:
+            L += ["", "  NO DATA PLAN ON THIS CARD.",
+                  "  Without one the card can only shop from what the fund holds,",
+                  "  and a paper quietly becomes whatever the existing data can answer."]
+        else:
+            if dp.granularity_verdict:
+                L.append("")
+                for i, line in enumerate(_wrap(" ".join(dp.granularity_verdict.split()), W - 16)):
+                    L.append(f"  {'granularity:' if i == 0 else '':<14} {line}")
+            for d in dp.ideal:
+                tag = "MINIMUM VIABLE" if d.minimum_viable else "improves the claim"
+                L += ["", f"  [{tag}] {d.field}",
+                      f"      {d.granularity}, from {d.history_from or '?'}"]
+                for label, val in (("why", d.why), ("granularity", d.why_granularity),
+                                   ("history", d.why_history),
+                                   ("adjustments", d.adjustments)):
+                    if str(val or "").strip():
+                        for i, line in enumerate(_wrap(" ".join(str(val).split()), W - 20)):
+                            L.append(f"      {label if i == 0 else '':<14} {line}")
+            if dp.rejected_alternatives:
+                L += ["", "  " + "-" * W, "  CONSIDERED AND REJECTED", "  " + "-" * W]
+                for r in dp.rejected_alternatives:
+                    L.append("")
+                    L.append(f"  x {r.get('option', '?')}")
+                    for i, line in enumerate(_wrap(
+                            " ".join(str(r.get("why_not", "")).split()), W - 12)):
+                        L.append(f"      {line}")
+            for label, val in (("WHY THIS IS THE RIGHT DATASET", dp.optimality_argument),
+                               ("WHAT WOULD CHANGE THE ANSWER",
+                                dp.what_would_change_the_answer)):
+                if str(val or "").strip():
+                    L += ["", f"  {label}"]
+                    for line in _wrap(" ".join(str(val).split()), W - 6):
+                        L.append(f"      {line}")
+
+        L += ["", "  " + "=" * W, "  WHICH SECURITIES", "  " + "=" * W]
+        if sel is None:
+            L.append("  NO SELECTION RULE. A selection nobody can re-derive on "
+                     "another date is not a strategy.")
+        else:
+            for i, line in enumerate(_wrap(" ".join(sel.rule.split()), W - 12)):
+                L.append(f"  {'rule:' if i == 0 else '':<8} {line}")
+            if sel.explicit_securities:
+                flag = ("" if sel.verified_against not in ("", "UNVERIFIED")
+                        else "   <-- NOT VERIFIED; treat as a guess")
+                L.append(f"  named:   {len(sel.explicit_securities)} securities, "
+                         f"verified against {sel.verified_against or 'NOTHING'}"
+                         f" as of {sel.as_of or 'no date'}{flag}")
+                for nm in sel.explicit_securities:
+                    L.append(f"             {nm}")
+            if sel.why_these:
+                for i, line in enumerate(_wrap(" ".join(sel.why_these.split()), W - 12)):
+                    L.append(f"  {'why:' if i == 0 else '':<8} {line}")
+
+        L += ["", "  " + "=" * W, "  WHAT WILL BE RUN", "  " + "=" * W]
+        if bp is None:
+            L.append("  NO BACKTEST PLAN. Gate A would be designing the run "
+                     "rather than verifying it.")
+        else:
+            L.append(f"    sample     : {bp.sample_start} -> {bp.sample_end}"
+                     + (f"   warmup {bp.warmup_days}d"
+                        if bp.warmup_days is not None else "   warmup NOT STATED"))
+            for label, val in (("why window", bp.why_this_window),
+                               ("why warmup", bp.why_warmup),
+                               ("rebalance", bp.rebalance_rule),
+                               ("weights", bp.weights_rule)):
+                if str(val or "").strip():
+                    for i, line in enumerate(_wrap(" ".join(str(val).split()), W - 20)):
+                        L.append(f"    {label if i == 0 else '':<12} {line}")
+            if bp.explicit_weights:
+                tot = sum(bp.explicit_weights.values())
+                L.append(f"    strategic  : " + ", ".join(
+                    f"{k} {v:.0%}" for k, v in bp.explicit_weights.items())
+                    + f"   (sum {tot:.0%})")
+            if bp.benchmarks:
+                L.append("")
+                L.append("    BENCHMARKS -- what this is measured against, and why")
+                for b in bp.benchmarks:
+                    L.append(f"      {b.get('name', '?')}")
+                    for line in _wrap(" ".join(str(b.get("why_this", "")).split()), W - 14):
+                        L.append(f"          {line}")
+            if bp.must_beat:
+                L.append("")
+                L.append("    MUST BEAT (named before the run, so the bar cannot move after)")
+                for m in bp.must_beat:
+                    L.append(f"      - {m}")
+            for label, val in (("SUCCESS", bp.success_looks_like),
+                               ("FAILURE", bp.failure_looks_like)):
+                if str(val or "").strip():
+                    L.append("")
+                    L.append(f"    {label} LOOKS LIKE")
+                    for line in _wrap(" ".join(str(val).split()), W - 8):
+                        L.append(f"      {line}")
+            if bp.known_failure_modes:
+                L.append("")
+                L.append("    KNOWN WAYS THIS BREAKS IN INDIA")
+                for f_ in bp.known_failure_modes:
+                    for i, line in enumerate(_wrap(" ".join(str(f_).split()), W - 10)):
+                        L.append(f"      {'-' if i == 0 else ' '} {line}")
+        L += ["", "  " + "=" * W]
+        return "\n".join(L)
+
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
 
@@ -640,10 +924,15 @@ def _build(cls, blob, name):
     for key, sub in _NESTED.get(cls, {}).items():
         if isinstance(kw.get(key), dict):
             kw[key] = _build(sub, kw[key], f"{name}.{key}")
+    for key, sub in _LISTED.get(cls, {}).items():
+        if isinstance(kw.get(key), list):
+            kw[key] = [_build(sub, v, f"{name}.{key}[{i}]") if isinstance(v, dict)
+                       else v for i, v in enumerate(kw[key])]
     return cls(**kw)
 
 
 _NESTED[UniverseTranslation] = {"mechanism_needs": MechanismNeeds}
+_LISTED = {DataPlan: {"ideal": DataSpec}}
 
 
 def load_card(path: str) -> StrategyCard:
@@ -655,7 +944,7 @@ def load_card(path: str) -> StrategyCard:
              "data_requirements", "ambiguities", "replication_targets",
              "benchmark_templates", "n_configs_tried", "notes", "card_version",
              "universe_translation", "strategy", "data_requests",
-             "open_questions"}
+             "open_questions", "data_plan", "selection", "backtest_plan"}
     unknown = set(blob) - known
     if unknown:
         raise CardValidationError(f"card has unknown top-level keys: {sorted(unknown)}")
@@ -689,5 +978,11 @@ def load_card(path: str) -> StrategyCard:
                        for i, r in enumerate(blob.get("data_requests") or [])],
         open_questions=[_build(OpenQuestion, q, f"open_questions[{i}]")
                         for i, q in enumerate(blob.get("open_questions") or [])],
+        data_plan=(_build(DataPlan, blob["data_plan"], "data_plan")
+                   if blob.get("data_plan") else None),
+        selection=(_build(SecuritySelection, blob["selection"], "selection")
+                   if blob.get("selection") else None),
+        backtest_plan=(_build(BacktestPlan, blob["backtest_plan"], "backtest_plan")
+                       if blob.get("backtest_plan") else None),
     )
     return card.require_valid()

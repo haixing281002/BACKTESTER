@@ -214,6 +214,9 @@ def main() -> int:
     shortfall += [r.requirement for r in feas.resolutions
                   if r.status == UNAVAILABLE and r.requirement not in shortfall]
 
+    head("STAGE 02  |  THE PLAN GATE A VERIFIES")
+    para(card.plan(), indent="")
+
     head("WHAT THE MODEL IS ASKING YOU FOR")
     para(card.asks(), indent="")
 

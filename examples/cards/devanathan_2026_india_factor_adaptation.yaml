@@ -268,6 +268,227 @@ benchmark_templates:
   - {name: "Equal risk contribution", template: equal_risk_contribution, params: {}}
   - {name: "Min variance",         template: min_variance, params: {}}
 
+data_plan:
+  # Designed from the paper, then compared with what the fund holds -- not the
+  # other way round. The mechanism allocates across a few long-only return
+  # streams under a risk cap; it never ranks securities. So the right dataset is
+  # a handful of clean stream histories, NOT a stock cross-section, and adding
+  # breadth would test an optimiser this paper never described.
+  ideal:
+    - field: "Total-return daily series for each of the five NSE factor sleeves"
+      granularity: daily
+      history_from: "2005-04-01"
+      why: >
+        The allocator needs a return stream per sleeve to estimate covariance and
+        an EWMA drift. Total return, not price return, because the cash leg is
+        compared against equity and a missing dividend biases that comparison in
+        one direction.
+      why_granularity: >
+        Daily and no finer. The covariance window is 11 days, so monthly data
+        cannot form the estimate at all, and the rebalance is monthly so
+        intraday adds nothing but cost -- there is no execution decision inside
+        the day to model.
+      why_history: >
+        2005-04 is the earliest date all five sleeves exist. Starting later
+        truncates the 2008 drawdown, which is the only severe stress in the
+        Indian sample and the regime where a hard volatility cap either earns
+        its keep or does not.
+      adjustments: "dividends reinvested; no survivorship question -- an index does not delist"
+      minimum_viable: true
+    - field: "Indian overnight or 91-day T-bill rate, daily"
+      granularity: daily
+      history_from: "2005-04-01"
+      why: >
+        Two distinct roles: the accrual on the un-invested residual, and the
+        numeraire every Sharpe here is measured against. A constant serves
+        neither honestly.
+      why_granularity: >
+        Daily, to match the accrual. Monthly would be acceptable and
+        forward-filled; a constant is not, because the mechanism de-risks into
+        cash and the value of doing so depends on where rates were at the time.
+      why_history: "same window as the sleeves, or the Sharpe is spliced"
+      adjustments: "annualised decimal; state the day-count convention"
+      minimum_viable: true
+    - field: "Daily traded value for each sleeve's tracking ETF, or its constituents"
+      granularity: daily
+      history_from: "2010-01-01"
+      why: >
+        The strategy's whole cost is turnover, and capacity is the binding
+        constraint on this desk rather than Sharpe. Without ADV, turnover_capacity
+        runs on a hand-supplied argument and the capacity conclusion is an input.
+      why_granularity: "daily, because turnover is charged per rebalance"
+      why_history: >
+        2010 onward is enough: sleeve ETFs did not exist earlier, and a capacity
+        number computed on a market that has since tripled in depth would be
+        wrong in the conservative direction rather than the dangerous one.
+      adjustments: "traded VALUE in INR, not share count"
+      minimum_viable: false
+    - field: "Each sleeve index's true launch date and methodology-change history"
+      granularity: monthly
+      history_from: "2005-04-01"
+      why: >
+        The held history is backfilled to a 2005 base with rules fixed years
+        later. Knowing the real launch date is what allows a post-launch-only
+        re-run, which is the only version of this that could support a live claim.
+      why_granularity: "a handful of dates, not a series"
+      why_history: "the full window, so the backfilled portion is identifiable"
+      adjustments: "one row per index: name, launch_date, any methodology revision"
+      minimum_viable: false
+  rejected_alternatives:
+    - option: "NIFTY 500 constituent-level prices and a 500-asset optimiser"
+      why_not: >
+        Tests a different paper. The 11-day covariance this mechanism uses is
+        near-singular well before 500 assets, so the optimiser would be doing
+        error maximisation rather than the paper's constrained allocation. If we
+        want a stock-level test, that is its own card.
+    - option: "Monthly sleeve closes"
+      why_not: >
+        The covariance window is 11 days and the EWMA has a 252-day halflife.
+        Monthly data cannot form either. Cheaper and useless.
+    - option: "Minute or tick data on the sleeve ETFs"
+      why_not: >
+        There is no intraday decision in this strategy: it sets weights once a
+        month on a close. Intraday would inform EXECUTION, which is a different
+        question from whether the signal exists, and would cost orders of
+        magnitude more for it.
+    - option: "The price-return sleeve series we already hold, unchanged"
+      why_not: >
+        It is what we will actually run on, and it is not the right dataset.
+        Dividends are missing from every series, so absolute returns understate
+        and the cash-versus-equity comparison that this mechanism turns on is
+        biased against equity throughout. Listed here so the gap is recorded
+        rather than forgotten.
+  granularity_verdict: >
+    DAILY, and nothing finer. The signal is formed on daily closes over an 11-day
+    window and traded monthly. Weekly loses the covariance estimate; intraday
+    answers an execution question this card does not ask.
+  optimality_argument: >
+    Five clean total-return streams plus a real short rate is the smallest
+    dataset that can answer this paper's actual question -- does a hard ex-ante
+    risk cap plus an l1 leash beat a static mix of the same streams, after
+    Indian costs. It is optimal rather than merely sufficient because every
+    addition we considered either tests a different mechanism (stock-level
+    breadth), cannot form the estimator (monthly), or prices an execution
+    decision this strategy does not make (intraday). The two fields marked
+    minimum_viable are the ones without which the answer is not interpretable;
+    ADV and launch dates change what we may CLAIM from the answer, not what the
+    answer is.
+  what_would_change_the_answer: >
+    Total-return series would raise every absolute return and narrow the gap
+    between the cash-holding and fully-invested variants, which is the comparison
+    the promotion decision turns on. A real rate series would let the cash leg
+    de-risk into an actual rate-cut cycle instead of a straight line, which is
+    where the paper claims its drawdown control comes from. Either could move
+    the verdict; ADV and launch dates cannot.
+
+selection:
+  rule: >
+    No selection step. All five sleeves are candidates at every rebalance and the
+    optimiser sets every weight, with the l1 leash bounding how far the mix may
+    stray from 20/20/20/20/20. NIFTY HIGH BETA 50 is excluded by construction:
+    its history starts 2012-11 and including it would truncate the sample by
+    seven years.
+  explicit_securities:
+    - NIFTY500 MOMENTUM 50
+    - NIFTY500 QUALITY 50
+    - NIFTY500 VALUE 50
+    - NIFTY500 LOW VOLATILITY 50
+    - NIFTY ALPHA 50
+  verified_against: firm_registry
+  as_of: "2026-05-29"
+  why_these: >
+    They are the five NSE single-factor indices drawn from NIFTY500 for which the
+    fund holds a full common history. Naming them is safe here because they are
+    indices the registry confirms, not stocks recalled from memory -- the list is
+    checkable against ros/data/firm_registry.py rather than asserted.
+
+backtest_plan:
+  sample_start: "2005-04-01"
+  sample_end: "2026-05-29"
+  why_this_window: >
+    Starts at the earliest date all five sleeves exist, so no sleeve is spliced
+    in mid-sample. Ends at NIFTY 500's last close, nine trading days before the
+    sleeves, because the benchmark comparison must be on a common window and
+    truncating the benchmark instead would flatter the strategy on those days.
+    The window includes 2008, which is the only severe stress in the Indian
+    sample and the regime a hard volatility cap exists for.
+  warmup_days: 16
+  why_warmup: >
+    lookback (11) + 5. The covariance and the EWMA cannot be formed before the
+    window fills, and trading on a partial estimate silently makes burn-in part
+    of the track record. Every benchmark uses the same warmup so no run gets a
+    head start -- an earlier version did not, and aligning the start dates
+    reversed the ranking.
+  rebalance_rule: >
+    Last TRADING day of each calendar month present in the data, never a calendar
+    date that may not trade. Signals are shifted by 1 + lag_days before use.
+  weights_rule: >
+    Convex optimiser output: maximise EWMA drift net of half-spread turnover
+    cost, subject to long-only, gross <= 1, an l1 leash of 1.0 to the strategic
+    mix, and ex-ante vol <= 18%. The residual holds cash in the faithful variant
+    and is renormalised away in the mandate variant.
+  explicit_weights:
+    NIFTY500 MOMENTUM 50: 0.2
+    NIFTY500 QUALITY 50: 0.2
+    NIFTY500 VALUE 50: 0.2
+    NIFTY500 LOW VOLATILITY 50: 0.2
+    NIFTY ALPHA 50: 0.2
+  benchmarks:
+    - name: "NIFTY 500"
+      why_this: >
+        The fund's mandate benchmark and the do-nothing alternative. Beating it
+        is necessary and nowhere near sufficient: any long-only equity basket
+        with a factor tilt has beaten it over this window.
+    - name: "NIFTY500 MULTIFACTOR MQVLV 50"
+      why_this: >
+        The real alternative to building this. An off-the-shelf multifactor index
+        with ZERO turnover and no optimiser to maintain. If the strategy does not
+        beat it after 30bp, the honest recommendation is to buy the index.
+    - name: "Equal-weight sleeves, annually rebalanced"
+      why_this: >
+        Isolates what the machinery buys. Same five streams, no covariance
+        estimate, no optimiser, almost no turnover. The difference between this
+        and the strategy IS the mechanism's contribution.
+    - name: "Vol-target overlay on the equal-weight mix"
+      why_this: >
+        Separates the two halves of the paper: the risk cap (eq. 1) from the
+        optimised allocation (eq. 3). If the overlay captures most of the
+        benefit, the optimiser is not earning its complexity.
+  must_beat:
+    - "NIFTY 500, on the paired bootstrap, at 5%"
+    - "NIFTY500 MULTIFACTOR MQVLV 50, after 30bp round-trip costs"
+    - "Equal-weight sleeves, or the optimiser buys nothing"
+  success_looks_like: >
+    Beats equal-weight AND MQVLV on geometric Sharpe with a paired stationary
+    bootstrap p <= 0.05 against both; deflated Sharpe P(skill) >= 0.95 at the
+    honest trial count; alpha survives the five-sleeve factor regression with
+    |HAC t| >= 2; incremental IR against the existing book positive at a
+    realistic sleeve size; turnover within tolerance; and the ranking stable
+    across the 12-26% target-vol and 4-8% cash-rate sweeps.
+  failure_looks_like: >
+    Any of: statistically tied with equal-weight, so the machinery buys nothing;
+    loses to MQVLV, so the answer is to buy the index; alpha vanishes against the
+    sleeves it is built from, so the excess return is unaccounted factor beta;
+    Sharpe that does not decay monotonically with implementation lag, which means
+    the signal carries no timing information; or a verdict that flips inside
+    either sweep, which makes the result an artefact of an unvalidated knob.
+  known_failure_modes:
+    - >
+      Near-collinear sleeves: 0.74-0.94 pairwise correlation leaves a
+      risk-constrained optimiser very little to do, and what it does do is
+      dominated by covariance estimation error on an 11-day window.
+    - >
+      The cap never binding, or binding always. At 26% target vol the strategy
+      collapses to the strategic mix; at 12% it sits permanently in cash. Either
+      makes the mechanism irrelevant and the sweep is what detects it.
+    - >
+      Turnover eating the edge. The optimiser will happily churn for a few basis
+      points of forecast drift, which is free in the paper's 5bp world and is not
+      here.
+    - >
+      A cash-holding variant flattered by price-return indices: the equity leg
+      is understated by the missing dividend while the cash leg is not.
+
 data_requests:
   - item: "An Indian overnight or T-bill rate series, daily, 2005 onward"
     why: >
