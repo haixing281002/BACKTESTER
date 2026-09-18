@@ -161,6 +161,47 @@ def extend_registry(registry: DataRegistry,
     return registry, added
 
 
+def read_master_declaration(path: str = MANIFEST) -> Optional[Dict[str, Any]]:
+    """The manifest's `master:` block, validated, or None.
+
+    A master universe is one file carrying many securities, so it does not fit
+    the per-series `series:` list. It still needs the same honesty fields: the
+    provenance of the spine travels with every number computed from it, and
+    `pit_status` is what decides whether a live claim may rest on the work.
+    """
+    if not os.path.exists(path):
+        return None
+    with open(path, encoding="utf-8") as fh:
+        blob = yaml.safe_load(fh) or {}
+    m = blob.get("master")
+    if not m:
+        return None
+    if not isinstance(m, dict):
+        raise ManifestError(f"{path}: 'master' must be a mapping")
+    errs = [f"master: '{f}' is required" for f in ("file", "pit_status", "licence")
+            if not m.get(f)]
+    if m.get("pit_status") and m["pit_status"] not in PIT_STATUSES:
+        errs.append(f"master: pit_status '{m['pit_status']}' not in {list(PIT_STATUSES)}")
+    full = os.path.join(RAW_DIR, m["file"]) if m.get("file") else ""
+    if full and not os.path.exists(full):
+        errs.append(f"master: file not found: {full}")
+    if errs:
+        raise ManifestError(f"{path} is not usable:\n  - " + "\n  - ".join(errs))
+    out = dict(m)
+    out["path"] = full
+    return out
+
+
+def load_declared_master(path: str = MANIFEST, **kw):
+    """Parse the manifest-declared master universe, or None if none is declared."""
+    decl = read_master_declaration(path)
+    if decl is None:
+        return None, None
+    from ros.data.master import load_master
+    mu = load_master(decl["path"], **kw)
+    return mu, decl
+
+
 def describe_shortfall(missing: List[str]) -> str:
     """The Gate A block: exactly what to supply, and how."""
     if not missing:

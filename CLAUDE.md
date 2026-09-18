@@ -126,6 +126,8 @@ ros/
       universes.py     20 Indian universes + mechanism-fit ranking; the
                        model chooses, the code scores, a human signs
       intake.py        supplying data at Gate A (manifest-declared, never sniffed)
+      master.py        the master universe: one long CSV in, engine panels out.
+                       Refuses a survivor-only file -- see its README.
   engine/              primitives, allocator templates, backtester
       templates.py     9 allocators; `cross_sectional` ranks a changing universe
       backtest.py      pass `membership=` for a cross-section: NaN prices become
@@ -150,7 +152,7 @@ python run_interpret.py --pdf docs/papers/<paper>.pdf     # 00 -> Gate A, NO DAT
 python run_pipeline.py --card cards/<card>.yaml          # ends at Gate B PENDING
 python run_pipeline.py --card cards/<card>.yaml \
     --decision REJECT --decided-by "Name" --rationale "…"  # a human rules
-python -m pytest tests/ -q                                # 180 tests
+python -m pytest tests/ -q                                # 201 tests
 python validate/cross_check.py --excel                    # engine vs clean-room impl
 python -m ros.interpretation history                      # who interpreted what
 ```
@@ -172,6 +174,13 @@ python -m ros.interpretation history                      # who interpreted what
   price file. Names that delisted must be present and held into their fall; the
   engine sells them at cost when they leave. Dropping a 6-in-30 delisting set is
   worth ~5.6% of three-year return.
+- **Check a master universe the day it lands**, before building on it:
+  `python -m ros.data.master <file>`. It refuses a survivor-only file, a missing
+  membership column, duplicate (date, security) rows and unrecognised membership
+  values — each of which yields a normal-looking backtest that is wrong in the
+  direction that flatters the strategy. Key the file on ISIN or an internal ID,
+  never on the NSE symbol: symbols get reused and a rename splices two companies
+  into one series. See `data/raw/master/README.md`.
 
 ## Data
 
