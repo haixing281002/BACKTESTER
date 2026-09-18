@@ -9,7 +9,10 @@ Read `$1` (a `PaperAnalysis`). Mode is `$2`, defaulting to `adaptation`.
 If no analysis exists yet, run `/ingest` first — do not card from the abstract.
 
 Before drafting, read `ros/cards/schema.py` for the field contract and
-`cards/devanathan_2026_india_factor_adaptation.yaml` as a worked example.
+`examples/cards/devanathan_2026_india_factor_adaptation.yaml` as a worked
+example. **Read it for shape; never copy and edit it.** A card carries a
+paper's sha256 and its own ambiguities, and `cards/` ships empty for that
+reason.
 
 Write `cards/<slug>_<mode>.yaml`. Hard rules:
 
@@ -52,14 +55,20 @@ from ros.cards.completeness import assess
 print(assess(load_card('cards/<slug>.yaml')).render())"
 ```
 
-42 checks, drawn from what a strong card actually contains. Each one names the
-failure it prevents rather than asserting a house style, so a gap is an argument
-to answer, not a box to tick. The repo's worked example scores 99%; a card that
-validates but says nothing scores 17%.
+Around 70 checks on a full adaptation card — the exact number depends on which
+sections your card has, so read the report rather than counting. Each check names
+the failure it prevents rather than asserting a house style, so a gap is an
+argument to answer, not a box to tick. The repo's worked example scores 99%; a
+card that validates but says nothing scores under 20%.
 
 **Anything marked `MISS` is worth fixing before Gate A.** Those are the gaps a
 reviewer cannot work around: no source sha256, no transferred mechanism, no
 transfer risks, a cost copied from the paper, unresolved ambiguities.
+
+**Iterate. Do not draft once and score once.** Fix every `MISS`, re-score, and
+keep going until `serious` is empty. Each pass takes seconds and the score is
+the only feedback you get before a human spends their five minutes on it. A card
+handed over at 70% is a card that asks a reviewer to do Stage 02's work.
 
 ## Two sections that are yours to fill, and easy to leave empty
 
@@ -79,9 +88,18 @@ it can currently be. Say so. One entry per thing, each with:
   as emphasis.
 - **`format_hint`** — the columns you want, so nobody has to guess.
 
-If nothing would improve the test, leave it empty — but that is a strong claim
-and the completeness check will say so, because silence reads as nobody having
-looked.
+**Rank them by what they would SETTLE, not by what would be nice to have.** Go
+back to the chain you wrote at Stage 01 and find the link you least believe. The
+request worth making is the one that decides that link. A request that would not
+change the verdict either way — only what you may claim from it — is real, but
+it is `nice_to_have` and must say so; putting it above the decisive one wastes
+the one moment in this pipeline when the fund is willing to buy data.
+
+If nothing would improve the test, **say so in `no_further_data_needed`** and
+argue it. Leaving the section blank is not the same claim: an argued "the five
+series we hold are the whole mechanism" is something a reviewer can disagree
+with, and silence is something they cannot tell apart from nobody having looked.
+Gate A surfaces the difference.
 
 ### `open_questions` — what the paper does not settle
 
@@ -196,6 +214,37 @@ Every field a human would otherwise have to decide:
 - **`known_failure_modes`** — the ways this specific mechanism is known to break
   in India.
 
+## `convertibility` — the question the fund is actually paying you to answer
+
+Every other section says what the paper is and how it would be tested. This one
+says whether any of it could become something **this fund could hold**. A card
+can be 99% complete and describe a beautiful test of something unholdable.
+
+Write the chain from Stage 01 into `what_must_be_true`, one link per entry:
+the effect exists; it exists in this segment; it survives 30bp at this turnover;
+it survives long-only; it is implementable at size. Then:
+
+- **`weakest_link`** — which one you least believe, **and why**. A chain whose
+  author believes every link equally has not been examined. Naming it is what
+  turns a run into a test of something specific.
+- **`decisive_evidence`** — what would settle it either way. This is what your
+  `data_requests` should be FOR. If your decisive evidence is something you
+  never requested, one of the two sections is wrong.
+- **`if_it_fails`** — what a null would teach us. If failure teaches nothing,
+  the run is not worth its cost, and saying so plainly is the right answer. The
+  best version generalises: "dynamic allocation buys nothing across a correlated
+  single-country sleeve set" retires a family of proposals, not one paper.
+- **`capacity_note`** — a real effect the fund cannot size into is a paper, not
+  a sleeve.
+- **`verdict`** — `convertible`, `convertible_with_data`, `mechanism_only` (a
+  question worth answering that this fund could not hold), or `not_convertible`.
+
+**`not_convertible` is a legitimate and valuable verdict, and it does not block
+Gate A.** A well-argued no here costs the fund nothing further and is worth more
+than most runs. Do not reach for `convertible` because it feels like the
+productive answer — the code cross-checks the verdict against your own asks, and
+`convertible_with_data` with no data request is a contradiction Gate A will show.
+
 ## Then score it
 
 ```bash
@@ -204,8 +253,23 @@ from ros.cards.schema import load_card
 from ros.cards.completeness import assess
 c = load_card('cards/<slug>.yaml')
 print(c.at_a_glance()); print(c.plan()); print(c.asks())
+print(c.convertibility_block())
 print(assess(c).render())"
 ```
 
-62 checks. The repo's worked example scores 99%. Anything marked `MISS` is a gap
-a reviewer cannot work around — fix it before Gate A, where it is still cheap.
+The repo's worked example scores 99% and has no `serious` gaps. Anything marked
+`MISS` is a gap a reviewer cannot work around — fix it, re-score, and repeat
+until nothing serious is left. It is still cheap here and it stops being cheap
+at Gate A.
+
+## Last: read the brief a human will actually read
+
+```bash
+python run_interpret.py --pdf docs/papers/<paper>.pdf --card cards/<slug>.yaml
+```
+
+Gate A now opens with **what a human is being asked to sign**: the judgement
+calls you made, what declining each data request costs, and the blocking items.
+Read that block as if you were the reviewer. If a call you made looks
+unjustifiable when it is standing on its own without the surrounding prose, it
+probably is — fix it now rather than defending it at the gate.

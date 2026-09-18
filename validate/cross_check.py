@@ -45,7 +45,7 @@ from ros.engine.templates import build_allocator
 from ros.validation import metrics as M
 
 XLSX = "data/raw/Factor_Indices_Historical_Price_Data.xlsx"
-CARD = "cards/devanathan_2026_india_factor_adaptation.yaml"
+CARD = "examples/cards/devanathan_2026_india_factor_adaptation.yaml"
 
 # Quantities that are equal by construction get an exact-arithmetic tolerance.
 # Nothing here is a fitted number, so a "close enough" tolerance would only hide

@@ -20,6 +20,55 @@ actually is**.
 
 ---
 
+## Before you read: two minutes that change what you are looking for
+
+**Ask the library what this desk already knows.**
+
+```bash
+python -c "
+from ros.governance.library import StrategyLibrary
+lib = StrategyLibrary('outputs/library')
+for e in lib.summary(): print(e)"
+```
+
+If a similar mechanism has been tested here before, you are not reading this
+paper cold: you are reading it against a prior result, and the interesting
+question becomes *what does this paper do differently*. A momentum paper
+arriving at a desk that already rejected two momentum sleeves needs to justify
+itself on the difference, not on its own abstract. It also feeds the deflated
+Sharpe trial budget, which counts the same bet under any name.
+
+**Then read the paper's abstract and conclusion FIRST, and write down — before
+reading the body — the single sentence you expect the mechanism to be.** Then
+read the body and see whether you were right. Where the body contradicts the
+abstract, that gap is usually the most valuable finding in the paper, and it is
+invisible if you read linearly and arrive at the conclusion already persuaded.
+
+---
+
+## The claim, as a chain
+
+Everything else at this stage hangs off one question: **what would have to be
+true for this to work here?** Write it as a CHAIN, not a paragraph:
+
+1. the effect exists in the source market and is not a statistical artefact
+2. it exists in *this segment* of the Indian market, not merely somewhere
+3. it survives Indian transaction costs at this turnover
+4. it survives long-only (the short leg is usually where the premium lives)
+5. it is implementable at the fund's size
+
+A paragraph averages the weak link away. A chain makes it visible, and the
+weakest link is what the backtest will actually find. This is the raw material
+for the card's `convertibility` section at Stage 02, and it is what a human at
+Gate A is really being asked to sign — so form the opinion while the paper is
+in front of you, not afterwards from the card.
+
+**Name the link you least believe, and say what would settle it.** "What would
+settle it" is the thing that makes a data request worth making: a request that
+would not change the verdict either way is a wish, not a test.
+
+---
+
 ## A. THE UNIVERSE  →  `universe_translation` on the card
 
 A paper sorts S&P 500 constituents. This fund is Indian equity, long-only. Your
@@ -228,6 +277,11 @@ Report at the end, in this order, because it is the order a human will ask:
 3. **Long-only** — what was dropped and what it plausibly cost
 4. **Engine** — the template, or what needs building
 5. **Data** — what `required_instruments` the fund does not hold
+6. **The chain** — the five links, which one you least believe, and what would
+   settle it. If your honest answer is "this cannot become anything this fund
+   could hold", say it here in one line. **A well-argued no at Stage 01 is the
+   single most valuable output this pipeline produces**, because it is the only
+   one that costs nothing further.
 
 You do not decide whether any of this is a good idea. Gate A does, and a human
 owns Gate A.

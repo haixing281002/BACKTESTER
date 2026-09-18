@@ -14,11 +14,25 @@ Rules that make the ladder mean something:
 """
 from __future__ import annotations
 
+import textwrap
 from dataclasses import dataclass, field, asdict
 from typing import Any, Dict, List, Optional
 
+from ros.cards.schema import audit_data_requests
+
 LADDER = ["REPLICATED", "INDIA_VALIDATED", "ROBUST", "ORTHOGONAL",
           "PORTFOLIO_USEFUL", "PAPER_TRADED", "LIVE_CANDIDATE"]
+
+_W = 96
+
+
+def _wrap(text: str, width: int) -> List[str]:
+    """Normalise whitespace and soft-wrap. Empty text yields no lines, so a
+    criterion with no evidence renders as one line rather than a blank one."""
+    flat = " ".join(str(text or "").split())
+    if not flat:
+        return []
+    return textwrap.wrap(flat, width) or []
 
 
 @dataclass
@@ -30,10 +44,25 @@ class Criterion:
     threshold: Any = None
     blocking: bool = True
 
-    def render(self) -> str:
+    def render(self, width: int = _W) -> str:
+        """One criterion, with its evidence WRAPPED rather than cut.
+
+        The evidence is the only part a reviewer can disagree with, and it used
+        to be truncated mid-word by the call sites -- "the covariance estimat".
+        A criterion whose reasoning is cut off is a criterion nobody can check,
+        which turns the gate into a row of green marks.
+        """
         mark = "PASS" if self.passed else ("FAIL" if self.blocking else "warn")
-        val = "" if self.value is None else f"  [{self.value} vs {self.threshold}]"
-        return f"    [{mark:>4}] {self.name}{val}" + (f"\n           {self.evidence}" if self.evidence else "")
+        if self.value is None:
+            val = ""
+        elif self.threshold is None:
+            val = f"  [{self.value}]"
+        else:
+            val = f"  [{self.value} vs {self.threshold}]"
+        lines = [f"    [{mark:>4}] {self.name}{val}"]
+        for line in _wrap(self.evidence, width - 11):
+            lines.append(f"           {line}")
+        return "\n".join(lines)
 
 
 @dataclass
@@ -62,6 +91,189 @@ class GateResult:
         return {"gate": self.gate, "owner": self.owner, "decision": self.decision,
                 "passed": self.passed, "rationale": self.rationale,
                 "criteria": [asdict(c) for c in self.criteria]}
+
+
+def _call(tag, headline, detail, who=""):
+    return {"tag": tag, "headline": headline, "detail": detail, "who": who}
+
+
+def judgement_calls(card, translation_check=None) -> List[Dict[str, str]]:
+    """Every choice on this card that a model made and a human may overturn.
+
+    The criteria list below is an audit trail: it proves each thing was checked.
+    It is not a decision aid, because a reviewer reading twenty-four green rows
+    learns only that nothing tripped. What a human actually signs at Gate A is
+    this: the specific judgements, each with what was chosen, on what basis, and
+    who can say otherwise.
+
+    Pulled from the card rather than restated, so this can never drift from what
+    the run will actually do.
+    """
+    out: List[Dict[str, str]] = []
+    ut, st, cv = (card.universe_translation, card.strategy,
+                  getattr(card, "convertibility", None))
+
+    if ut is not None:
+        detail = " ".join((ut.rationale or "no rationale given").split())
+        if ut.why_not_alternatives:
+            detail += ("  RUNNERS-UP: "
+                       + " ".join(ut.why_not_alternatives.split()))
+        out.append(_call("UNIVERSE",
+                         f"{ut.source_universe} -> {ut.target_universe or '(none)'}"
+                         + (f"  [{ut.grade}]" if ut.grade else ""),
+                         detail, "researcher"))
+    if translation_check is not None:
+        for note in translation_check.notes:
+            if "OUT OF MANDATE" in note.upper():
+                out.append(_call("MANDATE", "the chosen universe is OUT OF MANDATE",
+                                 " ".join(note.split()), "pm"))
+
+    if st is not None and st.is_long_short:
+        out.append(_call(
+            "LONG-ONLY", "the paper is long-short; this fund cannot short",
+            " ".join(st.long_only_adaptation.split()) or "NOT STATED",
+            "pm"))
+    if card.portfolio.mandate_allow_cash is False and card.portfolio.allow_cash:
+        out.append(_call(
+            "MANDATE", "the paper holds cash; the mandate is fully invested",
+            "Two different strategies, not two views of one. Which governs the "
+            "promotion decision is the fund's call, not the card's.", "pm"))
+
+    if cv is not None:
+        out.append(_call("CONVERTIBLE?", f"{cv.verdict}  (confidence {cv.confidence})",
+                         "WEAKEST LINK: " + " ".join(cv.weakest_link.split()),
+                         "researcher"))
+
+    out.append(_call(
+        "NUMBERS",
+        f"{card.costs.spread_bps:.0f}bp round trip, lag {card.signal.lag_days}d"
+        + (f", lookback {card.signal.lookback_days}d"
+           if card.signal.lookback_days else ""),
+        "A US paper's 5bp is the commonest way an Indian backtest lies, and "
+        "lag 0 trades on a price nobody had. Both are cheap to reject here.",
+        "researcher"))
+
+    bp = getattr(card, "backtest_plan", None)
+    if bp is not None:
+        bar = "; ".join(bp.must_beat) or "NOTHING NAMED"
+        out.append(_call(
+            "THE BAR", f"sample {bp.sample_start} -> {bp.sample_end}",
+            f"MUST BEAT: {bar}.  Named before the run so it cannot move "
+            f"afterwards. If this is not the bar you would hold it to, say so "
+            f"now.", "pm"))
+
+    sel = getattr(card, "selection", None)
+    if sel is not None and sel.explicit_securities and \
+            sel.verified_against in ("", "UNVERIFIED"):
+        out.append(_call(
+            "SECURITIES",
+            f"{len(sel.explicit_securities)} names, UNVERIFIED",
+            "A list recalled rather than checked is plausible and unverifiable, "
+            "which is worse than no list because it looks checked: "
+            + ", ".join(sel.explicit_securities), "data_owner"))
+
+    for a in card.material_ambiguities:
+        out.append(_call(
+            "AMBIGUITY",
+            f"{a.field}   [resolved, confidence {a.confidence}"
+            + (f", p.{a.evidence_page}]" if a.evidence_page else "]"),
+            " ".join(a.resolution.split()), "researcher"))
+
+    for q in card.open_questions:
+        out.append(_call(
+            "OPEN", " ".join(q.question.split()),
+            ("BLOCKS THE RUN" if q.blocks_run else
+             "assumed meanwhile: " + " ".join(q.what_i_assumed.split())),
+            q.ask_of))
+    return out
+
+
+def gate_a_brief(card, result, translation_check=None) -> str:
+    """What a human is being asked to sign, before the audit trail.
+
+    Gate A had all of this and none of it was converted: the asks sat 250 lines
+    below the criteria, the evidence was truncated mid-word, and the judgement
+    calls were spread across four sections a reviewer had to assemble in their
+    head. The gate is five minutes of somebody's attention. This is what those
+    five minutes should be spent on.
+    """
+    W = _W
+    blocking = [c for c in result.criteria if not c.passed and c.blocking]
+    warns = result.warnings
+    L = ["  " + "=" * W,
+         "  GATE A  --  WHAT YOU ARE BEING ASKED TO SIGN",
+         "  " + "=" * W,
+         f"  {card.paper.id}   ({card.intent.mode})",
+         f"  {len(result.criteria)} criteria checked   "
+         f"{len(blocking)} blocking   {len(warns)} worth a look"]
+
+    if blocking:
+        L += ["", "  " + "-" * W,
+              "  STOP. THESE BLOCK THE GATE -- nothing runs until they are fixed.",
+              "  " + "-" * W]
+        for i, c in enumerate(blocking, 1):
+            L.append(f"  {i}. {c.name}"
+                     + ("" if c.value is None else f"   [{c.value}]"))
+            for line in _wrap(c.evidence, W - 8):
+                L.append(f"       {line}")
+
+    calls = judgement_calls(card, translation_check)
+    L += ["", "  " + "-" * W,
+          "  THE JUDGEMENT CALLS. A model made each of these. You can overturn "
+          "any of them.",
+          "  " + "-" * W]
+    for cl in calls:
+        who = f"   <- {cl['who']}" if cl["who"] else ""
+        tag = f"  [{cl['tag']}] "
+        head_lines = _wrap(cl["headline"] + who, W - len(tag)) or [""]
+        L.append("")
+        L.append(tag + head_lines[0])
+        for line in head_lines[1:]:
+            L.append(" " * len(tag) + line)
+        for line in _wrap(cl["detail"], W - 8):
+            L.append(f"       {line}")
+
+    reqs = sorted(getattr(card, "data_requests", []) or [],
+                  key=lambda r: {"blocking": 0, "high": 1,
+                                 "nice_to_have": 2}.get(r.priority, 9))
+    L += ["", "  " + "-" * W,
+          "  WHAT SAYING NO COSTS. Every ask has a fallback; this is what each "
+          "fallback gives up.",
+          "  " + "-" * W]
+    if not reqs:
+        claim = " ".join(getattr(card, "no_further_data_needed", "").split())
+        if claim:
+            L.append("")
+            for line in _wrap("Nothing is being asked for, and here is why: "
+                              + claim, W - 6):
+                L.append(f"     {line}")
+        else:
+            L += ["", "     Nothing is asked for and nothing says why not. That "
+                      "is a strong claim",
+                  "     about a paper somebody just read, and nobody has argued "
+                  "it."]
+    for r in reqs:
+        tag = {"blocking": "BLOCKING", "high": "would help",
+               "nice_to_have": "optional"}.get(r.priority, r.priority)
+        L.append("")
+        L.append(f"  [{tag}] {r.item}")
+        for label, val in (("if declined", r.without_it), ("unlocks", r.unlocks)):
+            for i, line in enumerate(_wrap(val, W - 20)):
+                L.append(f"       {label if i == 0 else '':<13} {line}")
+
+    if warns:
+        L += ["", "  " + "-" * W, "  WORTH A SECOND LOOK (does not block)",
+              "  " + "-" * W]
+        for c in warns:
+            L.append(f"    - {c.name}"
+                     + ("" if c.value is None else f"   [{c.value}]"))
+
+    L += ["", "  " + "-" * W,
+          "  NOTHING ABOVE IS DECIDED. Gate A produces this checklist; the "
+          "decision is a",
+          "  named human's, and no code in this repo assigns one.",
+          "  " + "=" * W]
+    return "\n".join(L)
 
 
 def gate_a(card, feasibility, extraction_quality=None,
@@ -135,7 +347,7 @@ def gate_a(card, feasibility, extraction_quality=None,
             value=f"{len(dp.ideal)} field(s), "
                   f"{sum(1 for d in dp.ideal if d.minimum_viable)} minimum-viable",
             evidence="; ".join(errs) or
-                     " ".join(dp.granularity_verdict.split())[:140]))
+                     " ".join(dp.granularity_verdict.split())))
         c.append(Criterion(
             "alternatives were rejected, not skipped",
             len(dp.rejected_alternatives) >= 1,
@@ -154,7 +366,7 @@ def gate_a(card, feasibility, extraction_quality=None,
             "securities selection stated", True,
             value=(f"{len(sel.explicit_securities)} named"
                    if sel.explicit_securities else "rule only"),
-            evidence=" ".join(sel.rule.split())[:150]))
+            evidence=" ".join(sel.rule.split())))
         if sel.explicit_securities:
             verified = sel.verified_against not in ("", "UNVERIFIED")
             c.append(Criterion(
@@ -184,7 +396,7 @@ def gate_a(card, feasibility, extraction_quality=None,
         c.append(Criterion(
             "failure is defined before the run",
             bool(bp.failure_looks_like.strip()),
-            evidence=" ".join(bp.failure_looks_like.split())[:150] or
+            evidence=" ".join(bp.failure_looks_like.split()) or
                      "a plan that cannot fail is not a test, and a criterion "
                      "written after the numbers is not a criterion"))
 
@@ -194,12 +406,26 @@ def gate_a(card, feasibility, extraction_quality=None,
     blocking_reqs = [r for r in reqs if r.priority == "blocking"]
     blocking_qs = [q for q in qs if q.blocks_run]
 
+    # "data requests carry a fallback" used to sit here, and it could not fail:
+    # DataRequest.validate() rejects an empty `without_it` and load_card() then
+    # raises, so every card reaching this gate had already passed it. With no
+    # requests at all, all() returned True as well. It was a green row that
+    # verified nothing. These two check what the schema cannot.
+    audit = audit_data_requests(card)
     c.append(Criterion(
-        "data requests carry a fallback",
-        all(r.without_it.strip() for r in reqs),
-        value=f"{len(reqs)} request(s)",
-        evidence="; ".join(r.item for r in reqs if not r.without_it.strip())
-                 or "every request says what happens if it is declined"))
+        "the card asked for something, or argued it need not",
+        audit["stance"] != "silent",
+        value={"asked": f"{audit['n']} request(s)",
+               "argued_none": "argues none is needed",
+               "silent": "nothing asked, nothing argued"}[audit["stance"]],
+        blocking=False,
+        evidence=audit["detail"]))
+    c.append(Criterion(
+        "fallbacks are decisions you could take", audit["ok"],
+        value=f"{audit['n']} request(s)",
+        evidence="; ".join(audit["weak"]) or
+                 "each request says what happens if you decline it, and what "
+                 "that costs the test"))
     c.append(Criterion(
         "no request is blocking", not blocking_reqs,
         value=f"{len(blocking_reqs)} blocking", threshold=0,
@@ -209,14 +435,46 @@ def gate_a(card, feasibility, extraction_quality=None,
         "open questions carry a working assumption",
         all(q.what_i_assumed.strip() or q.blocks_run for q in qs),
         value=f"{len(qs)} question(s)", blocking=False,
-        evidence="; ".join(q.question[:70] for q in qs
+        evidence="; ".join(q.question for q in qs
                            if not q.what_i_assumed.strip() and not q.blocks_run)
                  or "the run can proceed under stated assumptions"))
     c.append(Criterion(
         "no question blocks the run", not blocking_qs,
         value=f"{len(blocking_qs)} blocking", threshold=0,
-        evidence="; ".join(q.question[:70] for q in blocking_qs)
+        evidence="; ".join(q.question for q in blocking_qs)
                  or "no question stops work"))
+
+    # ---- can this become something the fund could hold? ------------------
+    # Non-blocking on purpose. "not_convertible" is a legitimate and valuable
+    # answer; what is NOT acceptable is the card never saying, because then the
+    # judgement lands on whoever happens to read the gate.
+    cv = getattr(card, "convertibility", None)
+    if cv is None:
+        c.append(Criterion(
+            "convertibility assessed", False, blocking=False,
+            value="no verdict",
+            evidence="the card never says whether any of this could become a "
+                     "strategy this fund could hold. That judgement then falls "
+                     "to whoever reads the gate, which is Stage 02's work "
+                     "landing here"))
+    else:
+        c.append(Criterion(
+            "convertibility assessed", True, value=cv.verdict,
+            blocking=False,
+            evidence=f"weakest link: {' '.join(cv.weakest_link.split())}"))
+        c.append(Criterion(
+            "what would settle it is named",
+            bool(cv.decisive_evidence.strip()), blocking=False,
+            evidence=" ".join(cv.decisive_evidence.split()) or
+                     "without this, the data requests below are wishes rather "
+                     "than tests of the thing actually in doubt"))
+        if cv.verdict == "convertible_with_data" and not reqs:
+            c.append(Criterion(
+                "verdict agrees with the asks", False,
+                value="contradiction",
+                evidence="the verdict says this needs data the fund does not "
+                         "hold, and the card asks for none. One of the two is "
+                         "wrong, and both are the model's own statements"))
 
     # ---- what exactly is the strategy? -----------------------------------
     st = getattr(card, "strategy", None)
@@ -230,7 +488,7 @@ def gate_a(card, feasibility, extraction_quality=None,
         c.append(Criterion(
             "strategy reconstructed to an executable level", not errs,
             value=st.signal_name or "(unnamed)",
-            evidence="; ".join(errs) or " ".join(st.signal_definition.split())[:200]))
+            evidence="; ".join(errs) or " ".join(st.signal_definition.split())))
         c.append(Criterion(
             "long-only adaptation stated",
             not st.is_long_short or bool(st.long_only_adaptation.strip()),

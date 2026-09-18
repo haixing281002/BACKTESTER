@@ -96,28 +96,56 @@ gate is doing the design. Three card sections stop that, all written by the mode
   bar cannot move after, and both `success_looks_like` and `failure_looks_like`.
   A plan that cannot fail is not a test.
 
-**Gate A opens with four blocks:**
+**Gate A opens with the brief, then the audit trail.**
 
-1. **At a glance** — universe | signal | lookback | lag, weights | rebalance |
-   benchmark, costs | ambiguities | confidence, plus mandate conflicts and the
-   engine template. A blank reads `-- not stated --`, never a polite default.
-2. **The plan** (`card.plan()`) — the three sections above. This is what a human
-   is actually verifying.
-3. **Completeness** — 62 checks drawn from what a strong card contains, each
-   naming the failure it prevents. `examples/cards/devanathan_…` scores 99%; a
-   card that merely validates scores 17%. A card that validates is not a card
-   that is any good, and the schema cannot tell six cited ambiguities from none.
-4. **What the model is asking you for** — `data_requests` and `open_questions`.
+The card was never the problem; converting it was. Gate A used to open with
+twenty-four criteria whose evidence was truncated mid-word, with the model's
+asks 250 lines below. A reviewer spent their five minutes discovering that
+nothing had tripped. So the gate now leads with **`gate_a_brief()` — what you
+are being asked to sign**:
+
+1. **STOP** — every blocking failure, in full, first.
+2. **The judgement calls** — each choice a model made that a human can overturn,
+   one per block, tagged with who owns it: the universe over its runners-up, the
+   long-only adaptation, the convertibility verdict's weakest link, costs and
+   lag, the bar named before the run, an UNVERIFIED security list, every
+   material ambiguity with its resolution, every open question with the
+   assumption taken meanwhile. Pulled from the card, never restated, so it
+   cannot drift from what the run will do.
+3. **What saying no costs** — every data request with its `without_it`, ordered
+   by priority. The fallback is the only part a human can weigh.
+4. **Worth a second look** — the non-blocking warnings.
+
+Then, below it: at-a-glance, `card.plan()`, completeness, `card.asks()`, the
+India requirements, and the full criteria list as the audit trail.
+
+**Completeness** is ~69 checks on a full adaptation card (the count depends on
+which sections the card has). Each names the failure it prevents.
+`examples/cards/devanathan_…` scores 99%; a card that merely validates scores
+under 20%. A card that validates is not a card that is any good, and the schema
+cannot tell six cited ambiguities from none.
 
 `data_requests` is the model asking the fund for data, and **`without_it` is
-mandatory**: a request with no fallback is a demand, and a demand at Gate A
-stops the work instead of informing it. `open_questions` is what the paper does
-not settle, addressed with `ask_of` (pm / data_owner / researcher), and
-**`what_i_assumed` is mandatory** unless it declares `blocks_run` — the run
-proceeds under a stated guess that a human can overturn.
+mandatory** — enforced by the schema, so a fallback-less request never reaches
+the gate. What the gate checks is what the schema cannot: that the fallback is a
+decision you could actually take rather than a placeholder, and that the card
+asked for *something* — or argued in `no_further_data_needed` that nothing more
+would help. Silence is not a claim. `open_questions` is what the paper does not
+settle, addressed with `ask_of` (pm / data_owner / researcher), and
+**`what_i_assumed` is mandatory** unless it declares `blocks_run`.
 
-Gate A blocks on a `blocking` request, a `blocks_run` question, and any request
-missing its fallback.
+**`convertibility`** is Stage 02's answer to the question the fund is actually
+paying for: could any of this become a strategy we could hold? It states the
+chain (`what_must_be_true`), names the `weakest_link`, says what `decisive_evidence`
+would settle it, and what `if_it_fails` would teach us. The verdict is
+`convertible`, `convertible_with_data`, `mechanism_only` or `not_convertible` —
+and **`not_convertible` never blocks the gate**, because a well-argued no is the
+cheapest useful output this pipeline produces. The code cross-checks the
+model against itself: `convertible_with_data` with no data request is a
+contradiction Gate A shows.
+
+Gate A blocks on a `blocking` request, a `blocks_run` question, and a fallback
+that is a placeholder.
 
 ## Stages 00 to Gate A need NO MARKET DATA
 
@@ -197,7 +225,7 @@ ros/
   cards/schema.py      Strategy Card: the ONLY interface between interpretation
                        and the engine. A card is data, never code. Carries
                        at_a_glance() and asks() for Gate A.
-      completeness.py  62 checks: is this card as good as a good one?
+      completeness.py  ~69 checks: is this card as good as a good one?
       extract.py       deterministic PDF reader (regex + text-geometry tables)
   data/                registry (what the fund holds), loaders, PIT snapshots
       universes.py     24 Indian universes + mechanism-fit ranking; the

@@ -46,7 +46,7 @@ from ros.data.intake import MANIFEST, describe_shortfall, extend_registry
 from ros.data.universes import INDIAN_UNIVERSES, check_translation
 from ros.feasibility import UNAVAILABLE, assess
 from ros.cards.completeness import assess as card_completeness
-from ros.governance.gates import gate_a
+from ros.governance.gates import gate_a, gate_a_brief
 from ros.india_requirements import derive
 from ros.papers import artifact_paths, require_paper
 
@@ -219,7 +219,19 @@ def main() -> int:
 
     feas = assess(card, registry)
     ga = gate_a(card, feas, doc.quality, translation_check=tc)
+
+    # The brief FIRST, the audit trail after. A reviewer gets five minutes; they
+    # should be spent on the judgement calls and what the asks cost, not on
+    # reading twenty-four green rows to discover that nothing tripped.
     head("GATE A  |  HUMAN INTERPRETATION CONTROL")
+    para(gate_a_brief(card, ga, translation_check=tc), indent="")
+    print()
+    print(card.convertibility_block())
+    print()
+    para("  " + "-" * 96, indent="")
+    para("  THE FULL CHECKLIST -- the audit trail behind the brief above",
+         indent="")
+    para("  " + "-" * 96, indent="")
     para(ga.render(), indent="")
 
     # ---- what would you have to supply? --------------------------------

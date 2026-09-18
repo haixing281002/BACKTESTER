@@ -24,6 +24,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Callable, List, Optional, Tuple
 
+from ros.cards.schema import audit_data_requests
+
 
 @dataclass
 class Check:
@@ -337,15 +339,74 @@ def assess(card) -> Completeness:
               "the ways this specific mechanism is known to break in India")
 
     # ---- what the model is asking for ----------------------------------
-    check("asks", "data requests recorded", len(card.data_requests) >= 1, 2,
-          f"{len(card.data_requests)} request(s)",
-          "if nothing more would improve this test, say so explicitly; silence "
-          "reads as nobody having asked")
-    check("asks", "every request has a fallback",
-          all(_txt(r.without_it) for r in card.data_requests), 3, "",
-          "a request with no fallback is a demand, and a demand at Gate A "
-          "stops the work rather than informing it")
+    # "every request has a fallback" used to live here at weight 3. It could
+    # not fail: DataRequest.validate() already rejects an empty `without_it` and
+    # load_card() raises, so every card that got this far had passed it by
+    # construction -- and with no requests at all, all() returned True, so a
+    # card that asked for nothing scored the same as one that asked well. A
+    # check that cannot fail is worse than no check, because it occupies a row
+    # that looks verified. audit_data_requests() checks what the schema cannot.
+    audit = audit_data_requests(card)
+    check("asks", "the card asked for something, or argued it need not",
+          audit["stance"] != "silent", 2,
+          {"asked": f"{audit['n']} request(s)",
+           "argued_none": "argues no further data would help",
+           "silent": "nothing asked, nothing argued"}[audit["stance"]],
+          "silence is not a claim. 'Nothing more would improve this test' is a "
+          "strong statement about a paper somebody just read, and unargued it "
+          "cannot be told apart from nobody having looked")
+    check("asks", "fallbacks are decisions a human could take", audit["ok"], 3,
+          "; ".join(audit["weak"])[:120],
+          "a placeholder in `without_it` satisfies the schema and tells a "
+          "reviewer nothing. The fallback is what makes a request informative "
+          "rather than a demand, so it has to be the actual alternative and "
+          "what it costs")
     check("asks", "open questions recorded", len(card.open_questions) >= 1, 1,
           f"{len(card.open_questions)} question(s)",
           "the things the paper does not settle are what a human is for")
+
+    # ---- can this become something the fund could hold? -----------------
+    cv = getattr(card, "convertibility", None)
+    check("convertibility", "verdict recorded", cv is not None, 3, "",
+          "the card can be 99% complete and still never say whether any of this "
+          "could become a strategy this fund could hold -- which is the "
+          "question the fund is paying to have answered")
+    if cv is not None:
+        check("convertibility", "the chain is written out",
+              len(cv.what_must_be_true) >= 3, 2,
+              f"{len(cv.what_must_be_true)} link(s)",
+              "a mechanism transfers as a chain -- the effect exists, it exists "
+              "in this segment, it survives costs, it survives long-only, it "
+              "has capacity. Written as one paragraph the weak link averages "
+              "away; written as links it is visible")
+        check("convertibility", "weakest link named", bool(_txt(cv.weakest_link)), 3,
+              "", "a chain whose author believes every link equally has not "
+                  "been examined, and the weak link is what the run will find")
+        check("convertibility", "decisive evidence named",
+              bool(_txt(cv.decisive_evidence)), 3, "",
+              "what would settle this either way is what the data requests "
+              "should be FOR. Without it, a request is a wish rather than a "
+              "test of the thing in doubt")
+        check("convertibility", "a null result is worth something",
+              bool(_txt(cv.if_it_fails)), 2, "",
+              "if failure teaches nothing, the run is not worth its cost; "
+              "saying what a null would establish is what makes it worth it")
+        check("convertibility", "capacity considered", bool(_txt(cv.capacity_note)), 1,
+              "", "a real effect the fund cannot size into is a paper, not a "
+                  "sleeve")
+        # The model's own two statements must agree. This is the cheapest
+        # available check on whether the verdict was reasoned or reached for.
+        contradiction = ""
+        if cv.verdict == "convertible_with_data" and not card.data_requests:
+            contradiction = ("verdict says data we do not hold is required, but "
+                             "the card asks for none")
+        elif cv.verdict == "convertible" and _txt(card.no_further_data_needed) \
+                and card.data_requests:
+            contradiction = ("the card both argues no further data is needed and "
+                             "requests some")
+        check("convertibility", "verdict agrees with the asks", not contradiction, 3,
+              contradiction,
+              "a verdict that contradicts the card's own requests was reached "
+              "for rather than reasoned to, and it is the reasoning a human is "
+              "being asked to sign")
     return out

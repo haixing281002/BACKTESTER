@@ -585,3 +585,61 @@ notes: >
   The promotion question is NOT "is the Sharpe good". It is whether this beats, after
   30bp costs, the two things the fund can already do for free: hold NIFTY 500, or buy
   the NIFTY500 MULTIFACTOR MQVLV 50 index. Both are run as benchmarks.
+
+# The question the fund is actually paying to have answered. Everything above
+# says what the paper is and how it would be tested; this says whether any of it
+# could become something we could hold. It is an opinion, it decides nothing,
+# and a human at Gate A can overturn it in one line.
+convertibility:
+  verdict: convertible
+  confidence: medium
+  what_must_be_true:
+    - >
+      The five sleeves must be diverse enough for a risk-constrained optimiser to
+      have anything to do. The paper's lift comes from allocating across weakly
+      correlated assets; our sleeves correlate 0.74-0.94 pairwise, all
+      single-country equity. If the correlation structure leaves no room, the
+      optimiser returns the strategic mix and the machinery buys nothing.
+    - >
+      The EWMA return forecast must carry information AT THE SLEEVE LEVEL. The
+      paper forecasts asset classes whose return drivers differ in kind; five
+      factor tilts on one equity market may share a single driver, in which case
+      the forecast ranks noise.
+    - >
+      The edge must survive 30bp round trip on monthly rotation. The l1 leash
+      bounds turnover by construction, so this is the link most likely to hold --
+      but it has never been charged at Indian sleeve-replication cost.
+    - >
+      It must beat the two things the fund can already do for nothing: hold
+      NIFTY 500, or buy NIFTY500 MULTIFACTOR MQVLV 50. Beating cash is not the
+      bar and never was.
+    - >
+      Sleeve exposure must be obtainable at fund size. An index is not a
+      portfolio: real replication carries tracking error and rebalance impact
+      that the index series does not charge.
+  weakest_link: >
+    The first one, and it is not close. The paper's entire result rests on
+    allocating across assets that diversify each other, and we are proposing to
+    run it across five correlated slices of one equity market. This is the link
+    that would make a null result unsurprising rather than informative, and it
+    is knowable BEFORE the run: compute the sleeve correlation matrix and the
+    optimiser's feasible dispersion under the l1 leash.
+  decisive_evidence: >
+    Three things, in descending order of what they would settle. (1) The
+    realised sleeve correlation matrix over the sample, which decides whether
+    link one is alive at all -- we hold the data and it costs nothing. (2) An
+    Indian overnight or T-bill series: the paper's drawdown control lives in its
+    cash leg, and without a real rate we cannot tell a genuine de-risking
+    benefit from an artefact of a flat 6% proxy. (3) Sleeve-level traded value,
+    which turns the capacity conclusion from an input into a finding.
+  if_it_fails: >
+    A null here is worth more than the run costs. It would establish that
+    dynamic allocation machinery buys nothing over a fixed equal-weight mix
+    within a correlated single-country sleeve set -- which retires a whole
+    family of "dynamic factor rotation" proposals, not just this paper. That is
+    a reusable answer, and the library keeps it.
+  capacity_note: >
+    Unknown, and currently an assumption rather than a finding. The mechanism is
+    low-turnover by construction, which is favourable, but every number here is
+    computed on index series that charge no impact. Until sleeve ADV arrives,
+    any AUM ceiling quoted from this run is an argument, not a measurement.
