@@ -114,12 +114,21 @@ def test_no_entry_point_hardcodes_a_specific_paper():
 
 
 def test_the_users_card_folder_ships_empty():
-    """cards/ is the user's own work. Shipping examples in it meant every
-    check_setup run globbed cards/*.yaml and loaded somebody else's paper."""
-    shipped = sorted(p.name for p in (ROOT / "cards").glob("*.yaml"))
+    """The REPO must ship no cards. The FOLDER is expected to fill up.
+
+    The first version of this globbed the filesystem, which failed the moment a
+    real user had drafted their own cards -- it fired on five of them, which is
+    the folder working exactly as intended. What matters is what git TRACKS: an
+    example shipped in cards/ is what made check_setup glob it and load somebody
+    else's paper. A card a researcher wrote is none of this test's business.
+    """
+    import subprocess
+    tracked = subprocess.run(["git", "ls-files", "cards/"], cwd=ROOT,
+                             capture_output=True, text=True).stdout.split()
+    shipped = [t for t in tracked if t.endswith((".yaml", ".yml"))]
     assert not shipped, (
-        f"cards/ ships with {shipped}. Move worked examples to examples/cards/ "
-        f"so nothing picks one up by globbing.")
+        f"the repo ships {shipped}. Worked examples belong in examples/cards/, "
+        f"or check_setup globs cards/*.yaml and loads one on every run.")
     assert (ROOT / "examples/cards").is_dir(), "the examples went missing"
     assert list((ROOT / "examples/cards").glob("*.yaml")), "no examples left"
 
