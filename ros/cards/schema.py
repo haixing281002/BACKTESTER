@@ -343,6 +343,121 @@ class OpenQuestion:
         return errs
 
 
+CONVERTIBILITY_VERDICTS = ("convertible", "convertible_with_data",
+                           "mechanism_only", "not_convertible")
+
+
+@dataclass
+class Convertibility:
+    """Can this paper become a strategy THIS fund could actually run?
+
+    Everything else on the card answers "what does the paper say" and "how would
+    we test it". This answers the question the fund is actually paying to have
+    answered, and it is the one a completeness score cannot reach: a card can be
+    99% complete and describe a beautiful test of something the fund could never
+    hold.
+
+    It is deliberately a MODEL'S OPINION, clearly labelled, and it decides
+    nothing. A `not_convertible` verdict does not block Gate A -- it is a
+    finding, and a well-argued one is worth more than a run. What it does is
+    stop a human having to reconstruct the judgement from eleven other sections.
+
+    `what_must_be_true` is the load-bearing field. A mechanism transfers as a
+    CHAIN -- the effect exists, it exists in this segment, it survives costs, it
+    survives long-only, it has capacity -- and the chain is only as good as its
+    weakest link. Writing the links out separately is what makes the weak one
+    visible instead of averaged away in a paragraph.
+    """
+    verdict: str = ""
+    what_must_be_true: List[str] = field(default_factory=list)
+    weakest_link: str = ""              # which link you least believe, and why
+    decisive_evidence: str = ""         # what would settle it either way
+    if_it_fails: str = ""               # what a null result would teach us
+    capacity_note: str = ""             # what size this could carry, if it works
+    confidence: str = "medium"          # low | medium | high
+    evidence_page: Optional[int] = None
+
+    def validate(self, ctx: str = "convertibility") -> List[str]:
+        errs = []
+        if self.verdict not in CONVERTIBILITY_VERDICTS:
+            errs.append(f"{ctx}: verdict '{self.verdict}' not in "
+                        f"{list(CONVERTIBILITY_VERDICTS)}")
+        if self.confidence not in CONFIDENCE:
+            errs.append(f"{ctx}: confidence '{self.confidence}' not in "
+                        f"{sorted(CONFIDENCE)}")
+        # A chain with one link is a claim, not a chain. Two is the minimum at
+        # which "weakest" means anything.
+        if len(self.what_must_be_true) < 2:
+            errs.append(f"{ctx}: list at least 2 things that must be true -- a "
+                        f"mechanism transfers as a chain, and one link is an "
+                        f"assertion rather than an argument")
+        if not self.weakest_link.strip():
+            errs.append(f"{ctx}: name the weakest link -- a chain whose author "
+                        f"believes every link equally has not been examined")
+        return errs
+
+
+# A fallback is a sentence a human can decide against. These are the strings
+# that occupy the field without doing its job; the schema cannot tell them from
+# a real answer because it only checks that something was typed.
+_NON_ANSWERS = {"", "-", "--", "n/a", "na", "none", "nothing", "tbd", "todo",
+                "unknown", "not applicable", "no fallback", "unclear", "?"}
+_FALLBACK_MIN_CHARS = 25
+
+
+def audit_data_requests(card) -> Dict[str, Any]:
+    """Are the card's asks real, and are the fallbacks usable?
+
+    Lives here so Gate A and the completeness report cannot drift: one concern,
+    one implementation, two surfaces.
+
+    This exists because the obvious check -- "every request has a `without_it`"
+    -- CANNOT FAIL. DataRequest.validate() already rejects an empty one, and
+    load_card() raises, so any card that reaches Gate A has passed it by
+    construction. A criterion that always passes is worse than no criterion: it
+    occupies a row that looks verified. And with an empty request list `all()`
+    returns True, so a card that asked for nothing scored the same as one that
+    asked well.
+
+    So this checks the two things the schema genuinely cannot:
+
+      1. that the card asked for something, or explicitly argued that nothing
+         more would help (`no_further_data_needed`) -- silence is not a claim;
+      2. that each fallback is a decision a human could take, rather than a
+         placeholder typed to satisfy the field.
+    """
+    reqs = list(getattr(card, "data_requests", []) or [])
+    claim = " ".join(str(getattr(card, "no_further_data_needed", "") or "").split())
+
+    weak = []
+    for r in reqs:
+        txt = " ".join(str(r.without_it or "").split())
+        if txt.strip().lower().rstrip(".").strip() in _NON_ANSWERS:
+            weak.append(f"{r.item}: fallback is a placeholder ({txt or 'empty'!r})")
+        elif len(txt) < _FALLBACK_MIN_CHARS:
+            weak.append(f"{r.item}: fallback is too short to act on ({txt!r})")
+
+    if reqs:
+        stance, detail = "asked", ("; ".join(weak) or
+                                   f"{len(reqs)} request(s), each with a fallback "
+                                   f"a human can decide against")
+    elif len(claim) >= 40:
+        stance, detail = "argued_none", claim
+    else:
+        stance = "silent"
+        detail = ("nothing is asked for and nothing says why not. 'No further "
+                  "data would improve this test' is a strong claim about a "
+                  "paper somebody just read; unargued, it is indistinguishable "
+                  "from nobody having looked. State it in "
+                  "`no_further_data_needed` or ask for something.")
+
+    # `ok` judges the fallbacks that exist; silence is a separate finding, so a
+    # card with no requests has no bad fallbacks and must not be marked as
+    # having one. Keeping the two apart is what lets each name its own failure.
+    return {"ok": not weak, "n": len(reqs), "weak": weak, "stance": stance,
+            "complete": (not weak) and stance != "silent", "detail": detail}
+
+
 @dataclass
 class MechanismNeeds:
     """What the PAPER's mechanism needs from a universe, read at Stage 01.
@@ -564,6 +679,13 @@ class StrategyCard:
     # paper, these describe what is still needed to do it justice.
     data_requests: List[DataRequest] = field(default_factory=list)
     open_questions: List[OpenQuestion] = field(default_factory=list)
+    # Asking for nothing is a legitimate position and a strong claim. Stating it
+    # here turns it into one somebody can disagree with; leaving it blank makes
+    # "no further data would help" indistinguishable from nobody having looked.
+    no_further_data_needed: str = ""
+    # The model's opinion on the question the fund is actually paying for.
+    # Decides nothing; a `not_convertible` verdict is a finding, not a block.
+    convertibility: Optional[Convertibility] = None
     n_configs_tried: int = 1     # feeds the deflated Sharpe ratio; understating it is a lie
     notes: str = ""
     card_version: str = "1.0"
@@ -605,6 +727,8 @@ class StrategyCard:
             errs += self.strategy.validate()
         for i, r in enumerate(self.data_requests):
             errs += r.validate(f"data_requests[{i}]")
+        if self.convertibility is not None:
+            errs += self.convertibility.validate()
         for i, q in enumerate(self.open_questions):
             errs += q.validate(f"open_questions[{i}]")
         for section in (self.data_plan, self.selection, self.backtest_plan):
@@ -729,6 +853,53 @@ class StrategyCard:
         L.append("  " + "-" * W)
         return "\n".join(L)
 
+    def convertibility_block(self) -> str:
+        """The model's answer to the question the fund is actually paying for.
+
+        Clearly labelled as an opinion, because it is the only section on the
+        card that is one. Everything else states what the paper says or what
+        will be run; this says whether any of it can become something this fund
+        could hold, and a human is free to disagree in one line.
+        """
+        W = 96
+        cv = self.convertibility
+        if cv is None:
+            return ("  NO CONVERTIBILITY VERDICT ON THIS CARD.\n"
+                    "  The card says what the paper is and how it would be "
+                    "tested, but never says\n  whether it could become "
+                    "something this fund can hold. That judgement then falls\n"
+                    "  to whoever reads it at Gate A, which is Stage 02's work "
+                    "landing on the gate.")
+        label = {
+            "convertible": "CONVERTIBLE -- the fund could run this with data it holds",
+            "convertible_with_data": "CONVERTIBLE ONLY WITH DATA WE DO NOT HOLD",
+            "mechanism_only": "TESTABLE AS A QUESTION, NOT HOLDABLE BY THIS FUND",
+            "not_convertible": "NOT CONVERTIBLE -- the mechanism does not survive "
+                               "the translation",
+        }.get(cv.verdict, cv.verdict)
+        L = ["  " + "=" * W, "  CAN THIS BECOME A STRATEGY WE COULD RUN?  "
+                             "(the model's opinion, not a decision)",
+             "  " + "=" * W, "",
+             f"  {label}",
+             f"  confidence: {cv.confidence}"
+             + (f"   pages: {cv.evidence_page}" if cv.evidence_page else ""),
+             "",
+             "  EVERY ONE OF THESE MUST BE TRUE. The chain is as good as its "
+             "weakest link:"]
+        for i, link in enumerate(cv.what_must_be_true, 1):
+            for j, line in enumerate(_wrap(" ".join(str(link).split()), W - 10)):
+                L.append(f"    {str(i) + '.' if j == 0 else '':<4}{line}")
+        for label_, val in (("WEAKEST LINK", cv.weakest_link),
+                            ("WHAT WOULD SETTLE IT", cv.decisive_evidence),
+                            ("WHAT A NULL RESULT WOULD TEACH US", cv.if_it_fails),
+                            ("CAPACITY, IF IT WORKS", cv.capacity_note)):
+            if str(val or "").strip():
+                L += ["", f"  {label_}"]
+                for line in _wrap(" ".join(str(val).split()), W - 6):
+                    L.append(f"      {line}")
+        L += ["", "  " + "=" * W]
+        return "\n".join(L)
+
     def asks(self) -> str:
         """What the model wants from a human, formatted for Gate A.
 
@@ -737,14 +908,26 @@ class StrategyCard:
         you say no; and here is what the paper does not settle, with the
         position I have taken meanwhile.
         """
-        if not self.data_requests and not self.open_questions:
-            return ("  NOTHING IS BEING ASKED FOR.\n"
-                    "  No data request and no open question on this card. That "
-                    "is a strong claim --\n  it says no further data would "
-                    "improve this test and the paper settled everything.\n"
-                    "  Worth confirming rather than assuming nobody looked.")
-
         W = 96
+        if not self.data_requests and not self.open_questions:
+            claim = " ".join(self.no_further_data_needed.split())
+            if not claim:
+                return ("  NOTHING IS BEING ASKED FOR, AND NOTHING SAYS WHY NOT.\n"
+                        "  No data request, no open question, no argument that "
+                        "none is needed. That is\n  a strong claim about a paper "
+                        "somebody has just read, and unargued it cannot be\n"
+                        "  told apart from nobody having looked. Gate A surfaces "
+                        "it as a gap.")
+            L = ["  " + "=" * W, "  NOTHING IS BEING ASKED FOR -- AND HERE IS WHY",
+                 "  " + "=" * W, ""]
+            for line in _wrap(claim, W - 6):
+                L.append(f"      {line}")
+            L += ["", "  This is the model claiming the test is already as good as "
+                      "it can be.",
+                  "  Disagreeing with it is cheaper now than after the run.",
+                  "  " + "=" * W]
+            return "\n".join(L)
+
         L = ["  " + "=" * W, "  WHAT WOULD MAKE THIS TEST BETTER", "  " + "=" * W]
         order = {"blocking": 0, "high": 1, "nice_to_have": 2}
         for r in sorted(self.data_requests, key=lambda x: order.get(x.priority, 9)):
@@ -944,7 +1127,8 @@ def load_card(path: str) -> StrategyCard:
              "data_requirements", "ambiguities", "replication_targets",
              "benchmark_templates", "n_configs_tried", "notes", "card_version",
              "universe_translation", "strategy", "data_requests",
-             "open_questions", "data_plan", "selection", "backtest_plan"}
+             "open_questions", "data_plan", "selection", "backtest_plan",
+             "no_further_data_needed", "convertibility"}
     unknown = set(blob) - known
     if unknown:
         raise CardValidationError(f"card has unknown top-level keys: {sorted(unknown)}")
@@ -978,6 +1162,10 @@ def load_card(path: str) -> StrategyCard:
                        for i, r in enumerate(blob.get("data_requests") or [])],
         open_questions=[_build(OpenQuestion, q, f"open_questions[{i}]")
                         for i, q in enumerate(blob.get("open_questions") or [])],
+        no_further_data_needed=blob.get("no_further_data_needed", ""),
+        convertibility=(_build(Convertibility, blob["convertibility"],
+                               "convertibility")
+                        if blob.get("convertibility") else None),
         data_plan=(_build(DataPlan, blob["data_plan"], "data_plan")
                    if blob.get("data_plan") else None),
         selection=(_build(SecuritySelection, blob["selection"], "selection")

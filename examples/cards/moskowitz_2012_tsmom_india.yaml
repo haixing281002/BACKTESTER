@@ -389,3 +389,55 @@ n_configs_tried: 1
 notes: >
   Same promotion bar as every other card: beat NIFTY 500 AND the free MQVLV index,
   after 30bp costs, with alpha that survives the factor fingerprint.
+
+convertibility:
+  verdict: convertible
+  confidence: medium
+  what_must_be_true:
+    - >
+      The trend signal must carry information on Indian factor sleeves. The
+      paper establishes 12-month time-series momentum across 58 futures markets;
+      that it holds on five slices of one equity market is an assumption this
+      run tests, not a result it inherits.
+    - >
+      Something must survive the loss of the short leg. The source is long-short
+      across four asset classes. We keep the long leg of one asset class. Where
+      the paper's spread lived mostly in the short side, the long-only version
+      can be flat and the paper would still be right.
+    - >
+      The vol-target overlay must add something a fixed mix does not. Unlevered
+      and long-only, the overlay can only de-risk, so its entire contribution is
+      drawdown control -- and this fund's mandate forbids the cash leg that
+      would deliver it.
+    - >
+      Monthly rotation must survive 30bp round trip. Futures at a few basis
+      points is the cost regime the original lives in; cash-equity sleeve
+      replication is not.
+    - >
+      It must beat holding NIFTY 500 outright. A trend filter that merely tracks
+      the index with extra turnover is a worse index fund.
+  weakest_link: >
+    The second and third together. This adaptation removes BOTH things that
+    carried the original result -- the short leg and the cross-asset
+    diversification -- and then removes the cash leg that the remaining overlay
+    needs to do its work. What is left is a trend filter on five correlated
+    equity sleeves. That can still be a real effect, but it is close to a
+    different strategy wearing the paper's name, and the card must never score
+    it against the paper's numbers.
+  decisive_evidence: >
+    Leg-level returns from the paper, if they exist: knowing how much of the
+    published spread sat in the short leg is what turns link two from a worry
+    into a number. Failing that, the comparison that settles it here is the
+    long-only trend book against both the fixed equal-weight sleeve mix and
+    NIFTY 500 -- if it does not clear both, nothing downstream matters.
+  if_it_fails: >
+    It would tell us that time-series momentum's value in the published work was
+    the breadth, not the trend signal, at least as far as a single-country
+    long-only equity book can see. That closes the question for every future
+    TSMOM paper arriving at this desk in the same shape, which is worth more
+    than one run.
+  capacity_note: >
+    Turnover is the constraint, not size. Monthly sign-flipping on five sleeves
+    trades far more than the first card's l1-leashed optimiser, and at 30bp the
+    capacity ceiling is set by how often the signal changes its mind. No ADV
+    data has been supplied, so this remains an argument.

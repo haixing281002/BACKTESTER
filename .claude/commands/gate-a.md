@@ -24,7 +24,15 @@ c = load_card('$1')
 print(c.at_a_glance())
 print(c.plan())
 print(assess(c).render(only_missing=True))
+print(c.convertibility_block())
 print(c.asks())"
+```
+
+Or, for the whole thing assembled the way the reviewer will read it — the
+decision brief first, the audit trail after:
+
+```bash
+python run_interpret.py --pdf <paper.pdf> --card $1
 ```
 
 1. **At a glance** — universe, signal, lookback, lag, weights, rebalance,
@@ -54,9 +62,22 @@ it do better. Present each request with its fallback, so the answer is a
 decision rather than a favour — and put the `ask_of` label on every question, so
 a PM is not reading the data owner's queue.
 
-If the card has no requests and no questions, **say that explicitly**. It claims
-no further data would improve the test and the paper settled everything, which
-is worth confirming rather than passing over.
+If the card has no requests and no questions, **say that explicitly**, and say
+which of the two cases it is. `no_further_data_needed` filled in is a claim a
+reviewer can disagree with. Both sections blank is not a claim at all, and it
+cannot be told apart from nobody having looked.
+
+## The convertibility verdict is the model's opinion. Present it as one.
+
+`convertibility` is the only section on the card that is an opinion rather than
+a reading of the paper. Lead with the **weakest link** and what would settle it,
+not with the verdict — the verdict is the least interesting part, because it is
+the part a human is most likely to have their own view on. A reviewer who
+disagrees with the weakest link has found something; a reviewer who disagrees
+with the verdict alone has only voted.
+
+`not_convertible` does not block this gate, and it should not. A well-argued no
+here is the cheapest useful output this pipeline produces.
 
 ## Then the two that dominate everything else
 

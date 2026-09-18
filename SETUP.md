@@ -79,7 +79,7 @@ there is nothing to download or upload.
 
 ```bash
 python -m pytest tests/ -q          # Windows: py -m pytest tests/ -q
-python run_pipeline.py --card cards/devanathan_2026_india_factor_adaptation.yaml
+python run_pipeline.py --card examples/cards/devanathan_2026_india_factor_adaptation.yaml
 ```
 
 The first should print `41 passed`. The second takes 2–4 minutes and ends at

@@ -665,12 +665,62 @@ def test_gate_a_blocks_on_a_blocking_question(registry):
     assert row.blocking and not row.passed
 
 
-def test_gate_a_blocks_a_request_with_no_fallback(registry):
+def test_a_fallback_less_request_never_reaches_gate_a_at_all(registry, tmp_path):
+    """This used to be a Gate A criterion, and it could not fail.
+
+    The old test mutated a loaded card to empty a `without_it`, then asserted
+    that Gate A caught it. It did -- but no card in that state can ever reach
+    Gate A, because DataRequest.validate() rejects it and load_card() raises. A
+    criterion that only fires on a hand-mutated object is a green row on every
+    real run. Assert the real contract instead: the schema stops it upstream.
+    """
+    import yaml
+    from ros.cards.schema import CardValidationError
+    blob = yaml.safe_load(open(EXEMPLAR, encoding="utf-8"))
+    blob["data_requests"][0]["without_it"] = ""
+    bad = tmp_path / "bad.yaml"
+    bad.write_text(yaml.safe_dump(blob), encoding="utf-8")
+    with pytest.raises(CardValidationError) as e:
+        load_card(str(bad))
+    assert "without_it" in str(e.value)
+
+
+def test_gate_a_flags_a_card_that_asked_for_nothing(registry):
+    """The case the old criterion silently passed.
+
+    `all()` over an empty list is True, so a card that asked for nothing scored
+    exactly like one that asked well.
+    """
     card = load_card(EXEMPLAR)
-    card.data_requests[0].without_it = ""
+    card.data_requests = []
     gr = gate_a(card, _Feas())
-    row = next(c for c in gr.criteria if c.name == "data requests carry a fallback")
-    assert row.blocking and not row.passed
+    row = next(c for c in gr.criteria
+               if c.name == "the card asked for something, or argued it need not")
+    assert not row.passed
+    assert "silen" in row.evidence.lower() or "nothing" in row.evidence.lower()
+
+
+def test_an_argued_silence_is_accepted(registry):
+    """Asking for nothing is legitimate -- as a claim, not as a blank."""
+    card = load_card(EXEMPLAR)
+    card.data_requests = []
+    card.no_further_data_needed = (
+        "The five sleeve series are the whole mechanism; no further series "
+        "would change the verdict, only what we may claim from it.")
+    gr = gate_a(card, _Feas())
+    row = next(c for c in gr.criteria
+               if c.name == "the card asked for something, or argued it need not")
+    assert row.passed
+
+
+def test_gate_a_catches_a_placeholder_fallback(registry):
+    """Non-empty satisfies the schema. 'N/A' satisfies nobody."""
+    card = load_card(EXEMPLAR)
+    card.data_requests[0].without_it = "N/A"
+    gr = gate_a(card, _Feas())
+    row = next(c for c in gr.criteria
+               if c.name == "fallbacks are decisions you could take")
+    assert not row.passed and row.blocking
 
 
 # ---------------------------------------------------------------------------
