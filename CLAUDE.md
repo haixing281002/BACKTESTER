@@ -70,18 +70,44 @@ alphabetically, and read a card about somebody else's paper on every run. Read
 an example for its shape; never copy one and edit it — a card carries a paper's
 sha256 and its own ambiguities.
 
-**Gate A opens with three blocks:**
+## Stage 02 is where the work happens. Gate A only verifies.
+
+If a human at Gate A has to work out the sample window, the warmup, the
+benchmarks, or what would count as failure, then Stage 02 did not finish and the
+gate is doing the design. Three card sections stop that, all written by the model:
+
+- **`data_plan`** — the dataset this paper DESERVES, designed from the paper and
+  *then* compared with what the fund holds. Never the other way round: starting
+  from the eight series on the shelf is how a paper quietly becomes whatever the
+  available data can answer. Every field argues its **granularity** (why not
+  coarser, why not finer — the choice that decides what data costs) and its
+  **history**, names its **adjustments**, and is marked `minimum_viable` or not.
+  Plus `rejected_alternatives` with reasons, and an `optimality_argument` for why
+  this is the right way to test this paper in Indian equities.
+- **`selection`** — how securities are chosen. The `rule` is always required. A
+  named list is optional and dangerous: a model naming Indian stocks from memory
+  produces a plausible, unverifiable list, which is **worse** than no list
+  because it looks checked. So a list needs `verified_against`
+  (`firm_registry` / `master_universe` / `index_factsheet` / `paper` /
+  `supplied_by_human` / `UNVERIFIED`) and an `as_of` date. `UNVERIFIED` is legal
+  and both Gate A and the completeness check surface it as a guess.
+- **`backtest_plan`** — window and why, warmup and why, rebalance rule, weights,
+  **benchmarks each with `why_this`**, `must_beat` named before the run so the
+  bar cannot move after, and both `success_looks_like` and `failure_looks_like`.
+  A plan that cannot fail is not a test.
+
+**Gate A opens with four blocks:**
 
 1. **At a glance** — universe | signal | lookback | lag, weights | rebalance |
    benchmark, costs | ambiguities | confidence, plus mandate conflicts and the
-   engine template. A reviewer who reads only this should be able to say "that
-   is not the strategy I expected". A blank reads `-- not stated --`, never a
-   polite default.
-2. **Completeness** — 42 checks drawn from what a strong card contains, each
+   engine template. A blank reads `-- not stated --`, never a polite default.
+2. **The plan** (`card.plan()`) — the three sections above. This is what a human
+   is actually verifying.
+3. **Completeness** — 62 checks drawn from what a strong card contains, each
    naming the failure it prevents. `examples/cards/devanathan_…` scores 99%; a
    card that merely validates scores 17%. A card that validates is not a card
    that is any good, and the schema cannot tell six cited ambiguities from none.
-3. **What the model is asking you for** — `data_requests` and `open_questions`.
+4. **What the model is asking you for** — `data_requests` and `open_questions`.
 
 `data_requests` is the model asking the fund for data, and **`without_it` is
 mandatory**: a request with no fallback is a demand, and a demand at Gate A
@@ -171,7 +197,7 @@ ros/
   cards/schema.py      Strategy Card: the ONLY interface between interpretation
                        and the engine. A card is data, never code. Carries
                        at_a_glance() and asks() for Gate A.
-      completeness.py  42 checks: is this card as good as a good one?
+      completeness.py  62 checks: is this card as good as a good one?
       extract.py       deterministic PDF reader (regex + text-geometry tables)
   data/                registry (what the fund holds), loaders, PIT snapshots
       universes.py     24 Indian universes + mechanism-fit ranking; the
@@ -205,7 +231,7 @@ python run_interpret.py --pdf docs/papers/<paper>.pdf     # 00 -> Gate A, NO DAT
 python run_pipeline.py --card cards/<card>.yaml          # ends at Gate B PENDING
 python run_pipeline.py --card cards/<card>.yaml \
     --decision REJECT --decided-by "Name" --rationale "…"  # a human rules
-python -m pytest tests/ -q                                # 264 tests
+python -m pytest tests/ -q                                # 300 tests
 python validate/cross_check.py --excel                    # engine vs clean-room impl
 python -m ros.interpretation history                      # who interpreted what
 ```

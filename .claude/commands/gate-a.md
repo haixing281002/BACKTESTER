@@ -22,6 +22,7 @@ from ros.cards.schema import load_card
 from ros.cards.completeness import assess
 c = load_card('$1')
 print(c.at_a_glance())
+print(c.plan())
 print(assess(c).render(only_missing=True))
 print(c.asks())"
 ```
@@ -30,9 +31,22 @@ print(c.asks())"
    benchmark, costs, ambiguities, confidence, mandate conflicts, engine. A
    reviewer who reads only this should be able to say "that is not the strategy
    I expected" or "that lag cannot be right". Both objections are cheap here.
-2. **Completeness** — what a reviewer will find thin. Report the score and every
+2. **The plan** (`card.plan()`) — the dataset the card designed and why it is the
+   right one, which securities and on whose word, and exactly what will be run:
+   window, warmup, rebalance, weights, benchmarks with reasons, must-beat, and
+   what success and failure look like. **This is the block a human is actually
+   verifying.** Gate A is confirmation, not design: if any of it is missing, say
+   so plainly and send it back to Stage 02 rather than filling it in yourself.
+3. **Completeness** — what a reviewer will find thin. Report the score and every
    `MISS`; those are gaps nobody can work around.
-3. **What the model is asking for** — the data requests and open questions.
+4. **What the model is asking for** — the data requests and open questions.
+
+Two things in block 2 deserve a sentence of their own when you present it:
+
+- **A named security list with `verified_against: UNVERIFIED`** is a guess that
+  looks like a fact. Flag it first, above everything else.
+- **`failure_looks_like`** is what stops the bar moving after the numbers arrive.
+  If it is vague, that is the finding.
 
 That third block is the part people skip and should not. Gate A is a
 conversation: the human confirms judgements, and the model says what would let

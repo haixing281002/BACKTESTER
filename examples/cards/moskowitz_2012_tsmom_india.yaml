@@ -200,6 +200,190 @@ benchmark_templates:
   - {name: "Vol-target overlay",   template: vol_target,   params: {weights: equal, target_vol: 0.18}}
   - {name: "Inverse vol",          template: inverse_vol,  params: {}}
 
+data_plan:
+  # A per-stream trend filter needs several WEAKLY CORRELATED streams. That is
+  # the binding requirement and the Indian sleeves fail it -- which is the
+  # finding, not a flaw in the test. Designed from the paper first: what would a
+  # faithful Indian test of time-series momentum actually need?
+  ideal:
+    - field: "Total-return daily series for a set of weakly correlated Indian long-only streams"
+      granularity: daily
+      history_from: "2005-04-01"
+      why: >
+        The signal is a 12-1 trailing return per stream and the sizing is inverse
+        trailing volatility, so each stream needs its own return history. The
+        paper's result rests on holding many streams whose trends fire at
+        different times; with five correlated equity sleeves they fire together.
+      why_granularity: >
+        Daily. The vol estimate uses a 63-day window and the signal a 252-day
+        window with a 21-day skip, so monthly cannot form the skip at all.
+        Intraday is irrelevant: the position changes once a month.
+      why_history: >
+        2005-04 is the common start of the five sleeves. Trend following is
+        judged over cycles, not years, and a sample without 2008 and 2020 would
+        omit both regimes where trend either works or does not.
+      adjustments: "dividends reinvested; state whether the index rebases"
+      minimum_viable: true
+    - field: "Indian overnight or 91-day T-bill rate, daily"
+      granularity: daily
+      history_from: "2005-04-01"
+      why: >
+        The book goes to cash when no stream passes the filter, which on
+        correlated sleeves happens for long stretches. The return earned in
+        those stretches is a large part of the result.
+      why_granularity: "daily, to match the accrual"
+      why_history: "the full window, or the Sharpe is spliced"
+      adjustments: "annualised decimal; state the day-count"
+      minimum_viable: true
+    - field: "Additional low-correlation Indian long-only streams (sector, thematic, duration-linked)"
+      granularity: daily
+      history_from: "2005-04-01"
+      why: >
+        The honest fix for the mechanism's real problem. The paper had 58 markets
+        across four asset classes; a faithful Indian test needs more than five
+        streams that correlate 0.74-0.94, or it is testing collinearity rather
+        than trend.
+      why_granularity: "daily, same as the sleeves"
+      why_history: "the same window, or the streams cannot be combined"
+      adjustments: "total return, consistently across streams"
+      minimum_viable: false
+    - field: "Daily traded value per stream or its tracking ETF"
+      granularity: daily
+      history_from: "2010-01-01"
+      why: >
+        Trend following turns over hard on regime changes -- exactly when
+        liquidity is worst. Capacity here is not a footnote.
+      why_granularity: "daily, because the turnover is episodic and clustered"
+      why_history: "2010 onward; sleeve ETFs did not exist earlier"
+      adjustments: "traded VALUE in INR"
+      minimum_viable: false
+  rejected_alternatives:
+    - option: "Cross-sectional momentum over NIFTY 500 constituents"
+      why_not: >
+        A different and much better-studied strategy. The paper's claim is about
+        each stream against its OWN history, not against its peers. Testing the
+        cross-sectional version would answer a question nobody asked here.
+    - option: "Indian commodity or currency futures, to recover the paper's breadth"
+      why_not: >
+        A long-only equity fund cannot hold them. If the conclusion is that trend
+        needs cross-asset breadth, the actionable finding is that this fund
+        cannot run trend -- not that it should change mandate.
+    - option: "Monthly closes"
+      why_not: "cannot form a 21-day skip or a 63-day vol window"
+    - option: "The five price-return sleeves we hold, unchanged"
+      why_not: >
+        What we will actually run on, and not the right dataset: dividends are
+        missing, and the cash-versus-equity comparison the filter creates is
+        therefore biased. Recorded so the gap is not forgotten.
+  granularity_verdict: >
+    DAILY. A 252-day window with a 21-day skip and a 63-day vol estimate cannot
+    be formed from anything coarser, and nothing finer is used.
+  optimality_argument: >
+    Two fields are enough to answer this paper's question honestly on Indian
+    equities: total-return stream histories and a real short rate. That is
+    optimal rather than minimal because the mechanism's failure mode here is
+    KNOWN in advance -- five correlated sleeves cannot reproduce a result built
+    on 58 weakly correlated markets -- and no amount of extra data on those five
+    sleeves changes it. The third field, more low-correlation streams, is the
+    only addition that could change the verdict rather than merely sharpen it,
+    and that is why it is listed and marked non-viable: it would make this a
+    different and better test, which is a decision for a human.
+  what_would_change_the_answer: >
+    More weakly correlated streams could change the verdict outright, because
+    correlation is the mechanism's binding constraint. Total-return series and a
+    real rate change the LEVEL of every number and the cash-versus-equity
+    comparison. ADV changes what capacity we may claim, not whether the signal
+    exists.
+
+selection:
+  rule: >
+    No cross-sectional selection. Every sleeve is judged against ZERO on its own
+    12-1 trailing return, independently of the others; those passing are held at
+    inverse-volatility weights and the book is scaled to the vol target. If none
+    passes, the book goes to cash.
+  explicit_securities:
+    - NIFTY500 MOMENTUM 50
+    - NIFTY500 QUALITY 50
+    - NIFTY500 VALUE 50
+    - NIFTY500 LOW VOLATILITY 50
+    - NIFTY ALPHA 50
+  verified_against: firm_registry
+  why_these: >
+    The five NSE single-factor indices with a full common history in the registry.
+    Checkable against ros/data/firm_registry.py rather than asserted -- these are
+    indices, not stocks recalled from memory.
+  as_of: "2026-06-11"
+
+backtest_plan:
+  sample_start: "2005-04-01"
+  sample_end: "2026-05-29"
+  why_this_window: >
+    Common start of the five sleeves; ends at NIFTY 500's last close so the
+    benchmark comparison is on a shared window. Trend following must be judged
+    across cycles: this window contains 2008 and 2020, the two regimes where a
+    trend filter either earns its keep or is revealed as lagged beta.
+  warmup_days: 68
+  why_warmup: >
+    The 252-day signal window plus the 21-day skip cannot be formed earlier, and
+    the 63-day vol estimate needs its own burn-in. Every benchmark uses the same
+    warmup; unequal start dates once reversed a ranking in this repo.
+  rebalance_rule: "last trading day of each calendar month; signals shifted by 1 + lag_days"
+  weights_rule: >
+    Sign filter per stream, then inverse trailing volatility among those passing,
+    then scaled so ex-ante vol meets 18%, capped at unlevered. Cash holds the
+    residual in the faithful variant; the mandate variant spreads it across the
+    survivors.
+  benchmarks:
+    - name: "NIFTY 500"
+      why_this: >
+        The do-nothing option and the fund's benchmark. A trend filter that only
+        beats this has produced lagged equity beta with extra turnover.
+    - name: "Equal-weight sleeves, annually rebalanced"
+      why_this: >
+        Isolates the filter's contribution. Same five streams, no signal, almost
+        no turnover. The gap between this and the strategy IS the trend signal.
+    - name: "NIFTY500 MULTIFACTOR MQVLV 50"
+      why_this: >
+        The off-the-shelf alternative with zero turnover. If trend does not beat
+        a product you can simply buy, the recommendation is to buy it.
+    - name: "Always-invested version of the same sizing rule"
+      why_this: >
+        Separates the SIGN FILTER from the inverse-vol sizing. If the
+        always-invested version matches, the filter buys nothing and the result
+        is a risk-weighting effect wearing a trend label.
+  must_beat:
+    - "Equal-weight sleeves, or the trend filter buys nothing"
+    - "The always-invested same-sizing variant, or the filter is decorative"
+    - "NIFTY500 MULTIFACTOR MQVLV 50 after 30bp round trip"
+  success_looks_like: >
+    Beats equal-weight AND the always-invested variant on geometric Sharpe with
+    paired bootstrap p <= 0.05; drawdown materially shallower in 2008 and 2020,
+    which is what a trend filter is FOR; deflated Sharpe P(skill) >= 0.95 at an
+    honest trial count; and a Sharpe that decays monotonically as implementation
+    lag rises, which is the signature of real timing information.
+  failure_looks_like: >
+    Any of: tied with equal-weight; tied with the always-invested variant, making
+    the filter decorative; no drawdown improvement in the two stress regimes,
+    which means it is lagged beta rather than trend; Sharpe flat or rising with
+    implementation lag; or a result that depends on the cash rate assumption,
+    since the book sits in cash for long stretches when correlated sleeves all
+    fail the filter together.
+  known_failure_modes:
+    - >
+      Correlated streams fire and fail TOGETHER, so the book swings between fully
+      invested and fully in cash rather than diversifying across trends. This is
+      the mechanism's central problem here and it is structural, not a parameter.
+    - >
+      Whipsaw at regime turns: the 21-day skip delays both entry and exit, and
+      30bp round trip is charged on every false signal.
+    - >
+      Long cash periods make the result a bet on the cash-rate assumption, which
+      is currently a declared constant.
+    - >
+      The vol target masking the filter: scaling to 18% can produce most of the
+      risk-adjusted improvement on its own, which the always-invested benchmark
+      is there to detect.
+
 n_configs_tried: 1
 
 notes: >
