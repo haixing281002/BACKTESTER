@@ -111,9 +111,13 @@ def main() -> int:
             c = load_card(examples[0])
             print(f"{OK}engine       schema loads (self-test on an example), "
                   f"fingerprint {c.fingerprint()}")
+            # Say "and N more" rather than truncating silently: a count that
+            # does not match the list makes someone hunt for a missing file.
+            shown = [os.path.basename(m) for m in mine[:4]]
+            more = f", and {len(mine) - 4} more" if len(mine) > 4 else ""
             print(f"{OK}your cards   {len(mine)} in cards/"
-                  + (f": {', '.join(os.path.basename(m) for m in mine[:4])}"
-                     if mine else " -- none yet, which is expected on a fresh clone"))
+                  + (f": {', '.join(shown)}{more}" if mine
+                     else " -- none yet, which is expected on a fresh clone"))
         except Exception as e:                                   # noqa: BLE001
             print(f"{BAD}engine       {type(e).__name__}: {e}")
             problems.append("The engine could not load a card. Run from the repo root.")
