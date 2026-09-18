@@ -268,6 +268,96 @@ benchmark_templates:
   - {name: "Equal risk contribution", template: equal_risk_contribution, params: {}}
   - {name: "Min variance",         template: min_variance, params: {}}
 
+data_requests:
+  - item: "An Indian overnight or T-bill rate series, daily, 2005 onward"
+    why: >
+      The cash leg is the paper's drawdown-control mechanism, and every Sharpe
+      here is measured against a numeraire. Right now that numeraire is a flat
+      6% constant.
+    unlocks: >
+      A defensible Sharpe, and a cash-holding variant whose de-risking is timed
+      by the actual rate cycle rather than by a straight line.
+    without_it: >
+      Declared constant 6% proxy, swept 4-8%. Wrong in level and wrong in SHAPE
+      -- a constant cannot de-risk you into a rate-cut cycle -- so every
+      cash-holding result is reported as rate-dependent and the ladder stays
+      capped.
+    priority: high
+    format_hint: "two columns: date, annualised_rate (decimal, e.g. 0.0655)"
+  - item: "Total-return versions of the five factor sleeves"
+    why: >
+      The held series are price-return, so dividends are missing from every one.
+    unlocks: >
+      An honest absolute return, and a cash-vs-equity comparison that is not
+      structurally biased against equity by roughly the dividend yield a year.
+    without_it: >
+      Absolute returns understate throughout, and the faithful cash-holding
+      variant is flattered relative to the fully-invested one. Reported, not
+      corrected.
+    priority: high
+    format_hint: "same shape as the existing workbook, TRI instead of PRI"
+  - item: "Post-launch-only sleeve history, with each index's real launch date"
+    why: >
+      NSE backfilled these to a 2005 base with methodology fixed years later,
+      so the sleeve rules were chosen knowing the returns they now report.
+    unlocks: >
+      Lifting the ladder above ROBUST. No live claim may rest on backfilled
+      history, so without this the ceiling is structural rather than empirical.
+    without_it: >
+      Mechanism testing only, ladder capped at ROBUST, and the card says so.
+    priority: nice_to_have
+    format_hint: "one row per index: name, launch_date"
+  - item: "Daily traded value for the sleeve constituents, or for a tracking ETF"
+    why: >
+      Sleeve rotation is only free on paper. An index is not a portfolio.
+    unlocks: >
+      A capacity number instead of an assumption, and a defensible AUM ceiling.
+    without_it: >
+      turnover_capacity runs on hand-supplied ADV and AUM arguments, so the
+      capacity conclusion is an input, not a finding.
+    priority: high
+    format_hint: "date, index_or_etf, traded_value_inr_cr"
+
+open_questions:
+  - question: >
+      Is 18% the right ex-ante volatility cap for this book, or should it be set
+      from the fund's own risk budget rather than from NIFTY 500's realised vol?
+    why_it_matters: >
+      The cap is what the mechanism DOES. At 12% it binds continuously and the
+      book sits in cash; at 26% it never binds and the strategy collapses to the
+      strategic mix. Sharpe moved 0.45 to 0.37 across that range in the sweep,
+      so a chunk of any edge rides on this number.
+    what_i_assumed: >
+      18%, just above NIFTY 500's realised 20.2%, so the cap binds in stress
+      rather than continuously. Swept 12-26% and reported.
+    ask_of: pm
+    blocks_run: false
+  - question: >
+      Which variant governs the promotion decision -- the faithful cash-holding
+      run, or the fully-invested mandate run?
+    why_it_matters: >
+      They are different strategies, not two views of one. The cash variant is
+      where the paper's drawdown control lives and the fund cannot run it.
+      Scoring the wrong one promotes something unimplementable.
+    what_i_assumed: >
+      The mandate variant governs; the faithful variant is reported alongside as
+      the mechanism test.
+    ask_of: pm
+    blocks_run: false
+  - question: >
+      Is n_configs_tried = 1 honest here, given the paper's own appendix sweeps
+      and the target-vol range we explored?
+    why_it_matters: >
+      The deflated Sharpe rests entirely on this number and nothing in the
+      pipeline verifies it. Understating it is the easiest way to manufacture a
+      P(skill) that does not exist.
+    what_i_assumed: >
+      1, counting only this card's own configuration. That is almost certainly
+      too low once the paper's sweeps are folded in -- an earlier critique put
+      it nearer 48.
+    ask_of: researcher
+    blocks_run: false
+
 n_configs_tried: 1
 
 notes: >

@@ -117,6 +117,36 @@ def gate_a(card, feasibility, extraction_quality=None,
                 value=len(tc.caveats), threshold=">=1", blocking=False,
                 evidence="a translation with nothing to lose has not been examined"))
 
+    # ---- what is the model asking a human for? ---------------------------
+    reqs = getattr(card, "data_requests", []) or []
+    qs = getattr(card, "open_questions", []) or []
+    blocking_reqs = [r for r in reqs if r.priority == "blocking"]
+    blocking_qs = [q for q in qs if q.blocks_run]
+
+    c.append(Criterion(
+        "data requests carry a fallback",
+        all(r.without_it.strip() for r in reqs),
+        value=f"{len(reqs)} request(s)",
+        evidence="; ".join(r.item for r in reqs if not r.without_it.strip())
+                 or "every request says what happens if it is declined"))
+    c.append(Criterion(
+        "no request is blocking", not blocking_reqs,
+        value=f"{len(blocking_reqs)} blocking", threshold=0,
+        evidence="; ".join(r.item for r in blocking_reqs)
+                 or "nothing is being waited on"))
+    c.append(Criterion(
+        "open questions carry a working assumption",
+        all(q.what_i_assumed.strip() or q.blocks_run for q in qs),
+        value=f"{len(qs)} question(s)", blocking=False,
+        evidence="; ".join(q.question[:70] for q in qs
+                           if not q.what_i_assumed.strip() and not q.blocks_run)
+                 or "the run can proceed under stated assumptions"))
+    c.append(Criterion(
+        "no question blocks the run", not blocking_qs,
+        value=f"{len(blocking_qs)} blocking", threshold=0,
+        evidence="; ".join(q.question[:70] for q in blocking_qs)
+                 or "no question stops work"))
+
     # ---- what exactly is the strategy? -----------------------------------
     st = getattr(card, "strategy", None)
     if st is None:

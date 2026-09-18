@@ -12,7 +12,39 @@ code runs. Everything up to this point is cheap; everything after is not.
 Read the card `$1`, its analysis and critique in `outputs/interpretation/`, and
 the deterministic feasibility verdict.
 
-## Lead with the two that dominate everything else
+## Open with the card itself
+
+Three blocks, in this order, before any prose:
+
+```bash
+python -c "
+from ros.cards.schema import load_card
+from ros.cards.completeness import assess
+c = load_card('$1')
+print(c.at_a_glance())
+print(assess(c).render(only_missing=True))
+print(c.asks())"
+```
+
+1. **At a glance** — universe, signal, lookback, lag, weights, rebalance,
+   benchmark, costs, ambiguities, confidence, mandate conflicts, engine. A
+   reviewer who reads only this should be able to say "that is not the strategy
+   I expected" or "that lag cannot be right". Both objections are cheap here.
+2. **Completeness** — what a reviewer will find thin. Report the score and every
+   `MISS`; those are gaps nobody can work around.
+3. **What the model is asking for** — the data requests and open questions.
+
+That third block is the part people skip and should not. Gate A is a
+conversation: the human confirms judgements, and the model says what would let
+it do better. Present each request with its fallback, so the answer is a
+decision rather than a favour — and put the `ask_of` label on every question, so
+a PM is not reading the data owner's queue.
+
+If the card has no requests and no questions, **say that explicitly**. It claims
+no further data would improve the test and the paper settled everything, which
+is worth confirming rather than passing over.
+
+## Then the two that dominate everything else
 
 A reviewer who reads only the first two items must still catch the expensive
 mistakes. Put these at the top of the queue, in this order:

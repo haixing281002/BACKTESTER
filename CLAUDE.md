@@ -60,11 +60,28 @@ alphabetically, and read a card about somebody else's paper on every run. Read
 an example for its shape; never copy one and edit it — a card carries a paper's
 sha256 and its own ambiguities.
 
-**Gate A opens with the card at a glance**: universe | signal | lookback | lag,
-weights | rebalance | benchmark, costs | ambiguities | confidence, plus the
-mandate conflicts. A reviewer who reads only that block should be able to say
-"that is not the strategy I expected", which is cheap there and expensive after
-a run. A blank reads `-- not stated --` rather than a polite default.
+**Gate A opens with three blocks:**
+
+1. **At a glance** — universe | signal | lookback | lag, weights | rebalance |
+   benchmark, costs | ambiguities | confidence, plus mandate conflicts and the
+   engine template. A reviewer who reads only this should be able to say "that
+   is not the strategy I expected". A blank reads `-- not stated --`, never a
+   polite default.
+2. **Completeness** — 42 checks drawn from what a strong card contains, each
+   naming the failure it prevents. `examples/cards/devanathan_…` scores 99%; a
+   card that merely validates scores 17%. A card that validates is not a card
+   that is any good, and the schema cannot tell six cited ambiguities from none.
+3. **What the model is asking you for** — `data_requests` and `open_questions`.
+
+`data_requests` is the model asking the fund for data, and **`without_it` is
+mandatory**: a request with no fallback is a demand, and a demand at Gate A
+stops the work instead of informing it. `open_questions` is what the paper does
+not settle, addressed with `ask_of` (pm / data_owner / researcher), and
+**`what_i_assumed` is mandatory** unless it declares `blocks_run` — the run
+proceeds under a stated guess that a human can overturn.
+
+Gate A blocks on a `blocking` request, a `blocks_run` question, and any request
+missing its fallback.
 
 ## Stages 00 to Gate A need NO MARKET DATA
 
@@ -142,7 +159,9 @@ paper's numbers.
 ```
 ros/
   cards/schema.py      Strategy Card: the ONLY interface between interpretation
-                       and the engine. A card is data, never code.
+                       and the engine. A card is data, never code. Carries
+                       at_a_glance() and asks() for Gate A.
+      completeness.py  42 checks: is this card as good as a good one?
       extract.py       deterministic PDF reader (regex + text-geometry tables)
   data/                registry (what the fund holds), loaders, PIT snapshots
       universes.py     24 Indian universes + mechanism-fit ranking; the
@@ -176,7 +195,7 @@ python run_interpret.py --pdf docs/papers/<paper>.pdf     # 00 -> Gate A, NO DAT
 python run_pipeline.py --card cards/<card>.yaml          # ends at Gate B PENDING
 python run_pipeline.py --card cards/<card>.yaml \
     --decision REJECT --decided-by "Name" --rationale "…"  # a human rules
-python -m pytest tests/ -q                                # 243 tests
+python -m pytest tests/ -q                                # 260 tests
 python validate/cross_check.py --excel                    # engine vs clean-room impl
 python -m ros.interpretation history                      # who interpreted what
 ```
