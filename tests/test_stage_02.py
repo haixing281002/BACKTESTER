@@ -266,3 +266,74 @@ def test_the_plan_block_degrades_rather_than_crashing():
     txt = card.plan()
     assert "NO DATA PLAN" in txt and "NO SELECTION RULE" in txt
     assert "NO BACKTEST PLAN" in txt
+
+
+# ---------------------------------------------------------------------------
+# Is it a paper at all?
+#
+# Stage 00 screens a paper for RELEVANCE and assumes it is reading a paper.
+# Nothing checked that. A board deck read by an obliging model becomes a
+# "strategy" reconstructed from prose that describes none, and every stage
+# after it treats that reconstruction as real.
+# ---------------------------------------------------------------------------
+from ros.cards.extract import (NOT_A_PAPER, PAPER, classify_document,
+                               extract_document, parse_text_tables)
+
+REAL_PAPER = "docs/devanathan_2026_simple_dynamic_sbg.pdf"
+A_DECK = "docs/ai_research_operating_system.pdf"
+
+
+def _shape(path):
+    doc = extract_document(path)
+    return classify_document(doc, len(parse_text_tables(doc)))
+
+
+def test_a_real_paper_is_recognised():
+    sh = _shape(REAL_PAPER)
+    assert sh.verdict == PAPER and sh.looks_like_a_paper
+    assert len(sh.markers_found) >= 3
+
+
+def test_a_board_deck_is_not_mistaken_for_a_paper():
+    """The case that prompted this: a two-page architecture deck."""
+    sh = _shape(A_DECK)
+    assert sh.verdict == NOT_A_PAPER and not sh.looks_like_a_paper
+    assert sh.n_tables == 0
+
+
+def test_the_verdict_says_what_is_missing_rather_than_just_refusing():
+    sh = _shape(A_DECK)
+    blob = " ".join(sh.reasons).lower()
+    assert "pages" in blob
+    assert "table" in blob
+    assert len(sh.reasons) >= 3, "one signal alone is not enough to call it"
+
+
+def test_the_screen_needs_more_than_one_signal():
+    """A theory paper has no tables; a short note is still a paper. One signal
+    alone would reject real work, which is worse than the problem."""
+    import inspect
+    from ros.cards import extract
+    src = inspect.getsource(extract.classify_document)
+    assert "len(reasons) >= 3" in src
+
+
+def test_the_screen_advises_and_does_not_block():
+    """A scanned PDF or an unusual format can trip any heuristic."""
+    sh = _shape(A_DECK)
+    txt = sh.render()
+    assert "advisory" in txt.lower()
+    assert "confirm" in txt.lower()
+
+
+def test_run_interpret_surfaces_the_verdict_before_interpreting():
+    import subprocess
+    import sys
+    r = subprocess.run([sys.executable, "run_interpret.py", "--pdf", A_DECK],
+                       cwd=ROOT_DIR, capture_output=True, text=True, timeout=600)
+    assert "DOES NOT LOOK LIKE A RESEARCH PAPER" in r.stdout
+    assert "STOPPING HERE" in r.stdout
+
+
+import pathlib
+ROOT_DIR = pathlib.Path(__file__).resolve().parent.parent
