@@ -1,0 +1,195 @@
+{
+  "entry_id": "devanathan_2026_india_factor_adaptation__6b8f4683ceaf1eee__20260916T071637",
+  "card_id": "devanathan_2026_india_factor_adaptation",
+  "mode": "adaptation",
+  "created_utc": "2026-09-16T07:16:37.138733+00:00",
+  "card_fingerprint": "6b8f4683ceaf1eee",
+  "snapshot_id": "devanathan_2026_india_factor_adaptation__6b8f4683ceaf1eee",
+  "content_hash": "84abe49445fb2131d6b251d94b698f1c8a8d779af2a39ce7d205db0f5b92368c",
+  "engine_code_hash": "a8b53d961606696fdbde71f3e19749a5b833010b2ecec1c15c0a1252afbe8c42",
+  "git_commit": "249967b3ccbb4fe6242b9bdec3cd7c49d5a310a8",
+  "outcome": "REJECTED",
+  "attained_rung": null,
+  "stopped_at": "INDIA_VALIDATED",
+  "headline_metrics": {
+    "strategy": "dynamic_factor_sleeve_allocation [mandate: fully invested]",
+    "n_configs_tried": 7,
+    "cagr": 0.15240245908198258,
+    "vol": 0.21242366600586005,
+    "sharpe": 0.43968313599766407,
+    "max_dd": 0.6925388759513105,
+    "turnover": 1.4654708528089038,
+    "deflated_sharpe_prob": 6.538468946396785e-05,
+    "max_corr_to_book": 0.9735151951715318,
+    "best_delta_ir": 0.0
+  },
+  "factor_fingerprint": {
+    "NIFTY ALPHA 50": 0.4172,
+    "NIFTY500 LOW VOLATILITY 50": 0.3401,
+    "NIFTY500 MOMENTUM 50": 0.7865,
+    "NIFTY500 QUALITY 50": 0.1294,
+    "NIFTY500 VALUE 50": 0.2738
+  },
+  "gates": [
+    {
+      "gate": "GATE A -- interpretation",
+      "owner": "researcher",
+      "decision": "PENDING",
+      "passed": true,
+      "rationale": "",
+      "criteria": [
+        {
+          "name": "card validates against schema",
+          "passed": true,
+          "evidence": "schema clean",
+          "value": null,
+          "threshold": null,
+          "blocking": true
+        },
+        {
+          "name": "all ambiguities resolved",
+          "passed": true,
+          "evidence": "6 ambiguities logged and resolved",
+          "value": 0,
+          "threshold": 0,
+          "blocking": true
+        },
+        {
+          "name": "no low-confidence material interpretation",
+          "passed": false,
+          "evidence": "low-confidence: universe.cash_asset",
+          "value": 1,
+          "threshold": 0,
+          "blocking": false
+        },
+        {
+          "name": "data feasibility resolved",
+          "passed": true,
+          "evidence": "no blocking data gaps",
+          "value": "GO_WITH_PROXY",
+          "threshold": "GO or GO_WITH_PROXY",
+          "blocking": true
+        },
+        {
+          "name": "transferred mechanism stated",
+          "passed": true,
+          "evidence": "Monthly long-only allocation across a small sleeve set, maximising an EWMA-momentum return forecast net of half-spread cost, subject to a hard ex-ante volatility cap and an l1 constraint to a strategic mix (paper eq. 3), with a volatility-control overlay (paper eq. 1) as the simpler comparator.\n",
+          "value": null,
+          "threshold": null,
+          "blocking": true
+        },
+        {
+          "name": "broken source assumptions enumerated",
+          "passed": true,
+          "evidence": "DIVERSIFICATION: the paper's lift depends on SPY/AGG/GLD being weakly or negatively correlated. Our six sleeves are single-country equity and correlate 0.74-0.94 pairwise. A risk-constrained optimiser over near-collinear assets has far less to work with; expect most of the paper's benefit NOT to transfer.\n; CASH: the paper de-risks into cash, and cash is where its drawdown control comes from. A long-only fully-invested equity mandate cannot do this. The mandate- compliant variant is therefore a materially different strategy.\n; RISK-FREE ASSET: no Indian cash-rate series is in the snapshot. Any cash-holding variant runs on a declared constant proxy and must be read under the rate sweep.\n; POINT-IN-TIME: NSE factor indices are backfilled to a 2005 base with methodology fixed much later. The sleeve definitions were chosen knowing this history.\n; RETURN BASIS: these are price-return indices. Dividends are missing from every series, so absolute returns understate and any cash-vs-equity comparison is biased against equity.\n; INVESTABILITY: an index is not a portfolio. Real sleeve replication carries tracking error, rebalance impact and sleeve-level turnover that the index does not charge.\n",
+          "value": 6,
+          "threshold": ">=1",
+          "blocking": false
+        },
+        {
+          "name": "source text is machine-readable",
+          "passed": true,
+          "evidence": "Math-bearing lines on 7% of lines. Equations are unreliable after extraction -- any card field derived from a formula needs human verification against the rendered page.; Reversed (rotated) text on pages [10, 12, 13, 15, 16, 30]: figure axis labels. Numbers must not be read off these pages.",
+          "value": null,
+          "threshold": null,
+          "blocking": true
+        },
+        {
+          "name": "equations verified against rendered page",
+          "passed": false,
+          "evidence": "high math density: formulas were hand-checked, not trusted from text",
+          "value": "7.2%",
+          "threshold": "<5%",
+          "blocking": false
+        }
+      ]
+    },
+    {
+      "gate": "GATE B -- investment decision",
+      "owner": "PM / IC",
+      "decision": "REJECT",
+      "passed": false,
+      "rationale": "Loses to MQVLV after costs; sleeve-relative alpha t=0.15",
+      "criteria": [
+        {
+          "name": "deflated Sharpe clears selection bias",
+          "passed": false,
+          "evidence": "After penalising 7 configuration(s) tried, the threshold Sharpe is 1.39; observed 0.51; P(skill) = 0.0%.",
+          "value": "0.00",
+          "threshold": 0.95,
+          "blocking": true
+        },
+        {
+          "name": "positive Sharpe in every out-of-sample window",
+          "passed": false,
+          "evidence": "worst walk-forward window",
+          "value": "0.19",
+          "threshold": 0.3,
+          "blocking": true
+        },
+        {
+          "name": "advantage over benchmark is significant",
+          "passed": false,
+          "evidence": "paired stationary-bootstrap P(Sharpe difference <= 0)",
+          "value": "0.800",
+          "threshold": "<=0.05",
+          "blocking": true
+        },
+        {
+          "name": "differentiated from existing book",
+          "passed": false,
+          "evidence": "max correlation to any existing signal",
+          "value": "0.97",
+          "threshold": "<=0.8",
+          "blocking": true
+        },
+        {
+          "name": "improves the book's information ratio",
+          "passed": false,
+          "evidence": "incremental IR at a realistic sleeve size",
+          "value": "+0.000",
+          "threshold": ">=0.05",
+          "blocking": true
+        },
+        {
+          "name": "alpha survives the factor fingerprint",
+          "passed": false,
+          "evidence": "HAC t-stat of alpha vs known factor sleeves",
+          "value": "0.15",
+          "threshold": "|t|>=2.0",
+          "blocking": true
+        },
+        {
+          "name": "implementable within mandate",
+          "passed": true,
+          "evidence": "no mandate violations",
+          "value": null,
+          "threshold": null,
+          "blocking": true
+        },
+        {
+          "name": "turnover within operational tolerance",
+          "passed": true,
+          "evidence": "annualised two-way turnover",
+          "value": "147%",
+          "threshold": "<=400%",
+          "blocking": false
+        }
+      ]
+    }
+  ],
+  "lessons": [
+    "Stopped at INDIA_VALIDATED; attained nothing.",
+    "Max correlation to an already-available alternative: 0.97.",
+    "Alpha vs factor sleeves: t = 0.15 (HAC).",
+    "Deflated Sharpe P(skill) = 0.00 at 7 trials.",
+    "Source assumption broken: DIVERSIFICATION: the paper's lift depends on SPY/AGG/GLD being weakly or negatively correlated. Our six sleeves are single-country equity and correlate 0.74-0.9",
+    "Source assumption broken: CASH: the paper de-risks into cash, and cash is where its drawdown control comes from. A long-only fully-invested equity mandate cannot do this. The mandate- co",
+    "Source assumption broken: RISK-FREE ASSET: no Indian cash-rate series is in the snapshot. Any cash-holding variant runs on a declared constant proxy and must be read under the rate sweep"
+  ],
+  "reuse_notes": [
+    "Snapshot + code hash stored: this run is re-derivable.",
+    "Factor fingerprint stored for similarity search (5 loadings)."
+  ],
+  "reviewer": "N. Ganesh (PM)"
+}

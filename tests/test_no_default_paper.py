@@ -211,3 +211,47 @@ def test_an_uninterpreted_paper_says_what_to_run_next():
     assert r.returncode == 2
     assert "NOTHING HAS BEEN INTERPRETED" in r.stdout
     assert "/ingest" in r.stdout
+
+
+# ---------------------------------------------------------------------------
+# outputs/ must not ship another paper's work
+#
+# Worse than the cards case. A committed strategy library means a fresh clone
+# answers "has this question been asked before?" with somebody else's answers,
+# and trials_for_family() -- which feeds the deflated Sharpe -- inherits their
+# trial budget. Both silently change the significance of YOUR results.
+# ---------------------------------------------------------------------------
+def test_outputs_ships_with_no_run_artifacts():
+    import subprocess
+    tracked = subprocess.run(["git", "ls-files", "outputs/"], cwd=ROOT,
+                             capture_output=True, text=True).stdout.split()
+    allowed = {"outputs/.gitkeep", "outputs/README.md"}
+    stray = [t for t in tracked if t not in allowed]
+    assert not stray, (
+        "outputs/ is tracking run artifacts. A committed library makes a fresh "
+        f"clone inherit another paper's trial count:\n  " + "\n  ".join(stray))
+
+
+def test_the_strategy_library_starts_empty_on_a_fresh_clone():
+    """The root that matters: StrategyLibrary defaults to outputs/library."""
+    import subprocess
+    tracked = subprocess.run(["git", "ls-files", "outputs/library/"], cwd=ROOT,
+                             capture_output=True, text=True).stdout.split()
+    assert not tracked, (
+        f"{len(tracked)} library entries are committed. /librarian would report "
+        f"prior work that is not this fund's, and trials_for_family would count "
+        f"trials from another research programme.")
+
+
+def test_outputs_is_gitignored_so_runs_do_not_get_committed():
+    ignore = (ROOT / ".gitignore").read_text(encoding="utf-8")
+    assert "outputs/*" in ignore
+    assert "!outputs/README.md" in ignore, "the explanation must survive the ignore"
+
+
+def test_the_worked_example_outputs_are_kept_for_reference():
+    """Gitignoring the folder must not mean losing what a finished run looks like."""
+    ex = ROOT / "examples/outputs"
+    assert ex.is_dir()
+    assert list((ex / "library").glob("*.json")), "no example library entry"
+    assert list((ex / "reports").glob("*.txt")), "no example report"

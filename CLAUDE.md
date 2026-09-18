@@ -53,6 +53,16 @@ surfaces after a Gate A queue has been signed against the wrong work.
 New papers go in `docs/papers/`. Artifacts are keyed by the paper's slug and its
 sha256 travels on the card, so a result can always be traced to specific bytes.
 
+**`outputs/` is gitignored and yours.** It was committed once, and the
+consequence was not clutter: a fresh clone arrived with ten strategy-library
+entries about another paper. `/librarian` answers "has this been asked before?"
+from that library, and `trials_for_family()` feeds the **deflated Sharpe** trial
+count — so a shipped library makes a new fund inherit another research
+programme's prior answers and trial budget. The worked runs are kept for
+reference in `examples/outputs/`. A name you do not recognise under `outputs/`
+is a leftover from an earlier run on that machine, not something the pipeline
+reached for; delete it freely.
+
 **`cards/` ships EMPTY and is yours.** The three worked examples live in
 `examples/cards/`, off every code path. They used to sit in `cards/`, and the
 consequence was that `check_setup.py` globbed `cards/*.yaml`, took the first
@@ -195,7 +205,7 @@ python run_interpret.py --pdf docs/papers/<paper>.pdf     # 00 -> Gate A, NO DAT
 python run_pipeline.py --card cards/<card>.yaml          # ends at Gate B PENDING
 python run_pipeline.py --card cards/<card>.yaml \
     --decision REJECT --decided-by "Name" --rationale "…"  # a human rules
-python -m pytest tests/ -q                                # 260 tests
+python -m pytest tests/ -q                                # 264 tests
 python validate/cross_check.py --excel                    # engine vs clean-room impl
 python -m ros.interpretation history                      # who interpreted what
 ```
