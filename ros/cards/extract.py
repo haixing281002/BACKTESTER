@@ -491,3 +491,102 @@ def detect_target_conflicts(proposals: List[Dict[str, Any]]) -> List[Dict[str, A
                 "pages": sorted({r["evidence_page"] for r in rows}),
             })
     return sorted(conflicts, key=lambda c: (c["portfolio"], c["metric"]))
+
+
+# ---------------------------------------------------------------------------
+# Is this a research paper at all?
+#
+# Stage 00 exists to screen a document for relevance, and it assumes the thing
+# it is screening is a paper. Nothing checked that. A board deck, a factsheet, a
+# term sheet or a slide export will be read by an obliging model that then
+# reconstructs a "strategy" from prose that describes no strategy, and every
+# stage downstream treats that reconstruction as real.
+#
+# The screen is deliberately structural rather than semantic: papers have
+# abstracts, references and numeric tables; decks and factsheets do not. It
+# ADVISES rather than blocks, because a short working paper, a scanned PDF or an
+# unusual format can trip any heuristic, and hard-refusing real work on a guess
+# would be a worse failure than the one it prevents.
+# ---------------------------------------------------------------------------
+PAPER_MARKERS = (
+    "abstract", "introduction", "literature review", "methodology", "method",
+    "data and sample", "empirical", "results", "conclusion", "references",
+    "bibliography", "appendix", "we find", "we document", "this paper",
+    "hypothesis", "robustness",
+)
+
+PAPER, NOT_A_PAPER, UNCLEAR = "research_paper", "probably_not_a_paper", "unclear"
+
+
+@dataclass
+class DocumentShape:
+    """Structural evidence about what kind of document this is."""
+    n_pages: int
+    n_chars: int
+    n_tables: int
+    math_density: float
+    markers_found: List[str] = field(default_factory=list)
+    verdict: str = UNCLEAR
+    reasons: List[str] = field(default_factory=list)
+
+    @property
+    def looks_like_a_paper(self) -> bool:
+        return self.verdict == PAPER
+
+    def render(self) -> str:
+        L = [f"    pages {self.n_pages}   chars {self.n_chars:,}   "
+             f"numeric tables {self.n_tables}   math density {self.math_density:.1%}",
+             f"    paper markers: "
+             + (", ".join(self.markers_found[:8]) if self.markers_found else "NONE")]
+        if self.verdict == NOT_A_PAPER:
+            L += ["", "    THIS DOES NOT LOOK LIKE A RESEARCH PAPER.", ""]
+            for r in self.reasons:
+                L.append(f"      - {r}")
+            L += ["",
+                  "    Stage 00 screens a paper for RELEVANCE and assumes it is",
+                  "    reading a paper. If this is a deck, a factsheet or a term",
+                  "    sheet, an obliging model will reconstruct a strategy from",
+                  "    prose that describes none, and every stage after it will",
+                  "    treat that reconstruction as real.",
+                  "",
+                  "    This is advisory. A short working paper or a scanned PDF can",
+                  "    trip it. Confirm before continuing."]
+        elif self.verdict == UNCLEAR:
+            L.append("    Shape is ambiguous -- confirm this is a paper before continuing.")
+            for r in self.reasons:
+                L.append(f"      - {r}")
+        return "\n".join(L)
+
+
+def classify_document(doc: "Document", n_tables: int = 0) -> DocumentShape:
+    """Structural verdict on whether `doc` is a research paper."""
+    text = " ".join(p.text or "" for p in doc.pages).lower()
+    found = [m for m in PAPER_MARKERS if m in text]
+    q = doc.quality
+    shape = DocumentShape(n_pages=q.n_pages, n_chars=q.n_chars, n_tables=n_tables,
+                          math_density=q.mean_math_density, markers_found=found)
+
+    if len(found) >= 3:
+        shape.verdict = PAPER
+        return shape
+
+    reasons = []
+    if not found:
+        reasons.append("no abstract, introduction, references, results or "
+                       "conclusion anywhere in the text")
+    else:
+        reasons.append(f"only {len(found)} paper-like section marker(s): "
+                       f"{', '.join(found)}")
+    if q.n_pages <= 4:
+        reasons.append(f"{q.n_pages} pages -- shorter than almost any empirical paper")
+    if n_tables == 0:
+        reasons.append("no numeric tables, so there are no reported results to "
+                       "replicate or to pin a target to")
+    if q.mean_math_density < 0.005:
+        reasons.append("essentially no mathematical notation")
+
+    # Two independent signals before calling it. One alone catches too much:
+    # a theory paper has no tables, and a short note is still a paper.
+    shape.verdict = NOT_A_PAPER if len(reasons) >= 3 else UNCLEAR
+    shape.reasons = reasons
+    return shape

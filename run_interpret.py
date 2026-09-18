@@ -37,9 +37,9 @@ for _s in (sys.stdout, sys.stderr):
     except (AttributeError, ValueError):
         pass
 
-from ros.cards.extract import (detect_target_conflicts, extract_document,
-                               parse_text_tables, propose_replication_targets,
-                               summarize)
+from ros.cards.extract import (classify_document, detect_target_conflicts,
+                               extract_document, parse_text_tables,
+                               propose_replication_targets, summarize)
 from ros.cards.schema import CardValidationError, load_card
 from ros.data.firm_registry import build_firm_registry
 from ros.data.intake import MANIFEST, describe_shortfall, extend_registry
@@ -90,6 +90,19 @@ def main() -> int:
     doc = extract_document(paper.path)
     para(summarize(doc))
     tables = parse_text_tables(doc)
+
+    # Before anything else: is this a paper at all? Stage 00 screens a paper for
+    # relevance and assumes it is reading one. A deck or a factsheet read by an
+    # obliging model becomes a strategy that was never in the document.
+    shape = classify_document(doc, len(tables))
+    print()
+    print(shape.render())
+    if not shape.looks_like_a_paper:
+        print()
+        print("    " + "!" * 76)
+        print("    STOPPING HERE. Confirm this is the document you meant.")
+        print("    " + "!" * 76)
+
     props = propose_replication_targets(tables)
     conflicts = detect_target_conflicts(props)
     print()
