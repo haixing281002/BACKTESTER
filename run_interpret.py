@@ -47,7 +47,8 @@ from ros.data.intake import MANIFEST, describe_shortfall, extend_registry
 from ros.data.universes import INDIAN_UNIVERSES, check_translation
 from ros.feasibility import UNAVAILABLE, assess
 from ros.cards.completeness import assess as card_completeness
-from ros.governance.gates import gate_a, gate_a_document
+from ros.governance.gates import (gate_a, gate_a_document,
+                                  gate_a_summary)
 from ros.india_requirements import derive
 from ros.papers import artifact_paths, require_paper
 
@@ -186,10 +187,13 @@ def main() -> int:
     ga = gate_a(card, feas, doc.quality, translation_check=tc)
     india = derive(card, tc)
 
+    comp = card_completeness(card)
+    kw = dict(translation_check=tc, feasibility=feas, india=india,
+              completeness=comp)
     head("GATE A  |  HUMAN INTERPRETATION CONTROL")
-    para(gate_a_document(card, ga, translation_check=tc, feasibility=feas,
-                         india=india, completeness=card_completeness(card)),
-         indent="")
+    para(gate_a_summary(card, ga, **kw), indent="")
+    print()
+    para(gate_a_document(card, ga, **kw), indent="")
 
     # ---- what would you have to supply? --------------------------------
     shortfall = list(tc.missing) if tc else []

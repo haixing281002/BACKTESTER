@@ -71,6 +71,25 @@ class DataRequirement:
         return errs
 
 
+HEADLINE_MAX = 100
+
+
+def _check_headline(text: str, ctx: str) -> List[str]:
+    """A headline longer than one line is not a headline.
+
+    Optional everywhere -- a card written before this existed still loads, and
+    the summary falls back to a truncated first clause with an ellipsis so a
+    reader can see it was cut rather than written. What is NOT allowed is a
+    headline that is itself a paragraph, because then the one-page sheet is the
+    document again.
+    """
+    t = " ".join(str(text or "").split())
+    if t and len(t) > HEADLINE_MAX:
+        return [f"{ctx}: headline is {len(t)} chars; keep it under "
+                f"{HEADLINE_MAX} -- it has to fit one line on a decision sheet"]
+    return []
+
+
 @dataclass
 class Ambiguity:
     """An interpretation decision that a human must own at Gate A.
@@ -84,9 +103,16 @@ class Ambiguity:
     confidence: str = "low"
     evidence_page: Optional[int] = None
     material: bool = True  # does this plausibly move the headline metric?
+    # One line a human can rule on without reading the paragraph below it.
+    # Written by the model, because compressing an argument is a judgement --
+    # mechanical extraction can only TRUNCATE, and a headline cut mid-sentence
+    # is what made the old gate unreadable. The full text always stays below it;
+    # this is a pointer, never a replacement.
+    headline: str = ""
 
     def validate(self, ctx: str) -> List[str]:
         errs = []
+        errs += _check_headline(self.headline, ctx)
         if self.confidence not in CONFIDENCE:
             errs.append(f"{ctx}: confidence '{self.confidence}' not in {sorted(CONFIDENCE)}")
         if not self.resolution.strip():
@@ -303,9 +329,15 @@ class DataRequest:
     # minimum-viable field is NOT in hand, and a fuzzy match would quietly
     # mark the gap closed -- the failure this exists to catch.
     satisfies: List[str] = field(default_factory=list)
+    # One line a human can rule on without reading the paragraph below it.
+    # Written by the model, because compressing an argument is a judgement --
+    # mechanical extraction can only TRUNCATE, and a headline cut mid-sentence
+    # is what made the old gate unreadable. The full text always stays below it;
+    # this is a pointer, never a replacement.
+    headline: str = ""
 
     def validate(self, ctx: str) -> List[str]:
-        errs = []
+        errs = _check_headline(self.headline, ctx)
         if not self.item.strip():
             errs.append(f"{ctx}: item is required")
         if self.priority not in PRIORITIES:
@@ -335,9 +367,15 @@ class OpenQuestion:
     ask_of: str = "researcher"          # data_owner | pm | researcher | anyone
     blocks_run: bool = False
     evidence_page: Optional[int] = None
+    # One line a human can rule on without reading the paragraph below it.
+    # Written by the model, because compressing an argument is a judgement --
+    # mechanical extraction can only TRUNCATE, and a headline cut mid-sentence
+    # is what made the old gate unreadable. The full text always stays below it;
+    # this is a pointer, never a replacement.
+    headline: str = ""
 
     def validate(self, ctx: str) -> List[str]:
-        errs = []
+        errs = _check_headline(self.headline, ctx)
         if not self.question.strip():
             errs.append(f"{ctx}: question is required")
         if self.ask_of not in ASK_OF:
@@ -436,9 +474,15 @@ class Convertibility:
     capacity_note: str = ""             # what size this could carry, if it works
     confidence: str = "medium"          # low | medium | high
     evidence_page: Optional[int] = None
+    # One line a human can rule on without reading the paragraph below it.
+    # Written by the model, because compressing an argument is a judgement --
+    # mechanical extraction can only TRUNCATE, and a headline cut mid-sentence
+    # is what made the old gate unreadable. The full text always stays below it;
+    # this is a pointer, never a replacement.
+    headline: str = ""
 
     def validate(self, ctx: str = "convertibility") -> List[str]:
-        errs = []
+        errs = _check_headline(self.headline, ctx)
         if self.verdict not in CONVERTIBILITY_VERDICTS:
             errs.append(f"{ctx}: verdict '{self.verdict}' not in "
                         f"{list(CONVERTIBILITY_VERDICTS)}")

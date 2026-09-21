@@ -96,7 +96,28 @@ gate is doing the design. Three card sections stop that, all written by the mode
   bar cannot move after, and both `success_looks_like` and `failure_looks_like`.
   A plan that cannot fail is not a test.
 
-**GATE A IS THE CARD, rendered once, in the order a human decides in.**
+**Gate A opens with ONE PAGE, then the card rendered once beneath it.**
+
+`gate_a_summary()` is what a reviewer actually reads: one row per thing they
+personally rule on — the convertibility weakest link, the universe choice, every
+material ambiguity, every open question, every data request, the cost and lag,
+the bar — each with **who owns it** (pm / researcher / data_owner) and a **`S<n>`
+pointer** into the full document below. Nothing is summarised away; the pointer
+leads to the argued text.
+
+The split is the usual one. **The model writes the line**, because compressing
+an argument is a judgement and code can only truncate — a `headline` (under 100
+chars) on every ambiguity, open question, data request and on `convertibility`.
+A card without them still renders, with visibly truncated clauses ending in
+`...`, and the completeness report asks for them. **The code writes the
+order**, mechanically: blocking first, then a low-confidence material call, an
+UNVERIFIED list, a design running on proxies — the things this repo has learned
+are most often wrong. A model ranking its own work would lead with the item it
+was most pleased with.
+
+On the worked example: 18 items, one screen, above a 749-line document.
+
+**BENEATH IT, GATE A IS THE CARD, rendered once, in the order a human decides in.**
 
 The card is the best artifact this pipeline produces. What Gate A kept doing was
 RETELLING it: a brief that quoted some sections, then `plan()` and `asks()`

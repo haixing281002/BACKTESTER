@@ -544,3 +544,123 @@ def test_plan_still_composes_the_three_parts(card):
     for part in (card.plan_data(), card.plan_selection(), card.plan_run()):
         body = [l for l in part.splitlines() if l.strip() and set(l.strip()) != {"="}]
         assert body[-1] in whole
+
+
+# ---------------------------------------------------------------------------
+# THE ONE-PAGE SHEET
+#
+# Rendering the card once was the right fix for saying things three times, and
+# still ran to seven hundred lines -- because the card is seven hundred lines of
+# argued work. A reviewer does not need the argument to decide. They need to
+# know WHAT they are deciding, WHO owns it, and WHERE the argument is if a line
+# looks wrong.
+# ---------------------------------------------------------------------------
+from ros.governance.gates import gate_a_summary
+
+
+@pytest.fixture
+def sheet(card):
+    registry = build_firm_registry()
+    tc = check_translation(card.universe_translation, registry,
+                           long_only=card.portfolio.long_only)
+    feas = feasibility_assess(card, registry)
+    return gate_a_summary(card, gate_a(card, feas, translation_check=tc),
+                          translation_check=tc, feasibility=feas,
+                          india=derive_india(card, tc),
+                          completeness=card_completeness(card))
+
+
+def test_the_sheet_fits_on_a_screen(sheet):
+    """Not a hard limit -- a card with forty ambiguities earns forty rows.
+    But one line per item is the contract, and this catches a regression that
+    starts printing paragraphs again."""
+    assert len(sheet.splitlines()) < 80, (
+        f"the sheet is {len(sheet.splitlines())} lines; it is meant to be the "
+        f"thing you read INSTEAD of the document")
+
+
+def test_every_decidable_item_is_on_the_sheet(card, sheet):
+    """Compressed, not dropped. A summary that omits an item is worse than none."""
+    for a in card.material_ambiguities:
+        assert a.field in sheet, f"ambiguity {a.field} is missing from the sheet"
+    for q in card.open_questions:
+        probe = " ".join((q.headline or q.question).split())[:40]
+        assert probe in " ".join(sheet.split())
+    for r in card.data_requests:
+        probe = " ".join((r.headline or r.item).split())[:40]
+        assert probe in " ".join(sheet.split())
+
+
+def test_every_row_names_who_owns_it(sheet):
+    body = sheet.split("WHAT YOU ARE RULING ON")[1]
+    rows = [l for l in body.splitlines() if l.strip().startswith(tuple("123456789"))]
+    assert rows
+    for r in rows:
+        assert any(w in r for w in ("pm", "researcher", "data_owner", "STOP")), r
+
+
+def test_every_row_points_into_the_document(sheet, full):
+    """A pointer that resolves nowhere is worse than no pointer."""
+    import re
+    targets = set(re.findall(r"\bS[1-9]\b", sheet))
+    assert targets, "no section pointers on the sheet"
+    for t in targets:
+        assert f"{t}. " in full, f"the sheet points at {t} and the document has no {t}"
+
+
+def test_blocking_items_sort_first(card):
+    card.data_requests[0].priority = "blocking"
+    out = gate_a_summary(card, gate_a(card, _Feas()))
+    body = out.split("WHAT YOU ARE RULING ON")[1]
+    first = next(l for l in body.splitlines() if l.strip().startswith("1."))
+    assert "STOP" in first or "data_owner" in first
+
+
+def test_a_low_confidence_call_outranks_a_high_confidence_one(card, sheet):
+    body = " ".join(sheet.split())
+    low = next(a for a in card.material_ambiguities if a.confidence == "low")
+    high = next(a for a in card.material_ambiguities if a.confidence == "high")
+    assert body.index(low.field) < body.index(high.field), (
+        "a low-confidence material call is the thing most likely to be wrong "
+        "and must not sit below the settled ones")
+
+
+def test_the_model_writes_the_line_and_the_code_writes_the_order(card):
+    """The split that matters.
+
+    Compressing an argument is a judgement, so the headline is the model's.
+    RANKING is not given to it: a model that ordered its own work would put the
+    item it was most pleased with first. The order is mechanical.
+    """
+    card.convertibility.headline = "ZZZ unique probe text"
+    out = gate_a_summary(card, gate_a(card, _Feas()))
+    assert "ZZZ unique probe text" in out
+
+
+def test_a_card_with_no_headlines_falls_back_visibly(card):
+    """Truncation must announce itself rather than pass as a written line."""
+    for a in card.ambiguities:
+        a.headline = ""
+    card.convertibility.headline = ""
+    out = gate_a_summary(card, gate_a(card, _Feas()))
+    assert "..." in out, "a cut clause must show that it was cut"
+
+
+def test_a_headline_that_is_a_paragraph_is_rejected():
+    from ros.cards.schema import Ambiguity
+    errs = Ambiguity(field="f", issue="i", resolution="r",
+                     headline="word " * 40).validate("ctx")
+    assert any("one line" in e for e in errs)
+
+
+def test_completeness_asks_for_the_headlines(card):
+    for a in card.ambiguities:
+        a.headline = ""
+    r = card_completeness(card)
+    row = next(c for c in r.checks
+               if c.name == "every decision item has a one-line headline")
+    assert not row.passed
+
+
+def test_the_sheet_decides_nothing(sheet):
+    assert "NOTHING HERE IS DECIDED" in sheet

@@ -383,6 +383,168 @@ def _what_it_takes(card, feasibility, india) -> List[str]:
     return L
 
 
+def _line(text, fallback, width=86):
+    """A headline if the model wrote one, else a visibly TRUNCATED first clause.
+
+    The ellipsis is the honesty: a reader can tell at a glance whether they are
+    reading something somebody composed for this sheet or the first 86
+    characters of a paragraph that continues below.
+    """
+    h = " ".join(str(text or "").split())
+    if h:
+        return h
+    f = " ".join(str(fallback or "").split())
+    if len(f) <= width:
+        return f or "-- not stated --"
+    cut = f[:width].rsplit(" ", 1)[0]
+    return cut + " ..."
+
+
+def gate_a_summary(card, result, translation_check=None, feasibility=None,
+                   india=None, completeness=None) -> str:
+    """ONE PAGE. Everything a human must personally rule on, with pointers.
+
+    The full document renders the card once, which was the right fix for saying
+    things three times -- and still runs to seven hundred lines, because the
+    card is seven hundred lines of argued work. A reviewer does not need the
+    argument to decide; they need to know WHAT they are deciding, WHO owns it,
+    and WHERE to read the argument if a line looks wrong.
+
+    So every row here is one line plus a section pointer. Nothing is summarised
+    away: the pointer leads to the full text, which is directly below.
+
+    The one-liners come from the card's `headline` fields, written by the model
+    at Stage 02, because compressing an argument to a line is a judgement.
+    Mechanical extraction can only truncate, and a headline cut mid-sentence is
+    what made the previous gate unreadable. Where a card carries none, the row
+    falls back to a visibly truncated clause rather than pretending.
+
+    The ORDERING is mechanical and deliberately not the model's: blocking items,
+    then the things this repo has learned are most often wrong -- a low
+    confidence material call, an unverified list, a design running on proxies --
+    then everything else. A model that ranked its own work would put the item it
+    was most pleased with first.
+    """
+    W = _W
+    blocking = [c for c in result.criteria if not c.passed and c.blocking]
+    rows = []           # (priority, who, where, line, note)
+
+    def row(pri, who, where, line, note=""):
+        rows.append((pri, who, where, line, note))
+
+    for c in blocking:
+        row(0, "STOP", "top", c.name, " ".join(c.evidence.split())[:140])
+
+    cv = getattr(card, "convertibility", None)
+    if cv is not None:
+        row(1, "researcher", "S6",
+            _line(cv.headline, f"{cv.verdict}: {cv.weakest_link}"),
+            f"verdict {cv.verdict}, confidence {cv.confidence}")
+
+    ut = card.universe_translation
+    if ut is not None:
+        risk = ut.transfer_risks[0] if ut.transfer_risks else ""
+        row(2, "researcher", "S1",
+            f"{ut.source_universe} -> {ut.target_universe or '(none)'}"
+            f"  [{ut.grade or '?'}]", _line("", risk))
+    if translation_check is not None:
+        for n in translation_check.notes:
+            if "OUT OF MANDATE" in n.upper():
+                row(1, "pm", "S1", "chosen universe is OUT OF MANDATE",
+                    "the fund may TEST here and may not HOLD here")
+        if translation_check.missing:
+            row(0, "data_owner", "S1",
+                f"{len(translation_check.missing)} instrument(s) MISSING",
+                ", ".join(translation_check.missing[:3]))
+
+    st = card.strategy
+    if st is not None and st.is_long_short:
+        row(2, "pm", "S2", "paper is long-short; this fund cannot short",
+            _line("", st.long_only_adaptation))
+    if st is not None and st.engine_template == "NEEDS_NEW_TEMPLATE":
+        row(1, "researcher", "S2", "no registered template fits this strategy",
+            "a human implements it before anything runs")
+
+    rec = reconcile_data_plan(card, feasibility)
+    if rec["checked"] and rec["not_in_hand"]:
+        row(1, "pm", "S3",
+            f"{len(rec['not_in_hand'])} of {len(rec['need'])} minimum-viable "
+            f"field(s) NOT in hand",
+            "a legitimate run, but not the test this card specified")
+
+    sel = getattr(card, "selection", None)
+    if sel is not None and sel.explicit_securities and \
+            sel.verified_against in ("", "UNVERIFIED"):
+        row(1, "data_owner", "S4",
+            f"{len(sel.explicit_securities)} named securities are UNVERIFIED",
+            "a recalled list looks checked and is not")
+
+    bp = getattr(card, "backtest_plan", None)
+    if bp is not None:
+        row(3, "pm", "S5",
+            f"the bar: must beat {', '.join(bp.must_beat)[:70]}",
+            f"sample {bp.sample_start} -> {bp.sample_end}, named before the run")
+    row(3, "researcher", "S2",
+        f"costs {card.costs.spread_bps:.0f}bp round trip, lag "
+        f"{card.signal.lag_days}d",
+        "a US paper's 5bp is the commonest way an Indian backtest lies")
+
+    for a in card.material_ambiguities:
+        pri = 1 if a.confidence == "low" else 3
+        row(pri, "researcher", "S7",
+            _line(a.headline, f"{a.field}: {a.resolution}"),
+            f"{a.field}, confidence {a.confidence}"
+            + (f", p.{a.evidence_page}" if a.evidence_page else ""))
+
+    for q in card.open_questions:
+        row(0 if q.blocks_run else 2, q.ask_of, "S7",
+            _line(q.headline, q.question),
+            "BLOCKS THE RUN" if q.blocks_run
+            else "assumed: " + _line("", q.what_i_assumed, 70))
+
+    order = {"blocking": 0, "high": 2, "nice_to_have": 4}
+    for r in getattr(card, "data_requests", []) or []:
+        row(order.get(r.priority, 3), "data_owner", "S8",
+            _line(r.headline, r.item),
+            f"[{r.priority}] if declined: " + _line("", r.without_it, 60))
+
+    if india is not None and india.unaddressed_inputs:
+        row(2, "researcher", "S3",
+            f"{len(india.unaddressed_inputs)} strategy input(s) reached no "
+            f"India rule", "nobody has looked at these")
+
+    rows.sort(key=lambda t: t[0])
+    L = ["  " + "=" * W,
+         "  GATE A  --  ONE PAGE.  Everything you personally decide.",
+         "  " + "=" * W,
+         f"  {card.paper.id}   ({card.intent.mode})",
+         f"  {len(rows)} item(s) to rule on   |   {len(blocking)} blocking"
+         + (f"   |   card completeness {completeness.score:.0%}"
+            if completeness is not None else ""),
+         "",
+         "  Every line points into the full document below. Nothing here "
+         "replaces it;",
+         "  if a line looks wrong, S<n> is where the argument for it is "
+         "written out.",
+         "  " + "-" * W,
+         f"  {'#':<3} {'WHO':<11} {'GO':<4} WHAT YOU ARE RULING ON",
+         "  " + "-" * W]
+    for i, (pri, who, where, line, note) in enumerate(rows, 1):
+        mark = "STOP" if pri == 0 else where
+        for j, seg in enumerate(_wrap(line, W - 22)):
+            L.append(f"  {str(i) + '.' if j == 0 else '':<3} "
+                     f"{who if j == 0 else '':<11} {mark if j == 0 else '':<4} "
+                     f"{seg}")
+        for seg in _wrap(note, W - 24):
+            L.append(f"  {'':<3} {'':<11} {'':<4}   {seg}")
+    L += ["  " + "-" * W,
+          "  NOTHING HERE IS DECIDED. The decision is a named human's, and no "
+          "code",
+          "  in this repo assigns one.",
+          "  " + "=" * W]
+    return "\n".join(L)
+
+
 def gate_a_document(card, result, translation_check=None, feasibility=None,
                     india=None, completeness=None) -> str:
     """GATE A IS THE CARD, rendered once, in the order a human decides in.
@@ -414,7 +576,8 @@ def gate_a_document(card, result, translation_check=None, feasibility=None,
         return "  " + ch * W
 
     def head(n, title):
-        return ["", rule("="), f"  {n}. {title}", rule("=")]
+        # "S<n>" so the one-page sheet's pointers resolve by a literal search.
+        return ["", rule("="), f"  S{n}. {title}", rule("=")]
 
     L = [rule("="),
          "  GATE A  --  THE STRATEGY CARD, AS A HUMAN READS IT",

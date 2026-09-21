@@ -372,6 +372,21 @@ def assess(card) -> Completeness:
           "reviewer nothing. The fallback is what makes a request informative "
           "rather than a demand, so it has to be the actual alternative and "
           "what it costs")
+    # The one-page sheet is only readable if the model wrote the one-liners.
+    # Without them every row falls back to a truncated clause, which is what
+    # made the old gate unreadable -- so this is checked, not hoped for.
+    decidables = (list(card.material_ambiguities) + list(card.open_questions)
+                  + list(card.data_requests)
+                  + ([card.convertibility] if card.convertibility else []))
+    missing_h = [d for d in decidables if not _txt(getattr(d, "headline", ""))]
+    check("asks", "every decision item has a one-line headline",
+          not missing_h and bool(decidables), 2,
+          f"{len(decidables) - len(missing_h)} of {len(decidables)}",
+          "Gate A opens with a one-page sheet: one line per thing a human rules "
+          "on. Without a headline the line falls back to a truncated clause, and "
+          "a page of half-sentences is the unreadable gate this replaced. "
+          "Compressing an argument is a judgement -- code can only cut")
+
     check("asks", "open questions recorded", len(card.open_questions) >= 1, 1,
           f"{len(card.open_questions)} question(s)",
           "the things the paper does not settle are what a human is for")

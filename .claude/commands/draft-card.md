@@ -101,6 +101,26 @@ series we hold are the whole mechanism" is something a reviewer can disagree
 with, and silence is something they cannot tell apart from nobody having looked.
 Gate A surfaces the difference.
 
+### `headline` — the one line each decision item gets on the Gate A sheet
+
+Gate A opens with **one page**: one row per thing a human rules on, each
+pointing into the full document below. Every material ambiguity, every open
+question, every data request and the convertibility verdict needs a
+`headline` — under 100 characters, the thing a reviewer needs to know to decide
+whether to read further.
+
+This is yours because **compressing an argument is a judgement.** Code can only
+truncate, and a page of clauses cut mid-sentence is the unreadable gate this
+replaced. Write the line that would make a PM say "wait, that one" — not a
+restatement of the field name:
+
+- good: `"No Indian rate series: cash accrues a flat 6%, swept 4-8%. LOW confidence."`
+- useless: `"An ambiguity about universe.cash_asset"`
+- worse: the first 90 characters of your resolution paragraph
+
+The full text always sits below the row. The headline is a pointer, never a
+replacement, so it can be blunt in a way the argued version cannot.
+
 ### `open_questions` — what the paper does not settle
 
 Not ambiguities. An ambiguity is a call you MADE and resolved. An open question
