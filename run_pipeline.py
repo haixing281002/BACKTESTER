@@ -117,7 +117,8 @@ def main(argv=None) -> int:
     # ---------------- STEP 01 : INGEST -----------------------------------
     R.h("STEP 01  |  INGEST")
     doc = None
-    if card.paper.source_file and os.path.exists(card.paper.source_file):
+    if card.paper.source_file and card.paper.source_file.lower().endswith(".pdf") \
+            and os.path.exists(card.paper.source_file):
         doc = extract_document(card.paper.source_file)
         R.block(summarize(doc))
         tables = parse_text_tables(doc)
