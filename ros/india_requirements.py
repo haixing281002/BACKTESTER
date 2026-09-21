@@ -65,9 +65,19 @@ _CAPWEIGHT = re.compile(
     r"\bsize\s*(sort|factor|decile)", re.I)
 _RISKWEIGHT = re.compile(
     r"inverse.?vol|risk\s*parity|\bcovariance\b|risk\s*contribution", re.I)
+# The rules had NO cash rule at all, while CLAUDE.md fixes it as a standing
+# fact of this fund: there is no Indian risk-free series, so an un-invested
+# residual earns a declared constant. A card whose whole mechanism de-risks
+# into cash raised nothing about the series that mechanism runs on.
+_CASH = re.compile(
+    r"\bcash\b|risk.?free|\brf\b|\bt.?bills?\b|\brepo\b|\bmibor\b|"
+    r"overnight\s*rate|\bdeposits?\b|\byields?\b", re.I)
 
 FAST_REBALANCE = {"daily", "weekly"}
 THIN_SEGMENTS = {"small", "mid_small", "micro"}
+
+
+RULES, MODEL = "rules", "model"
 
 
 @dataclass
@@ -77,14 +87,24 @@ class Requirement:
     why: str
     blocking: bool = True
     triggered_by: str = ""
+    # WHERE this came from, and it is never decoration. A rules requirement is
+    # mechanical: it fires from a property of the strategy and no model can talk
+    # it away. A model requirement is a reading of the paper -- broader, and
+    # exactly as fallible as the reading. Merging them without saying which is
+    # which would let a model's opinion inherit the authority of the floor.
+    source: str = RULES
+    evidence_page: Optional[int] = None
 
     def render(self, width: int = 88) -> str:
         mark = "MUST" if self.blocking else "note"
-        out = [f"    [{mark}] {self.item}"]
+        tag = "" if self.source == RULES else "  <- from the paper, by a model"
+        out = [f"    [{mark}] {self.item}{tag}"]
         for line in _wrap(self.why, width - 11):
             out.append(f"           {line}")
         if self.triggered_by:
             out.append(f"           (because: {self.triggered_by})")
+        if self.evidence_page:
+            out.append(f"           (paper p.{self.evidence_page})")
         return "\n".join(out)
 
 
@@ -106,6 +126,12 @@ class IndiaRequirements:
     requirements: List[Requirement] = field(default_factory=list)
     matched_on: List[str] = field(default_factory=list)
     unmatched_inputs: List[str] = field(default_factory=list)
+    # Of the inputs the patterns did not recognise, the ones a model note picked
+    # up -- and the ones still nobody has looked at. The second list is the
+    # point: an unmatched input used to be a line of prose asking a human to be
+    # careful, which is not a mechanism.
+    addressed_inputs: List[str] = field(default_factory=list)
+    unaddressed_inputs: List[str] = field(default_factory=list)
 
     def of(self, category: str) -> List[Requirement]:
         return [r for r in self.requirements if r.category == category]
@@ -113,6 +139,10 @@ class IndiaRequirements:
     @property
     def blocking(self) -> List[Requirement]:
         return [r for r in self.requirements if r.blocking]
+
+    @property
+    def from_model(self) -> List[Requirement]:
+        return [r for r in self.requirements if r.source == MODEL]
 
     def render(self) -> str:
         L = ["  WHAT IT TAKES TO BACKTEST THIS STRATEGY IN INDIA", ""]
@@ -135,13 +165,29 @@ class IndiaRequirements:
                     f"actually true of this strategy, the requirement it raised is "
                     f"spurious -- say so rather than going shopping for it.", 84):
                 L.append(f"  {line}")
+        if self.from_model:
+            L.append("")
+            for line in _wrap(
+                    f"{len(self.from_model)} of these were read out of the paper by "
+                    f"a model rather than derived from the strategy's properties. "
+                    f"They are marked, they never block, and they are exactly as "
+                    f"reliable as the reading that produced them.", 84):
+                L.append(f"  {line}")
         if self.unmatched_inputs:
             L.append("")
-            L.append("  INPUTS THIS DID NOT RECOGNISE -- check nothing is missing above:")
-            for i in self.unmatched_inputs:
-                L.append(f"      {i}")
-            L.append("      Matching is keyword-based and shallow. An input it does not")
-            L.append("      recognise raises no requirement, so read these yourself.")
+            L.append("  INPUTS THE PATTERNS COULD NOT READ:")
+            for i in self.addressed_inputs:
+                L.append(f"      [covered by a model note] {i}")
+            for i in self.unaddressed_inputs:
+                L.append(f"      [NOBODY HAS LOOKED]       {i}")
+            if self.unaddressed_inputs:
+                for line in _wrap(
+                        "Keyword matching is shallow, so an input it cannot read "
+                        "raises no requirement and says nothing -- which is how a "
+                        "requirement goes missing. Add an `india_notes` entry "
+                        "addressing each one, or say in the entry why none is "
+                        "needed. Gate A tracks these until they are answered.", 84):
+                    L.append(f"      {line}")
         return "\n".join(L)
 
 
@@ -185,9 +231,12 @@ def derive(card, translation_check: Optional[Any] = None) -> IndiaRequirements:
                              (_RISKWEIGHT, does, "risk-based weighting")):
         if pat.search(field):
             req.matched_on.append(label)
+    # An input is "read" when SOME pattern recognises it, so a rule that fires
+    # on it counts. Leaving _CASH out of this set reported an input as unseen
+    # while the cash rule was raising a requirement from it two lines above.
     req.unmatched_inputs = [i for i in inputs
                             if not (_PRICE.search(i) or _FUNDAMENTAL.search(i)
-                                    or _VOLUME.search(i))]
+                                    or _VOLUME.search(i) or _CASH.search(i))]
 
     # ---------------- DATA --------------------------------------------
     if cross:
@@ -329,6 +378,17 @@ def derive(card, translation_check: Optional[Any] = None) -> IndiaRequirements:
             "size and the name's depth -- is usually larger than every statutory "
             "component combined.",
             triggered_by="trading individual securities")
+    if _CASH.search(blob) or card.portfolio.allow_cash:
+        add(DATA, "An Indian short-rate series -- overnight (MIBOR) or 91-day T-bill",
+            "There is no risk-free series in this repo, so any un-invested "
+            "residual earns a DECLARED CONSTANT and every cash-holding result is "
+            "swept 4-8%. A constant is wrong in level and wrong in SHAPE: it "
+            "cannot de-risk you into a rate-cut cycle, which is exactly when a "
+            "cash-holding mechanism is supposed to earn its keep. Until a real "
+            "series arrives, no cash-timing claim from this run is safe.",
+            blocking=False,
+            triggered_by="the strategy can hold cash")
+
     add(COST, "The breakeven cost at which the edge disappears",
         "Report it alongside the headline. For Indian equity the binding "
         "constraint is usually capacity rather than Sharpe, and a strategy whose "
@@ -364,4 +424,33 @@ def derive(card, translation_check: Optional[Any] = None) -> IndiaRequirements:
             "Named in the fund's own vocabulary so Stage 03 can resolve them once "
             "supplied. The manifest stanza for each is printed below.",
             triggered_by="the chosen universe, checked against the registry")
+    # ---------------- what the MODEL read out of the paper --------------
+    # Merged last so a rules requirement is never displaced by one, and marked
+    # so a reader can always tell a mechanical consequence from a reading.
+    for n in getattr(card, "india_notes", []) or []:
+        req.requirements.append(Requirement(
+            category=n.category, item=n.item, why=n.why,
+            blocking=False,                     # a model may add, never block
+            triggered_by=n.triggered_by, source=MODEL,
+            evidence_page=n.evidence_page))
+
+    # Did the model look at the inputs the patterns could not read?
+    #
+    # ONLY `addresses` counts. The first version also scanned each note's item
+    # and triggered_by for any shared word over four characters, and a note
+    # about index METHODOLOGY-REVISION history silently "covered" an input
+    # called "analyst REVISION breadth score". Loose matching here fails in the
+    # worst direction: it marks a gap closed that nobody looked at, which is the
+    # exact failure this field exists to catch.
+    #
+    # Substring either way within `addresses`, so a note declaring "promoter
+    # pledge" covers an input written "the issuer's promoter pledge
+    # disclosures" -- but the model has to NAME what it is covering.
+    claims = [a.strip().lower()
+              for n in (getattr(card, "india_notes", []) or [])
+              for a in n.addresses if a.strip()]
+    for i in req.unmatched_inputs:
+        low = i.lower()
+        hit = any(a in low or low in a for a in claims)
+        (req.addressed_inputs if hit else req.unaddressed_inputs).append(i)
     return req

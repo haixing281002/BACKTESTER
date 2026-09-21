@@ -325,10 +325,26 @@ def test_what_india_demands_is_in_the_brief(full):
     assert "30bp" in full
 
 
-def test_unrecognised_strategy_inputs_are_surfaced(full):
-    """Keyword matching is shallow; the brief must admit what it skipped."""
-    assert "raised NO requirement" in full
-    assert "cash rate for the un-invested residual" in full
+def test_unrecognised_strategy_inputs_are_surfaced(card):
+    """Keyword matching is shallow; the brief must admit what it skipped.
+
+    The exemplar no longer demonstrates this -- its cash input is recognised by
+    a rule now -- so use an input no pattern in the module can read.
+    """
+    from ros.india_requirements import derive as _derive
+    card.strategy.inputs_required = card.strategy.inputs_required + [
+        "analyst revision breadth score"]
+    out = gate_a_brief(card, gate_a(card, _Feas()), india=_derive(card))
+    assert "NOBODY HAS LOOKED" in out
+    assert "analyst revision breadth score" in out
+
+
+def test_a_model_note_is_marked_as_a_reading_in_the_brief(card):
+    """A reader must always be able to tell a reading from a consequence."""
+    from ros.india_requirements import derive as _derive
+    out = gate_a_brief(card, gate_a(card, _Feas()), india=_derive(card))
+    assert "read from the paper by a model" in out
+    assert "from the paper, by a model" in out
 
 
 def test_the_brief_degrades_cleanly_without_the_extra_arguments(card):

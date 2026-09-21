@@ -93,6 +93,20 @@ class GateResult:
                 "criteria": [asdict(c) for c in self.criteria]}
 
 
+def _india_for(card):
+    """Derive the India requirements for a card, or None if that is not possible.
+
+    Imported lazily: india_requirements imports nothing from governance today,
+    but a gate reaching into a derivation module is the kind of edge that turns
+    into a cycle later, and the cost of being careful here is one line.
+    """
+    try:
+        from ros.india_requirements import derive
+        return derive(card)
+    except Exception:
+        return None
+
+
 def _call(tag, headline, detail, who=""):
     return {"tag": tag, "headline": headline, "detail": detail, "who": who}
 
@@ -305,23 +319,35 @@ def _what_it_takes(card, feasibility, india) -> List[str]:
 
     if india is not None:
         musts = india.blocking
+        from_model = india.from_model
         L += ["", f"    WHAT INDIA DEMANDS OF THIS STRATEGY "
                   f"({len(musts)} non-negotiable of "
-                  f"{len(india.requirements)} derived)"]
+                  f"{len(india.requirements)} derived"
+                  + (f"; {len(from_model)} read from the paper by a model)"
+                     if from_model else ")")]
         for r in musts:
             L.append(f"      [{r.category.upper()}] {r.item}")
             for line in _wrap(r.why, W - 14):
                 L.append(f"             {line}")
-        rest = len(india.requirements) - len(musts)
+        for r in from_model:
+            L.append(f"      [{r.category.upper()}] {r.item}"
+                     f"   <- from the paper, by a model"
+                     + (f" (p.{r.evidence_page})" if r.evidence_page else ""))
+            for line in _wrap(r.why, W - 14):
+                L.append(f"             {line}")
+        rest = len(india.requirements) - len(musts) - len(from_model)
         if rest:
             L.append(f"      + {rest} advisory requirement(s) in full below, under "
                      f"WHAT IT TAKES TO RUN THIS IN INDIA.")
-        if india.unmatched_inputs:
+        if india.unaddressed_inputs:
             L.append("")
-            L.append("      ! these strategy inputs raised NO requirement -- the "
-                     "matching is keyword-based,")
-            L.append("        so read them yourself and check nothing is missing:")
-            for u in india.unmatched_inputs:
+            L.append("      ! NOBODY HAS LOOKED AT THESE. The rules match on "
+                     "keywords, so an input they")
+            L.append("        cannot read raises nothing and stays silent -- which "
+                     "is how a requirement")
+            L.append("        goes missing. A model should address each in "
+                     "`india_notes`:")
+            for u in india.unaddressed_inputs:
                 L.append(f"          {u}")
     return L
 
@@ -591,6 +617,25 @@ def gate_a(card, feasibility, extraction_quality=None,
         value=f"{len(blocking_qs)} blocking", threshold=0,
         evidence="; ".join(q.question for q in blocking_qs)
                  or "no question stops work"))
+
+    # ---- did anyone look at what the rules could not read? ---------------
+    # Non-blocking: an unread input is a gap in coverage, not a proven fault.
+    # But it must be a tracked row rather than a line of prose, because the
+    # failure mode is silence -- a requirement that never gets raised.
+    india = _india_for(card)
+    if india is not None and india.unmatched_inputs:
+        unread = india.unaddressed_inputs
+        c.append(Criterion(
+            "every strategy input reached the India rules", not unread,
+            value=(f"{len(unread)} unread" if unread else
+                   f"all {len(india.unmatched_inputs)} covered"),
+            threshold=0, blocking=False,
+            evidence=("; ".join(unread) + " -- keyword matching could not read "
+                      "these, and no india_notes entry addresses them, so no "
+                      "India requirement was raised from them at all"
+                      if unread else
+                      "inputs the patterns could not read are covered by "
+                      "india_notes entries")))
 
     # ---- can this become something the fund could hold? ------------------
     # Non-blocking on purpose. "not_convertible" is a legitimate and valuable

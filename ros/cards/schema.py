@@ -343,6 +343,61 @@ class OpenQuestion:
         return errs
 
 
+INDIA_CATEGORIES = ("data", "timing", "execution", "cost", "validity")
+
+
+@dataclass
+class IndiaNote:
+    """An India requirement a MODEL derived by reading the paper.
+
+    ros/india_requirements.py derives requirements mechanically from properties
+    of the reconstructed strategy -- does it rank securities, does it read a
+    fundamental, how fast does it trade. That is the floor, and it is a floor
+    precisely because no model can argue it away: `lag_days >= 1` and the 30bp
+    cost fire whatever anyone thinks.
+
+    But the matching is keyword-based, so it is deaf to anything a paper does
+    that nobody wrote a pattern for. This is where that gap gets closed: a model
+    reads the paper and states the India-specific requirement the rules missed.
+
+    Two constraints make that safe rather than merely broader.
+
+    First, a note can only ADD. It cannot remove or downgrade a rules
+    requirement, and it is never blocking -- a model may not invent a hard stop
+    any more than it may remove one. Gate A shows it, a human may act on it, and
+    promoting one into a rule is a code change somebody reviews.
+
+    Second, `addresses` names which strategy input this covers, so the code can
+    check that the model actually looked at the inputs the patterns missed
+    instead of writing notes about whatever was easiest. That check is the point
+    of the field: an unaddressed input used to be a line of prose asking a human
+    to be careful, which is not a mechanism.
+    """
+    category: str = "data"
+    item: str = ""
+    why: str = ""
+    triggered_by: str = ""              # what in the paper raised it
+    addresses: List[str] = field(default_factory=list)
+    evidence_page: Optional[int] = None
+
+    def validate(self, ctx: str) -> List[str]:
+        errs = []
+        if self.category not in INDIA_CATEGORIES:
+            errs.append(f"{ctx}: category '{self.category}' not in "
+                        f"{list(INDIA_CATEGORIES)}")
+        if not self.item.strip():
+            errs.append(f"{ctx}: item is required")
+        if not self.why.strip():
+            errs.append(f"{ctx}: say WHY India demands this of this strategy. A "
+                        f"requirement with no reason cannot be argued down, only "
+                        f"obeyed or ignored")
+        if not self.triggered_by.strip():
+            errs.append(f"{ctx}: say what in the paper raised it -- a requirement "
+                        f"nobody can trace to the strategy is one nobody can "
+                        f"retract when the strategy changes")
+        return errs
+
+
 CONVERTIBILITY_VERDICTS = ("convertible", "convertible_with_data",
                            "mechanism_only", "not_convertible")
 
@@ -683,6 +738,9 @@ class StrategyCard:
     # here turns it into one somebody can disagree with; leaving it blank makes
     # "no further data would help" indistinguishable from nobody having looked.
     no_further_data_needed: str = ""
+    # India requirements a MODEL read out of the paper, on top of the ones the
+    # rules derive mechanically. Additive and never blocking -- see IndiaNote.
+    india_notes: List[IndiaNote] = field(default_factory=list)
     # The model's opinion on the question the fund is actually paying for.
     # Decides nothing; a `not_convertible` verdict is a finding, not a block.
     convertibility: Optional[Convertibility] = None
@@ -729,6 +787,8 @@ class StrategyCard:
             errs += r.validate(f"data_requests[{i}]")
         if self.convertibility is not None:
             errs += self.convertibility.validate()
+        for i, n in enumerate(self.india_notes):
+            errs += n.validate(f"india_notes[{i}]")
         for i, q in enumerate(self.open_questions):
             errs += q.validate(f"open_questions[{i}]")
         for section in (self.data_plan, self.selection, self.backtest_plan):
@@ -1128,7 +1188,7 @@ def load_card(path: str) -> StrategyCard:
              "benchmark_templates", "n_configs_tried", "notes", "card_version",
              "universe_translation", "strategy", "data_requests",
              "open_questions", "data_plan", "selection", "backtest_plan",
-             "no_further_data_needed", "convertibility"}
+             "no_further_data_needed", "convertibility", "india_notes"}
     unknown = set(blob) - known
     if unknown:
         raise CardValidationError(f"card has unknown top-level keys: {sorted(unknown)}")
@@ -1163,6 +1223,8 @@ def load_card(path: str) -> StrategyCard:
         open_questions=[_build(OpenQuestion, q, f"open_questions[{i}]")
                         for i, q in enumerate(blob.get("open_questions") or [])],
         no_further_data_needed=blob.get("no_further_data_needed", ""),
+        india_notes=[_build(IndiaNote, n, f"india_notes[{i}]")
+                     for i, n in enumerate(blob.get("india_notes") or [])],
         convertibility=(_build(Convertibility, blob["convertibility"],
                                "convertibility")
                         if blob.get("convertibility") else None),
