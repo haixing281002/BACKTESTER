@@ -1,0 +1,379 @@
+card_version: "1.0"
+
+paper:
+  id: devanathan_2026_simple_dynamic_sbg_adaptation
+  title: "India adaptation: vol-targeted / risk-constrained dynamic allocation across NIFTY500 factor sleeves"
+  authors: [Nikhil Devanathan, Alexandros E. Tzikas, Stephen P. Boyd]
+  date: "2026-09-09"
+  source_file: docs/devanathan_2026_simple_dynamic_sbg.pdf
+  source_sha256: "2629076cfeb93ee1"
+  url: "https://arxiv.org/abs/2609.07946"
+
+intent:
+  mode: adaptation
+  parent_card: null
+  rationale: >
+    The paper is not investable here: wrong market (US ETFs), wrong asset classes
+    (stock/bond/gold), and cash is central to its own mechanism. What is
+    asset-agnostic is the MECHANISM: dynamically resize a long-only mix of a small
+    number of sleeves using a short, reactive trailing risk estimate, either by
+    diluting with cash to a fixed vol target (paper eq. 1) or by solving a small
+    convex problem that maximises a trailing-momentum return forecast subject to a
+    hard ex-ante-vol cap and an l1 leash to a strategic mix (paper eq. 3, "simple
+    Markowitz" variant only -- see broken_assumptions on the forecast). Our five
+    NIFTY500 single-factor sleeves are exactly such a set. This card tests whether
+    that mechanism survives the move to correlated, single-country equity sleeves;
+    it is not scored against the paper's own numbers.
+  transferred_mechanism: >
+    Monthly long-only reallocation across a small set of sleeves, sized by an
+    11-day trailing covariance estimate, subject to a hard ex-ante-volatility cap
+    and an l1 constraint to an equal-weight strategic mix (markowitz_l1 template,
+    paper eq. 3), using an EWMA trailing-return forecast (252-day half-life, paper's
+    "simple Markowitz" alpha) rather than the paper's full macro/Fama-French
+    regression forecast, which the engine does not implement (see broken_assumptions).
+    vol_target (paper eq. 1) is run as the simpler comparator, not the headline.
+  broken_assumptions:
+    - >
+      FORECAST FIDELITY: the paper's best-performing "Markowitz" portfolio (Sharpe
+      1.08) uses a 42-feature ridge regression on yields, VIX, the dollar index and
+      Fama-French factors, refit daily. Our markowitz_l1 template only implements
+      the simpler EWMA trailing-return alpha (the paper's own "simple Markowitz",
+      Sharpe 0.91 in-sample). We are therefore adapting the weaker of the paper's
+      two optimization-based variants, not its headline one.
+    - >
+      DIVERSIFICATION: the paper's lift depends on SPY/AGG/GLD being weakly or
+      negatively correlated (a genuine three-asset-class spread). Five NIFTY500
+      single-factor sleeves are single-country, single-asset-class equity and
+      typically pairwise-correlate well above 0.7. A risk-constrained optimiser
+      has far less genuine diversification to exploit; expect most of the paper's
+      benefit NOT to transfer.
+    - >
+      VOLATILITY CALIBRATION: the paper's own target of 7% annualised vol sits
+      well BELOW the natural volatility of its own strategic mixes (60/40 realises
+      11.3%, 50/30/20 realises 10.3% -- the target is roughly 62-68% of the
+      benchmark's own vol, which is what makes the cash overlay bind often enough
+      to matter, per Table 3's ~15-19% average cash holding). A target chosen
+      instead ABOVE the strategic mix's natural volatility would rarely bind and
+      would just reproduce the fully-invested benchmark. See ambiguities below for
+      how the initial target here is set to respect that same ratio.
+    - >
+      STATISTICAL SIGNIFICANCE: even on the paper's own data, the block-bootstrap
+      in appendix C finds the "Markowitz" Sharpe advantage significant at 5% only
+      versus the primary 60/40 fixed-weight benchmark; the advantage over the
+      paper's OWN volatility-controlled portfolios and simple Markowitz portfolio
+      -- the constructions closest in spirit to what we adapt here -- has a 95%
+      CI that includes zero (p.31-32). Twenty years of even US ETF data could not
+      resolve this; expect the same or worse resolving power on ~20 years of five
+      correlated Indian equity sleeves.
+    - >
+      IMPLEMENTATION LAG: the paper assumes same-close (zero-lag) execution. Its
+      own appendix D shows that lagging its forecast AND covariance estimate by
+      just 1 trading day already costs it noticeably (Sharpe 1.08 -> 1.01 in that
+      variant), and by 21 days costs it most of its edge over the fixed-weight
+      benchmarks (1.08 -> 0.73). We require lag_days=1 for NSE settlement realism;
+      some erosion versus a same-close backtest should be expected and is not a
+      defect.
+    - >
+      RISK-FREE ASSET: no Indian cash-rate series exists in the current snapshot.
+      Any cash-holding variant runs on a declared constant proxy and must be read
+      under the rate sweep, not as a precise number.
+    - >
+      POINT-IN-TIME: NSE factor indices are backfilled to a 2005 base with
+      methodology fixed years later, so sleeve construction rules were chosen
+      knowing the intervening history -- selection bias is built into the series.
+    - >
+      RETURN BASIS: these are price-return indices; dividends (~1.3-1.5% p.a.) are
+      missing from every series, biasing any equity-vs-cash comparison against
+      equity.
+    - >
+      INVESTABILITY: an index is not a portfolio. Real sleeve replication carries
+      tracking error, rebalance impact and sleeve-level turnover the index itself
+      does not charge.
+
+universe:
+  description: >
+    Five NSE single-factor sleeves drawn from the NIFTY500 universe, plus a
+    declared cash proxy. NIFTY HIGH BETA 50 is excluded (history starts 2012-11,
+    would truncate the sample by seven years). NIFTY500 MULTIFACTOR MQVLV 50 is
+    excluded from the allocation universe and instead used as a benchmark: it is
+    the free, off-the-shelf alternative to building this ourselves.
+  asset_class: equity
+  geography: IN
+  assets:
+    - NIFTY500 MOMENTUM 50
+    - NIFTY500 QUALITY 50
+    - NIFTY500 VALUE 50
+    - NIFTY500 LOW VOLATILITY 50
+    - NIFTY ALPHA 50
+  benchmark: NIFTY 500
+  cash_asset: CASH_PROXY
+
+signal:
+  name: dynamic_factor_sleeve_allocation
+  template: markowitz_l1
+  lookback_days: 11
+  lag_days: 1
+  description: >
+    Paper eq. (3), "simple Markowitz" alpha only (EWMA trailing return, not the
+    paper's macro-regression forecast -- see broken_assumptions). lag_days=1
+    because NSE index closes publish after the close; a signal computed on date t
+    cannot be traded at t's own close, unlike the paper's assumption.
+  params:
+    strategic_weights:
+      NIFTY500 MOMENTUM 50: 0.2
+      NIFTY500 QUALITY 50: 0.2
+      NIFTY500 VALUE 50: 0.2
+      NIFTY500 LOW VOLATILITY 50: 0.2
+      NIFTY ALPHA 50: 0.2
+    target_vol: 0.13
+    l1_budget: 1.0
+    spread_bps: 30.0
+    alpha_halflife: 252
+    alpha_scale: 21
+
+portfolio:
+  rebalance: monthly
+  long_only: true
+  max_gross: 1.0
+  allow_cash: true
+  mandate_allow_cash: false      # the fund is long-only and fully invested
+  target_vol: 0.13
+  start: "2005-04-01"
+  end: "2026-05-29"
+
+costs:
+  # 30bp round trip, not the paper's 5bp: Indian factor-sleeve rotation costs
+  # materially more than trading SPY/AGG/GLD once impact and STT are included.
+  # impact_bps_per_pct_adv is set (not left null): a flat spread alone understates
+  # cost precisely when turnover is highest and the sleeve least liquid -- see
+  # ambiguities.costs.impact_bps_per_pct_adv.
+  spread_bps: 30.0
+  cost_model: half_spread
+  impact_bps_per_pct_adv: 10.0
+
+data_requirements:
+  - {name: "NIFTY500 MOMENTUM 50", kind: price, frequency: daily, start: "2005-04-01", mandatory: true, purpose: "momentum sleeve", evidence_page: null}
+  - {name: "NIFTY500 QUALITY 50", kind: price, frequency: daily, start: "2005-04-01", mandatory: true, purpose: "quality sleeve"}
+  - {name: "NIFTY500 VALUE 50", kind: price, frequency: daily, start: "2005-04-01", mandatory: true, purpose: "value sleeve"}
+  - {name: "NIFTY500 LOW VOLATILITY 50", kind: price, frequency: daily, start: "2005-04-01", mandatory: true, purpose: "low-vol sleeve"}
+  - {name: "NIFTY ALPHA 50", kind: price, frequency: daily, start: "2005-04-01", mandatory: true, purpose: "alpha sleeve"}
+  - {name: "NIFTY 500", kind: price, frequency: daily, start: "2005-04-01", mandatory: true, purpose: "fund benchmark"}
+  - {name: "NIFTY500 MULTIFACTOR MQVLV 50", kind: price, frequency: daily, mandatory: true, purpose: "off-the-shelf multifactor competitor -- the real alternative to building this"}
+  - {name: india_cash_rate, kind: risk_free_rate, frequency: daily, mandatory: true, purpose: "cash accrual and Sharpe numeraire"}
+
+ambiguities:
+  - field: universe.mapping
+    issue: >
+      Mapping the paper's SPY/AGG/GLD onto five equity factor sleeves is a
+      judgement call, not a translation: the source spans asset classes, the
+      target is single-country, single-asset-class equity.
+    resolution: >
+      Proceed as an explicit ADAPTATION, never scored against the paper's
+      numbers. The empirical cost of the lost cross-asset diversification is
+      measured and reported (broken_assumptions), not assumed away.
+    confidence: high
+    material: true
+
+  - field: portfolio.target_vol
+    issue: >
+      The paper's 7% target is calibrated to sit at roughly 62-68% of its own
+      strategic mix's natural realised volatility (60/40: 11.3%, 50/30/20:
+      10.3%), which is what makes the cash overlay bind often enough to matter.
+      Copying 7% literally onto Indian equity sleeves (materially more volatile
+      than a 60/40 book) would force near-permanent, extreme cash holding rather
+      than an occasional de-risk; picking a target ABOVE the sleeves' natural
+      vol would instead almost never bind and would just reproduce the
+      fully-invested benchmark.
+    resolution: >
+      PLACEHOLDER, not a calibrated value: 0.13 is set here only so the
+      optimizer has a number to run with. It was derived by assuming the
+      equal-weight sleeve mix's long-run vol is "roughly 20%" and applying the
+      paper's own ~65% ratio -- but that 20% figure is asserted, not measured
+      anywhere in the ingest or this card (critique-card finding, p.n/a). Step 05
+      MUST compute the equal-weight strategic mix's own trailing realised
+      volatility first and re-derive the target as ~65% of that measured figure
+      before any single-point result is reported as a headline; until then,
+      treat the 8%-20% sensitivity sweep (mirroring the paper's own 3%-12%
+      sweep, Sec 3.4) as the primary output, not the 13% point estimate.
+    confidence: low
+    material: true
+
+  - field: signal.params (covariance dimensionality)
+    issue: >
+      Distinct from the lookback-window-selection ambiguity below: a 5-asset
+      covariance matrix has 15 free parameters (5 variances + 10 covariances),
+      estimated from an 11-observation trailing window -- fewer observations
+      than parameters, unlike the paper's 3-asset case (6 free parameters from
+      11 observations). The engine's own equal_risk_contribution template
+      comments that with "11 daily observations over five correlated sleeves"
+      the covariance is "frequently" near-singular, which is why eigenvalues
+      are floored harder there than elsewhere (critique-card finding).
+    resolution: >
+      Report a named sensitivity over longer windows (21, 42, 63 days) motivated
+      specifically by this parameter-count problem, distinct from the in-sample-
+      selection sensitivity below. Step 06 must report how often eigenvalue
+      clipping / PSD projection materially alters the raw covariance estimate
+      (not just count outright solver failures), since a near-singular estimate
+      can still "solve" while being economically meaningless.
+    confidence: high
+    material: true
+
+  - field: metrics.sharpe_convention
+    issue: >
+      ros/validation/metrics.py implements two Sharpe definitions -- the
+      paper's own geometric CAGR-based one and the conventional arithmetic-mean
+      one -- and its docstring states explicitly "a card must state which one
+      it is replicating." This card said neither (critique-card finding). The
+      paper's own Table (p.9) shows the two conventions differ by up to
+      0.03-0.04 for its higher-volatility benchmarks.
+    resolution: >
+      This is an adaptation, not a replication, so no single convention is
+      "correct" here. Require step 06/07 to report BOTH sharpe_geometric and
+      sharpe_conventional side by side for every portfolio in this card, rather
+      than either being picked implicitly by a report script.
+    confidence: high
+    material: true
+
+  - field: costs.spread_bps
+    issue: >
+      The paper assumes a 5bp full round-trip spread. Rotating between
+      mid-cap-heavy Indian factor sleeves costs materially more once market
+      impact and STT are included.
+    resolution: >
+      Use 30bp round trip as the base case per fund policy, and report the
+      breakeven cost at which the edge over the two free alternatives (holding
+      NIFTY 500, or buying NIFTY500 MULTIFACTOR MQVLV 50) disappears.
+    confidence: medium
+    material: true
+
+  - field: costs.impact_bps_per_pct_adv
+    issue: >
+      A flat spread_bps alone charges the same cost per rupee traded regardless
+      of trade size relative to a sleeve's liquidity. The paper's own Markowitz
+      analog turns over ~284%/year even in three of the world's most liquid
+      ETFs (p.11); this fund's own registry flags these five NSE sleeves as
+      mid-cap-heavy, and monthly full reallocation across them is this card's
+      principal activity -- exactly where impact, not just spread, should bite
+      (critique-card finding).
+    resolution: >
+      Set impact_bps_per_pct_adv=10.0 as a conservative fund-standard floor for
+      mid-cap NSE factor sleeves rather than leaving it null. Step 06/07 must
+      still report a turnover-scaled cost stress test in addition to the flat
+      30bp+impact headline, mirroring the paper's own cost-sensitivity table
+      (appendix G) but for impact rather than spread alone.
+    confidence: medium
+    material: true
+
+  - field: signal.lookback_days
+    issue: >
+      The paper's own text admits the 11-day covariance/vol window was chosen
+      "after a modest search over various values" on US ETF data (p.7) -- it is
+      an in-sample-selected hyperparameter, not a principled default, and its
+      transferability to five correlated Indian equity sleeves (very different
+      volatility dynamics/regime structure) is unproven.
+    resolution: >
+      Keep 11 days as the starting value (faithful to the transferred
+      mechanism) but treat it as a named sensitivity, not a tuned choice: report
+      performance across at least {11, 21, 63} days rather than presenting the
+      11-day result alone as if it were validated on our data.
+    confidence: medium
+    material: true
+
+  - field: signal.lag_days
+    issue: >
+      The paper implicitly assumes same-close (zero-lag) execution. Its own
+      appendix D shows lagging both the forecast and the covariance by just 1
+      day already costs Sharpe (1.08 -> 1.01 in its full regression-forecast
+      variant), and by 21 days erodes most of the edge (1.08 -> 0.73). It is
+      untested how much of that sensitivity carries over to the simpler EWMA
+      alpha this card actually uses.
+    resolution: >
+      Require lag_days=1 (NSE closes publish after the close; a signal computed
+      on t cannot trade at t's close). Expect some erosion relative to a
+      same-close backtest and do not treat it as an engine defect; report the
+      lag-sensitivity curve as part of research validation (step 06), the way
+      the paper reports its own.
+    confidence: medium
+    material: true
+
+  - field: n_configs_tried
+    issue: >
+      The paper's own specification search for its Markowitz portfolio is, in
+      its own words, "crudely gridded" across at least six hyperparameters
+      (target vol, weight-deviation limit, covariance window, forecast horizon,
+      half-life, ridge lambda). Its deflated-Sharpe correction (appendix C)
+      formally counts only 17 documented "one-at-a-time neighbor" specifications
+      and the paper itself warns this likely UNDERSTATES the true trial budget
+      because those neighbors are highly correlated with each other (p.36). On
+      top of that, critique-card found the paper ALSO reported, for this same
+      strategy, a target-vol sweep of ~19 points (3%-12% at 0.5% steps, Sec
+      3.4), a lag-sensitivity study of ~8 more variants (Tables 11-12), and
+      cost/cash-rate sensitivities of ~4 more (appendix G) -- none folded into
+      the 17.
+    resolution: >
+      Carry n_configs_tried=48 (17 formal neighbors + 19 target-vol sweep
+      points + 8 lag variants + 4 cost/cash-rate variants) as a floor inherited
+      from the paper's own documented search, not as a true count -- the paper
+      itself says even its 17 formal trials likely understate the truth. Our
+      own subsequent tuning on the sensitivities listed elsewhere in this card
+      must be added to this count before any deflated Sharpe is quoted in a
+      report.
+    confidence: medium
+    material: true
+
+  - field: universe.cash_asset
+    issue: No real Indian risk-free series exists in the current data snapshot.
+    resolution: >
+      Use the declared constant 6% proxy (CASH_PROXY_CONSTANT_6PCT), recorded
+      in the snapshot as a proxy, and sweep 4%-8%. Results that flip sign or
+      rank inside that band are reported as rate-dependent, not as settled.
+    confidence: low
+    material: true
+
+  - field: data.pit_status
+    issue: >
+      Backfilled index history: NSE defined these sleeves years after the 2005
+      base date, so construction rules were chosen with knowledge of the
+      intervening returns.
+    resolution: >
+      Accept for mechanism testing only. This caps the promotion ladder at
+      ROBUST: no live claim may rest on backfilled sleeve history. A live
+      decision requires a post-launch-only run.
+    confidence: high
+    material: true
+
+  - field: portfolio.allow_cash
+    issue: >
+      The fund's mandate is long-only and fully invested; the transferred
+      mechanism's edge (like the paper's own) depends partly on holding cash.
+    resolution: >
+      Run BOTH the faithful cash-holding variant (mechanism test, allow_cash
+      true) and a fully-invested variant (mandate test, mandate_allow_cash
+      false). The mandate variant governs any promotion decision; the faithful
+      variant is diagnostic only.
+    confidence: high
+    material: true
+
+replication_targets: []
+
+benchmark_templates:
+  - {name: "Equal-weight sleeves",     template: fixed_weight,           params: {weights: equal}, rebalance: annual}
+  - {name: "Vol-target overlay",       template: vol_target,             params: {weights: equal, target_vol: 0.13}}
+  - {name: "Inverse vol",              template: inverse_vol,            params: {}}
+  - {name: "Equal risk contribution",  template: equal_risk_contribution, params: {}}
+  - {name: "Min variance",             template: min_variance,          params: {}}
+
+n_configs_tried: 48
+
+notes: >
+  The promotion question is NOT "is the Sharpe good" -- it is whether this beats,
+  net of 30bp costs, the two things the fund can already do for free: hold NIFTY
+  500, or buy the NIFTY500 MULTIFACTOR MQVLV 50 index. Both are run as benchmarks.
+  Separately, note for step 06/07 critique: even in the paper's own, much more
+  favourable setting (three weakly-correlated US asset classes, 20 years of daily
+  data), the bootstrap in its appendix C could not reject a null of no advantage
+  over its own volatility-controlled and simple-Markowitz constructions at 5%
+  significance -- only the advantage over the naive 60/40 was significant. Do not
+  expect this adaptation, on five correlated equity sleeves and the same sample
+  length, to resolve significance any better; frame any headline Sharpe here as a
+  point estimate with a wide interval, not a settled result.
