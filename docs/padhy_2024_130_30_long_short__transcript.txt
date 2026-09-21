@@ -1,0 +1,193 @@
+SOURCE: "EEL-++Vol.+14+No.+4+(2024)+-+Jagabandhu+Padhy.pdf"
+Supplied as a direct chat upload with page-anchored text already extracted by the
+host environment, not a local PDF rendered by this session. This transcript is
+saved for lineage and hashing purposes in place of a source PDF file, matching
+the convention used for docs/maguire_2018_combining_smart_beta__transcript.txt.
+
+=== PAGE 1 (p.210) ===
+Analyzing the 130/30 Long-Short Strategy in Indian Stocks: A Comparative Study
+Using Sensex 30 and Benchmark Returns. Prof. Amit Bathia, Mr. Charith Pechetti,
+Ms. Ananya Gupta, Prof. Nandip Vaidya, Prof. Jagabandhu Padhy (corresponding
+author) -- NMIMS Anil Surendra Modi School of Commerce, Mumbai. European
+Economic Letters, ISSN 2323-5233, Vol 14, Issue 4 (2024).
+
+Abstract: investigates the 130/30 long-short strategy in the Indian stock
+market using a sample of 30 Sensex stocks, April 2019 to March 2024 (later
+stated as September 2024 in Methodology), evaluated via Holding Period Return,
+Sharpe Ratio and Information Ratio against Sensex benchmark returns. Finds the
+strategy can outperform in certain conditions but is vulnerable in downturns;
+rejects the null hypothesis.
+
+Introduction: NSE third largest APAC exchange by market cap ($4648.41bn,
+2024); Demat accounts 36m (Mar 2020) -> 160m (Jun 2024). 130/30 strategy per
+Lo & Patel (2008): 130% long, 30% short, net 100% market exposure, allows
+managers to express high-conviction long and short ideas simultaneously.
+
+=== PAGE 2 (p.211) ===
+Literature review citations: DiFonzo & Bordia (1998) on information ratio
+>0.5 for long-short success; Qian & Hua (2005) on strategy risk from
+variability in the information coefficient; Borchert & Zellmer-Bruhn (2010) on
+volatility risk management; Hubner (2008) Generalized Treynor Ratio; Sharpe
+(1994); Brush (1997) long-only vs long-short; Clarke et al. (2008) short
+extensions; Tornberg (2009) 130/30 funds outperform long-only by 2-3%/yr;
+Lo & Patel (2008): 130/30 generated 1.26% annualized return, info ratio 0.69;
+Frino et al. (2011) momentum-based 130/30 in Australia; Briere & Szafarz
+(2017) short-selling constraints and factor portfolios.
+
+Research objectives: (1) analyse the 130/30 strategy on the 30 Sensex stocks
+vs benchmark returns; (2) construct and critically evaluate the stock
+selection criteria for the 130/30 strategy.
+
+Null Hypothesis (H0): no significant difference between 130/30 strategy
+returns and Sensex benchmark returns.
+
+=== PAGE 3 (p.212) ===
+Methodology: Data from Yahoo Finance, adjusted close price of the 30 Sensex
+companies, April 1, 2019 to September 30, 2024. Risk-free government bond
+price also collected. Benchmark = Sensex price over same period.
+
+Data divided into 6-month periods -> 11 equal periods. Holding Period Return
+(HPR) computed for all 30 stocks and the benchmark:
+  HPR = (Price at end of 6 months - Price at start of 6 months) / Price at
+  start of 6 months.
+
+130/30 classification tools, each computed per 6-month period:
+- Tracking Error = stdev(daily return of stock - daily return of benchmark
+  index). Lower = more closely mimics benchmark.
+- Information Ratio = Active Returns / Tracking Error, where Active Return =
+  average return of portfolio - average return of benchmark. Higher = better
+  risk-adjusted outperformance.
+- Sharpe Ratio = (6-monthly return of portfolio - 6-monthly return of
+  risk-free asset) / stdev(portfolio returns). Stdev computed in Excel.
+- Treynor Ratio = (6-monthly return of portfolio - 6-monthly return of
+  risk-free asset) / Beta of portfolio. Beta = covariance(benchmark, stock) /
+  variance(market).
+
+Classification criteria table (Figure 2):
+  Tracking Error: Long = bottom 40% of stocks; Short = top 40% of stocks.
+  Information Ratio: Long = top 40%; Short = bottom 40%.
+  Sharpe Ratio: Long = top 40%; Short = bottom 40%.
+  Treynor Ratio: Long = top 40%; Short = bottom 40%.
+(The paper does not state how a stock scoring in the "long" cohort on some
+metrics and "short" cohort on others is resolved -- i.e., no combination rule
+across the four metrics is given beyond the table itself.)
+
+Rationale given for 40%/40% split: avoids extreme-decile bias, captures
+meaningful performance variation while keeping a sufficiently large,
+diversified pool.
+
+Stocks are classified in a 6-month window, then the SUBSEQUENT 6 months'
+returns are used to evaluate performance against the benchmark (i.e., a
+1-period-lagged formation-then-holding design).
+
+=== PAGE 4 (p.213) ===
+Data Analysis and Findings: Rs 1,00,000 notional invested in each strategy
+and in the Sensex benchmark. Transaction cost: 26 bps, plus a short-selling
+cost of 84 bps -- combined "1.1% of the net gain/loss value for the
+classified stocks" applied to the 130/30 book. Only 26 bps transaction cost
+applied to the Sensex benchmark leg (no shorting assumed there).
+
+130/30 weighting: short book = -Rs 30,000 / (number of short-classified
+stocks), equal-weighted (negative sign because shorting requires borrowing);
+long book = Rs 1,00,000 / (number of long-classified stocks) -- note the text
+says the long book is scaled by 1,00,000 but the worked long amount invested
+in each period's table sums to Rs 1,30,000 (e.g. Figure 3: 5 long stocks x Rs
+26,000 = Rs 130,000), i.e. the long-side notional is actually 130,000, not
+100,000 as the prose states -- an internal inconsistency between the prose
+weighting description and the worked Excel tables.
+
+Year 2019-20: H1 (Apr-Sep 2019, formed on prior data unavailable / evaluated
+Oct19-Mar20... paper's period labelling is formation-period = evaluation
+period for the first row, see table): no stocks satisfied the short
+criteria in the first half -- strategy "cannot be implemented" for that
+window. Second half (formed Oct-Mar, evaluated Apr-Sep... per Figure 3's
+literal rows: formation "2019-20 October-March", evaluation "2020-21
+April-September"): 5 stocks long (RIL, TCS, Kotak Mahindra Bank, Asian
+Paints, Tech Mahindra), 5 stocks short (ITC, Bajaj Finance, Axis Bank, Adani
+Ports, IndusInd). Net gain/loss 130/30 = Rs 52,625.48 vs Sensex benchmark
+profit Rs 34,590.57 -- 130/30 beats benchmark by ~Rs 18,035 (18.03 pp on
+Rs 100,000 base).
+
+=== PAGE 5 (p.214) ===
+Year 2020-21 (Covid-19 period): formation Apr-Sep 2020, evaluated Oct20-Mar21:
+Sensex profit Rs 27,867.72 (27.87%). 130/30: short book (ICICI Bank, NTPC,
+Axis Bank) lost Rs 14,422; long book (RIL, HCL, Sun Pharma, M&M, Tata Motors)
+gained ~Rs 48,698; net 130/30 gain after costs = Rs 33,898.96 (33.90%),
+beating Sensex by ~Rs 6,031 (6.03 pp). Second half of 2020-21: no stocks
+satisfied the short-classification criteria -> strategy not implementable
+for that window.
+
+Year 2021-22: first half -- no stocks satisfied the LONG criteria -> not
+implementable. Second half (2nd Covid wave): Sensex loss Rs 5,240.80
+(-5.25%). 130/30: short Asian Paints & IndusInd Bank, long Infosys & SBI;
+net 130/30 loss Rs 16,474.76 (-16.47%), UNDERPERFORMING the benchmark by
+~Rs 11,234 (-11.23 pp).
+
+=== PAGE 6 (p.215) ===
+Year 2022-23: both halves implementable. H1 (formed Apr-Sep22, evaluated
+Oct22-Mar23): short Tata Motors, Power Grid, JSW Steel; long ICICI Bank, SBI,
+ITC, Nestle. Net gain 130/30 = Rs 6,395.62 (6.40%) vs Sensex Rs 3,868.69
+(3.87%) -- 130/30 beats by ~Rs 2,527 (2.53 pp). H2 (formed Oct22-Mar23,
+evaluated Apr-Sep23): 130/30 gain Rs 14,304.57 (14.30%) vs Sensex Rs
+11,343.08 (11.34%) -- beats by ~Rs 2,961 (2.96 pp).
+
+=== PAGE 7 (p.216-217, text continues to Appendix) ===
+Year 2023-24: H1 -- no stocks classified, strategy not implementable. H2
+(formed Oct23-Mar24, evaluated Apr-Sep24): short Infosys, Bajaj Finance;
+long RIL, Titan Company. Net 130/30 loss Rs 3,490.18 (-3.49%) vs Sensex gain
+Rs 13,860.10 (13.86%) -- 130/30 UNDERPERFORMS by ~Rs 17,350 (-17.35 pp).
+
+Figure 8 (Conclusion table), full year-by-year record (period, 130/30
+return %, Sensex return %, difference pp):
+  2019-20 Apr-Sep: no implementation
+  2019-20 Oct-Mar: 52.63% vs 34.59% (+18.03 pp)
+  2020-21 Apr-Sep: 33.90% vs 27.87% (+6.03 pp)
+  2020-21 Oct-Mar: no implementation
+  2021-22 Apr-Sep: no implementation
+  2021-22 Oct-Mar: -16.47% vs -5.24% (-11.23 pp)
+  2022-23 Apr-Sep: 6.40% vs 3.87% (+2.53 pp)
+  2022-23 Oct-Mar: 14.30% vs 11.34% (+2.96 pp)
+  2023-24 Apr-Sep: no implementation
+  2023-24 Oct-Mar: -3.49% vs 13.86% (-17.35 pp)
+(Of 10 half-year windows, only 6 had both a long and a short cohort and were
+"implementable"; 4 had zero stocks in one leg and the paper reports the
+strategy as simply not run for that window rather than substituting a
+long-only or partial book.)
+
+Conclusion: rejects H0 -- 130/30 returns are statistically distinct from
+Sensex, but the direction is inconsistent (outperforms in some windows,
+underperforms badly in others, notably the last reported window).
+
+Limitations stated by the authors: (1) Covid-19 period volatility distorts
+reliability; (2) the classification criteria FAILED TO IDENTIFY ANY STOCKS in
+4 of 10 windows, i.e. the strategy could not always be run; (3) universe
+restricted to Sensex 30 large-caps only, no mid/small-cap; (4) no
+sector-relative benchmark check, only Sensex.
+
+Future scope proposed by authors: extend to mid/small-cap; incorporate
+behavioural-finance sentiment effects; use adaptive/ML-based stock-selection
+criteria that update with regime changes.
+
+=== PAGE 7-8 (p.217) Appendix 1 ===
+List of the 30 Sensex constituents studied and their sectors: Reliance
+Industries (Oil & Gas), HDFC Bank, Hindustan Unilever (FMCG), ICICI Bank,
+Infosys (IT), Larsen & Toubro (Construction), TCS (IT), Kotak Mahindra Bank,
+Axis Bank, Bharti Airtel (Telecom), SBI, NTPC (Power), Bajaj Finance,
+Titan Company (Consumer Durables), Power Grid Corp, Sun Pharmaceutical,
+UltraTech Cement, Maruti Suzuki, HCL Technologies, Asian Paints,
+Mahindra & Mahindra, IndusInd Bank, Tech Mahindra, Bajaj Finserv, Tata
+Motors, Nestle India, JSW Steel, Adani Ports & SEZ, Coal India, SBI Life
+Insurance.
+
+=== PAGES 8-9 (p.217-218) References ===
+Standard reference list (Lo & Patel 2008; Qian & Hua 2005; Sharpe 1994;
+Tornberg 2009; Frino et al. 2011; Briere & Szafarz 2017; Clarke et al. 2008;
+Hubner 2008; Brush 1997; Vakratsas et al. 2003; two Statista/ICICIdirect web
+citations; two apparently mis-cited references -- Borchert & Zellmer-Bruhn
+2010 and DiFonzo & Bordia 1998 are both listed with the identical placeholder
+citation "Reproduced with permission of the copyright owner... Journal of
+Allergy and Clinical Immunology, 130(2), 556" -- clearly a reference-manager
+copy-paste error, not a real citation to either claim attributed to them in
+the Literature Review).
+
+No text addressed to an AI/model reader was found on any page.

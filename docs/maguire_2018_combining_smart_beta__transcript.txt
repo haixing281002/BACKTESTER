@@ -1,0 +1,383 @@
+SOURCE: user-uploaded PDF (arXiv:1808.02505v2 [q-fin.PM], 9 Aug 2018)
+Title: Combining Independent Smart Beta Strategies for Portfolio Optimization
+Authors: Phil Maguire, Karl Moffett, Rebecca Maguire (National University of Ireland Maynooth)
+This transcript is the page-anchored text as supplied directly in the chat upload,
+reproduced verbatim per page for lineage/hashing purposes. No local PDF file exists;
+this .txt stands in for source_file in the Strategy Card and interpretation records.
+
+===== PAGE 1 =====
+Combining Independent Smart Beta Strategies
+for Portfolio Optimization
+Phil Maguire, Karl Moffett, and Rebecca Maguire
+Department of Computer Science, National University of Ireland Maynooth, Ireland
+Department of Psychology, National University of Ireland Maynooth, Ireland
+
+Abstract. Smart beta, also known as strategic beta or factor investing, is the idea of
+selecting an investment portfolio in a simple rule-based manner that systematically
+captures market inefficiencies, thereby enhancing risk-adjusted returns above
+capitalization-weighted benchmarks. We explore the idea of applying a smart strategy in
+reverse, yielding a "bad beta" portfolio which can be shorted, thus allowing long and short
+positions on independent smart beta strategies to generate beta neutral returns. In this
+article we detail the construction of a monthly reweighted portfolio involving two
+independent smart beta strategies; the first component is a long-short beta-neutral
+strategy derived from running an adaptive boosting classifier on a suite of momentum
+indicators. The second component is a minimized volatility portfolio which exploits the
+observation that low-volatility stocks tend to yield higher risk-adjusted returns than
+high-volatility stocks. Working off a market benchmark Sharpe Ratio of 0.42, we find that
+the market neutral component achieves a ratio of 0.61, the low volatility approach achieves
+a ratio of 0.90, while the combined leveraged strategy achieves a ratio of 0.96. In six
+months of live trading, the combined strategy achieved a Sharpe Ratio of 1.35. These
+results reinforce the effectiveness of smart beta strategies, and demonstrate that
+combining multiple strategies simultaneously can yield better performance than that
+achieved by any single component in isolation.
+
+Keywords: smart beta; factor investing; low-volatility anomaly; portfolio optimization;
+variance minimization; minimum volatility portfolio; long-short strategy, diversification
+
+1 Introduction
+According to the Capital Asset Pricing Model (CAPM), stock returns should be a linear
+function of beta. [E(Ri) = Rf + βi(E(Rm) − Rf) + α]
+
+===== PAGE 2 =====
+where Rf is the risk-free rate of return, βi is a measure of the correlation between
+portfolio i's returns and that of a benchmark, and Rm is the expected returns of that
+benchmark asset (Perold, 2004). The elusive α term is the excess returns that are
+generated from selecting long positions which outperform the market, or short positions
+that underperform. In an efficient market (see Malkiel & Fama, 1970), the expected value
+of the alpha coefficient is zero.
+
+Recent work on smart beta has suggested that superior risk-to-reward performance can be
+achieved by following a few simple rules. Low-volatility portfolios across the world have
+offered a desirable combination of high average returns and small drawdowns, "the
+greatest anomaly in finance" (Baker et al., 2011).
+
+Assets under management in smart-beta strategies ballooned from $103bn in 2008 to
+$616bn in 2015. Investors continued to pile into smart-beta funds in Q1 2017, driving a
+2,000% rise in new money allocated to such strategies. Smart beta funds now account for
+one seventh of the $4 trillion invested in the global ETF market.
+
+There remains some debate as to whether smart beta is real, insofar as it can be reliably
+and consistently exploited in practice. Many factors which appear supportive of smart beta
+may be nothing more than temporary anomalies discovered through data mining (Arnott,
+Beck, Kalesnik & West, 2016). These anomalies may be small enough to be eroded by
+transaction costs, or reflect a statistical quirk such as future bias. Arnott et al. (2016)
+suggest smart beta strategies are not sustainable -- soaring popularity pushes prices up in
+a way that inflates past performance ("smart beta bubble").
+
+===== PAGE 3 =====
+Our study seeks specifically to address whether applying a combination of smart beta
+strategies together can deliver real profits beyond the market benchmark. We apply a
+monthly reweighting strategy (minimal trading costs, little rebalancing required). We apply
+our strategy out-of-sample, developing the portfolio on historical data and applying it to
+real live data, "thus removing any possibility of future bias." We investigate whether
+combining multiple independent strategies enhances performance.
+
+2 Quantopian
+Algorithms tested via the online crowd-sourced hedge fund Quantopian: Python-based
+research environment, minute-by-minute US stock pricing data, fundamental business
+data, backtesting suite with commission/slippage/bid-ask spread cost models. As of July
+2016, ~85,000 members, $250 million under direction.
+
+2.1 Characteristics of a Lucrative Hedge-Fund
+Quantopian grants capital allocations to top algorithms meeting strict requirements:
+
+Low Exposure to the Market: β = Covariance(Ri,Rm) / Variance(Rm). Algorithms should
+have a beta coefficient between -0.3 and +0.3 vs S&P 500, achieved via hedging.
+
+===== PAGE 4 =====
+Consistent Profitability: Portfolios should consistently demonstrate a Sharpe Ratio
+greater than 1 (Sharpe = (portfolio return − risk-free rate) / std dev of return series).
+
+Actively Trading Algorithms: Portfolios must rebalance at least once per month or at most
+twice a day (ensures performance reflects algorithm quality, not lucky stock selection).
+
+Low Correlation to Peers: Average pairwise correlation of positions to other users'
+algorithms must be between -30% and +30%.
+
+3 Beta-neutral portfolio
+A beta-neutral strategy remains "market neutral," equity evenly divided between long and
+short positions (Sorensen, Hua & Qian, 2007: market neutrality of long-short equity
+portfolios leads to higher risk-adjusted return). With beta ~0, the CAPM beta term is
+eliminated, leaving alpha as the only return driver ("pure alpha").
+
+Granizo-Mackenzie (2016): take a universe of stocks (e.g. S&P 500 constituents), rank by a
+predetermined factor, go long top N, short bottom N. Returns generated from divergence
+of the two groups. N must be large enough to limit idiosyncratic risk; too-large N pushes
+cumulative beta toward 1 (this is the
+
+===== PAGE 5 =====
+smart beta portfolio; the short side, "bad-beta portfolio," has beta ~-1 / "alternative beta").
+Combining the two should yield overall beta ~0.
+
+This paper's idea: use momentum oscillators for the Granizo-MacKenzie ranking. Four
+indicators used: Relative Strength Index, Stochastic Oscillator, Moving Average Crossover,
+and (Dollar) Volume.
+
+Relative Strength Index (RSI): RSI = 100 − 100/(1+RS), RS = (avg x-day gains)/(avg x-day
+losses). Calculated over a 14-day window.
+
+Stochastic Oscillator: two signals %k and %D (%D = 3-period moving average of %k, to
+smooth it).
+%k = (Latest Close − Lowest price of last N days) / (Highest price of last N days − Lowest
+price of last N days)
+
+===== PAGE 6 =====
+N = 21 days (average trading days in a month) was used to calculate %k, mirroring the
+return-analysis period. Only the %D signal (smoothed) was used, as less noisy / better
+suited to the machine-learning process.
+
+Moving Average Crossover: related to MACD. The paper analyses the latest MACD value
+directly (not charted). Granizo-Mackenzie warns that choosing specific chart values can
+cause overfitting; kept general by using:
+MAcrossover = (1-month simple moving average) / (2-month simple moving average)
+
+Volume: Quantopian's "average dollar volume" factor (average traded volume over a
+lookback window x latest share price) used instead of raw volume, as a liquidity measure.
+Remorov (2014): trading volume relates to price during market-crash downturns.
+
+Normalisation: simplest method used -- rank each feature relative to all other stocks (1 =
+highest value, 500 = lowest, i.e. cross-sectional rank across the ~500-stock universe).
+
+3.1 Model Selection
+Used scikit-learn; instantiated a range of classifiers, cross-validated to assess predictive
+robustness.
+
+===== PAGE 7 =====
+Same train/test sets used per classifier, across multiple different periods (repeated cross
+validation). AdaBoostClassifier was the most effective (Adaptive Boosting meta-algorithm,
+Freund & Schapire 1999; less prone to overfitting than some alternatives).
+
+Cross-validation accuracy of 53%. "The margin of success was fine, but if used wisely,
+could prove significant." Training window: previous TWO MONTHS was found optimal.
+Longer periods: classifier too slow to adapt / spans multiple regimes, ineffective learning.
+Shorter (1 month): not enough samples to learn adequately.
+
+3.2 Fundamental Factors
+Stone, Chen & White (2014): 8 factor categories (valuation, growth, quality, efficiency,
+momentum, risk/size, pay-out, profitability), 50+ financial factors. Quantopian supplies
+Morningstar fundamental data. Authors added all implementable factors to training sets,
+retrained, inspected feature importance: the original momentum factors were the top 3
+features (most consistent predictors). Average Dollar Volume scored lower -- attributed to
+the test period being an uptrend (volume matters more in downtrends, per Remorov 2014).
+
+A version including fundamental factors alongside momentum/volume factors did NOT
+enhance performance ("inconsistent results"); fundamental factors were dropped entirely.
+Cites Jawade, Naidu & Agrawal (2015): fundamental factors can't anticipate price
+movement since they've already influenced current price.
+
+3.3 The Effects of Unstable Trading Periods
+Algorithm performed poorly immediately AFTER extremely unstable trading periods (though
+performance DURING such periods wasn't notably different) -- inferred as poor learning
+from highly volatile training data.
+
+===== PAGE 8 =====
+Examined S&P 500 monthly high/low/close, 1997-2007, log-normalized monthly ranges
+(max−min)/average. [Figure 1: density plots of normalised and logged monthly ranges,
+dotted line marks the cutoff.]
+
+Found: omitting the most unstable trading periods (range > 17%, per Figure 1's dotted line)
+from the LEARNING/TRAINING process increased performance. Rationale: such high-vol
+periods are transient / not representative of the current trend.
+
+3.4 Performance of Momentum Oscillator Quintiles
+Universe: 500 S&P 500 constituents. Formed 5 equal-weighted long-only quintile
+portfolios by the ML classifier's ranking, each rebalanced monthly. [Figure 2: cumulative
+performance of Quintiles 1-5, 2007-2016; visibly monotonic separation, Quintile 5 (top
+ranked) highest, Quintile 1 (bottom ranked) lowest.] Interpreted as evidence the
+momentum-oscillator ranking is a valid stock-ranking system for a long-short strategy.
+
+===== PAGE 9 =====
+[Figure 2 continued/shown: five quintile equity curves, Jan 2007 - 2016, in the range
+0-2,500,000 starting near 1,000,000-ish; Quintile 5 (green) tops out highest, ~2.4M by
+2016; Quintile 1 (red) lowest, ~1.4M.]
+
+4 Minimum Variance Portfolio
+Low-volatility investing has strong empirical support. Ang et al. (2009): across 23
+international developed markets, stocks with high recent idiosyncratic volatility had lower
+future average returns (adjusted difference −1.31%/month between highest and lowest
+volatility quintiles), individually significant in every G7 country -- a global phenomenon,
+not sample-specific.
+
+Blitz & van Vliet (2007): global low-vs-high-volatility decile portfolios' annual alpha spread
+= 12% over 1986-2006, independent effects in US/European/Japanese markets.
+
+===== PAGE 10 =====
+Baker & Haugen (2012): 33 markets, 1990-2011 (incl. non-survivors), volatility of total
+return over trailing 24 months, ranked into deciles. In all 21 developed countries, lowest-
+volatility decile had both lower risk AND higher return -> large Sharpe divergence.
+
+Clarke, de Silva & Thorley (2006): min-variance portfolios (1,000 largest US stocks,
+1968-2005) achieved ~25% volatility reduction with comparable or higher average returns
+than the market.
+
+Beta relates to volatility (market beta=1 by definition). Black (1993): 1931-1965,
+low-beta US stocks outperformed CAPM predictions, high-beta stocks underperformed.
+
+Frazzini & Pedersen (2014): high-beta portfolios have LOWER alphas/Sharpe than
+low-beta portfolios (US equities, 20 intl equity markets, treasury/corporate bonds, futures).
+Betting-against-beta (BAB) factor (long leveraged low-beta, short high-beta) produces
+significant positive risk-adjusted returns rivaling value/momentum/size in magnitude,
+significance, robustness. Hypothesis: constrained investors "stretch for return" by
+increasing beta, inflating high-beta security prices; mutual funds/individual investors hold
+betas significantly >1; leveraged buyout funds and Berkshire Hathaway (who have leverage
+access) buy betas <1 and apply leverage -- "Warren Buffett gets rich by betting against
+beta."
+
+Motivated by this evidence: authors employ a second smart-beta strategy, minimizing
+volatility.
+
+4.1 Minimum Variance Portfolio Algorithm
+Mostowfi & Stier (2013): MVPs are popular for their straightforward covariance-matrix-
+based calculation. Based on Frazzini & Pedersen (2014), authors pre-select LOW-BETA
+stocks for the MVP. Beta computed vs S&P 500 over a
+
+===== PAGE 11 =====
+66-trading-day lookback (~3 months). Selected the 25 lowest-beta stocks to comprise the
+MVP (small N). Used Herssein's (2016) procedure to derive allocations from historical
+returns only.
+
+Procedure: build a matrix of daily historical returns for each of the 25 assets over the
+previous quarter; compute its covariance matrix V; using a ones-vector I and a vector of
+each asset's average return R:
+
+mvp_weights = V^-1 R + V^-1 I
+
+(V^-1 = inverse covariance matrix). NO constraints imposed (no max-allocation cap). This
+formulation allows BOTH LONG AND SHORT positions -- sign of each weight is
+determined by whether that asset's historical average return was positive or negative.
+
+Average exposure: 65% long / 35% short (market tends to rise); closer to 55%/45% during
+market declines.
+
+5 Results and Evaluation
+Backtest period: 2007-01-01 to 2016-12-31 (10 years, covering both up- and down-trends).
+Benchmark: S&P 500 index.
+
+5.1 Momentum Oscillator Performance
+Long-short beta-neutral: long the top-ranked quintile (evenly weighted), short the
+bottom-ranked quintile (evenly weighted), 50%/50% capital split (dollar-neutral, beta ~0).
+Annual return only 2.5%. Beta = -0.01 ("truly a 'pure alpha' strategy" -- returns
+independent of market movement). Max drawdown 8.7% (vs S&P 500's >50%). Performance
+was largely unaffected by the 2007-2009 crash.
+
+Since markets tend to rise ("perhaps their only genuinely predictable feature," citing the
+authors' own prior work), the paper proposes tilting
+
+===== PAGE 12 =====
+capital allocation toward the long side to capture this, while staying within a controlled
+target beta.
+
+[Figure 3: cumulative performance, unleveraged strategies, 2007-2016 -- ML Dollar
+Neutral, ML 55L/45S, Minimum Variance Portfolio, Combined Dollar Neutral, Combined
+55L/45S. MVP (grey) is the standout top performer for most of the period, ending highest
+(~1.5M) by 2016; the others cluster together lower.]
+
+Assigning 55% long / 45% short: returns boosted by >10 percentage points over the 10-year
+period; Sharpe rises from 0.58 to 0.70. Market beta stays low at 0.1 (within the +-0.3
+Quantopian bound). Max drawdown actually LOWER at 8.5% (vs dollar-neutral's 8.7%).
+
+===== PAGE 13 =====
+Table 1. Profitability and risk metrics of UNLEVERAGED strategies vs benchmark:
+
+Strategy | Returns(%) | Sharpe | Beta | MaxDraw(%) | Vol(%)
+S&P 500 | 90.2 | 0.42 | 1 | 54.9 | 20
+Beta-Neutral | 25.4 | 0.58 | -0.01 | 8.7 | 4
+Beta-Neutral(55%) | 36.5 | 0.70 | 0.1 | 8.5 | 4
+MinVar | 54.1 | 0.89 | 0.06 | 8.9 | 5
+Combo | 33 | 0.9 | 0.03 | 6.4 | 3
+Combo(55%) | 38.8 | 0.92 | 0.08 | 7.9 | 4
+
+(Note: abstract states market-neutral component Sharpe = 0.61 and low-vol Sharpe = 0.90;
+this table's un-leveraged Beta-Neutral row shows 0.58 and MinVar shows 0.89 -- a small
+inconsistency between the abstract's headline figures and Table 1's own figures, both
+appear in the paper as printed.)
+
+5.2 Minimum Variance Portfolio Performance
+MVP outperformed the momentum-oscillator strategy in both returns and Sharpe, while
+only marginally more volatile: 54.1% return, Sharpe 0.89, beta 0.06 (miniscule benchmark
+exposure), max drawdown 8.9%. Since the MVP is dynamically weighted with such a low
+beta, authors conclude returns stem from "a combination of both clever stock picking and
+intelligent asset weighting."
+
+5.3 Combined Strategies Performance
+Combining both strategies in parallel improved performance further: absolute returns
+necessarily lower than MVP alone (up to 38.8% at 55%L/45%S) but volatility also lower,
+making the combo "more suitable for leverage." Sharpe Ratio = 0.92.
+
+5.4 Leveraged Results
+Leveraging = borrowing capital to reinvest, magnifying gains/losses. Authors chose a
+leverage factor of 2 (to balance magnified returns against magnified drawdown/vol).
+
+===== PAGE 14 =====
+Table 2. Profitability and risk metrics, LEVERAGED strategies (2:1):
+
+Strategy | Returns(%) | Sharpe | Beta | MaxDraw(%) | Vol(%)
+S&P 500 | 90.2 | 0.42 | 1 | 54.9 | 20
+Beta-Neutral | 58.7 | 0.61 | -0.03 | 16.8 | 8
+Beta-Neutral(55%) | 86.27 | 0.73 | 0.19 | 16.5 | 9
+MinVar | 131.4 | 0.9 | 0.13 | 17.2 | 10
+Combo | 80.1 | 0.94 | 0.05 | 12.6 | 6
+Combo(55%) | 95.5 | 0.96 | 0.16 | 15.5 | 7
+
+[Figure 4: cumulative performance, leveraged strategies + S&P 500 benchmark,
+2007-2016.]
+
+===== PAGE 15 =====
+Leverage magnifies returns, beta, max drawdown, and volatility by the leverage factor,
+while Sharpe is "relatively unaffected" (authors note a slight Sharpe INCREASE under
+leverage, attributed to excess positive returns themselves compounding/being
+reinvested faster, offsetting financing costs -- no explicit borrowing-cost rate is given
+anywhere in the paper).
+
+Table 2 shows MVP has a LOWER Sharpe than either combined strategy, interpreted as MVP
+returns coming from taking on more risk (larger max drawdown, persistently higher
+volatility) -- i.e. combining independent strategies "lowers risk while maintaining profits."
+
+5.5 Live Trading and Competition Performance
+Quantopian competitions: scored on 6 months of out-of-sample simulated live trading plus
+a prior 2-year backtest; ranked metrics averaged across competitors.
+
+Authors entered the combined 55/45 momentum-oscillator/MVP strategy. After 26 weeks:
+84th leaderboard position (out of thousands of algorithms globally). Unleveraged returns
+since going live: 1.2%. Sharpe Ratio over that 6-month live window: 1.35.
+
+Future work listed before any real capital allocation:
+1. Keep the portfolio dollar-neutral at all times (possibly replacing MVP with a long-short
+betting-against-beta factor).
+2. Keep the portfolio sector-neutral (max 60/40 long-short exposure per sector).
+3. Shorten rebalancing to weekly instead of monthly, to constrain neutrality drift (may
+increase rebalancing costs).
+
+6 Conclusion
+Combined long-short momentum-oscillator + minimum-volatility strategy outperforms
+S&P 500 on net returns and risk/profitability metrics. The highest-Sharpe strategy achieves
+>9%/yr, "marginally more than the benchmark, but with significantly less risk."
+
+===== PAGE 16 =====
+With greater risk tolerance (e.g. leverage 2.5:1), returns of just under 140% (2007-2017)
+would outperform the market by ~50%. [Figure 5: Best Strategy Leveraged 2.5:1 vs S&P
+500 (SPY), 2007-2016 -- strategy line consistently above the benchmark line for most of
+the period, both trending up, strategy climbing to ~2.4M vs benchmark's ~1.9M by the end.]
+Max drawdown at 2.5:1 leverage: 19.1% (vs market's >50%).
+
+Under Quantopian's competition rules over the 10-year backtest, the strategy "falls just
+short" of Quantopian's own recommended Sharpe >= 1 threshold, managing 0.96. It does
+stay within the +-0.3 beta bracket, keeps leverage < 3, and avoids excessively large
+drawdowns.
+
+Conclusion (paper's own words): "the success of the algorithm in competitive live trading
+provides evidence that smart beta strategies can be effective, and that combining multiple
+smart beta strategies can be even more so."
+
+===== REFERENCES (pages 17-18, abbreviated to those cited above) =====
+Ang, Hodrick, Xing & Zhang (2009); Arnott, Beck, Kalesnik & West (2016); Baker, Bradley &
+Wurgler (2011); Baker & Haugen (2012); Black (1993); Blitz & van Vliet (2007); Clarke, de
+Silva & Thorley (2006); Frazzini & Pedersen (2014); Freund, Schapire & Abe (1999);
+Granizo-Mackenzie (2016) [uncited as formal reference entry, described inline only];
+Herssein (2013); Jawade, Naidu & Agrawal (2015); Malkiel & Fama (1970); Maguire, Kelly,
+Miller, Moser, Hyland & Maguire (2017) -- the authors' own prior low-volatility paper;
+Mostowfi & Stier (2013); Perold (2004); Remorov (2013); Sorensen, Hua & Qian (2006);
+Stone, Chen & White (2014, cited inline, not in refs) [Note: Sorensen et al. reference list
+gives 2006, inline text says 2007 -- a citation-year inconsistency in the paper itself.]
+
+===== END TRANSCRIPT =====

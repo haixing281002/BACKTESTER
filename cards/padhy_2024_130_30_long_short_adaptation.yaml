@@ -1,0 +1,785 @@
+card_version: "1.0"
+
+paper:
+  id: padhy_2024_130_30_long_short_adaptation
+  title: "Analyzing the 130/30 Long-Short Strategy in Indian Stocks: A Comparative Study Using Sensex 30 and Benchmark Returns"
+  authors: [Amit Bathia, Charith Pechetti, Ananya Gupta, Nandip Vaidya, Jagabandhu Padhy]
+  date: null   # masthead gives only "Vol 14, Issue 4 (2024)" -- no month/day is stated
+  source_file: docs/papers/padhy_2024_130_30_long_short.pdf
+  source_sha256: b218437b552240da94b038467a410075b39c97cce9bac15bbbf58a7fda7184a6
+  url: null
+
+intent:
+  mode: adaptation
+  parent_card: null
+  rationale: >
+    The paper classifies 30 individual Sensex stocks every 6 months on four metrics computed
+    against the Sensex benchmark (Tracking Error, Information Ratio, Sharpe Ratio, Treynor
+    Ratio -- p.212), goes 130% long the top-40%-by-metric cohort and 30% short the bottom
+    cohort, holds for the subsequent 6 months, and compares to holding the Sensex. This card
+    supersedes an earlier transcript-based draft of the same paper (no sha256 lineage, no
+    universe_translation/strategy sections) now that the actual PDF is on disk. It states the
+    best achievable long-only test of the idea using this fund's audited engine, run on the
+    paper's own 30 named companies (Appendix 1, p.216-217) -- a documented, page-verifiable
+    list -- rather than a sleeve-index substitute or a separately-recalled NIFTY 50 panel.
+  transferred_mechanism: >
+    Long-only cross-sectional selection (cross_sectional template): rank the universe every
+    ~6 months on a trailing momentum proxy and hold only the top 40% cohort, equal-weighted.
+    This reuses the paper's own ALLOCATION SHAPE (score, sort, hold the top quantile) but not
+    its SCORE -- no primitive in this fund's engine computes the paper's own 4-metric
+    risk-adjusted composite (Tracking Error / Information Ratio / Sharpe / Treynor vs Sensex),
+    so total_return_momentum stands in for it. See ambiguities and notes for the new-primitive
+    specification that would be needed to test the paper's actual scoring mechanism.
+  broken_assumptions:
+    - >
+      SHORT LEG IS THE PAPER, NOT A DETAIL: the paper's title, null hypothesis, and every
+      reported number describe the COMBINED 130% long / 30% short book; no long-only-only
+      variant is reported anywhere to benchmark against. This fund's long-only mandate is a
+      business/legal constraint, not a data or engine gap -- no data procurement fixes it.
+      Dropping the short leg does not leave a smaller version of the same claim; it removes
+      the paper's central mechanism. The paper's own worked tables show the short leg was
+      profitable and additive in most windows where it existed (e.g. 2019-20 Oct-Mar: short
+      leg's covered-short amount of Rs 19,900.8 against Rs 30,000 borrowed implies a ~Rs 10,099
+      short-leg gain on top of the long leg's ~Rs 63,310 gain, Fig 3 p.213) -- dropping it is
+      not a haircut. This card's result, whatever it is, is not evidence about whether the
+      paper's own 130/30 strategy works.
+    - >
+      LEVERAGE: the paper's long leg is 130% gross, funded by the 30% short. This fund uses no
+      leverage, so the long-only adaptation is scaled to 100% notional, not 130%. Both the short
+      leg and the leverage it funded are dropped together.
+    - >
+      RANKING MECHANISM: the paper ranks stocks on four separate benchmark-relative metrics
+      (Tracking Error, Information Ratio, Sharpe Ratio, Treynor Ratio vs. Sensex) with NO
+      stated rule for combining them when a stock lands in different cohorts on different
+      metrics (Stage 01 analysis, extraction_concerns -- the paper itself is under-specified
+      here). None of this fund's registered primitives compute a multi-metric cross-sectional
+      score; total_return_momentum is used instead inside the cross_sectional allocator -- a
+      materially cruder idea ("has this stock gone up") than the paper's own ("has this stock
+      beaten the benchmark on a risk-adjusted basis"). This card's result is not evidence about
+      the paper's specific stock-picking claim.
+    - >
+      REBALANCE CADENCE: the paper's design is a strict 6-month formation-then-hold cycle
+      (11 non-overlapping periods). This fund's schema (ros/cards/schema.py REBALANCE) has no
+      semi-annual option; "quarterly" is used as the nearest supported cadence on the same
+      126-trading-day trailing window, trading roughly twice as often as the paper's own design.
+    - >
+      COST TREATMENT: the paper charges a blended 110 bps (26 bps transaction + 84 bps
+      short-selling cost, long+short book only; 26 bps alone on the Sensex leg). This fund's
+      standing 30 bps round-trip policy is applied instead, per fund-wide practice -- not a
+      deviation from the paper's number, since that number prices a short leg this card no
+      longer has.
+    - >
+      STRATEGY IS OFTEN UN-IMPLEMENTABLE IN THE SOURCE: the paper's own criteria produced zero
+      qualifying stocks in one leg for 4 of its 10 half-year windows (an author-acknowledged
+      limitation, p.216). The cross_sectional template's response to a too-thin cross-section
+      is to hold the PREVIOUS rebalance's weights (min_names skip), a different mechanism from
+      the paper's own "skip the period entirely."
+    - >
+      UNIVERSE WIDTH: the paper sorts exactly 30 names into 40% cohorts (~12 each). Stage 01
+      graded "NIFTY 50 constituents" (score 55.0) as the best-fitting catalogued universe class
+      for this mechanism (mega-cap, cross-sectional, in-mandate) over NIFTY 100 (53.0, large is
+      only adjacent to mega) -- but this card runs on the paper's OWN verified 30-name list
+      rather than a separately-sourced 50-name NIFTY 50 panel, for reasons given in `selection`
+      and `open_questions` below. Widening to the full NIFTY 50 panel is offered as a
+      data_request, not silently substituted.
+    - >
+      POINT-IN-TIME / SURVIVORSHIP: the paper's own Appendix 1 list (p.216-217) is presumably
+      its SAMPLE-START-DATE Sensex-30 membership; whatever data is supplied at Gate A must
+      reflect the constituents named there, not today's Sensex-30 (some names have since been
+      swapped). Whoever supplies the data should confirm this.
+
+universe_translation:
+  source_universe: "BSE SENSEX 30 constituents"
+  source_breadth: 30
+  source_selection_rule: >
+    Fixed membership: the 30 companies constituting the BSE Sensex at time of study -- a
+    free-float market-cap-weighted index of India's largest, most liquid listed companies
+    across key sectors. No further selection rule is applied beyond "the 30 stocks of the
+    Sensex" (p.210, p.212). Full list in Appendix 1, p.216-217.
+  target_universe: "NIFTY 50 constituents"
+  grade: close
+  resolution: needs_data
+  rationale: >
+    ros.data.universes scores NIFTY 50 highest (55.0) against mechanism_needs(min_names=30,
+    cap_segment='mega', needs_cross_section=True, must_be_in_mandate=True, min_history_years=5.5
+    -- the paper's own sample length, p.212) -- ahead of NIFTY 100 (53.0, large is only
+    adjacent to mega) and NIFTY Next 50 (43.0, large not mega). Verified the score is unchanged
+    (55.0) whether min_history_years is passed as the paper's actual 5.5 years or the library's
+    10.0-year default, since NIFTY 50/100/Next 50 all comfortably clear either threshold. Sensex
+    30 is a mega-cap concentration, not merely "large"; NIFTY 50 is the catalogued universe
+    matching that tier, sits inside the fund's own NIFTY-family holdings (NSE/NIFTY-sourced,
+    not BSE), and is squarely in mandate. The vast majority of Sensex-30 constituents are
+    themselves NIFTY-50 constituents, so this is closer to testing near-the-same companies than
+    a cross-index translation. Alternative considered and rejected: replicate on the literal 30
+    Sensex names via their NSE-listed prices (near-identical to BSE prices for dual-listed large
+    caps) -- this is in fact what this card OPERATIONALLY does (see `selection`), since the
+    paper's own 30-name list is verifiable (page-cited) while a separately-sourced full 50-name
+    NIFTY 50 panel is not, absent a supplied membership file.
+  transfer_risks:
+    - >
+      NIFTY 50 and BSE Sensex 30 are highly overlapping but not identical constituent sets
+      (different index committees and review cadence) -- some names in the paper's actual
+      30-stock sample may be absent from a NIFTY 50 panel, and vice versa. This card sidesteps
+      that specific risk by running on the paper's own 30 names directly rather than a full
+      NIFTY 50 panel, but the classification RESULT (which stocks are "long" vs "short") would
+      differ from the paper's own tables regardless, per the ranking-mechanism substitution.
+    - >
+      The paper sorts only 30 names into 40% cohorts (~12 names each); a wider NIFTY 50 panel
+      (~20-name cohorts) was considered and rejected as the primary universe specifically to
+      avoid guessing membership -- see open_questions for the tradeoff this leaves on the table.
+    - >
+      Sensex is BSE-listed; this fund is NSE-sourced. The 30 named companies' NSE-listed prices
+      are assumed near-identical to their BSE prices (true for all of them, being large,
+      liquid, dual-listed names) but this has not been independently verified series-by-series.
+  required_instruments:
+    - "daily adjusted close, the paper's 30 named Sensex constituents (with membership history)"
+    - "benchmark daily close (NIFTY 50 and/or BSE SENSEX)"
+    - "Indian risk-free rate proxy, 6-monthly basis"
+  evidence_page: 212
+  mechanism_needs:
+    needs_cross_section: true
+    min_names: 30
+    cap_segment: mega
+    sector: null
+    min_history_years: 5.5
+    must_be_in_mandate: true
+    notes: >
+      Paper's own construction ranks exactly 30 names into 40% cohorts; NIFTY 50 (mega-cap,
+      ~50 names, in mandate) is the best-fitting catalogued analogue class per
+      ros.data.universes, even though this card operationalizes selection on the paper's own
+      30-name list rather than the full 50-name panel (see selection.why_these).
+  alternatives_considered:
+    - "NIFTY 100 constituents (score 53.0) -- large is only adjacent to the paper's mega segment"
+    - "NIFTY Next 50 constituents (score 43.0) -- large, not mega"
+    - "Full NIFTY 50 panel with membership named from the model's own recollection -- rejected as an unverifiable guess (see selection)"
+  why_not_alternatives: >
+    NIFTY 100/Next 50 dilute the mega-cap concentration the paper specifically studies. A
+    full, separately-sourced NIFTY 50 panel would be the more statistically powered choice,
+    but naming ~50 tickers from memory is exactly the "plausible, unverifiable list" this
+    fund's card discipline forbids -- so the paper's own page-cited 30-name list is used
+    instead, and widening to a verified NIFTY 50 panel is offered as a data_request.
+
+strategy:
+  signal_name: "Cross-sectional momentum proxy for a 4-metric composite rank vs Sensex (long-only top-40% cohort)"
+  signal_definition: >
+    THE PAPER'S OWN MECHANISM: over each 6-month formation window, compute four
+    backward-looking, benchmark-relative metrics per stock: (1) Tracking Error = stdev(daily
+    stock return - daily benchmark return); (2) Information Ratio = Active Return / Tracking
+    Error, Active Return = avg(daily stock return) - avg(daily benchmark return); (3) Sharpe
+    Ratio (paper's own construction) = (6-month stock return - 6-month risk-free return) /
+    stdev(daily stock returns over the window); (4) Treynor Ratio = (6-month stock return -
+    6-month risk-free return) / beta, beta = cov(benchmark, stock) / var(benchmark). LONG
+    candidates: bottom 40% by Tracking Error AND top 40% by each of the other three. SHORT
+    candidates: the mirror image. THE PAPER STATES NO RULE for a stock landing "long" on some
+    metrics and "short" on others (p.212-216) -- logged as an unresolved Ambiguity.
+    THIS CARD'S ACTUAL SIGNAL (substitute, see ambiguities): 126-trading-day trailing
+    total-return momentum per stock (ros.engine.primitives.total_return_momentum), ranked
+    cross-sectionally, top 40% held long and equal-weighted. This captures the paper's
+    ALLOCATION SHAPE (score, sort, hold the top quantile) but not its SCORE.
+  inputs_required:
+    - "daily adjusted close per stock"
+    - "benchmark daily close (for Tracking Error / Information Ratio / beta, if the literal metrics are ever built)"
+    - "6-monthly risk-free return (paper collects a government bond PRICE series; conversion to a period return is unstated, p.212)"
+  cross_sectional: true
+  formation_rule: >
+    Paper: top-40%/bottom-40% cut on each of 4 metrics over the trailing 6-month formation
+    window; a leg with zero qualifying names in a period is simply not traded (occurred in 4
+    of the paper's 10 half-year windows, p.216). This card: top 40% quantile cut on trailing
+    126-day momentum, cross_sectional template's min_names floor holds prior weights instead
+    of skipping outright when the cross-section is too thin.
+  weighting_rule: >
+    Paper: equal-weighted within each cohort; long book Rs 130,000 notional (130%), short book
+    Rs 30,000 notional (30%, negative sign, short-financed) -- worked tables (Fig 3, p.213)
+    show Rs 130,000 is what is actually used despite the prose stating Rs 100,000. This card:
+    equal-weighted within the held quantile, scaled to 100% notional, no leverage, no short.
+  holding_period: "Paper: 6 months, non-overlapping. This card: ~1 quarter between rebalances, on a 126-day trailing window (see ambiguities -- no semi-annual rebalance option exists)."
+  rebalance_frequency: quarterly
+  is_long_short: true
+  long_only_adaptation: >
+    Drop the short (30%) leg and the 130% gross leverage entirely; hold only the long cohort,
+    equal-weighted, scaled to 100% notional. This is a DIFFERENT strategy from the paper's
+    130/30 book, not a haircut of it: the paper's own worked tables show the short leg was
+    profitable and additive in most windows where it existed (e.g. 2019-20 Oct-Mar: ~Rs 10,099
+    short-leg gain on top of the long leg's ~Rs 63,310 gain, Fig 3 p.213). A long-only version
+    must be scored only against Sensex/NIFTY, never against the paper's own stated 130/30
+    returns.
+  constraints:
+    - long_only
+    - "no leverage -- the paper's 130% gross long is itself a form of leverage and is dropped alongside the short leg"
+    - "lag_days >= 1 per the fund's NSE-close-publication rule"
+    - "30bp round-trip India factor-sleeve cost floor applies; the paper's own blended 110bp figure is not carried over"
+  engine_template: cross_sectional
+  template_gap: >
+    The ALLOCATOR shape (rank a cross-section, hold the top quantile, long-only) is covered by
+    the registered `cross_sectional` template. What is NOT covered: no registered primitive
+    computes the paper's own 4-metric risk-adjusted composite score (Tracking Error /
+    Information Ratio / Sharpe / Treynor vs benchmark, combined by an unstated rule). A human
+    would need to add a new alpha_source branch to ros/engine/prepare.py (or a new primitive in
+    ros/engine/primitives.py) that computes this composite and resolves the four-metric
+    combination rule the paper itself never states, before this card could test the paper's
+    actual mechanism rather than a momentum proxy for it.
+  confidence: medium
+  evidence_pages: [210, 212, 213, 214, 215, 216]
+
+universe:
+  description: >
+    The paper's own 30 Sensex constituent stocks (Appendix 1, p.216-217), run on their
+    NSE-listed prices -- NOT a sleeve-index substitute, and NOT a separately-recalled NIFTY 50
+    panel. Stage 01 grades "NIFTY 50 constituents" as the best-fitting catalogued universe CLASS
+    for this mechanism (see universe_translation); this card operationalizes that class using
+    the paper's own verified 30-name list. If this exact breadth cannot be sourced, that is a
+    Gate A finding to be made explicitly, not something for this card to quietly work around.
+  asset_class: equity
+  geography: IN
+  assets:
+    - Reliance Industries
+    - HDFC Bank
+    - Hindustan Unilever
+    - ICICI Bank
+    - Infosys
+    - Larsen & Toubro
+    - Tata Consultancy Services
+    - Kotak Mahindra Bank
+    - Axis Bank
+    - Bharti Airtel
+    - State Bank of India
+    - NTPC
+    - Bajaj Finance
+    - Titan Company
+    - Power Grid Corporation of India
+    - Sun Pharmaceutical Industries
+    - UltraTech Cement
+    - Maruti Suzuki India
+    - HCL Technologies
+    - Asian Paints
+    - Mahindra & Mahindra
+    - IndusInd Bank
+    - Tech Mahindra
+    - Bajaj Finserv
+    - Tata Motors
+    - Nestle India
+    - JSW Steel
+    - Adani Ports & SEZ
+    - Coal India
+    - SBI Life Insurance
+  benchmark: NIFTY 50
+  cash_asset: >
+    Fund's standard declared constant-rate proxy, swept 4-8% (CLAUDE.md fund-wide practice --
+    there is no Indian risk-free series). This strategy holds no material cash under
+    mandate_allow_cash=false (the cross_sectional template's thin-universe fallback holds
+    PREVIOUS weights, not cash), so this is a near-vestigial declaration for the single day
+    before the first rebalance forms. Deliberately NOT the same series as the real risk-free
+    yield requested in data_requests for Sharpe reporting -- see universe_translation
+    transfer_risks and the critique for why those two roles must stay separate.
+
+signal:
+  name: padhy2024_momentum_proxy_longonly
+  template: cross_sectional
+  lookback_days: 126
+  lag_days: 1
+  description: >
+    Cross-sectional top-40%-quantile long-only selection on a 126-trading-day (~6-month)
+    trailing total-return momentum proxy, equal-weighted, across the paper's own 30 named
+    Sensex constituents. Momentum is the closest primitive this fund's audited engine can
+    compute (ros.engine.primitives.total_return_momentum) to the paper's own 4-metric
+    risk-adjusted composite rank -- see strategy.signal_definition and ambiguities for what
+    is NOT captured by this substitution.
+  params:
+    quantile: 0.4
+    weighting: equal
+    ascending: false
+    min_names: 8
+    alpha_source: momentum
+    alpha_window: 126
+    alpha_skip: 0
+
+portfolio:
+  rebalance: quarterly
+  long_only: true
+  max_gross: 1.0
+  allow_cash: true
+  mandate_allow_cash: false      # fund is long-only and fully invested
+  target_vol: null               # cross_sectional does not vol-target; equal weighting only
+  start: "2019-04-01"    # the paper's own sample start (p.212)
+  end: "2024-09-30"      # the paper's own sample end (p.212)
+
+costs:
+  spread_bps: 30.0
+  cost_model: half_spread
+
+data_plan:
+  ideal:
+    - field: "Daily adjusted close, the paper's 30 named Sensex constituents (Appendix 1)"
+      granularity: daily
+      history_from: "2018-10-01"
+      why: >
+        Forms the trailing 126-day momentum proxy score for each stock every rebalance, and
+        the raw return that both the long-only cohort and every benchmark are measured on.
+      why_granularity: >
+        Daily is necessary: the paper's own Tracking Error is explicitly a function of DAILY
+        return dispersion (p.212), and this card's momentum proxy is likewise a compounded
+        daily-return statistic. Anything coarser collapses exactly the dispersion term the
+        paper's metrics exist to measure. Intraday is not needed -- both the paper's own
+        construction and this card's signal operate on a ~6-month formation/hold cycle with no
+        finer timing decision.
+      why_history: >
+        2018-10 gives a full 126-trading-day warmup before the sample's first tradable date
+        (2019-04-01, matching the paper's own start, p.212), so the first live rebalance is not
+        trading on a partially-formed signal.
+      adjustments: >
+        Split/bonus/dividend-adjusted close (total-return-equivalent), point-in-time -- NOT
+        today's restated series, since a name's later corporate actions must not leak into a
+        2019-era formation window.
+      minimum_viable: true
+    - field: "Benchmark daily close (NIFTY 50 and/or BSE SENSEX)"
+      granularity: daily
+      history_from: "2018-10-01"
+      why: >
+        The do-nothing benchmark this strategy must beat, and (if the literal 4-metric
+        composite is ever built) the series every stock's Tracking Error, Information Ratio
+        and beta are computed against.
+      why_granularity: "Daily, matching the constituent series."
+      why_history: "Same warmup logic as the constituent series."
+      adjustments: >
+        Price-return index level (the paper's own Tracking Error/IR use price returns, not
+        total-return-index levels, p.212) -- flagged since an official TRI series would give a
+        subtly different Tracking Error than the price index the paper actually used.
+      minimum_viable: true
+    - field: "Indian risk-free rate, 6-monthly basis"
+      granularity: daily
+      history_from: "2018-10-01"
+      why: "Risk-free leg of the paper's own Sharpe and Treynor classification metrics (p.212); not consumed by this card's momentum-only signal."
+      why_granularity: >
+        Daily/continuous is preferred so this card can resample onto a different rebalance
+        cadence (quarterly, see backtest_plan) than the paper's own strict 6-monthly cycle
+        without losing resolution.
+      why_history: "Same window as the constituent series."
+      adjustments: >
+        The paper collects a government BOND PRICE series and does not explain how it becomes
+        a period return (Stage 01 extraction concern) -- a rate/yield series is requested
+        directly rather than a price series needing an unstated conversion.
+      minimum_viable: false
+  rejected_alternatives:
+    - option: "Substitute the fund's held NIFTY500 factor-sleeve indices for the 30 named stocks"
+      why_not: >
+        Collapses the cross-sectional stock-selection mechanism entirely into an index-timing
+        bet between a handful of pre-built baskets -- a fundamentally different,
+        much lower-resolution strategy that cannot express "pick better stocks than average
+        within a mega-cap panel." An earlier draft of this card made exactly this substitution;
+        it was a weaker test than necessary and is not repeated here.
+    - option: "Weekly or monthly close instead of daily"
+      why_not: >
+        Tracking Error is defined by the paper as the standard deviation of DAILY return
+        differences (p.212); weekly/monthly data cannot reconstruct it, only a coarser and
+        non-comparable approximation.
+    - option: "Widen immediately to the full ~50-name NIFTY 50 panel, named from the model's own recollection"
+      why_not: >
+        No verified, checkable source for a historical point-in-time NIFTY 50 membership list
+        was available in this session; naming 50 tickers from memory is exactly the "plausible,
+        unverifiable list" this fund's card discipline forbids. The paper's own page-cited
+        30-name Appendix 1 list is used instead; widening is offered as a data_request.
+    - option: "Intraday/tick data"
+      why_not: >
+        Every metric in the paper's mechanism (HPR, Tracking Error, IR, Sharpe, Treynor) is a
+        daily-close, 6-month-window statistic; intraday data would price a decision -- entry/
+        exit timing within a day -- that this strategy never makes.
+  granularity_verdict: >
+    Daily adjusted close is both necessary and sufficient: every one of the paper's four
+    classification metrics is explicitly a function of DAILY return dispersion or compounding
+    over a ~6-month window (p.212), so daily is the floor; nothing in the mechanism uses
+    intraday information, so daily is also the ceiling worth paying for.
+  optimality_argument: >
+    This is the dataset the paper's OWN mechanism specifies, not a substitute chosen for
+    convenience: 30 individually-named, page-cited (Appendix 1, p.216-217) mega-cap Indian
+    equities, their benchmark, and a risk-free series, all at daily granularity, covering the
+    paper's own 2019-04-01 to 2024-09-30 window plus a 6-month warmup. The only departure from
+    a literal replication is trading NSE-listed prices for these same 30 companies rather than
+    their BSE/Sensex listings (near-identical for dual-listed large caps, and consistent with
+    this fund's NSE-sourced infrastructure and NIFTY 500 mandate benchmark) -- the mechanism,
+    breadth and metrics are otherwise unchanged. A coarser-granularity or sleeve-index
+    substitute would test a different, lower-resolution question; finer granularity would
+    price a decision (intraday timing) the strategy does not make.
+  what_would_change_the_answer: >
+    The stock-level price data and benchmark series determine whether the classification and
+    its return are correct at all -- without them there is no answer, only a proxy on unrelated
+    sleeve indices. The risk-free series only sharpens which periods the paper's own
+    Sharpe/Treynor legs would tilt toward long vs short (not consumed by this card's actual
+    momentum signal); the fund's constant-proxy fallback (swept 4-8%) changes the claim's
+    precision about rate-sensitivity but is very unlikely to flip a momentum-driven headline
+    verdict.
+
+selection:
+  rule: >
+    The paper's own 30 named Sensex constituents (Appendix 1, p.216-217), traded on their
+    NSE-listed prices. Ranked every rebalance on trailing 126-day total-return momentum (the
+    engine's substitute for the paper's own 4-metric composite, see strategy) into top/bottom
+    40% cohorts; this fund runs the long cohort only, equal-weighted.
+  explicit_securities:
+    - Reliance Industries
+    - HDFC Bank
+    - Hindustan Unilever
+    - ICICI Bank
+    - Infosys
+    - Larsen & Toubro
+    - Tata Consultancy Services
+    - Kotak Mahindra Bank
+    - Axis Bank
+    - Bharti Airtel
+    - State Bank of India
+    - NTPC
+    - Bajaj Finance
+    - Titan Company
+    - Power Grid Corporation of India
+    - Sun Pharmaceutical Industries
+    - UltraTech Cement
+    - Maruti Suzuki India
+    - HCL Technologies
+    - Asian Paints
+    - Mahindra & Mahindra
+    - IndusInd Bank
+    - Tech Mahindra
+    - Bajaj Finserv
+    - Tata Motors
+    - Nestle India
+    - JSW Steel
+    - Adani Ports & SEZ
+    - Coal India
+    - SBI Life Insurance
+  verified_against: paper
+  as_of: "2024 (Vol 14 Issue 4 masthead; no exact constituent-list date stated beyond the paper's own Apr 2019-Sep 2024 sample window, p.212, Appendix 1 p.216-217)"
+  why_these: >
+    These are the paper's own explicitly stated, page-cited sample -- not a separately
+    recalled NIFTY 50 panel. Using a full 50-name NIFTY 50 list here would require either
+    sourcing an official point-in-time membership file or naming constituents from memory,
+    which this card declines to do (see data_requests). Widening to the full NIFTY 50 panel is
+    offered as a data request, not assumed. The overwhelming majority of these 30 names are
+    themselves NIFTY 50 constituents, so this list already sits close to the catalogued
+    analogue Stage 01 selected.
+
+backtest_plan:
+  sample_start: "2019-04-01"
+  sample_end: "2024-09-30"
+  why_this_window: >
+    Matches the paper's own sample exactly (p.212), so any comparison to the paper's reported
+    windows is apples-to-apples in TIME even though the mechanism differs (long-only vs
+    130/30). Includes a full pre-COVID/COVID/post-COVID cycle and two of the paper's own
+    "un-implementable" half-years, which is itself useful information about the mechanism's
+    practical uptime.
+  warmup_days: 126
+  why_warmup: >
+    The first classification needs a full trailing 126-trading-day (~6-month) window of daily
+    returns to compute the momentum proxy (and, were it ever built, the paper's own Tracking
+    Error/IR/Sharpe/Treynor) before the first holding period can begin; without this the first
+    live period would trade on a partially-formed signal.
+  rebalance_rule: >
+    Quarterly, on the first trading day of the new period; signal recomputed on a trailing
+    126-day window each time. The fund's REBALANCE vocabulary has no semi-annual option, so
+    this trades roughly 2x as often as the paper's own non-overlapping 6-month cycle
+    (correcting the earlier transcript-based card, which used the same quarterly compromise
+    but under the ts_momentum template).
+  weights_rule: >
+    Equal-weighted within the held quantile (top 40%), matching the paper's own equal-
+    weighting within each cohort (p.212-213); long-only, no leverage, scaled to 100% gross (not
+    the paper's 130%) -- see strategy.long_only_adaptation.
+  benchmarks:
+    - name: "NIFTY 50"
+      why_this: >
+        The fund's chosen catalogued analogue for this universe (Stage 01 universe_translation)
+        and the do-nothing option: simply hold the index instead of running the strategy.
+    - name: "BSE SENSEX"
+      why_this: >
+        The paper's own literal benchmark (p.212) -- included so this run's cohort-selection
+        edge can still be read against the paper's own stated comparator.
+    - name: "Equal-weight, the paper's 30 named stocks"
+      why_this: >
+        Isolates what the ranking machinery buys over simply holding the same 30-name universe
+        equally weighted with no selection at all -- the standard test for whether a
+        cross-sectional score adds anything beyond passive breadth.
+    - name: "NIFTY 500"
+      why_this: >
+        The fund's own mandate benchmark; every strategy is ultimately judged against it
+        regardless of the universe it trades within.
+  must_beat:
+    - "NIFTY 50"
+    - "NIFTY 500"
+    - "Equal-weight, the paper's 30 named stocks"
+  success_looks_like: >
+    The long-only cohort's risk-adjusted return (Sharpe) beats NIFTY 50, NIFTY 500 and the
+    equal-weight-of-universe benchmark net of the fund's 30bp cost floor, across the
+    deflated-Sharpe and walk-forward robustness checks -- using a momentum proxy that is a
+    materially CRUDER stand-in for the paper's own 4-metric risk-adjusted score, so a pass here
+    is evidence the general "reward relative outperformers" shape survives in long-only Indian
+    mega-caps, not evidence for the paper's specific 4-metric mechanism.
+  failure_looks_like: >
+    The cohort fails to beat one or more of the named benchmarks, OR clears the
+    India-validated rung but fails the selection-bias-deflated Sharpe (this fund's own prior
+    runs on structurally similar momentum-shaped adaptations -- tripathi_2009_momentum_effect
+    and moskowitz_2012_tsmom_india -- have both landed here: P(skill) 0.5% and REJECTED
+    respectively, per the strategy library's factor-fingerprint match), OR the strategy proves
+    untradeable as often as the paper's own construction was (author-acknowledged 4 of 10
+    windows, p.216).
+  known_failure_modes:
+    - >
+      Thin cross-section: even at 30 names, a 40% quantile cohort is ~12 names -- membership
+      churn, delistings or data gaps could shrink this further mid-sample, triggering the
+      template's min_names skip-and-hold-previous-weights behaviour, which is NOT the paper's
+      own "skip the period" behaviour.
+    - >
+      Momentum-as-proxy risk: the engine can only score names on trailing momentum or EWMA,
+      not the paper's own risk-adjusted 4-metric composite -- a pass or fail here is evidence
+      about a momentum tilt in Indian mega-caps, not about the paper's specific claim.
+    - >
+      Cost mismatch: this fund's 30bp round-trip is meaningfully lower than the paper's own
+      blended ~110bp (which priced a short leg this card does not run), but also excludes
+      market impact for the less liquid tail of the panel across 5.5 years.
+    - >
+      COVID-period distortion: a large share of the sample window sits in or immediately after
+      the 2020 crash and the 2021 second wave, both flagged by the paper's own authors as
+      anomalous (p.217).
+
+data_requirements:
+  - {name: "Reliance Industries", kind: price, frequency: daily, start: "2018-10-01", mandatory: true, purpose: "paper's own Appendix 1 constituent", evidence_page: 216}
+  - {name: "HDFC Bank", kind: price, frequency: daily, start: "2018-10-01", mandatory: true, purpose: "paper's own Appendix 1 constituent", evidence_page: 216}
+  - {name: "Hindustan Unilever", kind: price, frequency: daily, start: "2018-10-01", mandatory: true, purpose: "paper's own Appendix 1 constituent", evidence_page: 216}
+  - {name: "ICICI Bank", kind: price, frequency: daily, start: "2018-10-01", mandatory: true, purpose: "paper's own Appendix 1 constituent", evidence_page: 216}
+  - {name: "Infosys", kind: price, frequency: daily, start: "2018-10-01", mandatory: true, purpose: "paper's own Appendix 1 constituent", evidence_page: 216}
+  - {name: "Larsen & Toubro", kind: price, frequency: daily, start: "2018-10-01", mandatory: true, purpose: "paper's own Appendix 1 constituent", evidence_page: 216}
+  - {name: "Tata Consultancy Services", kind: price, frequency: daily, start: "2018-10-01", mandatory: true, purpose: "paper's own Appendix 1 constituent", evidence_page: 216}
+  - {name: "Kotak Mahindra Bank", kind: price, frequency: daily, start: "2018-10-01", mandatory: true, purpose: "paper's own Appendix 1 constituent", evidence_page: 216}
+  - {name: "Axis Bank", kind: price, frequency: daily, start: "2018-10-01", mandatory: true, purpose: "paper's own Appendix 1 constituent", evidence_page: 216}
+  - {name: "Bharti Airtel", kind: price, frequency: daily, start: "2018-10-01", mandatory: true, purpose: "paper's own Appendix 1 constituent", evidence_page: 217}
+  - {name: "State Bank of India", kind: price, frequency: daily, start: "2018-10-01", mandatory: true, purpose: "paper's own Appendix 1 constituent", evidence_page: 217}
+  - {name: "NTPC", kind: price, frequency: daily, start: "2018-10-01", mandatory: true, purpose: "paper's own Appendix 1 constituent", evidence_page: 217}
+  - {name: "Bajaj Finance", kind: price, frequency: daily, start: "2018-10-01", mandatory: true, purpose: "paper's own Appendix 1 constituent", evidence_page: 217}
+  - {name: "Titan Company", kind: price, frequency: daily, start: "2018-10-01", mandatory: true, purpose: "paper's own Appendix 1 constituent", evidence_page: 217}
+  - {name: "Power Grid Corporation of India", kind: price, frequency: daily, start: "2018-10-01", mandatory: true, purpose: "paper's own Appendix 1 constituent", evidence_page: 217}
+  - {name: "Sun Pharmaceutical Industries", kind: price, frequency: daily, start: "2018-10-01", mandatory: true, purpose: "paper's own Appendix 1 constituent", evidence_page: 217}
+  - {name: "UltraTech Cement", kind: price, frequency: daily, start: "2018-10-01", mandatory: true, purpose: "paper's own Appendix 1 constituent", evidence_page: 217}
+  - {name: "Maruti Suzuki India", kind: price, frequency: daily, start: "2018-10-01", mandatory: true, purpose: "paper's own Appendix 1 constituent", evidence_page: 217}
+  - {name: "HCL Technologies", kind: price, frequency: daily, start: "2018-10-01", mandatory: true, purpose: "paper's own Appendix 1 constituent", evidence_page: 217}
+  - {name: "Asian Paints", kind: price, frequency: daily, start: "2018-10-01", mandatory: true, purpose: "paper's own Appendix 1 constituent", evidence_page: 217}
+  - {name: "Mahindra & Mahindra", kind: price, frequency: daily, start: "2018-10-01", mandatory: true, purpose: "paper's own Appendix 1 constituent", evidence_page: 217}
+  - {name: "IndusInd Bank", kind: price, frequency: daily, start: "2018-10-01", mandatory: true, purpose: "paper's own Appendix 1 constituent", evidence_page: 217}
+  - {name: "Tech Mahindra", kind: price, frequency: daily, start: "2018-10-01", mandatory: true, purpose: "paper's own Appendix 1 constituent", evidence_page: 217}
+  - {name: "Bajaj Finserv", kind: price, frequency: daily, start: "2018-10-01", mandatory: true, purpose: "paper's own Appendix 1 constituent", evidence_page: 217}
+  - {name: "Tata Motors", kind: price, frequency: daily, start: "2018-10-01", mandatory: true, purpose: "paper's own Appendix 1 constituent", evidence_page: 217}
+  - {name: "Nestle India", kind: price, frequency: daily, start: "2018-10-01", mandatory: true, purpose: "paper's own Appendix 1 constituent", evidence_page: 217}
+  - {name: "JSW Steel", kind: price, frequency: daily, start: "2018-10-01", mandatory: true, purpose: "paper's own Appendix 1 constituent", evidence_page: 217}
+  - {name: "Adani Ports & SEZ", kind: price, frequency: daily, start: "2018-10-01", mandatory: true, purpose: "paper's own Appendix 1 constituent", evidence_page: 217}
+  - {name: "Coal India", kind: price, frequency: daily, start: "2018-10-01", mandatory: true, purpose: "paper's own Appendix 1 constituent", evidence_page: 217}
+  - {name: "SBI Life Insurance", kind: price, frequency: daily, start: "2018-10-01", mandatory: true, purpose: "paper's own Appendix 1 constituent", evidence_page: 217}
+  - {name: "NIFTY 50", kind: price, frequency: daily, start: "2018-10-01", mandatory: true, purpose: "fund's chosen benchmark analogue (Stage 01 universe_translation) -- the do-nothing comparator", evidence_page: 212}
+  - {name: "BSE SENSEX", kind: price, frequency: daily, start: "2018-10-01", mandatory: false, purpose: "the paper's own literal benchmark (p.212) -- informational comparator only, not required to run the card", evidence_page: 212}
+  - {name: "India government T-bill / bond yield", kind: risk_free_rate, frequency: daily, start: "2018-10-01", mandatory: false, purpose: "paper collects a government bond PRICE series for its risk-free leg (p.212); not consumed by this card's momentum-only signal, but requested for research-validation Sharpe reporting rather than the fund's constant-rate proxy, since the sample window sits across the 2020 easing cycle", evidence_page: 212}
+
+ambiguities:
+  - field: backtest_plan.sample_end
+    issue: >
+      The paper contradicts itself on its own sample end: the abstract states data runs
+      "from April 2019 to March 2024" (p.210), but the Methodology section states data was
+      "collected from April 1, 2019, to September 30, 2024" (p.212), and Figure 7's own worked
+      table has an evaluation period running into "2024-25 April-September" -- which requires
+      price data through September 2024, matching the methodology and contradicting the
+      abstract.
+    resolution: >
+      Use 2024-09-30. The methodology text and Figure 7's own worked table are direct,
+      internally-consistent evidence of what was actually analysed; the abstract's "March 2024"
+      is very likely a stale draft artifact that was not updated when the sample was extended.
+    confidence: medium
+    material: true
+    evidence_page: 210
+
+  - field: signal.template
+    issue: >
+      No registered primitive computes the paper's own multi-metric (Tracking Error /
+      Information Ratio / Sharpe / Treynor) cross-sectional score, and the paper gives no rule
+      for combining the four metrics when they disagree on a stock.
+    resolution: >
+      Use the cross_sectional allocator (correct SHAPE: rank, sort, hold top quantile,
+      long-only) with total_return_momentum as the SCORE (best available primitive proxy).
+      See strategy.template_gap for the new-primitive specification that would be needed to
+      test the paper's actual scoring mechanism -- that is a human build decision, not
+      something resolved here.
+    confidence: high
+    material: true
+    evidence_page: 212
+
+  - field: portfolio.rebalance
+    issue: >
+      The paper's design is a strict, non-overlapping 6-month formation/hold cycle. This
+      fund's schema has no semi-annual rebalance option.
+    resolution: >
+      Use quarterly (the nearest supported cadence) on the same 126-day lookback. Report
+      turnover explicitly since this trades roughly 2x as often as the paper's own cycle.
+    confidence: medium
+    material: true
+    evidence_page: 212
+
+  - field: portfolio.allow_cash
+    issue: >
+      The cross_sectional template holds the PREVIOUS rebalance's weights when fewer than
+      min_names qualify, rather than moving to cash or skipping the period. The paper's own
+      analogous case (zero qualifying stocks) is handled differently -- it simply skips the
+      period and reports no result for that leg.
+    resolution: >
+      Report rebalances_skipped_thin_universe (the template's own diagnostic) alongside
+      results so a human can see how often this differs from the paper's own "not
+      implementable" periods. mandate_allow_cash: false is still honoured since holding prior
+      weights is not the same as holding cash.
+    confidence: high
+    material: true
+    evidence_page: 216
+
+  - field: metrics.sharpe_convention
+    issue: >
+      ros/validation/metrics.py implements a geometric and a conventional Sharpe; this card
+      states neither. The paper's OWN Sharpe/Treynor definitions (6-monthly return over
+      Excel-computed stdev) are classification inputs, not comparable to either fund
+      convention.
+    resolution: >
+      Report both sharpe_geometric and sharpe_conventional. Never compare either to the
+      paper's own per-period Sharpe/Treynor numbers -- different metric, different basis.
+    confidence: high
+    material: true
+    evidence_page: 212
+
+  - field: n_configs_tried
+    issue: >
+      The paper gives a rationale for its 40/40 split but does not admit searching over
+      alternatives, nor any other explicit hyperparameter sweep.
+    resolution: >
+      Carry n_configs_tried=1 as the literal count of what the paper admits, hedged as a
+      floor rather than a ceiling.
+    confidence: low
+    material: false
+    evidence_page: 212
+
+replication_targets: []
+
+benchmark_templates:
+  - {name: "Equal-weight, the paper's 30 named stocks", template: fixed_weight, params: {weights: equal}, rebalance: annual}
+  - {name: "NIFTY 50 buy-and-hold", template: fixed_weight, params: {weights: {"NIFTY 50": 1.0}}, rebalance: annual}
+  - {name: "BSE SENSEX buy-and-hold", template: fixed_weight, params: {weights: {"BSE SENSEX": 1.0}}, rebalance: annual}
+
+data_requests:
+  - item: "Daily adjusted close for the paper's 30 named Sensex constituents (Appendix 1), 2018-10-01 to 2024-09-30, NSE-listed prices"
+    why: "The entire cross-sectional signal and the return of any long-only cohort depend on it -- there is no way to test this paper's actual mechanism without individual stock prices."
+    unlocks: "The only version of this test that preserves the paper's actual stock-selection mechanism, rather than an index-timing substitute between pre-built sleeves."
+    without_it: >
+      There is no honest fallback. Substituting the fund's held NIFTY500 factor-sleeve indices
+      (as an earlier draft of this card, and other cards in this repo, do) would collapse the
+      cross-sectional stock-picking mechanism into a different, lower-resolution strategy
+      (index timing between ~5-8 baskets) and should be recorded as a Step 03 FAIL_FAST rather
+      than quietly substituted again.
+    priority: blocking
+    format_hint: "One column per stock (or long panel: date, ticker, adj_close), point-in-time adjusted, ISIN or internal ID keyed -- never NSE symbol alone (symbols get reused)."
+    evidence_page: 217
+
+  - item: "NIFTY 50 index daily close, 2018-10-01 to 2024-09-30"
+    why: "The do-nothing benchmark this strategy must beat, per Stage 01's chosen universe analogue."
+    unlocks: "A must_beat comparison against the fund's own catalogued analogue universe, not just the paper's literal Sensex benchmark."
+    without_it: "Fall back to BSE SENSEX alone as the sole benchmark -- weakens the must_beat set from 3 named benchmarks to 2, but does not block the run."
+    priority: high
+    format_hint: "date, close"
+    evidence_page: 212
+
+  - item: "Official point-in-time NIFTY 50 membership history (constituent list by date), 2018-2024"
+    why: "Would let this card widen from the paper's verified 30-name list to the full ~50-name NIFTY 50 panel Stage 01 identified as the best-fitting universe class, giving the 40% quantile cohorts ~20 names instead of ~12 and more resilience to membership churn."
+    unlocks: "A more statistically powered version of this same test, run on the fund's actual mandate universe rather than a fixed 30-name list."
+    without_it: "Run only on the paper's own 30 named stocks, as this card currently does. A smaller, thinner-cohort test, but fully verified against the paper's own page-cited list rather than a guess."
+    priority: nice_to_have
+    format_hint: "date, ticker/ISIN, in/out flag -- or a pointer to the fund's master_universe file if NIFTY 50 membership is already tracked there"
+    evidence_page: null
+
+  - item: "Real Indian risk-free/T-bill yield series, 2018-10-01 to 2024-09-30"
+    why: "Matches the paper's own Sharpe/Treynor risk-free leg more closely than a constant proxy, and lets research-validation Sharpe reporting reflect the 2020 easing cycle sitting inside this exact sample."
+    unlocks: "Rate-sensitivity precision in the research validation writeup; not consumed by this card's momentum-only trading signal."
+    without_it: "Use the fund's standard declared constant-rate proxy, swept 4-8% per fund-wide practice -- every cash/rate-adjacent result becomes rate-dependent, and that sensitivity is reported rather than hidden."
+    priority: high
+    format_hint: "date, annualised yield (decimal), day-count convention stated"
+    evidence_page: 212
+
+open_questions:
+  - question: >
+      The paper's own abstract states its purpose is "to provide a comparative analysis of the
+      130/30 strategy and pair trading strategy" (p.211) -- but no pair-trading methodology,
+      table, or result appears anywhere in the paper's body (Methodology, Data Analysis,
+      Conclusion or Appendix all cover only the 130/30 strategy). Was a pair-trading variant
+      genuinely run by the authors (just not included in what was extracted here, or dropped
+      before publication), and if so, should this fund's n_configs_tried treat it as a second
+      configuration the authors tried on this same idea?
+    why_it_matters: >
+      If a pair-trading variant was in fact tried, the paper's true trial count for "a
+      market-neutral-style strategy in Indian equities" could be 2, not 1 -- understating the
+      trial budget for the deflated Sharpe is exactly the failure mode n_configs_tried exists
+      to prevent, and this card cannot resolve it from the pages available.
+    what_i_assumed: >
+      Carried n_configs_tried=1, treating the abstract's pair-trading reference as either a
+      strategy that was never actually run to completion or one that is out of scope for this
+      card (a different mechanism, not a parameter sweep of the 130/30 idea). A human with
+      access to a fuller version of the paper, or the authors' own working files, should
+      confirm this before the deflated Sharpe is finalised at Stage 06.
+    ask_of: researcher
+    blocks_run: false
+    evidence_page: 210
+
+  - question: >
+      Should this card run on the paper's own verified 30-name list (thinner cohorts, fully
+      page-checkable) or widen immediately to the full ~50-name NIFTY 50 panel Stage 01 graded
+      as the best-fitting universe class (broader cohorts, but requires either a supplied
+      membership file or naming constituents from memory)?
+    why_it_matters: >
+      A 30-name universe produces ~12-name cohorts that can shrink to nothing during
+      membership churn or data gaps (the paper's own construction hit this in 4 of 10 windows);
+      a 50-name panel is more resilient but was not available as a verified list in this
+      session.
+    what_i_assumed: >
+      Assumed the paper's own 30-name list for THIS run, since it is verifiable against the
+      text (page 216-217) and avoids guessing NIFTY 50 membership from memory. Widening to the
+      full panel is recorded above as a nice_to_have data_request, not silently substituted.
+    ask_of: pm
+    blocks_run: false
+    evidence_page: 217
+
+  - question: >
+      Is a 30bp round-trip cost floor appropriate for a 30-name mega-cap panel, or should this
+      card use a lower blue-chip-specific cost assumption given these are among the most liquid
+      names on the exchange?
+    why_it_matters: >
+      The fund's standing 30bp policy is set for factor-sleeve-level trading; individual
+      mega-cap names (Reliance, HDFC Bank, TCS, etc.) typically trade tighter than that in
+      practice, so 30bp may be conservative rather than realistic for this specific universe.
+    what_i_assumed: >
+      Kept the fund-wide 30bp standard per CLAUDE.md's explicit instruction not to copy a
+      paper's own cost assumption, and because deviating downward without a stated basis would
+      flatter the result.
+    ask_of: pm
+    blocks_run: false
+    evidence_page: null
+
+n_configs_tried: 1
+
+notes: >
+  TEMPLATE CORRECTION FROM THE EARLIER DRAFT: the prior transcript-based version of this card
+  used ts_momentum (a template built for holding ALL positive-momentum sleeves, sized
+  inverse-vol, across a small set of pre-existing return streams -- see
+  ros/engine/templates.py TimeSeriesMomentum). That is a poor structural fit for a "rank many
+  names, hold the top 40% quantile" mechanism. cross_sectional (ros/engine/templates.py
+  CrossSectional) is the template actually built for this shape: score every security, sort,
+  hold the top slice, long-only. This card uses it instead. The unresolved gap either template
+  choice still leaves is the SCORE, not the allocation shape: neither the old nor the new
+  choice can compute the paper's own 4-metric composite, because no registered primitive in
+  ros/engine/prepare.py does anything beyond ewma or trailing momentum. See
+  strategy.template_gap for the specification a human would need to build.
+
+  WHAT THIS CARD ACTUALLY ASKS FOR (Gate A): the 30 individual daily price series named in
+  data_requirements above (NSE-listed, for the paper's own named companies), a NIFTY 50 index
+  series, and -- optionally -- a real Indian risk-free yield series and an official NIFTY 50
+  membership file. None of these are in this fund's current data registry and none are proxied
+  here. If the blocking stock-level data cannot be sourced, that should be recorded as a Step
+  03 FAIL_FAST finding -- a real, useful outcome -- rather than substituting sleeve indices
+  again.
+
+  Should never be scored against the paper's own reported per-period returns or its rejection
+  of H0 -- even with the requested data, this remains a long-only, single-signal (momentum)
+  proxy for a long-short, multi-metric mechanism.

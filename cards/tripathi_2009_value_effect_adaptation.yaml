@@ -1,0 +1,142 @@
+card_version: "1.0"
+
+paper:
+  id: tripathi_2009_value_effect_adaptation
+  title: "Investment Strategies In The Indian Stock Market: A Survey"
+  authors: [Vanita Tripathi]
+  date: "2009-11-01"
+  source_file: "admin,+IJF+November+2009+Paper+1.pdf"
+  source_sha256: null
+
+intent:
+  mode: adaptation
+  parent_card: null
+  rationale: >
+    The survey names "value effect (buy high book to market equity stocks)" as one of 21
+    practitioner-rated strategies (Table 3 item 2, p.6). It scored low on perceived
+    worthiness (mean 1.914, least-preferred fundamentals-based strategy, p.7) and low on
+    reported use (mean 1.753, p.9) -- weaker practitioner support than momentum or size.
+    The paper gives no breakpoint, no portfolio construction rule, and this fund has no
+    per-stock book-value data to sort on directly. This card substitutes NSE's own
+    pre-built value-construction sleeve as the closest investable proxy and tests a static
+    tilt to it -- a narrower and different question from a B/M cross-sectional sort.
+  transferred_mechanism: >
+    Static (buy-and-hold, annually rebalanced) 100% exposure to NIFTY500 VALUE 50, NSE's
+    own value-factor sleeve (constructed from P/E, P/B and dividend yield per NSE
+    methodology), as an investable proxy for the paper's stock-level "buy high B/M" effect.
+  broken_assumptions:
+    - >
+      PROXY, NOT THE EFFECT: the paper's value effect is a stock-level book-to-market sort.
+      This fund holds no per-stock book-value data (see feasibility notes below), so this
+      card cannot sort stocks by B/M at all. NIFTY500 VALUE 50 is NSE's own multi-metric
+      construction (P/E, P/B, dividend yield) -- related to, but not the same definition as,
+      a pure B/M sort. A result here tests "does NSE's value basket earn a premium," not
+      "does a B/M sort work in India."
+    - >
+      STATIC, NOT DYNAMIC: this card has no signal at all -- it is a buy-and-hold tilt to a
+      pre-built index, not the paper's implied ranking/reformation rule. There is no
+      lookback, breakpoint, or holding period to adapt because the paper never gives one to
+      begin with (p.6, Table 3 item 2 -- an eight-word label).
+    - >
+      SAME PROXY AS THE P/E EFFECT: NIFTY500 VALUE 50's own construction already
+      incorporates P/E. Survey item #4 ("P/E effect, buy low P/E stocks," p.6) and item #2
+      (this card) collapse onto the SAME investable proxy given this fund's data -- they
+      are not independent trials. Item #4 was deliberately NOT drafted as a separate card;
+      see the Gate A queue for the full reasoning.
+    - >
+      POINT-IN-TIME / RETURN BASIS: same NSE backfill and price-return (ex-dividend)
+      caveats as every other factor-sleeve card in this fund.
+
+universe:
+  description: >
+    Single-sleeve static holding: NIFTY500 VALUE 50, NSE's value-construction factor sleeve.
+  asset_class: equity
+  geography: IN
+  assets:
+    - NIFTY500 VALUE 50
+  benchmark: NIFTY 500
+  cash_asset: null
+
+signal:
+  name: static_value_sleeve_tilt
+  template: fixed_weight
+  lookback_days: null
+  lag_days: 1
+  description: >
+    Constant 100% weight in NIFTY500 VALUE 50. Not a ranking signal -- there is nothing in
+    the source paper to rank on with this fund's data, so the only honest adaptation is a
+    static exposure to the closest available proxy, tested against the benchmark.
+  params:
+    weights:
+      NIFTY500 VALUE 50: 1.0
+
+portfolio:
+  rebalance: annual
+  long_only: true
+  max_gross: 1.0
+  allow_cash: false
+  mandate_allow_cash: false
+  target_vol: null
+  start: "2005-04-01"
+  end: "2026-05-29"
+
+costs:
+  spread_bps: 30.0
+  cost_model: half_spread
+
+data_requirements:
+  - {name: "NIFTY500 VALUE 50", kind: price, frequency: daily, start: "2005-04-01", mandatory: true, purpose: "value-sleeve proxy holding", evidence_page: 6}
+  - {name: "NIFTY 500", kind: price, frequency: daily, start: "2003-09-30", mandatory: true, purpose: "fund benchmark"}
+
+ambiguities:
+  - field: signal.definition
+    issue: >
+      The paper defines the value effect only as "buy high book to market equity stocks"
+      (Table 3 item 2, p.6) -- no breakpoint (top decile? tercile?), no portfolio
+      construction, and no per-stock B/M data exists in this fund's registry to construct
+      one directly.
+    resolution: >
+      Substitute NSE's pre-built NIFTY500 VALUE 50 index as the closest investable proxy.
+      This changes the question from "does a B/M cross-sectional sort earn a premium" to
+      "does NSE's own value-construction basket beat the benchmark" -- flagged for explicit
+      human confirmation at Gate A that this substitution is an acceptable reading, not a
+      silent one.
+    confidence: low
+    evidence_page: 6
+    material: true
+
+  - field: universe.assets
+    issue: No per-stock fundamental (book value) data is in the firm registry.
+    resolution: >
+      Sleeve-level proxy only. A true B/M cross-sectional test is infeasible without
+      procuring stock-level book-value data -- out of scope for this card; noted for
+      stage 03 (data feasibility) if a human wants to pursue the literal effect later.
+    confidence: high
+    material: true
+
+  - field: n_configs_tried
+    issue: >
+      The same investable proxy (NIFTY500 VALUE 50) also answers survey item #4, the P/E
+      effect. Card-ing both independently would count one investable idea as two trials in
+      the deflated Sharpe budget.
+    resolution: >
+      Treat this card as the SOLE trial for both the value and P/E labels. The P/E effect
+      (item #4) was not drafted as a separate card for exactly this reason -- see the Gate A
+      queue.
+    confidence: high
+    material: true
+
+replication_targets: []
+
+benchmark_templates: []
+
+n_configs_tried: 1
+
+notes: >
+  This is a static buy-and-hold tilt, not a dynamic strategy -- there is no signal in the
+  source paper to adapt beyond "hold something value-tilted." Its only purpose is to answer
+  a narrow, honest question: does NSE's own value-construction sleeve beat the NIFTY 500
+  benchmark net of a realistic 30bp entry cost, over the sleeve's available history. It is
+  explicitly NOT a test of whether a book-to-market cross-sectional sort works in India --
+  that question is infeasible with this fund's current data (see ambiguities above and the
+  Gate A queue).
