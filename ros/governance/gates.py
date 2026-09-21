@@ -18,7 +18,8 @@ import textwrap
 from dataclasses import dataclass, field, asdict
 from typing import Any, Dict, List, Optional
 
-from ros.cards.schema import audit_data_requests, reconcile_data_plan
+from ros.cards.schema import (BLOCK, DECIDE, GROUPS, GUESS, Fact,
+                              audit_data_requests, reconcile_data_plan)
 
 LADDER = ["REPLICATED", "INDIA_VALIDATED", "ROBUST", "ORTHOGONAL",
           "PORTFOLIO_USEFUL", "PAPER_TRADED", "LIVE_CANDIDATE"]
@@ -401,326 +402,217 @@ def _line(text, fallback, width=86):
 
 
 def gate_a_summary(card, result, translation_check=None, feasibility=None,
-                   india=None, completeness=None) -> str:
-    """ONE PAGE. Everything a human must personally rule on, with pointers.
+                   india=None, completeness=None, extra=None) -> str:
+    """ONE PAGE: only the facts flagged as something a human rules on.
 
-    The full document renders the card once, which was the right fix for saying
-    things three times -- and still runs to seven hundred lines, because the
-    card is seven hundred lines of argued work. A reviewer does not need the
-    argument to decide; they need to know WHAT they are deciding, WHO owns it,
-    and WHERE to read the argument if a line looks wrong.
-
-    So every row here is one line plus a section pointer. Nothing is summarised
-    away: the pointer leads to the full text, which is directly below.
-
-    The one-liners come from the card's `headline` fields, written by the model
-    at Stage 02, because compressing an argument to a line is a judgement.
-    Mechanical extraction can only truncate, and a headline cut mid-sentence is
-    what made the previous gate unreadable. Where a card carries none, the row
-    falls back to a visibly truncated clause rather than pretending.
-
-    The ORDERING is mechanical and deliberately not the model's: blocking items,
-    then the things this repo has learned are most often wrong -- a low
-    confidence material call, an unverified list, a design running on proxies --
-    then everything else. A model that ranked its own work would put the item it
-    was most pleased with first.
+    Same projection as the document, filtered to BLOCK and DECIDE and sorted
+    with the blockers first. Reading from the same facts() means the sheet can
+    never say something the card does not.
     """
     W = _W
+    facts = (list(card.facts())
+             + list(code_facts(card, translation_check, feasibility, india))
+             + list(extra or []))
     blocking = [c for c in result.criteria if not c.passed and c.blocking]
-    rows = []           # (priority, who, where, line, note)
 
-    def row(pri, who, where, line, note=""):
-        rows.append((pri, who, where, line, note))
+    mine = [f for f in facts if f.flag in (BLOCK, DECIDE, GUESS)]
+    rank = {BLOCK: 0, DECIDE: 1, GUESS: 2}
+    mine.sort(key=lambda f: (rank.get(f.flag, 3), GROUPS.index(f.group)))
 
-    for c in blocking:
-        row(0, "STOP", "top", c.name, " ".join(c.evidence.split())[:140])
-
-    cv = getattr(card, "convertibility", None)
-    if cv is not None:
-        row(1, "researcher", "S6",
-            _line(cv.headline, f"{cv.verdict}: {cv.weakest_link}"),
-            f"verdict {cv.verdict}, confidence {cv.confidence}")
-
-    ut = card.universe_translation
-    if ut is not None:
-        risk = ut.transfer_risks[0] if ut.transfer_risks else ""
-        row(2, "researcher", "S1",
-            f"{ut.source_universe} -> {ut.target_universe or '(none)'}"
-            f"  [{ut.grade or '?'}]", _line("", risk))
-    if translation_check is not None:
-        for n in translation_check.notes:
-            if "OUT OF MANDATE" in n.upper():
-                row(1, "pm", "S1", "chosen universe is OUT OF MANDATE",
-                    "the fund may TEST here and may not HOLD here")
-        if translation_check.missing:
-            row(0, "data_owner", "S1",
-                f"{len(translation_check.missing)} instrument(s) MISSING",
-                ", ".join(translation_check.missing[:3]))
-
-    st = card.strategy
-    if st is not None and st.is_long_short:
-        row(2, "pm", "S2", "paper is long-short; this fund cannot short",
-            _line("", st.long_only_adaptation))
-    if st is not None and st.engine_template == "NEEDS_NEW_TEMPLATE":
-        row(1, "researcher", "S2", "no registered template fits this strategy",
-            "a human implements it before anything runs")
-
-    rec = reconcile_data_plan(card, feasibility)
-    if rec["checked"] and rec["not_in_hand"]:
-        row(1, "pm", "S3",
-            f"{len(rec['not_in_hand'])} of {len(rec['need'])} minimum-viable "
-            f"field(s) NOT in hand",
-            "a legitimate run, but not the test this card specified")
-
-    sel = getattr(card, "selection", None)
-    if sel is not None and sel.explicit_securities and \
-            sel.verified_against in ("", "UNVERIFIED"):
-        row(1, "data_owner", "S4",
-            f"{len(sel.explicit_securities)} named securities are UNVERIFIED",
-            "a recalled list looks checked and is not")
-
-    bp = getattr(card, "backtest_plan", None)
-    if bp is not None:
-        row(3, "pm", "S5",
-            f"the bar: must beat {', '.join(bp.must_beat)[:70]}",
-            f"sample {bp.sample_start} -> {bp.sample_end}, named before the run")
-    row(3, "researcher", "S2",
-        f"costs {card.costs.spread_bps:.0f}bp round trip, lag "
-        f"{card.signal.lag_days}d",
-        "a US paper's 5bp is the commonest way an Indian backtest lies")
-
-    for a in card.material_ambiguities:
-        pri = 1 if a.confidence == "low" else 3
-        row(pri, "researcher", "S7",
-            _line(a.headline, f"{a.field}: {a.resolution}"),
-            f"{a.field}, confidence {a.confidence}"
-            + (f", p.{a.evidence_page}" if a.evidence_page else ""))
-
-    for q in card.open_questions:
-        row(0 if q.blocks_run else 2, q.ask_of, "S7",
-            _line(q.headline, q.question),
-            "BLOCKS THE RUN" if q.blocks_run
-            else "assumed: " + _line("", q.what_i_assumed, 70))
-
-    order = {"blocking": 0, "high": 2, "nice_to_have": 4}
-    for r in getattr(card, "data_requests", []) or []:
-        row(order.get(r.priority, 3), "data_owner", "S8",
-            _line(r.headline, r.item),
-            f"[{r.priority}] if declined: " + _line("", r.without_it, 60))
-
-    if india is not None and india.unaddressed_inputs:
-        row(2, "researcher", "S3",
-            f"{len(india.unaddressed_inputs)} strategy input(s) reached no "
-            f"India rule", "nobody has looked at these")
-
-    rows.sort(key=lambda t: t[0])
     L = ["  " + "=" * W,
-         "  GATE A  --  ONE PAGE.  Everything you personally decide.",
+         f"  WHAT YOU DECIDE   {card.paper.id}",
          "  " + "=" * W,
-         f"  {card.paper.id}   ({card.intent.mode})",
-         f"  {len(rows)} item(s) to rule on   |   {len(blocking)} blocking"
-         + (f"   |   card completeness {completeness.score:.0%}"
+         f"  {len(mine)} call(s)   |   {len(blocking)} blocking"
+         + (f"   |   card {completeness.score:.0%} complete"
             if completeness is not None else ""),
-         "",
-         "  Every line points into the full document below. Nothing here "
-         "replaces it;",
-         "  if a line looks wrong, S<n> is where the argument for it is "
-         "written out.",
-         "  " + "-" * W,
-         f"  {'#':<3} {'WHO':<11} {'GO':<4} WHAT YOU ARE RULING ON",
          "  " + "-" * W]
-    for i, (pri, who, where, line, note) in enumerate(rows, 1):
-        mark = "STOP" if pri == 0 else where
-        for j, seg in enumerate(_wrap(line, W - 22)):
-            L.append(f"  {str(i) + '.' if j == 0 else '':<3} "
-                     f"{who if j == 0 else '':<11} {mark if j == 0 else '':<4} "
-                     f"{seg}")
-        for seg in _wrap(note, W - 24):
-            L.append(f"  {'':<3} {'':<11} {'':<4}   {seg}")
+    for c in blocking:
+        L.append(f"  x  {'STOP':<11} {c.name}")
+        for line in _wrap(c.evidence, W - 20):
+            L.append(f"     {'':<11} {line}")
+    for i, f in enumerate(mine, 1):
+        who = f.owner or ("-" if f.flag == GUESS else "researcher")
+        body = _wrap(f.text, W - 24)
+        L.append(f"  {str(i) + '.':<4}{who:<11} {f.group:<11} {body[0]}")
+        for line in body[1:]:
+            L.append(f"  {'':<4}{'':<11} {'':<11} {line}")
     L += ["  " + "-" * W,
-          "  NOTHING HERE IS DECIDED. The decision is a named human's, and no "
-          "code",
-          "  in this repo assigns one.",
+          "  The full card is below. Nothing here is decided.",
           "  " + "=" * W]
     return "\n".join(L)
 
 
+def code_facts(card, translation_check=None, feasibility=None,
+               india=None) -> List[Fact]:
+    """What the CARD cannot know, in the same shape as everything else.
+
+    The universe fit, the fund's data position and India's non-negotiables are
+    not on the card -- they come from the registry, the feasibility pass and the
+    rules. Emitting them as Facts means the renderer never learns they have a
+    different origin, and the reader never gets a tour of which part of the
+    pipeline produced which paragraph.
+    """
+    F: List[Fact] = []
+
+    def add(group, label, value, detail="", owner="", flag=""):
+        v = " ".join(str(value or "").split())
+        if v:
+            F.append(Fact(group=group, label=label, value=v,
+                          detail=" ".join(str(detail or "").split()),
+                          owner=owner, flag=flag, ref="(computed)"))
+
+    tc = translation_check
+    if tc is not None:
+        add("UNIVERSE", "we hold",
+            f"{len(tc.held)} instrument(s): " + ", ".join(tc.held[:6])
+            + (" ..." if len(tc.held) > 6 else ""))
+        if tc.missing:
+            add("UNIVERSE", "MISSING", ", ".join(tc.missing),
+                "these must be supplied before anything runs",
+                owner="data_owner", flag=BLOCK)
+        if tc.ranked:
+            add("UNIVERSE", "scored", "; ".join(
+                f"{f.score:.0f} {f.universe.name}"
+                + ("" if f.universe.in_mandate else " (out of mandate)")
+                for f in tc.ranked[:4]))
+        for n in tc.notes:
+            if "OUT OF MANDATE" in n.upper():
+                add("UNIVERSE", "OUT OF MANDATE",
+                    "the fund may TEST here and may not HOLD here", n,
+                    owner="pm", flag=DECIDE)
+        for cav in tc.caveats:
+            add("RISKS", "india", cav)
+
+    rec = reconcile_data_plan(card, feasibility)
+    if rec["checked"] and rec["not_in_hand"]:
+        add("DATA", "NOT IN HAND",
+            f"{len(rec['not_in_hand'])} of {len(rec['need'])} minimum-viable: "
+            + "; ".join(rec["not_in_hand"]),
+            "a legitimate run, and not the test this card specified",
+            owner="pm", flag=DECIDE)
+    for pr in rec.get("proxied", []):
+        add("DATA", "substituted", f"{pr} -- not the real series",
+            flag=GUESS, owner="pm")
+    if rec.get("degraded"):
+        add("DATA", "backfilled",
+            f"{len(rec['degraded'])} series were not knowable as-was on past "
+            f"dates: " + ", ".join(rec["degraded"][:5]),
+            "caps any live claim; fine for asking whether a mechanism exists",
+            flag=GUESS, owner="researcher")
+    if feasibility is not None:
+        add("DATA", "verdict", getattr(feasibility, "verdict", ""))
+
+    if india is not None:
+        # NOT flagged. These are enforced whatever anyone thinks -- lag >= 1 and
+        # the 30bp floor are non-negotiables, not calls a human makes. Putting
+        # them on the decision sheet would pad it with things nobody decides.
+        for r in india.blocking:
+            add("RISKS", f"india/{r.category}", r.item, r.why)
+        for u in india.unaddressed_inputs:
+            add("RISKS", "unread input", u,
+                "no rule recognised this and no india_note addresses it",
+                owner="researcher", flag=GUESS)
+    return F
+
+
+def extraction_facts(doc=None, conflicts=None, shape=None) -> List[Fact]:
+    """What reading the PDF turned up, as facts rather than as a tour.
+
+    The report used to open with fifty lines about what the regex reader saw --
+    page counts, math density, a dump of every candidate field it matched. That
+    is the reader describing itself. Two of its findings matter to a reviewer
+    and the rest is plumbing, so only the two survive, in the same shape as
+    everything else.
+    """
+    F: List[Fact] = []
+    if shape is not None and not shape.looks_like_a_paper:
+        F.append(Fact(group="PAPER", label="NOT A PAPER",
+                      value="this document does not read like a research paper",
+                      detail="confirm it is the one you meant",
+                      flag=BLOCK, owner="researcher", ref="(computed)"))
+    for w in (getattr(getattr(doc, "quality", None), "warnings", None) or []):
+        F.append(Fact(group="RISKS", label="extraction", value=w,
+                      ref="(computed)"))
+    if conflicts:
+        names = "; ".join(f"{c['portfolio']} {c['metric']}"
+                          for c in conflicts[:4])
+        F.append(Fact(
+            group="RISKS", label="basis conflict",
+            value=f"{len(conflicts)} metric(s) reported on several accounting "
+                  f"bases: {names}",
+            detail="harvesting all of them yields a replication test that can "
+                   "never fail. One basis has to be pinned.",
+            owner="researcher", flag=DECIDE, ref="(computed)"))
+    return F
+
+
 def gate_a_document(card, result, translation_check=None, feasibility=None,
-                    india=None, completeness=None) -> str:
-    """GATE A IS THE CARD, rendered once, in the order a human decides in.
+                    india=None, completeness=None, extra=None) -> str:
+    """THE STRATEGY CARD, DISPLAYED. Nothing else.
 
-    The card already contains everything a reviewer needs -- it is the best
-    artifact this pipeline produces. What Gate A kept doing was RETELLING it:
-    a brief that quoted some sections, then plan() and asks() printing those
-    same sections again below, then a criteria list carrying the same text a
-    third time as "evidence". Measured on the worked example, the universe
-    rationale appeared twice, the convertibility weakest link three times and a
-    minimum-viable data field five times, across 888 lines.
+    No stages, no "what the deterministic reader saw", no audit-trail tour. The
+    card's facts, grouped the way a reviewer thinks -- universe, signal,
+    portfolio, costs, data, securities, the run, the bar, risks, the verdict,
+    what you decide, what is being asked for -- with the computed facts mixed in
+    where they belong rather than announced as a separate provenance.
 
-    So this renders each part of the card EXACTLY ONCE, placed where the
-    decision about it gets made -- the dataset next to what the fund actually
-    holds, the run next to the bar it must clear, the ambiguities next to the
-    questions they raise -- and interleaves only what the card cannot know:
-    the universe fit the code scored, the feasibility position, the India rules,
-    and the checklist.
-
-    Nothing is summarised and nothing is dropped. The only thing made shorter is
-    the chrome.
+    It is a projection: walk facts, group, print. It knows no field names.
     """
     W = _W
+    facts = (list(card.facts())
+             + list(code_facts(card, translation_check, feasibility, india))
+             + list(extra or []))
     blocking = [c for c in result.criteria if not c.passed and c.blocking]
-    warns = result.warnings
-    pa = card.paper
 
-    def rule(ch="-"):
-        return "  " + ch * W
-
-    def head(n, title):
-        # "S<n>" so the one-page sheet's pointers resolve by a literal search.
-        return ["", rule("="), f"  S{n}. {title}", rule("=")]
-
-    L = [rule("="),
-         "  GATE A  --  THE STRATEGY CARD, AS A HUMAN READS IT",
-         rule("="),
-         f"  {pa.id}   ({card.intent.mode})",
-         f"  {pa.title}" if pa.title else "",
-         f"  paper: {pa.source_file or 'NOT RECORDED'}",
-         f"  sha256: {pa.source_sha256 or 'NOT RECORDED'}",
-         f"  {len(result.criteria)} criteria checked   {len(blocking)} blocking   "
-         f"{len(warns)} worth a look"
-         + (f"   card completeness {completeness.score:.0%}"
-            if completeness is not None else "")]
-    L = [x for x in L if x != ""] if False else L
-
+    L = ["  " + "=" * W,
+         f"  STRATEGY CARD   {card.paper.id}",
+         "  " + "=" * W]
     if blocking:
-        L += ["", rule("!"),
-              "  STOP. THESE BLOCK THE GATE -- nothing runs until they are fixed.",
-              rule("!")]
-        for i, c in enumerate(blocking, 1):
-            L.append(f"  {i}. {c.name}"
+        L += ["", "  BLOCKED. Nothing runs until these are fixed."]
+        for c in blocking:
+            L.append(f"    x {c.name}"
                      + ("" if c.value is None else f"   [{c.value}]"))
             for line in _wrap(c.evidence, W - 8):
-                L.append(f"       {line}")
-
-    L += ["", rule("-"), "  AT A GLANCE", rule("-")]
-    L.append(card.at_a_glance())
-
-    # 1 -- where, as instruments. Card's translation + the code's scoring.
-    L += head(1, "WHERE THIS RUNS")
-    L += _where_this_runs(card, translation_check)[1:]   # drop its own rule
-    ut = card.universe_translation
-    if ut is not None:
-        L += ["", "  WHY HERE AND NOT SOMEWHERE ELSE (the model's argument)"]
-        for line in _wrap(ut.rationale, W - 6):
-            L.append(f"      {line}")
-        if ut.why_not_alternatives:
-            L += ["", "  WHY NOT THE RUNNERS-UP"]
-            for line in _wrap(ut.why_not_alternatives, W - 6):
                 L.append(f"      {line}")
-        if ut.transfer_risks:
-            L += ["", "  WHAT BREAKS IN THIS TRANSLATION (particular to this paper)"]
-            for r in ut.transfer_risks:
-                for i, line in enumerate(_wrap(r, W - 10)):
-                    L.append(f"      {'-' if i == 0 else ' '} {line}")
-    if translation_check is not None and translation_check.caveats:
-        # The catalogued caveats for this correspondence: generic to Indian
-        # equities rather than to this paper, and attached by the registry
-        # rather than argued by the model. Kept here because removing the old
-        # STEP 02c preamble would otherwise have dropped them entirely.
-        L += ["", "  CATALOGUED CAVEATS FOR THIS CORRESPONDENCE (attach to every "
-                  "result computed here)"]
-        for cav in translation_check.caveats:
-            for i, line in enumerate(_wrap(cav, W - 10)):
-                L.append(f"      {'-' if i == 0 else ' '} {line}")
 
-    # 2 -- what it actually is.
-    L += head(2, "WHAT THE STRATEGY IS")
-    st = card.strategy
-    if st is None:
-        L.append("  NO RECONSTRUCTION. A template name is not a strategy.")
-    else:
-        L.append(f"  {st.signal_name or '(unnamed)'}   "
-                 f"[{'cross-sectional' if st.cross_sectional else 'time-series'}]"
-                 f"   engine: {st.engine_template or '(unset)'}"
-                 f"   confidence: {st.confidence}")
-        for label, val in (("signal", st.signal_definition),
-                           ("formation", st.formation_rule),
-                           ("weighting", st.weighting_rule),
-                           ("rebalance", st.rebalance_frequency),
-                           ("holding", st.holding_period),
-                           ("inputs", ", ".join(st.inputs_required))):
-            if str(val or "").strip():
-                for i, line in enumerate(_wrap(str(val), W - 16)):
-                    L.append(f"    {label if i == 0 else '':<11} {line}")
-        for k in st.constraints:
-            for i, line in enumerate(_wrap(k, W - 16)):
-                L.append(f"    {'constraint' if i == 0 else '':<11} {line}")
-        if st.is_long_short:
-            L += ["", "  THIS FUND CANNOT SHORT. What was dropped, and what it cost:"]
-            for line in _wrap(st.long_only_adaptation or "NOT STATED", W - 6):
-                L.append(f"      {line}")
-            L.append("      A DIFFERENT strategy from the paper's. Never scored "
-                     "against its numbers.")
-        if st.engine_template == "NEEDS_NEW_TEMPLATE":
-            L += ["", "  NO REGISTERED TEMPLATE FITS. A human implements this first:"]
-            for line in _wrap(st.template_gap, W - 6):
-                L.append(f"      {line}")
-        L.append(f"    pages      {st.evidence_pages or 'none cited'}")
+    LAB = 15
+    for group in GROUPS:
+        rows = [f for f in facts if f.group == group]
+        if not rows:
+            continue
+        L += ["", "  " + "-" * W, f"  {group}", "  " + "-" * W]
+        for f in rows:
+            tag = ""
+            if f.flag:
+                tag = f"  [{f.flag}" + (f" {f.owner}" if f.owner else "") + "]"
+            if f.page:
+                tag += f"  p.{f.page}"
+            body = _wrap(f.text + tag, W - LAB - 6)
+            L.append(f"    {f.label:<{LAB}} {body[0]}")
+            for line in body[1:]:
+                L.append(f"    {'':<{LAB}} {line}")
+            if f.detail and f.detail != f.text:
+                for line in _wrap(f.detail, W - LAB - 10):
+                    L.append(f"    {'':<{LAB}}   {line}")
 
-    # 3 -- the dataset, in full, then whether we have it.
-    L += head(3, "THE DATASET THIS PAPER DESERVES, AND WHAT WE HOLD")
-    L.append(card.plan_data(W, banner=False))
-    L += _what_it_takes(card, feasibility, india)[1:]
+    if completeness is not None and completeness.missing:
+        L += ["", "  " + "-" * W, "  THIN ON THIS CARD", "  " + "-" * W,
+              f"    completeness {completeness.score:.0%}"]
+        for c in completeness.missing:
+            L.append(f"    {'MISS' if c.weight >= 3 else 'thin':<6} "
+                     f"{c.section}: {c.name}")
+            for line in _wrap(c.matters, W - 14):
+                L.append(f"           {line}")
 
-    # 4 / 5 -- securities and the run.
-    L += head(4, "WHICH SECURITIES")
-    L.append(card.plan_selection(W, banner=False))
-    L += head(5, "WHAT WILL BE RUN, AND THE BAR IT MUST CLEAR")
-    L.append(card.plan_run(W, banner=False))
-
-    # 6 -- the model's opinion, clearly labelled.
-    L += head(6, "CAN THIS BECOME SOMETHING WE COULD HOLD?")
-    L.append(card.convertibility_block())
-
-    # 7 -- what a human personally owns.
-    L += head(7, "THE JUDGEMENT CALLS -- a model made each; you can overturn any")
-    for cl in judgement_calls(card, translation_check):
-        if cl["tag"] in ("UNIVERSE", "CONVERTIBLE?", "THE BAR", "LONG-ONLY"):
-            continue          # rendered in full in sections 1, 2, 5 and 6
-        who = f"   <- {cl['who']}" if cl["who"] else ""
-        tag = f"  [{cl['tag']}] "
-        hl = _wrap(cl["headline"] + who, W - len(tag)) or [""]
-        L.append("")
-        L.append(tag + hl[0])
-        for line in hl[1:]:
-            L.append(" " * len(tag) + line)
-        for line in _wrap(cl["detail"], W - 8):
-            L.append(f"       {line}")
-
-    # 8 -- the asks.
-    # requests only -- the open questions are judgement calls and were rendered
-    # in section 7. Printing them in both places is what made the volatility-cap
-    # question appear twice in one document.
-    L += head(8, "WHAT THE MODEL IS ASKING YOU FOR, AND WHAT SAYING NO COSTS")
-    L.append(card.asks(requests_only=True))
-
-    # 9 -- the checklist, terse.
-    L += head(9, "THE CHECKLIST")
-    if completeness is not None:
-        L.append(completeness.render(only_missing=True))
-        L.append("")
-    L.append(result.render(terse=True))
-    if warns:
-        L += ["", "  WORTH A SECOND LOOK (does not block)"]
-        for c in warns:
-            L.append(f"    - {c.name}"
-                     + ("" if c.value is None else f"   [{c.value}]"))
-
-    L += ["", rule("="),
-          "  NOTHING ABOVE IS DECIDED. Gate A produces this document; the "
-          "decision is a",
-          "  named human's, and no code in this repo assigns one.",
-          rule("=")]
+    L += ["", "  " + "-" * W]
+    L.append(f"    {len(result.criteria)} checks run, "
+             f"{len(blocking)} blocking, {len(result.warnings)} warnings.")
+    # Verbatim. "decision: PENDING" is the repo's central invariant made
+    # visible, and things grep for it -- rewording it to "Decision:" quietly
+    # removed the only printed evidence that no code had ruled.
+    L.append(f"    decision: {result.decision}")
+    L.append("    Nothing here is decided. A named human rules; no code does.")
+    L.append("  " + "=" * W)
     return "\n".join(L)
 
 

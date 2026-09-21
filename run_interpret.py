@@ -47,8 +47,8 @@ from ros.data.intake import MANIFEST, describe_shortfall, extend_registry
 from ros.data.universes import INDIAN_UNIVERSES, check_translation
 from ros.feasibility import UNAVAILABLE, assess
 from ros.cards.completeness import assess as card_completeness
-from ros.governance.gates import (gate_a, gate_a_document,
-                                  gate_a_summary)
+from ros.governance.gates import (extraction_facts, gate_a,
+                                  gate_a_document, gate_a_summary)
 from ros.india_requirements import derive
 from ros.papers import artifact_paths, require_paper
 
@@ -88,49 +88,29 @@ def main() -> int:
     hr()
 
     # ---- STEP 01a : deterministic extraction ---------------------------
-    head("STEP 01a  |  WHAT THE DETERMINISTIC READER CAN SEE")
+    # The reader's own findings become FACTS on the card display below. What
+    # it saw about itself -- page counts, math density, every candidate field
+    # it matched -- is plumbing and is no longer printed.
     doc = extract_document(paper.path)
-    para(summarize(doc))
     tables = parse_text_tables(doc)
-
-    # Before anything else: is this a paper at all? Stage 00 screens a paper for
-    # relevance and assumes it is reading one. A deck or a factsheet read by an
-    # obliging model becomes a strategy that was never in the document.
     shape = classify_document(doc, len(tables))
-    print()
-    print(shape.render())
+    conflicts = detect_target_conflicts(propose_replication_targets(tables))
+    extra = extraction_facts(doc, conflicts, shape)
+
+    # BEFORE anything else, and regardless of whether a card exists yet: is
+    # this a paper at all? A deck read by an obliging model becomes a strategy
+    # that was never in the document. Stripping the reader's self-description
+    # briefly took this with it.
     if not shape.looks_like_a_paper:
+        print()
+        print(shape.render())
         print()
         print("    " + "!" * 76)
         print("    STOPPING HERE. Confirm this is the document you meant.")
         print("    " + "!" * 76)
 
-    props = propose_replication_targets(tables)
-    conflicts = detect_target_conflicts(props)
-    print()
-    print(f"    text-geometry tables recovered : {len(tables)}")
-    print(f"    candidate replication targets  : {len(props)}")
-    print(f"    CONFLICTING targets            : {len(conflicts)}")
-    for c in conflicts[:6]:
-        vals = ", ".join(f"{v:.3g}" for v in c["values"])
-        print(f"      ! {c['portfolio']:<20} {c['metric']:<8} = [{vals}]  pages {c['pages']}")
-    if conflicts:
-        print("      -> The same metric is reported on several accounting bases.")
-        print("         Harvesting all of them yields a replication test that can")
-        print("         never fail. A human pins ONE basis at Gate A.")
-    print()
-    print("    This is the FLOOR, not the reading. The reader finds zero tables in")
-    print("    many LaTeX papers and mangles every equation. Stage 01 proper is a")
-    print("    model reading the rendered pages, which is the next step below.")
-
     # ---- STEP 01b : has the model read it yet? -------------------------
-    head("STEP 01b  |  INTERPRETATION")
     have_analysis = os.path.exists(paths["analysis"])
-    print(f"    analysis : {paths['analysis']}"
-          f"   {'FOUND' if have_analysis else 'not yet written'}")
-    print(f"    card     : {card_path}"
-          f"   {'FOUND' if os.path.exists(card_path) else 'not yet written'}")
-
     if not os.path.exists(card_path):
         print()
         print("    NOTHING HAS BEEN INTERPRETED FOR THIS PAPER YET.")
@@ -191,9 +171,9 @@ def main() -> int:
     kw = dict(translation_check=tc, feasibility=feas, india=india,
               completeness=comp)
     head("GATE A  |  HUMAN INTERPRETATION CONTROL")
-    para(gate_a_summary(card, ga, **kw), indent="")
+    para(gate_a_summary(card, ga, extra=extra, **kw), indent="")
     print()
-    para(gate_a_document(card, ga, **kw), indent="")
+    para(gate_a_document(card, ga, extra=extra, **kw), indent="")
 
     # ---- what would you have to supply? --------------------------------
     shortfall = list(tc.missing) if tc else []
@@ -206,34 +186,19 @@ def main() -> int:
     head("WHAT IT TAKES TO RUN THIS IN INDIA  (full derivation)")
     para(india.render(), indent="")
 
+    # The data position is on the card display above, under DATA. What belongs
+    # here is only what to do next.
     head("WHAT THIS PAPER WOULD NEED FROM YOU")
-    rec = reconcile_data_plan(card, feas)
-    if not shortfall:
-        # "Nothing" was answering the wrong question. Every series NAMED on the
-        # card resolving is not the same as holding the dataset the card
-        # designed -- a proxy and a degraded series both resolve.
-        print("    Every series NAMED on this card resolves, so a run can proceed.")
-        if rec["not_in_hand"]:
-            print()
-            print(f"    BUT {len(rec['not_in_hand'])} of {len(rec['need'])} fields "
-                  f"the card itself marks MINIMUM-VIABLE are not in hand")
-            print("    (named in full in Gate A section 3, not repeated here).")
-            print()
-            print("    The card asks for each of them, so by its own account this")
-            print("    run substitutes for its own minimum viable dataset. That is")
-            print("    a legitimate run and it is not the test the card specified.")
-        elif rec["checked"]:
-            print(f"    The card's {len(rec['need'])} minimum-viable field(s) are "
-                  f"satisfied by what")
-            print("    the fund holds, so this is the test the card specified.")
+    if shortfall:
+        para(describe_shortfall(shortfall), indent="")
+    else:
+        # The data position itself is on the card display above, under DATA --
+        # including which minimum-viable fields are standing on proxies. What
+        # belongs here is only what to do next.
+        print("    Every series named on this card resolves. See DATA above for")
+        print("    which of them are the real thing and which are standing in.")
         print()
         print(f"        python run_pipeline.py --card {card_path}")
-    else:
-        print(f"    {len(shortfall)} series are missing. That is the deliverable of")
-        print("    this script, not a failure: it says precisely what to buy or")
-        print("    supply so this specific paper becomes testable.")
-        print()
-        para(describe_shortfall(shortfall), indent="")
 
     head("NOTHING ABOVE HAS BEEN DECIDED")
     print("    Gate A produces a checklist. The decision belongs to a named human,")

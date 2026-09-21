@@ -96,62 +96,50 @@ gate is doing the design. Three card sections stop that, all written by the mode
   bar cannot move after, and both `success_looks_like` and `failure_looks_like`.
   A plan that cannot fail is not a test.
 
-**Gate A opens with ONE PAGE, then the card rendered once beneath it.**
+**GATE A IS THE STRATEGY CARD, DISPLAYED.** Not a tour of the pipeline.
 
-`gate_a_summary()` is what a reviewer actually reads: one row per thing they
-personally rule on — the convertibility weakest link, the universe choice, every
-material ambiguity, every open question, every data request, the cost and lag,
-the bar — each with **who owns it** (pm / researcher / data_owner) and a **`S<n>`
-pointer** into the full document below. Nothing is summarised away; the pointer
-leads to the argued text.
+The card is the best artifact this repo produces, and every attempt to show it
+drifted into narrating the machinery instead — which stage produced what, what
+the deterministic reader saw, where the audit trail lived. That happened because
+every card field was bespoke prose behind a bespoke name (`rationale`,
+`why_not_alternatives`, `optimality_argument`, `weakest_link`, `without_it`), so
+any renderer had to know all of them, and each change meant renderer surgery.
 
-The split is the usual one. **The model writes the line**, because compressing
-an argument is a judgement and code can only truncate — a `headline` (under 100
-chars) on every ambiguity, open question, data request and on `convertibility`.
-A card without them still renders, with visibly truncated clauses ending in
-`...`, and the completeness report asks for them. **The code writes the
-order**, mechanically: blocking first, then a low-confidence material call, an
-UNVERIFIED list, a design running on proxies — the things this repo has learned
-are most often wrong. A model ranking its own work would lead with the item it
-was most pleased with.
+**The fix is in the shape of the data, not the renderer.** `card.facts()`
+projects the whole card to a flat list of `Fact`:
 
-On the worked example: 18 items, one screen, above a 749-line document.
+```python
+Fact(group, label, value, detail="", owner="", flag="", page=None, ref="")
+```
 
-**BENEATH IT, GATE A IS THE CARD, rendered once, in the order a human decides in.**
+`group` is one of `GROUPS` — PAPER, UNIVERSE, SIGNAL, PORTFOLIO, COSTS, DATA,
+SECURITIES, THE RUN, THE BAR, RISKS, VERDICT, DECIDE, ASKS. Named after the
+**strategy**, never after a stage. `value` is the line, `detail` the argument
+behind it, `ref` the card field it came from. `flag` is the only editorial
+judgement in the structure: `BLOCK` stops the run, `DECIDE` is a human's call,
+`GUESS` is asserted without a source.
 
-The card is the best artifact this pipeline produces. What Gate A kept doing was
-RETELLING it: a brief that quoted some sections, then `plan()` and `asks()`
-printing those same sections again below, then the criteria list carrying the
-same text a third time as "evidence". Measured on the worked example across 888
-lines, the universe rationale appeared twice, the convertibility weakest link
-three times, and a minimum-viable data field five times. A reader who has
-already read a paragraph does not read it again — they skim, and skimming is how
-a gate becomes a rubber stamp.
+Every surface is now a projection over that list and knows **no field names**:
 
-`gate_a_document()` renders each part of the card **exactly once**, placed where
-the decision about it is made, interleaving only what the card cannot know:
+- `gate_a_document()` — groups the facts and prints them. Adding a card section
+  means yielding more facts, never editing a report.
+- `gate_a_summary()` — the same facts filtered to the flagged ones, blockers
+  first. It cannot say anything the card does not.
+- `code_facts()` — what the card cannot know (the universe fit, what the fund
+  holds, proxied and backfilled series, India's non-negotiables) in the *same
+  shape*, so it lands under UNIVERSE and DATA beside the card's own lines rather
+  than in a section announcing its own provenance.
+- `extraction_facts()` — the two findings from reading the PDF that a reviewer
+  needs (this is not a paper; these metrics are reported on conflicting
+  accounting bases). The reader's self-description — page counts, math density,
+  every candidate field it matched — is plumbing and is no longer printed.
 
-| | | |
-|---|---|---|
-| | **STOP** | every blocking failure, in full, first |
-| | **At a glance** | the nine fields |
-| 1 | **Where this runs** | the translation, plus the code's fit score, held and missing instruments by name, `OUT OF MANDATE`, the ranked runners-up, the paper-specific transfer risks and the catalogued caveats |
-| 2 | **What the strategy is** | the reconstruction in full — signal, formation, weighting, constraints, the long-only adaptation, the engine template or the gap |
-| 3 | **The dataset it deserves, and what we hold** | `data_plan` in full, then the reconciliation and the feasibility position |
-| 4 | **Which securities** | the rule, and any named list with what verified it |
-| 5 | **What will be run** | window, warmup, weights, benchmarks with reasons, must-beat, success and failure |
-| 6 | **Can this become something we could hold?** | the convertibility chain and its weakest link |
-| 7 | **The judgement calls** | ambiguities and open questions, each tagged with its owner |
-| 8 | **What the model is asking for** | the data requests with what declining each costs |
-| 9 | **The checklist** | completeness gaps, then the criteria — terse |
+India's non-negotiables are deliberately **unflagged**: `lag >= 1` and the 30bp
+floor are enforced whatever anyone thinks, so putting them on a decision sheet
+pads it with things nobody rules on.
 
-A **passing** criterion prints one line: its evidence is the card text rendered
-in full above it. A **failing** one keeps its evidence, because that is the one
-place the reason is not written anywhere else. Below the document, the full
-India derivation, which also carries the advisory requirements.
-
-Nothing is summarised and nothing is dropped. The only thing made shorter is the
-chrome.
+`decision: PENDING` is printed verbatim. It is the repo's central invariant made
+visible, and rewording it removes the only printed evidence that no code ruled.
 
 **Completeness** is ~69 checks on a full adaptation card (the count depends on
 which sections the card has). Each names the failure it prevents.
