@@ -111,11 +111,23 @@ are being asked to sign**:
    `OUT OF MANDATE` flag where it applies, and the code's ranking of the
    runners-up. The model chose; the code only scores.
 3. **What it takes to run this, and what you already have** — the dataset the
-   paper deserves (minimum-viable separated from nice-to-have), the fund's
-   current position from the feasibility pass with every proxy and degraded
-   series named, and the non-negotiable India requirements. Plus the strategy
-   inputs the keyword matcher did not recognise, because a shallow match that
-   stays quiet is how a requirement goes missing.
+   paper deserves (minimum-viable separated from nice-to-have), **whether the
+   run actually uses it**, the fund's current position from the feasibility pass
+   with every proxy and degraded series named, and the non-negotiable India
+   requirements. Plus the strategy inputs the keyword matcher did not recognise,
+   because a shallow match that stays quiet is how a requirement goes missing.
+
+   **There are TWO shortfalls and only one used to be reported.** Feasibility
+   resolves `data_requirements` — a list of registry NAMES — and says GO when
+   proxies and degraded series stand in. `data_plan.ideal` is the dataset the
+   card designed, and its `minimum_viable` fields are the ones without which the
+   answer is not interpretable. Nothing compared them, so a card could mark
+   "total-return series" and "a real Indian short rate" minimum-viable, hold
+   neither, and read *"Nothing. Every series this card needs is already held."*
+   Every series it NAMED. `reconcile_data_plan()` now answers the second
+   question, via `satisfies` on a `DataRequest` — a **declared** link, never a
+   fuzzy match, because a fuzzy match marks the gap closed. A run on proxies is
+   legitimate; it is not the test the card specified, and the brief says so.
 4. **The judgement calls** — each choice a model made that a human can overturn,
    one per block, tagged with who owns it: the universe over its runners-up, the
    long-only adaptation, the convertibility verdict's weakest link, costs and

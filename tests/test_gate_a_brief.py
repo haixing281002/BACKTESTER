@@ -360,3 +360,72 @@ def test_the_brief_degrades_cleanly_without_the_extra_arguments(card):
     assert "THE DATASET THIS PAPER DESERVES" in out     # on the card
     assert "WHERE YOU STAND:" not in out                # needs the registry
     assert "WHAT INDIA DEMANDS" not in out              # needs the derivation
+
+
+# ---------------------------------------------------------------------------
+# Two shortfalls, not one
+#
+# Feasibility answers "does every NAMED series resolve", and says GO when
+# proxies and degraded series stand in. `data_plan.ideal` is the dataset the
+# paper deserves. Nothing compared them, so a card could design a dataset, hold
+# none of it, and the report would print "Nothing. Every series this card needs
+# is already held." Every series it NAMED. Not the dataset it designed.
+# ---------------------------------------------------------------------------
+from ros.cards.schema import reconcile_data_plan
+
+
+def test_a_minimum_viable_field_the_card_asks_for_is_not_in_hand(card):
+    registry = build_firm_registry()
+    rec = reconcile_data_plan(card, feasibility_assess(card, registry))
+    assert rec["need"], "the exemplar marks minimum-viable fields"
+    assert rec["not_in_hand"] == rec["need"], (
+        "the exemplar holds price-return series and a constant cash proxy; "
+        "both of its minimum-viable fields are substituted for")
+
+
+def test_the_link_is_declared_not_guessed(card):
+    """A fuzzy match would mark the gap closed, which is the failure to catch."""
+    card.data_requests[0].satisfies = []
+    rec = reconcile_data_plan(card, None)
+    assert "Indian overnight or 91-day T-bill rate, daily" not in rec["not_in_hand"]
+
+
+def test_the_brief_says_which_dataset_is_actually_being_run(card, full):
+    assert "ARE WE RUNNING ON THAT DATASET" in full
+    assert "MINIMUM-VIABLE" in full
+    assert "not the test this card specified" in full.lower() or \
+           "NOT in hand" in full
+
+
+def test_gate_a_carries_a_row_for_it(card):
+    registry = build_firm_registry()
+    gr = gate_a(card, feasibility_assess(card, registry))
+    row = next(c for c in gr.criteria
+               if c.name == "the run uses the dataset the card designed")
+    assert not row.passed
+    assert not row.blocking, "running on a declared proxy is legitimate, not a fault"
+
+
+def test_a_card_whose_design_is_satisfied_passes(card):
+    for r in card.data_requests:
+        r.satisfies = []
+    rec = reconcile_data_plan(card, None)
+    assert not rec["not_in_hand"]
+    gr = gate_a(card, _Feas())
+    row = next(c for c in gr.criteria
+               if c.name == "the run uses the dataset the card designed")
+    assert row.passed
+
+
+def test_a_card_with_no_data_plan_is_not_judged_on_one():
+    from ros.cards.schema import (CostSpec, Intent, Paper, PortfolioSpec,
+                                  Signal, StrategyCard, Universe)
+    bare = StrategyCard(
+        paper=Paper(id="x", title="x"),
+        intent=Intent(mode="adaptation", transferred_mechanism="m"),
+        universe=Universe(assets=["A"]), signal=Signal(template="fixed_weight"),
+        portfolio=PortfolioSpec(), costs=CostSpec(spread_bps=30.0))
+    rec = reconcile_data_plan(bare, None)
+    assert not rec["checked"]
+    names = [c.name for c in gate_a(bare, _Feas()).criteria]
+    assert "the run uses the dataset the card designed" not in names

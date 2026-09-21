@@ -298,6 +298,11 @@ class DataRequest:
     priority: str = "high"              # blocking | high | nice_to_have
     format_hint: str = ""               # so a human knows what to send
     evidence_page: Optional[int] = None
+    # Which data_plan field(s) this request would supply, named exactly.
+    # Declared rather than guessed: the link is what lets the code say a
+    # minimum-viable field is NOT in hand, and a fuzzy match would quietly
+    # mark the gap closed -- the failure this exists to catch.
+    satisfies: List[str] = field(default_factory=list)
 
     def validate(self, ctx: str) -> List[str]:
         errs = []
@@ -458,6 +463,52 @@ class Convertibility:
 _NON_ANSWERS = {"", "-", "--", "n/a", "na", "none", "nothing", "tbd", "todo",
                 "unknown", "not applicable", "no fallback", "unclear", "?"}
 _FALLBACK_MIN_CHARS = 25
+
+
+def reconcile_data_plan(card, feasibility=None) -> Dict[str, Any]:
+    """Is the card RUNNING on the dataset it designed, or on what was lying around?
+
+    These are different questions and the report used to answer only the first.
+    Feasibility resolves the card's `data_requirements` -- a list of registry
+    NAMES -- and says GO when every name resolves, proxies and degraded series
+    included. `data_plan.ideal` is the dataset the paper deserves, and its
+    `minimum_viable` fields are the ones without which the answer is not
+    interpretable. Nothing compared the two.
+
+    So a card could mark "total-return daily series" and "a real Indian short
+    rate" as minimum-viable, hold neither -- price-return indices and a declared
+    constant stand in -- and Gate A would print "Nothing. Every series this card
+    needs is already held." Every series it NAMED, yes. Not the dataset it
+    designed, and that is the sentence a reviewer was reading.
+
+    A request naming a field in `satisfies` is the model saying, in its own
+    words, that the field is not in hand. That is the only non-guessing link
+    available, and it is declared rather than matched.
+    """
+    dp = getattr(card, "data_plan", None)
+    if dp is None or not dp.ideal:
+        return {"checked": False, "need": [], "not_in_hand": [], "proxied": [],
+                "degraded": []}
+
+    claimed = {c.strip().lower()
+               for r in (getattr(card, "data_requests", []) or [])
+               for c in r.satisfies if c.strip()}
+    need, not_in_hand = [], []
+    for d in dp.ideal:
+        if not d.minimum_viable:
+            continue
+        need.append(d.field)
+        if d.field.strip().lower() in claimed:
+            not_in_hand.append(d.field)
+
+    proxied, degraded = [], []
+    for r in getattr(feasibility, "resolutions", []) or []:
+        if r.status == "PROXY":
+            proxied.append(f"{r.requirement} -> {r.resolved_to or '?'}")
+        elif r.status == "DEGRADED":
+            degraded.append(r.requirement)
+    return {"checked": True, "need": need, "not_in_hand": not_in_hand,
+            "proxied": proxied, "degraded": degraded}
 
 
 def audit_data_requests(card) -> Dict[str, Any]:
