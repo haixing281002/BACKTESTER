@@ -1011,7 +1011,7 @@ class StrategyCard:
         L += ["", "  " + "=" * W]
         return "\n".join(L)
 
-    def asks(self) -> str:
+    def asks(self, requests_only: bool = False) -> str:
         """What the model wants from a human, formatted for Gate A.
 
         Gate A is a conversation, not a form. This is the model's half of it:
@@ -1020,7 +1020,7 @@ class StrategyCard:
         position I have taken meanwhile.
         """
         W = 96
-        if not self.data_requests and not self.open_questions:
+        if not self.data_requests and (requests_only or not self.open_questions):
             claim = " ".join(self.no_further_data_needed.split())
             if not claim:
                 return ("  NOTHING IS BEING ASKED FOR, AND NOTHING SAYS WHY NOT.\n"
@@ -1053,7 +1053,7 @@ class StrategyCard:
                     for i, line in enumerate(_wrap(" ".join(str(val).split()), W - 18)):
                         L.append(f"      {label if i == 0 else '':<12} {line}")
 
-        if self.open_questions:
+        if self.open_questions and not requests_only:
             L.append("")
             L.append("  " + "-" * W)
             L.append("  QUESTIONS THE PAPER DOES NOT SETTLE")
@@ -1076,6 +1076,127 @@ class StrategyCard:
         L.append("  " + "=" * W)
         return "\n".join(L)
 
+    # plan() is kept as the composition of the three parts below. Gate A
+    # renders the parts separately so each lands where a reviewer decides on
+    # it -- the dataset next to what the fund actually holds, the run next to
+    # the bar it has to clear -- instead of arriving as one block that repeats
+    # what the brief already said.
+    def plan_data(self, W: int = 96, banner: bool = True) -> str:
+        """The dataset this paper deserves, in full."""
+        dp = self.data_plan
+        L = (["  " + "=" * W, "  THE DATASET THIS PAPER DESERVES", "  " + "=" * W]
+             if banner else [])
+        if dp is None:
+            L += ["", "  NO DATA PLAN ON THIS CARD.",
+                  "  Without one the card can only shop from what the fund holds,",
+                  "  and a paper quietly becomes whatever the existing data can answer."]
+            return "\n".join(L)
+        if dp.granularity_verdict:
+            L.append("")
+            for i, line in enumerate(_wrap(" ".join(dp.granularity_verdict.split()), W - 16)):
+                L.append(f"  {'granularity:' if i == 0 else '':<14} {line}")
+        for d in dp.ideal:
+            tag = "MINIMUM VIABLE" if d.minimum_viable else "improves the claim"
+            L += ["", f"  [{tag}] {d.field}",
+                  f"      {d.granularity}, from {d.history_from or '?'}"]
+            for label, val in (("why", d.why), ("granularity", d.why_granularity),
+                               ("history", d.why_history),
+                               ("adjustments", d.adjustments)):
+                if str(val or "").strip():
+                    for i, line in enumerate(_wrap(" ".join(str(val).split()), W - 20)):
+                        L.append(f"      {label if i == 0 else '':<14} {line}")
+        if dp.rejected_alternatives:
+            L += ["", "  " + "-" * W, "  CONSIDERED AND REJECTED", "  " + "-" * W]
+            for r in dp.rejected_alternatives:
+                L.append("")
+                L.append(f"  x {r.get('option', '?')}")
+                for i, line in enumerate(_wrap(
+                        " ".join(str(r.get("why_not", "")).split()), W - 12)):
+                    L.append(f"      {line}")
+        for label, val in (("WHY THIS IS THE RIGHT DATASET", dp.optimality_argument),
+                           ("WHAT WOULD CHANGE THE ANSWER",
+                            dp.what_would_change_the_answer)):
+            if str(val or "").strip():
+                L += ["", f"  {label}"]
+                for line in _wrap(" ".join(str(val).split()), W - 6):
+                    L.append(f"      {line}")
+        return "\n".join(L)
+
+    def plan_selection(self, W: int = 96, banner: bool = True) -> str:
+        """Which securities, and on whose word."""
+        sel = self.selection
+        L = (["  " + "=" * W, "  WHICH SECURITIES", "  " + "=" * W]
+             if banner else [])
+        if sel is None:
+            L.append("  NO SELECTION RULE. A selection nobody can re-derive on "
+                     "another date is not a strategy.")
+            return "\n".join(L)
+        for i, line in enumerate(_wrap(" ".join(sel.rule.split()), W - 12)):
+            L.append(f"  {'rule:' if i == 0 else '':<8} {line}")
+        if sel.explicit_securities:
+            flag = ("" if sel.verified_against not in ("", "UNVERIFIED")
+                    else "   <-- NOT VERIFIED; treat as a guess")
+            L.append(f"  named:   {len(sel.explicit_securities)} securities, "
+                     f"verified against {sel.verified_against or 'NOTHING'}"
+                     f" as of {sel.as_of or 'no date'}{flag}")
+            for nm in sel.explicit_securities:
+                L.append(f"             {nm}")
+        if sel.why_these:
+            for i, line in enumerate(_wrap(" ".join(sel.why_these.split()), W - 12)):
+                L.append(f"  {'why:' if i == 0 else '':<8} {line}")
+        return "\n".join(L)
+
+    def plan_run(self, W: int = 96, banner: bool = True) -> str:
+        """Exactly what will be run, and the bar it has to clear."""
+        bp = self.backtest_plan
+        L = (["  " + "=" * W, "  WHAT WILL BE RUN", "  " + "=" * W]
+             if banner else [])
+        if bp is None:
+            L.append("  NO BACKTEST PLAN. Gate A would be designing the run "
+                     "rather than verifying it.")
+            return "\n".join(L)
+        L.append(f"    sample     : {bp.sample_start} -> {bp.sample_end}"
+                 + (f"   warmup {bp.warmup_days}d"
+                    if bp.warmup_days is not None else "   warmup NOT STATED"))
+        for label, val in (("why window", bp.why_this_window),
+                           ("why warmup", bp.why_warmup),
+                           ("rebalance", bp.rebalance_rule),
+                           ("weights", bp.weights_rule)):
+            if str(val or "").strip():
+                for i, line in enumerate(_wrap(" ".join(str(val).split()), W - 20)):
+                    L.append(f"    {label if i == 0 else '':<12} {line}")
+        if bp.explicit_weights:
+            tot = sum(bp.explicit_weights.values())
+            L.append(f"    strategic  : " + ", ".join(
+                f"{k} {v:.0%}" for k, v in bp.explicit_weights.items())
+                + f"   (sum {tot:.0%})")
+        if bp.benchmarks:
+            L.append("")
+            L.append("    BENCHMARKS -- what this is measured against, and why")
+            for b in bp.benchmarks:
+                L.append(f"      {b.get('name', '?')}")
+                for line in _wrap(" ".join(str(b.get("why_this", "")).split()), W - 14):
+                    L.append(f"          {line}")
+        if bp.must_beat:
+            L.append("")
+            L.append("    MUST BEAT (named before the run, so the bar cannot move after)")
+            for m in bp.must_beat:
+                L.append(f"      - {m}")
+        for label, val in (("SUCCESS", bp.success_looks_like),
+                           ("FAILURE", bp.failure_looks_like)):
+            if str(val or "").strip():
+                L.append("")
+                L.append(f"    {label} LOOKS LIKE")
+                for line in _wrap(" ".join(str(val).split()), W - 8):
+                    L.append(f"      {line}")
+        if bp.known_failure_modes:
+            L.append("")
+            L.append("    KNOWN WAYS THIS BREAKS IN INDIA")
+            for f_ in bp.known_failure_modes:
+                for i, line in enumerate(_wrap(" ".join(str(f_).split()), W - 10)):
+                    L.append(f"      {'-' if i == 0 else ' '} {line}")
+        return "\n".join(L)
+
     def plan(self) -> str:
         """The dataset, the securities and the run -- what Gate A verifies.
 
@@ -1084,110 +1205,8 @@ class StrategyCard:
         Stage 02 did not finish and Gate A is doing the design.
         """
         W = 96
-        dp, sel, bp = self.data_plan, self.selection, self.backtest_plan
-        L = ["  " + "=" * W, "  THE DATASET THIS PAPER DESERVES", "  " + "=" * W]
-
-        if dp is None:
-            L += ["", "  NO DATA PLAN ON THIS CARD.",
-                  "  Without one the card can only shop from what the fund holds,",
-                  "  and a paper quietly becomes whatever the existing data can answer."]
-        else:
-            if dp.granularity_verdict:
-                L.append("")
-                for i, line in enumerate(_wrap(" ".join(dp.granularity_verdict.split()), W - 16)):
-                    L.append(f"  {'granularity:' if i == 0 else '':<14} {line}")
-            for d in dp.ideal:
-                tag = "MINIMUM VIABLE" if d.minimum_viable else "improves the claim"
-                L += ["", f"  [{tag}] {d.field}",
-                      f"      {d.granularity}, from {d.history_from or '?'}"]
-                for label, val in (("why", d.why), ("granularity", d.why_granularity),
-                                   ("history", d.why_history),
-                                   ("adjustments", d.adjustments)):
-                    if str(val or "").strip():
-                        for i, line in enumerate(_wrap(" ".join(str(val).split()), W - 20)):
-                            L.append(f"      {label if i == 0 else '':<14} {line}")
-            if dp.rejected_alternatives:
-                L += ["", "  " + "-" * W, "  CONSIDERED AND REJECTED", "  " + "-" * W]
-                for r in dp.rejected_alternatives:
-                    L.append("")
-                    L.append(f"  x {r.get('option', '?')}")
-                    for i, line in enumerate(_wrap(
-                            " ".join(str(r.get("why_not", "")).split()), W - 12)):
-                        L.append(f"      {line}")
-            for label, val in (("WHY THIS IS THE RIGHT DATASET", dp.optimality_argument),
-                               ("WHAT WOULD CHANGE THE ANSWER",
-                                dp.what_would_change_the_answer)):
-                if str(val or "").strip():
-                    L += ["", f"  {label}"]
-                    for line in _wrap(" ".join(str(val).split()), W - 6):
-                        L.append(f"      {line}")
-
-        L += ["", "  " + "=" * W, "  WHICH SECURITIES", "  " + "=" * W]
-        if sel is None:
-            L.append("  NO SELECTION RULE. A selection nobody can re-derive on "
-                     "another date is not a strategy.")
-        else:
-            for i, line in enumerate(_wrap(" ".join(sel.rule.split()), W - 12)):
-                L.append(f"  {'rule:' if i == 0 else '':<8} {line}")
-            if sel.explicit_securities:
-                flag = ("" if sel.verified_against not in ("", "UNVERIFIED")
-                        else "   <-- NOT VERIFIED; treat as a guess")
-                L.append(f"  named:   {len(sel.explicit_securities)} securities, "
-                         f"verified against {sel.verified_against or 'NOTHING'}"
-                         f" as of {sel.as_of or 'no date'}{flag}")
-                for nm in sel.explicit_securities:
-                    L.append(f"             {nm}")
-            if sel.why_these:
-                for i, line in enumerate(_wrap(" ".join(sel.why_these.split()), W - 12)):
-                    L.append(f"  {'why:' if i == 0 else '':<8} {line}")
-
-        L += ["", "  " + "=" * W, "  WHAT WILL BE RUN", "  " + "=" * W]
-        if bp is None:
-            L.append("  NO BACKTEST PLAN. Gate A would be designing the run "
-                     "rather than verifying it.")
-        else:
-            L.append(f"    sample     : {bp.sample_start} -> {bp.sample_end}"
-                     + (f"   warmup {bp.warmup_days}d"
-                        if bp.warmup_days is not None else "   warmup NOT STATED"))
-            for label, val in (("why window", bp.why_this_window),
-                               ("why warmup", bp.why_warmup),
-                               ("rebalance", bp.rebalance_rule),
-                               ("weights", bp.weights_rule)):
-                if str(val or "").strip():
-                    for i, line in enumerate(_wrap(" ".join(str(val).split()), W - 20)):
-                        L.append(f"    {label if i == 0 else '':<12} {line}")
-            if bp.explicit_weights:
-                tot = sum(bp.explicit_weights.values())
-                L.append(f"    strategic  : " + ", ".join(
-                    f"{k} {v:.0%}" for k, v in bp.explicit_weights.items())
-                    + f"   (sum {tot:.0%})")
-            if bp.benchmarks:
-                L.append("")
-                L.append("    BENCHMARKS -- what this is measured against, and why")
-                for b in bp.benchmarks:
-                    L.append(f"      {b.get('name', '?')}")
-                    for line in _wrap(" ".join(str(b.get("why_this", "")).split()), W - 14):
-                        L.append(f"          {line}")
-            if bp.must_beat:
-                L.append("")
-                L.append("    MUST BEAT (named before the run, so the bar cannot move after)")
-                for m in bp.must_beat:
-                    L.append(f"      - {m}")
-            for label, val in (("SUCCESS", bp.success_looks_like),
-                               ("FAILURE", bp.failure_looks_like)):
-                if str(val or "").strip():
-                    L.append("")
-                    L.append(f"    {label} LOOKS LIKE")
-                    for line in _wrap(" ".join(str(val).split()), W - 8):
-                        L.append(f"      {line}")
-            if bp.known_failure_modes:
-                L.append("")
-                L.append("    KNOWN WAYS THIS BREAKS IN INDIA")
-                for f_ in bp.known_failure_modes:
-                    for i, line in enumerate(_wrap(" ".join(str(f_).split()), W - 10)):
-                        L.append(f"      {'-' if i == 0 else ' '} {line}")
-        L += ["", "  " + "=" * W]
-        return "\n".join(L)
+        return "\n".join([self.plan_data(W), "", self.plan_selection(W), "",
+                           self.plan_run(W), "", "  " + "=" * W])
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)

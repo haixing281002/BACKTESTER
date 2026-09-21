@@ -44,7 +44,7 @@ from ros.data.snapshot import SnapshotBuilder
 from ros.engine.backtest import LookaheadError, assert_causal
 from ros.feasibility import UNAVAILABLE, assess
 from ros.governance.gates import (
-    Criterion, evaluate_ladder, gate_a, gate_a_brief, gate_b,
+    Criterion, evaluate_ladder, gate_a, gate_a_document, gate_b,
     render_ladder)
 from ros.governance.library import LibraryEntry, StrategyLibrary, make_entry_id
 from ros.india_requirements import derive as derive_india_requirements
@@ -223,32 +223,19 @@ def main(argv=None) -> int:
         R.p("  terms a second person could implement from. Gate A will flag it.")
 
     # ---------------- GATE A ---------------------------------------------
-    R.p("")
-    R.block(card.at_a_glance())
-    R.p("")
-    R.block(card_completeness(card).render(only_missing=True))
-
+    # ONE document: the card, once, in the order a human decides in. The
+    # at-a-glance, completeness, plan, asks and convertibility blocks are all
+    # inside it -- they used to print separately as well, so the same card text
+    # reached the reader two to five times.
     feas = assess(card, registry)
     ga = gate_a(card, feas, doc.quality if doc else None, translation_check=tc)
     india = derive_india_requirements(card, tc)
     R.h("GATE A  |  HUMAN INTERPRETATION CONTROL")
-    R.block(gate_a_brief(card, ga, translation_check=tc, feasibility=feas,
-                         india=india))
-    R.p("")
-    R.block(card.convertibility_block())
-    R.p("")
-    R.block("  " + "-" * 96)
-    R.block("  THE FULL CHECKLIST -- the audit trail behind the brief above")
-    R.block("  " + "-" * 96)
-    R.block(ga.render())
+    R.block(gate_a_document(card, ga, translation_check=tc, feasibility=feas,
+                            india=india,
+                            completeness=card_completeness(card)))
 
-    R.h("STAGE 02  |  THE PLAN GATE A VERIFIES")
-    R.block(card.plan())
-
-    R.h("WHAT THE MODEL IS ASKING YOU FOR")
-    R.block(card.asks())
-
-    R.h("WHAT IT TAKES TO RUN THIS IN INDIA")
+    R.h("WHAT IT TAKES TO RUN THIS IN INDIA  (full derivation)")
     R.block(india.render())
 
     shortfall = list(tc.missing) if tc else []

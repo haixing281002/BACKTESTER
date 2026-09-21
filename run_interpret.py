@@ -47,7 +47,7 @@ from ros.data.intake import MANIFEST, describe_shortfall, extend_registry
 from ros.data.universes import INDIAN_UNIVERSES, check_translation
 from ros.feasibility import UNAVAILABLE, assess
 from ros.cards.completeness import assess as card_completeness
-from ros.governance.gates import gate_a, gate_a_brief
+from ros.governance.gates import gate_a, gate_a_document
 from ros.india_requirements import derive
 from ros.papers import artifact_paths, require_paper
 
@@ -168,90 +168,38 @@ def main() -> int:
             cap = registry.get(name)
             print(f"    {name:<40} kind={cap.kind:<14} pit={cap.pit_status}")
 
-    head("STEP 02c  |  UNIVERSE  --  where should this be tested?")
+    # STEP 02c and STEP 02 used to print the universe and the strategy HERE,
+    # above the gate header -- so the two most consequential Stage 01 calls read
+    # as preamble to the thing being signed, and then appeared again inside the
+    # gate. Both are now sections 1 and 2 of the Gate A document, once.
     tc = None
     if card.universe_translation is not None:
         tc = check_translation(card.universe_translation, registry,
                                long_only=card.portfolio.long_only)
-        para(tc.render(), indent="")
-    else:
-        print("    NO UNIVERSE TRANSLATION ON THIS CARD.")
-        print(f"    {len(INDIAN_UNIVERSES)} Indian universes are catalogued and none")
-        print("    has been chosen. Add a `universe_translation:` section, or run")
-        print(f"    /ingest {paper.path} to have it read from the paper.")
-
-    head("STEP 02  |  STRATEGY  --  what exactly is it?")
-    st = card.strategy
-    if st is None:
-        print("    NO STRATEGY RECONSTRUCTION ON THIS CARD.")
-        print("    The card names a template but never states what the paper's")
-        print("    strategy IS in terms a second person could implement from.")
-    else:
-        print(f"    name        : {st.signal_name or '(unnamed)'}")
-        print(f"    definition  : {' '.join(st.signal_definition.split())}")
-        print(f"    type        : "
-              f"{'cross-sectional (ranks securities)' if st.cross_sectional else 'time-series (times one stream)'}")
-        for label, val in (("formation", st.formation_rule),
-                           ("weighting", st.weighting_rule)):
-            if val:
-                print(f"    {label:<12}: {' '.join(val.split())}")
-        print(f"    rebalance   : {st.rebalance_frequency or card.portfolio.rebalance}"
-              f"   holding: {st.holding_period or 'n/a'}")
-        print(f"    inputs      : {', '.join(st.inputs_required) or '(none listed)'}")
-        if st.is_long_short:
-            print("    LONG-SHORT SOURCE -- this fund cannot short.")
-            print(f"    adaptation  : {' '.join(st.long_only_adaptation.split()) or 'NOT STATED'}")
-            print("    A DIFFERENT strategy from the paper's. Never scored against it.")
-        for k in st.constraints:
-            print(f"    constraint  : {' '.join(k.split())}")
-        print(f"    engine      : {st.engine_template or '(unset)'}"
-              f"   confidence: {st.confidence}   pages: {st.evidence_pages or 'none cited'}")
-        if st.engine_template == "NEEDS_NEW_TEMPLATE":
-            print("    NO REGISTERED TEMPLATE FITS. A human implements this first:")
-            print(f"      {' '.join(st.template_gap.split())}")
 
     # ---- GATE A ---------------------------------------------------------
-    # The nine fields first. A reviewer who reads only this should be able to
-    # say "that is not the strategy I expected" -- cheap here, expensive later.
-    print()
-    print(card.at_a_glance())
-    print()
-    print(card_completeness(card).render(only_missing=True))
-
+    # ONE document: the card, rendered once, in the order a human decides in.
+    # It used to be a brief quoting some sections, then plan() and asks()
+    # printing those same sections again below, then a criteria list carrying
+    # the same text a third time as "evidence".
     feas = assess(card, registry)
     ga = gate_a(card, feas, doc.quality, translation_check=tc)
-
-    # The brief FIRST, the audit trail after. A reviewer gets five minutes; they
-    # should be spent on the judgement calls and what the asks cost, not on
-    # reading twenty-four green rows to discover that nothing tripped.
-    # Derived BEFORE the gate renders: the brief needs it. The full listing
-    # still prints below -- the brief carries the non-negotiables.
     india = derive(card, tc)
 
     head("GATE A  |  HUMAN INTERPRETATION CONTROL")
-    para(gate_a_brief(card, ga, translation_check=tc, feasibility=feas,
-                      india=india), indent="")
-    print()
-    print(card.convertibility_block())
-    print()
-    para("  " + "-" * 96, indent="")
-    para("  THE FULL CHECKLIST -- the audit trail behind the brief above",
+    para(gate_a_document(card, ga, translation_check=tc, feasibility=feas,
+                         india=india, completeness=card_completeness(card)),
          indent="")
-    para("  " + "-" * 96, indent="")
-    para(ga.render(), indent="")
 
     # ---- what would you have to supply? --------------------------------
     shortfall = list(tc.missing) if tc else []
     shortfall += [r.requirement for r in feas.resolutions
                   if r.status == UNAVAILABLE and r.requirement not in shortfall]
 
-    head("STAGE 02  |  THE PLAN GATE A VERIFIES")
-    para(card.plan(), indent="")
-
-    head("WHAT THE MODEL IS ASKING YOU FOR")
-    para(card.asks(), indent="")
-
-    head("WHAT IT TAKES TO RUN THIS IN INDIA")
+    # The dataset, securities, run, asks and the India non-negotiables are all
+    # inside the document above, each exactly once. This is the FULL India
+    # derivation, which also carries the advisory requirements.
+    head("WHAT IT TAKES TO RUN THIS IN INDIA  (full derivation)")
     para(india.render(), indent="")
 
     head("WHAT THIS PAPER WOULD NEED FROM YOU")
@@ -264,9 +212,8 @@ def main() -> int:
         if rec["not_in_hand"]:
             print()
             print(f"    BUT {len(rec['not_in_hand'])} of {len(rec['need'])} fields "
-                  f"the card itself marks MINIMUM-VIABLE are not in hand:")
-            for f in rec["not_in_hand"]:
-                print(f"        {f}")
+                  f"the card itself marks MINIMUM-VIABLE are not in hand")
+            print("    (named in full in Gate A section 3, not repeated here).")
             print()
             print("    The card asks for each of them, so by its own account this")
             print("    run substitutes for its own minimum viable dataset. That is")
