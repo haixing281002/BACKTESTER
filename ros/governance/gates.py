@@ -81,11 +81,26 @@ class GateResult:
     def warnings(self) -> List[Criterion]:
         return [c for c in self.criteria if not c.passed and not c.blocking]
 
-    def render(self) -> str:
+    def render(self, terse: bool = False) -> str:
+        """The audit trail: proof each thing was checked.
+
+        `terse` drops the evidence from PASSING rows. In the Gate A document
+        every passing criterion's evidence is the card text rendered in full
+        further up, so repeating it there was the single largest source of
+        duplication in the report -- the universe rationale appeared twice, the
+        minimum-viable field five times. A FAILING row always keeps its
+        evidence: that is the one place the reason is not written anywhere else.
+        """
         head = f"  {self.gate} (owner: {self.owner}) -> {'PASS' if self.passed else 'BLOCKED'}"
-        body = "\n".join(c.render() for c in self.criteria)
+        rows = []
+        for c in self.criteria:
+            if terse and c.passed:
+                val = "" if c.value is None else f"   [{c.value}]"
+                rows.append(f"    [PASS] {c.name}{val}")
+            else:
+                rows.append(c.render())
         tail = f"\n    decision: {self.decision}" + (f" -- {self.rationale}" if self.rationale else "")
-        return head + "\n" + body + tail
+        return head + "\n" + "\n".join(rows) + tail
 
     def to_dict(self) -> Dict[str, Any]:
         return {"gate": self.gate, "owner": self.owner, "decision": self.decision,
@@ -287,18 +302,10 @@ def _what_it_takes(card, feasibility, india) -> List[str]:
          "  WHAT IT TAKES TO RUN THIS, AND WHAT YOU ALREADY HAVE",
          "  " + "-" * W]
 
-    if dp is not None and dp.ideal:
-        need = [d for d in dp.ideal if d.minimum_viable]
-        extra = [d for d in dp.ideal if not d.minimum_viable]
-        L += ["", "    THE DATASET THIS PAPER DESERVES "
-                  f"({len(need)} of {len(dp.ideal)} are minimum-viable)"]
-        for d in need + extra:
-            tag = "MUST HAVE " if d.minimum_viable else "would help"
-            L.append(f"      [{tag}] {d.field}")
-            L.append(f"                   {d.granularity}, from "
-                     f"{d.history_from or '?'}"
-                     + (f", {' '.join(d.adjustments.split())}"
-                        if d.adjustments else ""))
+    # The dataset itself is NOT summarised here. card.plan_data() renders it in
+    # full immediately above this block in the Gate A document, and a summary
+    # that repeats it is how the same paragraph came to appear five times in one
+    # report. This block answers only what the card cannot: do we HAVE it.
 
     rec = reconcile_data_plan(card, feasibility)
     if rec["checked"]:
@@ -376,101 +383,181 @@ def _what_it_takes(card, feasibility, india) -> List[str]:
     return L
 
 
-def gate_a_brief(card, result, translation_check=None, feasibility=None,
-                 india=None) -> str:
-    """What a human is being asked to sign, before the audit trail.
+def gate_a_document(card, result, translation_check=None, feasibility=None,
+                    india=None, completeness=None) -> str:
+    """GATE A IS THE CARD, rendered once, in the order a human decides in.
 
-    Gate A had all of this and none of it was converted: the asks sat 250 lines
-    below the criteria, the evidence was truncated mid-word, and the judgement
-    calls were spread across four sections a reviewer had to assemble in their
-    head. The gate is five minutes of somebody's attention. This is what those
-    five minutes should be spent on.
+    The card already contains everything a reviewer needs -- it is the best
+    artifact this pipeline produces. What Gate A kept doing was RETELLING it:
+    a brief that quoted some sections, then plan() and asks() printing those
+    same sections again below, then a criteria list carrying the same text a
+    third time as "evidence". Measured on the worked example, the universe
+    rationale appeared twice, the convertibility weakest link three times and a
+    minimum-viable data field five times, across 888 lines.
 
-    `translation_check`, `feasibility` and `india` are optional only so that a
-    caller holding just a card can still get the judgement calls. Pass them --
-    without them the brief cannot say where the strategy runs, what data it
-    needs, or what India demands of it, which is three quarters of what a
-    reviewer is actually deciding.
+    So this renders each part of the card EXACTLY ONCE, placed where the
+    decision about it gets made -- the dataset next to what the fund actually
+    holds, the run next to the bar it must clear, the ambiguities next to the
+    questions they raise -- and interleaves only what the card cannot know:
+    the universe fit the code scored, the feasibility position, the India rules,
+    and the checklist.
+
+    Nothing is summarised and nothing is dropped. The only thing made shorter is
+    the chrome.
     """
     W = _W
     blocking = [c for c in result.criteria if not c.passed and c.blocking]
     warns = result.warnings
-    L = ["  " + "=" * W,
-         "  GATE A  --  WHAT YOU ARE BEING ASKED TO SIGN",
-         "  " + "=" * W,
-         f"  {card.paper.id}   ({card.intent.mode})",
-         f"  {len(result.criteria)} criteria checked   "
-         f"{len(blocking)} blocking   {len(warns)} worth a look"]
+    pa = card.paper
+
+    def rule(ch="-"):
+        return "  " + ch * W
+
+    def head(n, title):
+        return ["", rule("="), f"  {n}. {title}", rule("=")]
+
+    L = [rule("="),
+         "  GATE A  --  THE STRATEGY CARD, AS A HUMAN READS IT",
+         rule("="),
+         f"  {pa.id}   ({card.intent.mode})",
+         f"  {pa.title}" if pa.title else "",
+         f"  paper: {pa.source_file or 'NOT RECORDED'}",
+         f"  sha256: {pa.source_sha256 or 'NOT RECORDED'}",
+         f"  {len(result.criteria)} criteria checked   {len(blocking)} blocking   "
+         f"{len(warns)} worth a look"
+         + (f"   card completeness {completeness.score:.0%}"
+            if completeness is not None else "")]
+    L = [x for x in L if x != ""] if False else L
 
     if blocking:
-        L += ["", "  " + "-" * W,
+        L += ["", rule("!"),
               "  STOP. THESE BLOCK THE GATE -- nothing runs until they are fixed.",
-              "  " + "-" * W]
+              rule("!")]
         for i, c in enumerate(blocking, 1):
             L.append(f"  {i}. {c.name}"
                      + ("" if c.value is None else f"   [{c.value}]"))
             for line in _wrap(c.evidence, W - 8):
                 L.append(f"       {line}")
 
-    L += _where_this_runs(card, translation_check)
-    L += _what_it_takes(card, feasibility, india)
+    L += ["", rule("-"), "  AT A GLANCE", rule("-")]
+    L.append(card.at_a_glance())
 
-    calls = judgement_calls(card, translation_check)
-    L += ["", "  " + "-" * W,
-          "  THE JUDGEMENT CALLS. A model made each of these. You can overturn "
-          "any of them.",
-          "  " + "-" * W]
-    for cl in calls:
+    # 1 -- where, as instruments. Card's translation + the code's scoring.
+    L += head(1, "WHERE THIS RUNS")
+    L += _where_this_runs(card, translation_check)[1:]   # drop its own rule
+    ut = card.universe_translation
+    if ut is not None:
+        L += ["", "  WHY HERE AND NOT SOMEWHERE ELSE (the model's argument)"]
+        for line in _wrap(ut.rationale, W - 6):
+            L.append(f"      {line}")
+        if ut.why_not_alternatives:
+            L += ["", "  WHY NOT THE RUNNERS-UP"]
+            for line in _wrap(ut.why_not_alternatives, W - 6):
+                L.append(f"      {line}")
+        if ut.transfer_risks:
+            L += ["", "  WHAT BREAKS IN THIS TRANSLATION (particular to this paper)"]
+            for r in ut.transfer_risks:
+                for i, line in enumerate(_wrap(r, W - 10)):
+                    L.append(f"      {'-' if i == 0 else ' '} {line}")
+    if translation_check is not None and translation_check.caveats:
+        # The catalogued caveats for this correspondence: generic to Indian
+        # equities rather than to this paper, and attached by the registry
+        # rather than argued by the model. Kept here because removing the old
+        # STEP 02c preamble would otherwise have dropped them entirely.
+        L += ["", "  CATALOGUED CAVEATS FOR THIS CORRESPONDENCE (attach to every "
+                  "result computed here)"]
+        for cav in translation_check.caveats:
+            for i, line in enumerate(_wrap(cav, W - 10)):
+                L.append(f"      {'-' if i == 0 else ' '} {line}")
+
+    # 2 -- what it actually is.
+    L += head(2, "WHAT THE STRATEGY IS")
+    st = card.strategy
+    if st is None:
+        L.append("  NO RECONSTRUCTION. A template name is not a strategy.")
+    else:
+        L.append(f"  {st.signal_name or '(unnamed)'}   "
+                 f"[{'cross-sectional' if st.cross_sectional else 'time-series'}]"
+                 f"   engine: {st.engine_template or '(unset)'}"
+                 f"   confidence: {st.confidence}")
+        for label, val in (("signal", st.signal_definition),
+                           ("formation", st.formation_rule),
+                           ("weighting", st.weighting_rule),
+                           ("rebalance", st.rebalance_frequency),
+                           ("holding", st.holding_period),
+                           ("inputs", ", ".join(st.inputs_required))):
+            if str(val or "").strip():
+                for i, line in enumerate(_wrap(str(val), W - 16)):
+                    L.append(f"    {label if i == 0 else '':<11} {line}")
+        for k in st.constraints:
+            for i, line in enumerate(_wrap(k, W - 16)):
+                L.append(f"    {'constraint' if i == 0 else '':<11} {line}")
+        if st.is_long_short:
+            L += ["", "  THIS FUND CANNOT SHORT. What was dropped, and what it cost:"]
+            for line in _wrap(st.long_only_adaptation or "NOT STATED", W - 6):
+                L.append(f"      {line}")
+            L.append("      A DIFFERENT strategy from the paper's. Never scored "
+                     "against its numbers.")
+        if st.engine_template == "NEEDS_NEW_TEMPLATE":
+            L += ["", "  NO REGISTERED TEMPLATE FITS. A human implements this first:"]
+            for line in _wrap(st.template_gap, W - 6):
+                L.append(f"      {line}")
+        L.append(f"    pages      {st.evidence_pages or 'none cited'}")
+
+    # 3 -- the dataset, in full, then whether we have it.
+    L += head(3, "THE DATASET THIS PAPER DESERVES, AND WHAT WE HOLD")
+    L.append(card.plan_data(W, banner=False))
+    L += _what_it_takes(card, feasibility, india)[1:]
+
+    # 4 / 5 -- securities and the run.
+    L += head(4, "WHICH SECURITIES")
+    L.append(card.plan_selection(W, banner=False))
+    L += head(5, "WHAT WILL BE RUN, AND THE BAR IT MUST CLEAR")
+    L.append(card.plan_run(W, banner=False))
+
+    # 6 -- the model's opinion, clearly labelled.
+    L += head(6, "CAN THIS BECOME SOMETHING WE COULD HOLD?")
+    L.append(card.convertibility_block())
+
+    # 7 -- what a human personally owns.
+    L += head(7, "THE JUDGEMENT CALLS -- a model made each; you can overturn any")
+    for cl in judgement_calls(card, translation_check):
+        if cl["tag"] in ("UNIVERSE", "CONVERTIBLE?", "THE BAR", "LONG-ONLY"):
+            continue          # rendered in full in sections 1, 2, 5 and 6
         who = f"   <- {cl['who']}" if cl["who"] else ""
         tag = f"  [{cl['tag']}] "
-        head_lines = _wrap(cl["headline"] + who, W - len(tag)) or [""]
+        hl = _wrap(cl["headline"] + who, W - len(tag)) or [""]
         L.append("")
-        L.append(tag + head_lines[0])
-        for line in head_lines[1:]:
+        L.append(tag + hl[0])
+        for line in hl[1:]:
             L.append(" " * len(tag) + line)
         for line in _wrap(cl["detail"], W - 8):
             L.append(f"       {line}")
 
-    reqs = sorted(getattr(card, "data_requests", []) or [],
-                  key=lambda r: {"blocking": 0, "high": 1,
-                                 "nice_to_have": 2}.get(r.priority, 9))
-    L += ["", "  " + "-" * W,
-          "  WHAT SAYING NO COSTS. Every ask has a fallback; this is what each "
-          "fallback gives up.",
-          "  " + "-" * W]
-    if not reqs:
-        claim = " ".join(getattr(card, "no_further_data_needed", "").split())
-        if claim:
-            L.append("")
-            for line in _wrap("Nothing is being asked for, and here is why: "
-                              + claim, W - 6):
-                L.append(f"     {line}")
-        else:
-            L += ["", "     Nothing is asked for and nothing says why not. That "
-                      "is a strong claim",
-                  "     about a paper somebody just read, and nobody has argued "
-                  "it."]
-    for r in reqs:
-        tag = {"blocking": "BLOCKING", "high": "would help",
-               "nice_to_have": "optional"}.get(r.priority, r.priority)
-        L.append("")
-        L.append(f"  [{tag}] {r.item}")
-        for label, val in (("if declined", r.without_it), ("unlocks", r.unlocks)):
-            for i, line in enumerate(_wrap(val, W - 20)):
-                L.append(f"       {label if i == 0 else '':<13} {line}")
+    # 8 -- the asks.
+    # requests only -- the open questions are judgement calls and were rendered
+    # in section 7. Printing them in both places is what made the volatility-cap
+    # question appear twice in one document.
+    L += head(8, "WHAT THE MODEL IS ASKING YOU FOR, AND WHAT SAYING NO COSTS")
+    L.append(card.asks(requests_only=True))
 
+    # 9 -- the checklist, terse.
+    L += head(9, "THE CHECKLIST")
+    if completeness is not None:
+        L.append(completeness.render(only_missing=True))
+        L.append("")
+    L.append(result.render(terse=True))
     if warns:
-        L += ["", "  " + "-" * W, "  WORTH A SECOND LOOK (does not block)",
-              "  " + "-" * W]
+        L += ["", "  WORTH A SECOND LOOK (does not block)"]
         for c in warns:
             L.append(f"    - {c.name}"
                      + ("" if c.value is None else f"   [{c.value}]"))
 
-    L += ["", "  " + "-" * W,
-          "  NOTHING ABOVE IS DECIDED. Gate A produces this checklist; the "
+    L += ["", rule("="),
+          "  NOTHING ABOVE IS DECIDED. Gate A produces this document; the "
           "decision is a",
           "  named human's, and no code in this repo assigns one.",
-          "  " + "=" * W]
+          rule("=")]
     return "\n".join(L)
 
 
@@ -656,9 +743,9 @@ def gate_a(card, feasibility, extraction_quality=None,
                    f"minimum-viable not in hand" if rec["not_in_hand"]
                    else f"all {len(rec['need'])} minimum-viable satisfied"),
             blocking=False,
-            evidence=("; ".join(rec["not_in_hand"]) + " -- the card asks for "
-                      "these itself, so it is running on a substitute for its "
-                      "own minimum viable dataset"
+            evidence=("named in full in the dataset section -- the card asks "
+                      "for them itself, so it is running on a substitute for "
+                      "its own minimum viable dataset"
                       if rec["not_in_hand"] else
                       "no open request names a minimum-viable field")))
 

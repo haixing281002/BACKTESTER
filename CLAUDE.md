@@ -96,51 +96,41 @@ gate is doing the design. Three card sections stop that, all written by the mode
   bar cannot move after, and both `success_looks_like` and `failure_looks_like`.
   A plan that cannot fail is not a test.
 
-**Gate A opens with the brief, then the audit trail.**
+**GATE A IS THE CARD, rendered once, in the order a human decides in.**
 
-The card was never the problem; converting it was. Gate A used to open with
-twenty-four criteria whose evidence was truncated mid-word, with the model's
-asks 250 lines below. A reviewer spent their five minutes discovering that
-nothing had tripped. So the gate now leads with **`gate_a_brief()` — what you
-are being asked to sign**:
+The card is the best artifact this pipeline produces. What Gate A kept doing was
+RETELLING it: a brief that quoted some sections, then `plan()` and `asks()`
+printing those same sections again below, then the criteria list carrying the
+same text a third time as "evidence". Measured on the worked example across 888
+lines, the universe rationale appeared twice, the convertibility weakest link
+three times, and a minimum-viable data field five times. A reader who has
+already read a paragraph does not read it again — they skim, and skimming is how
+a gate becomes a rubber stamp.
 
-1. **STOP** — every blocking failure, in full, first.
-2. **Where this runs** — the Indian universe as *instruments*, not as an
-   argument: what the mechanism needs (names, cap segment, history), the
-   resolution, every instrument HELD and every one MISSING by name, an
-   `OUT OF MANDATE` flag where it applies, and the code's ranking of the
-   runners-up. The model chose; the code only scores.
-3. **What it takes to run this, and what you already have** — the dataset the
-   paper deserves (minimum-viable separated from nice-to-have), **whether the
-   run actually uses it**, the fund's current position from the feasibility pass
-   with every proxy and degraded series named, and the non-negotiable India
-   requirements. Plus the strategy inputs the keyword matcher did not recognise,
-   because a shallow match that stays quiet is how a requirement goes missing.
+`gate_a_document()` renders each part of the card **exactly once**, placed where
+the decision about it is made, interleaving only what the card cannot know:
 
-   **There are TWO shortfalls and only one used to be reported.** Feasibility
-   resolves `data_requirements` — a list of registry NAMES — and says GO when
-   proxies and degraded series stand in. `data_plan.ideal` is the dataset the
-   card designed, and its `minimum_viable` fields are the ones without which the
-   answer is not interpretable. Nothing compared them, so a card could mark
-   "total-return series" and "a real Indian short rate" minimum-viable, hold
-   neither, and read *"Nothing. Every series this card needs is already held."*
-   Every series it NAMED. `reconcile_data_plan()` now answers the second
-   question, via `satisfies` on a `DataRequest` — a **declared** link, never a
-   fuzzy match, because a fuzzy match marks the gap closed. A run on proxies is
-   legitimate; it is not the test the card specified, and the brief says so.
-4. **The judgement calls** — each choice a model made that a human can overturn,
-   one per block, tagged with who owns it: the universe over its runners-up, the
-   long-only adaptation, the convertibility verdict's weakest link, costs and
-   lag, the bar named before the run, an UNVERIFIED security list, every
-   material ambiguity with its resolution, every open question with the
-   assumption taken meanwhile. Pulled from the card, never restated, so it
-   cannot drift from what the run will do.
-5. **What saying no costs** — every data request with its `without_it`, ordered
-   by priority. The fallback is the only part a human can weigh.
-6. **Worth a second look** — the non-blocking warnings.
+| | | |
+|---|---|---|
+| | **STOP** | every blocking failure, in full, first |
+| | **At a glance** | the nine fields |
+| 1 | **Where this runs** | the translation, plus the code's fit score, held and missing instruments by name, `OUT OF MANDATE`, the ranked runners-up, the paper-specific transfer risks and the catalogued caveats |
+| 2 | **What the strategy is** | the reconstruction in full — signal, formation, weighting, constraints, the long-only adaptation, the engine template or the gap |
+| 3 | **The dataset it deserves, and what we hold** | `data_plan` in full, then the reconciliation and the feasibility position |
+| 4 | **Which securities** | the rule, and any named list with what verified it |
+| 5 | **What will be run** | window, warmup, weights, benchmarks with reasons, must-beat, success and failure |
+| 6 | **Can this become something we could hold?** | the convertibility chain and its weakest link |
+| 7 | **The judgement calls** | ambiguities and open questions, each tagged with its owner |
+| 8 | **What the model is asking for** | the data requests with what declining each costs |
+| 9 | **The checklist** | completeness gaps, then the criteria — terse |
 
-Then, below it: at-a-glance, `card.plan()`, completeness, `card.asks()`, the
-India requirements, and the full criteria list as the audit trail.
+A **passing** criterion prints one line: its evidence is the card text rendered
+in full above it. A **failing** one keeps its evidence, because that is the one
+place the reason is not written anywhere else. Below the document, the full
+India derivation, which also carries the advisory requirements.
+
+Nothing is summarised and nothing is dropped. The only thing made shorter is the
+chrome.
 
 **Completeness** is ~69 checks on a full adaptation card (the count depends on
 which sections the card has). Each names the failure it prevents.

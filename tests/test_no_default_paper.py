@@ -113,23 +113,56 @@ def test_no_entry_point_hardcodes_a_specific_paper():
         "belong in examples/, which this scan skips:\n  " + "\n  ".join(offenders))
 
 
-def test_the_users_card_folder_ships_empty():
-    """The REPO must ship no cards. The FOLDER is expected to fill up.
+def test_no_worked_example_is_shipped_in_the_users_card_folder():
+    """The harm was never "cards/ contains cards". It was WHOSE cards.
 
-    The first version of this globbed the filesystem, which failed the moment a
-    real user had drafted their own cards -- it fired on five of them, which is
-    the folder working exactly as intended. What matters is what git TRACKS: an
-    example shipped in cards/ is what made check_setup glob it and load somebody
-    else's paper. A card a researcher wrote is none of this test's business.
+    This has now been wrong twice in opposite directions. First it globbed the
+    filesystem and fired on a researcher's own five drafts. Then it checked what
+    git tracks -- and fired again on the same five, the moment the researcher
+    committed them, which is how work gets off one laptop and is not a defect.
+
+    Its own docstring said "a card a researcher wrote is none of this test's
+    business" while it had no way to tell authorship from tracking. So assert
+    what actually caused the original incident instead: a worked EXAMPLE sitting
+    in cards/, which check_setup.py then globbed alphabetically and loaded on
+    every run, so a fresh clone read a card about somebody else's paper.
     """
     import subprocess
     tracked = subprocess.run(["git", "ls-files", "cards/"], cwd=ROOT,
                              capture_output=True, text=True).stdout.split()
-    shipped = [t for t in tracked if t.endswith((".yaml", ".yml"))]
-    assert not shipped, (
-        f"the repo ships {shipped}. Worked examples belong in examples/cards/, "
-        f"or check_setup globs cards/*.yaml and loads one on every run.")
+    in_cards = {os.path.basename(t) for t in tracked
+                if t.endswith((".yaml", ".yml"))}
+    examples = {p.name for p in (ROOT / "examples/cards").glob("*.yaml")}
+    duplicated = sorted(in_cards & examples)
+    assert not duplicated, (
+        f"worked example(s) {duplicated} are shipped in cards/. That is the "
+        f"leak: check_setup.py globbed cards/*.yaml, took the first "
+        f"alphabetically, and read a card about somebody else's paper on every "
+        f"run. Examples live in examples/cards/, off every code path.")
     assert (ROOT / "examples/cards").is_dir(), "the examples went missing"
+
+
+def test_no_live_path_loads_an_arbitrary_card_from_the_users_folder():
+    """The mechanism of the original incident, guarded directly.
+
+    Whatever is in cards/ belongs to the researcher. Nothing may reach in and
+    pick one -- a card is named on the command line or not loaded at all.
+    """
+    import re
+    offenders = []
+    for path in ROOT.rglob("*.py"):
+        rel = str(path.relative_to(ROOT))
+        if rel.startswith(("examples/", "tests/", ".git")):
+            continue
+        for i, line in enumerate(
+                path.read_text(encoding="utf-8", errors="replace").splitlines(), 1):
+            if re.search(r"glob[^\n]*[\"\']cards/\*", line) and "examples/" not in line:
+                offenders.append(f"{rel}:{i}: {line.strip()}")
+    # check_setup.py may COUNT them; it may not LOAD one. A count has no
+    # alphabetical first element that becomes somebody else's paper.
+    real = [o for o in offenders if "len(" not in o and "load_card" in o]
+    assert not real, (
+        "a live path globs cards/ and loads one:\n  " + "\n  ".join(real))
     assert list((ROOT / "examples/cards").glob("*.yaml")), "no examples left"
 
 

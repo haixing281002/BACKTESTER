@@ -16,7 +16,7 @@ from ros.cards.completeness import assess as card_completeness
 from ros.cards.schema import (Convertibility, CostSpec, Intent, Paper,
                               PortfolioSpec, Signal, StrategyCard, Universe,
                               audit_data_requests, load_card)
-from ros.governance.gates import (Criterion, gate_a, gate_a_brief,
+from ros.governance.gates import (Criterion, gate_a, gate_a_document,
                                   judgement_calls)
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -38,7 +38,7 @@ def card():
 
 @pytest.fixture
 def brief(card):
-    return gate_a_brief(card, gate_a(card, _Feas()))
+    return gate_a_document(card, gate_a(card, _Feas()))
 
 
 # ---------------------------------------------------------------------------
@@ -88,7 +88,7 @@ def test_blocking_failures_come_first(card):
     gr = gate_a(card, _Feas())
     gr.criteria.insert(0, Criterion("a blocking failure", False,
                                     evidence="this must be impossible to miss"))
-    out = gate_a_brief(card, gr)
+    out = gate_a_document(card, gr)
     assert out.index("STOP.") < out.index("THE JUDGEMENT CALLS")
     assert "this must be impossible to miss" in out
 
@@ -100,7 +100,7 @@ def test_the_brief_says_nothing_is_decided(brief):
 def test_an_unverified_security_list_is_surfaced(card):
     card.selection.explicit_securities = ["RELIANCE", "TCS"]
     card.selection.verified_against = "UNVERIFIED"
-    out = gate_a_brief(card, gate_a(card, _Feas()))
+    out = gate_a_document(card, gate_a(card, _Feas()))
     assert "UNVERIFIED" in out and "RELIANCE" in out
 
 
@@ -260,7 +260,7 @@ def full(card):
     tc = check_translation(card.universe_translation, registry,
                            long_only=card.portfolio.long_only)
     feas = feasibility_assess(card, registry)
-    return gate_a_brief(card, gate_a(card, feas, translation_check=tc),
+    return gate_a_document(card, gate_a(card, feas, translation_check=tc),
                         translation_check=tc, feasibility=feas,
                         india=derive_india(card, tc))
 
@@ -295,7 +295,7 @@ def test_missing_instruments_are_named_and_flagged(card):
     tc = check_translation(card.universe_translation, registry,
                            long_only=card.portfolio.long_only)
     tc.missing = ["nifty_500_membership_history"]
-    out = gate_a_brief(card, gate_a(card, _Feas()), translation_check=tc)
+    out = gate_a_document(card, gate_a(card, _Feas()), translation_check=tc)
     assert "nifty_500_membership_history" in out
     assert "supplied before anything runs" in out
 
@@ -307,7 +307,13 @@ def test_the_dataset_the_paper_deserves_is_in_the_brief(card, full):
 
 
 def test_minimum_viable_is_distinguished_from_nice_to_have(full):
-    assert "MUST HAVE" in full and "would help" in full
+    """The labels come from plan_data() now -- one renderer, not two.
+
+    The document used to carry its own summary of the data plan alongside the
+    full rendering, with a second set of labels. That summary was the largest
+    single source of duplication and it is gone; the distinction it made is not.
+    """
+    assert "MINIMUM VIABLE" in full and "improves the claim" in full
 
 
 def test_where_you_stand_today_is_in_the_brief(full):
@@ -334,7 +340,7 @@ def test_unrecognised_strategy_inputs_are_surfaced(card):
     from ros.india_requirements import derive as _derive
     card.strategy.inputs_required = card.strategy.inputs_required + [
         "analyst revision breadth score"]
-    out = gate_a_brief(card, gate_a(card, _Feas()), india=_derive(card))
+    out = gate_a_document(card, gate_a(card, _Feas()), india=_derive(card))
     assert "NOBODY HAS LOOKED" in out
     assert "analyst revision breadth score" in out
 
@@ -342,7 +348,7 @@ def test_unrecognised_strategy_inputs_are_surfaced(card):
 def test_a_model_note_is_marked_as_a_reading_in_the_brief(card):
     """A reader must always be able to tell a reading from a consequence."""
     from ros.india_requirements import derive as _derive
-    out = gate_a_brief(card, gate_a(card, _Feas()), india=_derive(card))
+    out = gate_a_document(card, gate_a(card, _Feas()), india=_derive(card))
     assert "read from the paper by a model" in out
     assert "from the paper, by a model" in out
 
@@ -355,7 +361,7 @@ def test_the_brief_degrades_cleanly_without_the_extra_arguments(card):
     than guessed at: a brief that invented a data position would be worse than
     one that omits it.
     """
-    out = gate_a_brief(card, gate_a(card, _Feas()))
+    out = gate_a_document(card, gate_a(card, _Feas()))
     assert "THE JUDGEMENT CALLS" in out
     assert "THE DATASET THIS PAPER DESERVES" in out     # on the card
     assert "WHERE YOU STAND:" not in out                # needs the registry
@@ -429,3 +435,112 @@ def test_a_card_with_no_data_plan_is_not_judged_on_one():
     assert not rec["checked"]
     names = [c.name for c in gate_a(bare, _Feas()).criteria]
     assert "the run uses the dataset the card designed" not in names
+
+
+# ---------------------------------------------------------------------------
+# THE CONTRACT: Gate A is the card, rendered ONCE.
+#
+# Measured on the worked example before this change, across 888 lines: the
+# universe rationale appeared twice, the convertibility weakest link three
+# times, a minimum-viable data field five times. The brief quoted sections, then
+# plan() and asks() printed the same sections again below, then the criteria
+# list carried the same text a third time as "evidence". A reader who has
+# already read a paragraph does not read it again -- they skim, and skimming is
+# how a gate becomes a rubber stamp.
+# ---------------------------------------------------------------------------
+def _count(text, phrase):
+    return " ".join(text.split()).count(" ".join(phrase.split()))
+
+
+def test_the_card_is_not_repeated(card, full):
+    """Every substantial card field appears exactly once in the document."""
+    once = {
+        "universe rationale": card.universe_translation.rationale,
+        "why not the alternatives": card.universe_translation.why_not_alternatives,
+        "signal definition": card.strategy.signal_definition,
+        "granularity verdict": card.data_plan.granularity_verdict,
+        "optimality argument": card.data_plan.optimality_argument,
+        "selection rule": card.selection.rule,
+        "why this window": card.backtest_plan.why_this_window,
+        "failure looks like": card.backtest_plan.failure_looks_like,
+        "weakest link": card.convertibility.weakest_link,
+    }
+    repeated = {}
+    for label, text in once.items():
+        probe = " ".join(str(text).split())[:70]
+        if not probe:
+            continue
+        n = _count(full, probe)
+        if n != 1:
+            repeated[label] = n
+    assert not repeated, f"card text rendered more than once: {repeated}"
+
+
+def test_each_open_question_appears_once(card, full):
+    """They are judgement calls, not asks. Section 7 only."""
+    for q in card.open_questions:
+        assert _count(full, " ".join(q.question.split())[:60]) == 1
+
+
+def test_each_data_request_appears_once(card, full):
+    for r in card.data_requests:
+        assert _count(full, " ".join(r.without_it.split())[:60]) == 1
+
+
+def test_a_passing_criterion_does_not_repeat_its_evidence(card, full):
+    """The evidence for a PASS is the card text rendered above it.
+
+    A failing criterion keeps its evidence in full -- that is the one place the
+    reason is not written anywhere else.
+    """
+    gr = gate_a(card, _Feas())
+    passing = [c for c in gr.criteria if c.passed and len(c.evidence) > 120]
+    assert passing, "the exemplar has long-evidence passing criteria"
+    terse = gr.render(terse=True)
+    for c in passing:
+        assert " ".join(c.evidence.split())[:70] not in " ".join(terse.split())
+    full_render = gr.render()
+    assert " ".join(passing[0].evidence.split())[:70] in " ".join(full_render.split())
+
+
+def test_a_failing_criterion_keeps_its_evidence():
+    gr_evidence = "this is exactly why it failed and it is written nowhere else"
+    from ros.governance.gates import GateResult
+    gr = GateResult(gate="X", owner="y",
+                    criteria=[Criterion("a", False, evidence=gr_evidence)])
+    assert gr_evidence in " ".join(gr.render(terse=True).split())
+
+
+def test_every_section_is_present_and_numbered(full):
+    for n, title in SECTIONS:
+        assert f"{n}. {title}" in full, f"section {n} ({title}) is missing"
+
+
+SECTIONS = ((1, "WHERE THIS RUNS"), (2, "WHAT THE STRATEGY IS"),
+            (3, "THE DATASET THIS PAPER DESERVES"), (4, "WHICH SECURITIES"),
+            (5, "WHAT WILL BE RUN"),
+            (6, "CAN THIS BECOME SOMETHING WE COULD HOLD"),
+            (7, "THE JUDGEMENT CALLS"),
+            (8, "WHAT THE MODEL IS ASKING YOU FOR"), (9, "THE CHECKLIST"))
+
+
+def test_the_sections_are_in_decision_order(full):
+    # Anchor on the full header. A bare "2. " also matches a numbered list
+    # inside the card's own prose, which is where the first version of this
+    # test went wrong.
+    marks = [full.index(f"{n}. {title}") for n, title in SECTIONS]
+    assert marks == sorted(marks)
+
+
+def test_provenance_is_at_the_top(card, full):
+    head = full[:full.index("1. WHERE THIS RUNS")]
+    assert card.paper.source_sha256[:16] in head
+    assert card.paper.id in head
+
+
+def test_plan_still_composes_the_three_parts(card):
+    """plan() is kept for callers that want the whole Stage 02 block."""
+    whole = card.plan()
+    for part in (card.plan_data(), card.plan_selection(), card.plan_run()):
+        body = [l for l in part.splitlines() if l.strip() and set(l.strip()) != {"="}]
+        assert body[-1] in whole
