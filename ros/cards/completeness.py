@@ -282,6 +282,17 @@ def assess(card) -> Completeness:
         check("data plan", "optimality argued", len(_txt(dp.optimality_argument)) > 80, 3,
               "", "the section exists to answer 'are we testing this properly or "
                   "testing what we own'. Without the argument it answers neither")
+        need = [d.field for d in dp.ideal if d.minimum_viable]
+        claimed = {c.strip().lower() for r in card.data_requests
+                   for c in r.satisfies if c.strip()}
+        unlinked = [r.item for r in card.data_requests if not r.satisfies]
+        check("data plan", "requests say which designed field they supply",
+              not (need and unlinked), 2,
+              "; ".join(unlinked)[:120],
+              "a request that names no `satisfies` field cannot be reconciled "
+              "against the dataset the card designed, and the report then says "
+              "'every series this card needs is already held' about a card that "
+              "is running on a substitute for its own minimum viable dataset")
         check("data plan", "what would change the answer",
               bool(_txt(dp.what_would_change_the_answer)), 1, "",
               "names the data that would overturn the conclusion, so a null "

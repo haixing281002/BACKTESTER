@@ -40,7 +40,8 @@ for _s in (sys.stdout, sys.stderr):
 from ros.cards.extract import (classify_document, detect_target_conflicts,
                                extract_document, parse_text_tables,
                                propose_replication_targets, summarize)
-from ros.cards.schema import CardValidationError, load_card
+from ros.cards.schema import (CardValidationError, load_card,
+                              reconcile_data_plan)
 from ros.data.firm_registry import build_firm_registry
 from ros.data.intake import MANIFEST, describe_shortfall, extend_registry
 from ros.data.universes import INDIAN_UNIVERSES, check_translation
@@ -254,9 +255,26 @@ def main() -> int:
     para(india.render(), indent="")
 
     head("WHAT THIS PAPER WOULD NEED FROM YOU")
+    rec = reconcile_data_plan(card, feas)
     if not shortfall:
-        print("    Nothing. Every series this card needs is already held, so it can")
-        print("    go straight to a full run:")
+        # "Nothing" was answering the wrong question. Every series NAMED on the
+        # card resolving is not the same as holding the dataset the card
+        # designed -- a proxy and a degraded series both resolve.
+        print("    Every series NAMED on this card resolves, so a run can proceed.")
+        if rec["not_in_hand"]:
+            print()
+            print(f"    BUT {len(rec['not_in_hand'])} of {len(rec['need'])} fields "
+                  f"the card itself marks MINIMUM-VIABLE are not in hand:")
+            for f in rec["not_in_hand"]:
+                print(f"        {f}")
+            print()
+            print("    The card asks for each of them, so by its own account this")
+            print("    run substitutes for its own minimum viable dataset. That is")
+            print("    a legitimate run and it is not the test the card specified.")
+        elif rec["checked"]:
+            print(f"    The card's {len(rec['need'])} minimum-viable field(s) are "
+                  f"satisfied by what")
+            print("    the fund holds, so this is the test the card specified.")
         print()
         print(f"        python run_pipeline.py --card {card_path}")
     else:

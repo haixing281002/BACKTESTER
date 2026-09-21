@@ -12,6 +12,48 @@ code runs. Everything up to this point is cheap; everything after is not.
 Read the card `$1`, its analysis and critique in `outputs/interpretation/`, and
 the deterministic feasibility verdict.
 
+---
+
+## The one rule: EMIT, DO NOT SUMMARISE
+
+The card is better than any prose retelling of it, and the code already renders
+it for a human. A queue that re-describes the universe, the strategy and the
+dataset in your own words is strictly worse than the thing it describes: it is
+shorter, it loses the argued detail, and it can drift from what the run will
+actually do.
+
+So **paste the deterministic output, then add only what a model can add.**
+
+```bash
+python run_interpret.py --pdf <paper.pdf> --card $1
+```
+
+That one command produces the whole brief a reviewer needs — blocking failures,
+where this runs as instruments, what data it takes against what the fund holds,
+every judgement call tagged with its owner, what declining each request costs,
+the India requirements, the convertibility chain, and the audit trail. Your
+queue carries that output. It does not paraphrase it.
+
+**What is yours to write, and nothing else:**
+
+1. Where a reviewer should spend their attention first, and WHY that one and
+   not the other nine.
+2. What the critique caught that the first draft treated as settled — the one
+   thing no deterministic block can know, because it is the difference between
+   two versions of a reading.
+3. Where you are least confident in your own reading, in your own words.
+4. Anything in the paper the card could not hold: extraction concerns, a
+   template gap, a policy question the fund has never had to answer.
+
+**Never:**
+
+- Restate a section the code renders. Point at it.
+- **Compare this queue to another paper's queue.** "About the same size as the
+  devanathan queue" tells a reviewer nothing about THIS paper, and reaching into
+  another run's artifacts to say it is how one paper's work starts appearing in
+  another's gate. Queue length is a fact about this card. State it and stop.
+- Report "no data shortfall" from the feasibility verdict. See below.
+
 ## Open with the card itself
 
 Three blocks, in this order, before any prose:
@@ -114,16 +156,43 @@ goes, so it is never a footnote.
 If `engine_template` is `NEEDS_NEW_TEMPLATE`, that is a build decision and it
 belongs here, with the spec, before anyone spends a day on it.
 
-## Then the data shortfall — this is the moment it can still be fixed
+## Then the data — and there are TWO shortfalls, not one
 
-Gate A is the last cheap point. If the translation needs instruments the fund
-does not hold, print the shortfall block and say plainly that supplying the data
-here is a five-minute fix, whereas discovering it after a run is not:
+Gate A is the last cheap point, so this is where data gets supplied. But the
+question has two halves and reporting only the first is how a card that holds
+none of its own designed dataset gets written up as "no shortfall".
+
+**Shortfall 1 — the named series.** Does every entry in `data_requirements`
+resolve against the registry? This is what feasibility answers, and it answers
+GO when proxies and degraded series stand in.
+
+**Shortfall 2 — the dataset the card DESIGNED.** Are the `data_plan` fields
+marked `minimum_viable` actually in hand? A card can mark "total-return daily
+series" and "a real Indian short rate" as minimum-viable, hold neither — price
+return indices and a declared 6% constant standing in — and still pass
+shortfall 1 on every line.
 
 ```bash
 python -c "
-from ros.data.intake import describe_shortfall; print(describe_shortfall(['<missing>']))"
+from ros.cards.schema import load_card, reconcile_data_plan
+from ros.data.firm_registry import build_firm_registry
+from ros.feasibility import assess
+c = load_card('$1')
+print(reconcile_data_plan(c, assess(c, build_firm_registry())))"
 ```
+
+`not_in_hand` is the answer to shortfall 2. If it is non-empty, **say so in the
+queue and do not write that there is no shortfall.** The honest sentence is:
+every series this card NAMES resolves, and the card is running on a substitute
+for its own minimum viable dataset. Both halves are true and only one of them
+was being reported.
+
+A run on proxies is a legitimate run. It is not the test the card specified, and
+a result from it has to be read as the proxy's answer.
+
+If the data cannot be licensed, that is itself a finding worth recording — it
+says what the fund would have to buy, which is a procurement decision rather
+than a research one.
 
 The manifest's awkward fields — `pit_status`, `licence`, `caveats` — are
 mandatory on purpose and travel with every result computed from the series.
@@ -148,9 +217,12 @@ Each with a page citation and one sentence on why it matters:
 7. Anything the critic flagged as `missed_by_first_pass`
 8. Any extraction concern that would change the reading
 
-State the queue length honestly at the top. **If it is long, say so** — a queue
-nobody can read is a rubber stamp, and that failure mode arrives exactly when
-throughput starts working.
+State the queue length honestly at the top, as a count of THIS card's items and
+which two deserve the most time. **If it is long, say so** — a queue nobody can
+read is a rubber stamp, and that failure mode arrives exactly when throughput
+starts working. Do not calibrate the length against another paper's queue: that
+is not a fact about this paper, and reading another run's artifacts to produce
+it is how somebody else's work leaks into this gate.
 
 End with: *"Nothing above has been decided. A named researcher confirms these
 before Gate A passes."*

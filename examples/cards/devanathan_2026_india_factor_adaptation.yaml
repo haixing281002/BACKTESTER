@@ -505,6 +505,7 @@ data_requests:
       capped.
     priority: high
     format_hint: "two columns: date, annualised_rate (decimal, e.g. 0.0655)"
+    satisfies: ["Indian overnight or 91-day T-bill rate, daily"]
   - item: "Total-return versions of the five factor sleeves"
     why: >
       The held series are price-return, so dividends are missing from every one.
@@ -517,6 +518,7 @@ data_requests:
       corrected.
     priority: high
     format_hint: "same shape as the existing workbook, TRI instead of PRI"
+    satisfies: ["Total-return daily series for each of the five NSE factor sleeves"]
   - item: "Post-launch-only sleeve history, with each index's real launch date"
     why: >
       NSE backfilled these to a 2005 base with methodology fixed years later,
@@ -528,6 +530,7 @@ data_requests:
       Mechanism testing only, ladder capped at ROBUST, and the card says so.
     priority: nice_to_have
     format_hint: "one row per index: name, launch_date"
+    satisfies: ["Each sleeve index's true launch date and methodology-change history"]
   - item: "Daily traded value for the sleeve constituents, or for a tracking ETF"
     why: >
       Sleeve rotation is only free on paper. An index is not a portfolio.
@@ -538,6 +541,7 @@ data_requests:
       capacity conclusion is an input, not a finding.
     priority: high
     format_hint: "date, index_or_etf, traded_value_inr_cr"
+    satisfies: ["Daily traded value for each sleeve's tracking ETF, or its constituents"]
 
 open_questions:
   - question: >

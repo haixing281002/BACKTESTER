@@ -18,7 +18,7 @@ import textwrap
 from dataclasses import dataclass, field, asdict
 from typing import Any, Dict, List, Optional
 
-from ros.cards.schema import audit_data_requests
+from ros.cards.schema import audit_data_requests, reconcile_data_plan
 
 LADDER = ["REPLICATED", "INDIA_VALIDATED", "ROBUST", "ORTHOGONAL",
           "PORTFOLIO_USEFUL", "PAPER_TRADED", "LIVE_CANDIDATE"]
@@ -299,6 +299,30 @@ def _what_it_takes(card, feasibility, india) -> List[str]:
                      f"{d.history_from or '?'}"
                      + (f", {' '.join(d.adjustments.split())}"
                         if d.adjustments else ""))
+
+    rec = reconcile_data_plan(card, feasibility)
+    if rec["checked"]:
+        L += ["", "    ARE WE RUNNING ON THAT DATASET, OR ON WHAT WE HAVE?"]
+        if rec["not_in_hand"]:
+            L.append(f"      {len(rec['not_in_hand'])} of {len(rec['need'])} "
+                     f"MINIMUM-VIABLE field(s) are NOT in hand -- the card asks "
+                     f"for them itself:")
+            for f in rec["not_in_hand"]:
+                L.append(f"        {f}")
+            L.append("      A run is still possible. It is not the test this card "
+                     "specified, and any")
+            L.append("      result has to be read as the proxy's answer, not the "
+                     "design's.")
+        else:
+            L.append(f"      The card marks {len(rec['need'])} field(s) "
+                     f"minimum-viable and links no open request to any of them, "
+                     f"so by its own account the design is satisfied.")
+        if rec["proxied"]:
+            L.append(f"      standing in: " + "; ".join(rec["proxied"]))
+        if rec["degraded"]:
+            L.append(f"      degraded ({len(rec['degraded'])}): "
+                     + ", ".join(rec["degraded"][:4])
+                     + (" ..." if len(rec["degraded"]) > 4 else ""))
 
     if feasibility is not None:
         counts = feasibility.counts() if hasattr(feasibility, "counts") else {}
@@ -617,6 +641,26 @@ def gate_a(card, feasibility, extraction_quality=None,
         value=f"{len(blocking_qs)} blocking", threshold=0,
         evidence="; ".join(q.question for q in blocking_qs)
                  or "no question stops work"))
+
+    # ---- is the run the card's own design, or a proxy of it? -------------
+    # Feasibility answers "does every NAMED series resolve", which is GO even
+    # when proxies and degraded series stand in. The card's own minimum-viable
+    # dataset is a different question and nothing asked it, so a card could
+    # design a dataset, hold none of it, and read "no shortfall".
+    rec = reconcile_data_plan(card, feasibility)
+    if rec["checked"] and rec["need"]:
+        c.append(Criterion(
+            "the run uses the dataset the card designed",
+            not rec["not_in_hand"],
+            value=(f"{len(rec['not_in_hand'])} of {len(rec['need'])} "
+                   f"minimum-viable not in hand" if rec["not_in_hand"]
+                   else f"all {len(rec['need'])} minimum-viable satisfied"),
+            blocking=False,
+            evidence=("; ".join(rec["not_in_hand"]) + " -- the card asks for "
+                      "these itself, so it is running on a substitute for its "
+                      "own minimum viable dataset"
+                      if rec["not_in_hand"] else
+                      "no open request names a minimum-viable field")))
 
     # ---- did anyone look at what the rules could not read? ---------------
     # Non-blocking: an unread input is a gap in coverage, not a proven fault.
