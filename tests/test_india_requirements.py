@@ -141,9 +141,18 @@ def test_the_block_says_what_it_matched_on():
 
 
 def test_unrecognised_inputs_are_surfaced_not_swallowed():
+    """The failure mode of keyword matching is SILENCE, not a wrong answer.
+
+    An input no pattern can read raises no requirement and says nothing, so the
+    report has to say it looked and failed. With no india_notes covering it, it
+    is reported as read by nobody.
+    """
     r = derive(_card(inputs_required=["analyst revision breadth score"]))
     assert "analyst revision breadth score" in r.unmatched_inputs
-    assert "did not recognise" in r.render().lower()
+    assert r.unaddressed_inputs == ["analyst revision breadth score"]
+    text = r.render()
+    assert "analyst revision breadth score" in text
+    assert "NOBODY HAS LOOKED" in text
 
 
 # ---------------------------------------------------------------------------

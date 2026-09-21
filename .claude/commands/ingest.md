@@ -270,6 +270,49 @@ python -m ros.interpretation record --stage 01_ingest \
     --operator "<name>" --input "$1"
 ```
 
+## D. What India demands that no rule can derive  →  `india_notes` on the card
+
+`ros/india_requirements.py` already derives requirements mechanically from
+properties of the strategy you reconstruct — does it rank securities, does it
+read a fundamental, how fast does it trade, which cap segment. **Do not restate
+those.** Check what it produces first:
+
+```bash
+python -c "
+from ros.cards.schema import load_card
+from ros.india_requirements import derive
+print(derive(load_card('cards/<slug>.yaml')).render())"
+```
+
+Those rules are a floor. They fire whatever anyone thinks, and you cannot lower
+them: `lag_days >= 1` and the 30bp cost are not negotiable by argument.
+
+What they cannot do is read. The matching is keyword-based, so it is deaf to
+anything particular to THIS paper in THIS market. That is your half, and there
+are two ways in:
+
+1. **The inputs it could not read.** The report ends with them, and Gate A now
+   tracks them until somebody answers. Each needs an `india_notes` entry, or an
+   entry saying why none is needed.
+2. **What you know about India that no pattern encodes.** An index whose
+   methodology was revised after launch, so a continuous series splices two rule
+   sets. A constraint anchored to a prior that exists in the US and not here. An
+   instrument that is liquid in the paper's market and thin in ours. A
+   disclosure regime that changes when a signal becomes knowable.
+
+Each entry carries `category` (data / timing / execution / cost / validity),
+`item`, `why` India demands it **of this strategy**, `triggered_by` naming what
+in the paper raised it, and `addresses` listing the strategy inputs it covers.
+Cite the page where there is one.
+
+**A note can only add.** It is never blocking, it cannot displace a rules
+requirement, and it is marked at Gate A as a reading rather than a consequence —
+because it is exactly as reliable as your reading of the paper. If you think
+something should be a hard block, say so in your report and a human promotes it
+into a rule, which is a code change somebody reviews.
+
+---
+
 Report at the end, in this order, because it is the order a human will ask:
 
 1. **Universe** — source, target, grade, and the one risk that worries you most

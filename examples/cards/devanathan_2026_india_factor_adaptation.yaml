@@ -643,3 +643,43 @@ convertibility:
     low-turnover by construction, which is favourable, but every number here is
     computed on index series that charge no impact. Until sleeve ADV arrives,
     any AUM ceiling quoted from this run is an argument, not a measurement.
+
+# India requirements the RULES cannot derive, read out of the paper by a model.
+# Additive only: a note never blocks and never removes a rules requirement.
+# ros/india_requirements.py keys on properties of the strategy -- does it rank,
+# does it read a fundamental, how fast does it trade -- so it is deaf to what is
+# particular to THIS paper in this market. That is what these cover.
+india_notes:
+  - category: validity
+    item: "Each sleeve index's methodology-revision history, not just its launch date"
+    why: >
+      NSE has revised factor-index methodologies after launch. A single
+      continuous series therefore splices two different rule sets at an
+      undisclosed date, and the optimiser reads that splice as a change in the
+      asset's behaviour. This is distinct from the generic backfill caveat: the
+      backfill is knowably synthetic, whereas a post-launch revision looks like
+      live history and is not.
+    triggered_by: "the mechanism allocates ACROSS sleeves, so a rule change in one is a signal"
+    addresses: ["sleeve closes"]
+    evidence_page: 3
+  - category: validity
+    item: "A defensible Indian prior for the strategic mix the l1 leash anchors to"
+    why: >
+      The l1 constraint bounds how far the book may drift from a strategic mix,
+      so that mix is doing much of the work. The paper's comes from decades of
+      US asset-class convention. No equivalent prior exists for a five-sleeve
+      Indian equity book, which makes the anchor a free parameter chosen by
+      whoever writes the card -- and a free parameter inside a constraint is
+      harder to see than one in the signal.
+    triggered_by: "paper eq. 3 anchors the optimiser to a strategic mix"
+    addresses: ["strategic mix"]
+    evidence_page: 4
+  - category: execution
+    item: "Which of the five sleeves actually has a liquid tracking ETF, and its tracking error"
+    why: >
+      The backtest trades index levels. The fund would trade instruments. Indian
+      factor-ETF liquidity is uneven across these five sleeves, so the
+      implementable version may be a subset of the tested one -- which changes
+      the covariance the optimiser sees, not merely the cost it pays.
+    triggered_by: "monthly rotation across sleeves, held as instruments rather than as indices"
+    addresses: ["sleeve closes"]

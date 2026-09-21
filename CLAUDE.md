@@ -181,6 +181,22 @@ the Stage 01 reconstruction — the model says what the strategy is, the rules s
 what India demands of it. Works for any strategy, including one no template can
 run yet: "what would it take" is answerable before "can we run it".
 
+**The rules are a floor, and `india_notes` is how a model builds on it.** The
+rules key on properties of the strategy and match on keywords, so they are deaf
+to what is particular to one paper in this market: an index whose methodology
+was revised after launch, a constraint anchored to a prior that exists in the US
+and not here, an instrument liquid there and thin here. A model reads the paper
+and writes those as `india_notes`.
+
+The split is not decoration. A model that misread a strategy as low-turnover
+would also not demand ADV — both errors point the same way, toward a cheaper
+test that clears its own bar. So a note can only **ADD**: it is never blocking,
+it cannot displace a rules requirement, and it is marked at Gate A as a reading
+rather than a consequence. Promoting one into a rule is a code change somebody
+reviews. `derive()` also reports which strategy inputs the patterns could not
+read and whether any note addresses them, and Gate A carries an open row until
+they are answered — because the failure mode of keyword matching is silence.
+
 ## Stage 01 carries the weight
 
 Two decisions dominate everything downstream, and both are made by reading the

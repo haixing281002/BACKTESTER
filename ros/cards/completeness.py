@@ -365,6 +365,27 @@ def assess(card) -> Completeness:
           f"{len(card.open_questions)} question(s)",
           "the things the paper does not settle are what a human is for")
 
+    # ---- what the rules could not see ------------------------------------
+    notes = getattr(card, "india_notes", []) or []
+    try:
+        from ros.india_requirements import derive as _derive_india
+        ind = _derive_india(card)
+    except Exception:
+        ind = None
+    if ind is not None and ind.unmatched_inputs:
+        check("india", "inputs the rules could not read are addressed",
+              not ind.unaddressed_inputs, 3,
+              "; ".join(ind.unaddressed_inputs)[:120],
+              "the India rules match on keywords, so an input they cannot read "
+              "raises no requirement AND SAYS NOTHING. That silence is how a "
+              "requirement goes missing. Address each one in `india_notes`, or "
+              "say there why none is needed")
+    check("india", "the model added what the rules cannot derive",
+          len(notes) >= 1, 1, f"{len(notes)} note(s)",
+          "the rules key on properties of the strategy, so they are deaf to "
+          "anything particular to THIS paper in India. Reading for that is the "
+          "model's job and nothing else does it")
+
     # ---- can this become something the fund could hold? -----------------
     cv = getattr(card, "convertibility", None)
     check("convertibility", "verdict recorded", cv is not None, 3, "",
