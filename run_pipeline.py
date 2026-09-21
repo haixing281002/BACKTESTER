@@ -44,8 +44,8 @@ from ros.data.snapshot import SnapshotBuilder
 from ros.engine.backtest import LookaheadError, assert_causal
 from ros.feasibility import UNAVAILABLE, assess
 from ros.governance.gates import (
-    Criterion, evaluate_ladder, gate_a, gate_a_document, gate_b,
-    render_ladder)
+    Criterion, evaluate_ladder, gate_a, gate_a_document,
+    gate_a_summary, gate_b, render_ladder)
 from ros.governance.library import LibraryEntry, StrategyLibrary, make_entry_id
 from ros.india_requirements import derive as derive_india_requirements
 from ros.runner import align_runs, execute_card
@@ -230,10 +230,12 @@ def main(argv=None) -> int:
     feas = assess(card, registry)
     ga = gate_a(card, feas, doc.quality if doc else None, translation_check=tc)
     india = derive_india_requirements(card, tc)
+    kw = dict(translation_check=tc, feasibility=feas, india=india,
+              completeness=card_completeness(card))
     R.h("GATE A  |  HUMAN INTERPRETATION CONTROL")
-    R.block(gate_a_document(card, ga, translation_check=tc, feasibility=feas,
-                            india=india,
-                            completeness=card_completeness(card)))
+    R.block(gate_a_summary(card, ga, **kw))
+    R.p("")
+    R.block(gate_a_document(card, ga, **kw))
 
     R.h("WHAT IT TAKES TO RUN THIS IN INDIA  (full derivation)")
     R.block(india.render())

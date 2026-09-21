@@ -203,6 +203,7 @@ data_requirements:
 
 ambiguities:
   - field: universe.mapping
+    headline: "Testing a stock/bond/gold mechanism on five equity sleeves -- adaptation, not replication"
     issue: >
       Mapping SPY/AGG/GLD onto five equity factor sleeves is a judgement, not a
       translation. The source assets span asset classes; the targets do not.
@@ -214,6 +215,7 @@ ambiguities:
     material: true
 
   - field: portfolio.target_vol
+    headline: "Vol cap set at 18%, just above NIFTY 500 realised, so it binds in stress not continuously"
     issue: >
       The paper's 7% target is meaningless here: the cheapest sleeve runs at 16% vol,
       so a 7% cap would force the book permanently ~60% into cash.
@@ -224,6 +226,7 @@ ambiguities:
     material: true
 
   - field: costs.spread_bps
+    headline: "30bp round trip as base case, with the breakeven cost reported alongside"
     issue: >
       The paper assumes 5bp. Rotating between Indian factor sleeves -- which are
       mid-cap heavy -- costs materially more once impact and STT are included.
@@ -234,6 +237,7 @@ ambiguities:
     material: true
 
   - field: universe.cash_asset
+    headline: "No Indian rate series: cash accrues a flat 6%, swept 4-8%. LOW confidence."
     issue: No Indian risk-free series in the snapshot.
     resolution: >
       Declared constant 6% proxy, recorded in the snapshot as a proxy, and swept
@@ -242,6 +246,7 @@ ambiguities:
     material: true
 
   - field: data.pit_status
+    headline: "Backfilled sleeve history accepted for mechanism testing only; caps the ladder at ROBUST"
     issue: >
       Backfilled index history. NSE defined these sleeves years after 2005 and the
       construction rules were chosen with knowledge of the intervening returns.
@@ -252,6 +257,7 @@ ambiguities:
     material: true
 
   - field: portfolio.allow_cash
+    headline: "Both variants run; the fully-invested mandate one governs promotion"
     issue: The fund's mandate is long-only and fully invested; the mechanism uses cash.
     resolution: >
       Run BOTH: the faithful cash-holding variant (mechanism test) and a fully-invested
@@ -504,6 +510,7 @@ data_requests:
       cash-holding result is reported as rate-dependent and the ladder stays
       capped.
     priority: high
+    headline: "A real Indian short rate, so cash de-risking is timed by the rate cycle not a straight line"
     format_hint: "two columns: date, annualised_rate (decimal, e.g. 0.0655)"
     satisfies: ["Indian overnight or 91-day T-bill rate, daily"]
   - item: "Total-return versions of the five factor sleeves"
@@ -517,6 +524,7 @@ data_requests:
       variant is flattered relative to the fully-invested one. Reported, not
       corrected.
     priority: high
+    headline: "Total-return sleeves: dividends are missing from every series we hold"
     format_hint: "same shape as the existing workbook, TRI instead of PRI"
     satisfies: ["Total-return daily series for each of the five NSE factor sleeves"]
   - item: "Post-launch-only sleeve history, with each index's real launch date"
@@ -529,6 +537,7 @@ data_requests:
     without_it: >
       Mechanism testing only, ladder capped at ROBUST, and the card says so.
     priority: nice_to_have
+    headline: "Real index launch dates, the only route to lifting the ladder above ROBUST"
     format_hint: "one row per index: name, launch_date"
     satisfies: ["Each sleeve index's true launch date and methodology-change history"]
   - item: "Daily traded value for the sleeve constituents, or for a tracking ETF"
@@ -540,6 +549,7 @@ data_requests:
       turnover_capacity runs on hand-supplied ADV and AUM arguments, so the
       capacity conclusion is an input, not a finding.
     priority: high
+    headline: "Sleeve traded value, to make capacity a finding rather than an assumption"
     format_hint: "date, index_or_etf, traded_value_inr_cr"
     satisfies: ["Daily traded value for each sleeve's tracking ETF, or its constituents"]
 
@@ -555,6 +565,7 @@ open_questions:
     what_i_assumed: >
       18%, just above NIFTY 500's realised 20.2%, so the cap binds in stress
       rather than continuously. Swept 12-26% and reported.
+    headline: "Is 18% the right vol cap, or should the fund set it from its own risk budget?"
     ask_of: pm
     blocks_run: false
   - question: >
@@ -567,6 +578,7 @@ open_questions:
     what_i_assumed: >
       The mandate variant governs; the faithful variant is reported alongside as
       the mechanism test.
+    headline: "Which variant governs promotion -- the faithful cash run or the mandate one?"
     ask_of: pm
     blocks_run: false
   - question: >
@@ -580,6 +592,7 @@ open_questions:
       1, counting only this card's own configuration. That is almost certainly
       too low once the paper's sweeps are folded in -- an earlier critique put
       it nearer 48.
+    headline: "Is n_configs_tried = 1 honest, given the paper's own appendix sweeps?"
     ask_of: researcher
     blocks_run: false
 
@@ -597,6 +610,7 @@ notes: >
 convertibility:
   verdict: convertible
   confidence: medium
+  headline: "Runnable today, but five 0.74-0.94 correlated sleeves may leave the optimiser nothing to do"
   what_must_be_true:
     - >
       The five sleeves must be diverse enough for a risk-constrained optimiser to
