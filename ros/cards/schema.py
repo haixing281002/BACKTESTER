@@ -803,6 +803,51 @@ class Intent:
     broken_assumptions: List[str] = field(default_factory=list)
 
 
+# The groups a reviewer thinks in. Named after the STRATEGY, never after the
+# pipeline: a reader wants "universe", "signal", "the bar" -- not "stage 02c"
+# or "what the deterministic reader saw". Order is the order they are read in.
+GROUPS = ("PAPER", "UNIVERSE", "SIGNAL", "PORTFOLIO", "COSTS", "DATA",
+          "SECURITIES", "THE RUN", "THE BAR", "RISKS", "VERDICT", "DECIDE",
+          "ASKS")
+
+# What a flag means to the person reading the line.
+BLOCK, DECIDE, GUESS, NOTE = "BLOCK", "DECIDE", "GUESS", ""
+
+
+@dataclass
+class Fact:
+    """ONE displayable line from the card. The whole card is a list of these.
+
+    This exists because Gate A kept needing renderer surgery. Every card field
+    was bespoke prose behind a bespoke name -- `rationale`, `why_not_alternatives`,
+    `optimality_argument`, `weakest_link`, `without_it` -- so any renderer had
+    to know all of them, and what came out read like a tour of the pipeline
+    rather than a strategy card: which stage produced what, which part the code
+    scored, where the audit trail lived.
+
+    Shape the data once and the display is a projection. A renderer walks facts,
+    groups them and prints; it never learns a field name, and adding a card
+    section means yielding more facts rather than editing a report.
+
+    `value` is the line. `detail` is the argument behind it, shown or not
+    depending on how much room the surface has. `flag` is the only editorial
+    judgement in the structure: BLOCK stops the run, DECIDE is a human's call,
+    GUESS is something asserted without a source.
+    """
+    group: str
+    label: str
+    value: str
+    detail: str = ""
+    owner: str = ""                  # "" | pm | researcher | data_owner
+    flag: str = ""                   # "" | BLOCK | DECIDE | GUESS
+    page: Optional[int] = None
+    ref: str = ""                    # the card field, for anyone tracing it back
+
+    @property
+    def text(self) -> str:
+        return " ".join(str(self.value or "").split())
+
+
 @dataclass
 class StrategyCard:
     paper: Paper
@@ -934,6 +979,210 @@ class StrategyCard:
         }
         blob = yaml.safe_dump(econ, sort_keys=True).encode()
         return hashlib.sha256(blob).hexdigest()[:16]
+
+    def facts(self) -> List[Fact]:
+        """The whole card as a flat list of displayable lines.
+
+        Every surface that shows the card reads this, so they cannot drift and
+        none of them needs to know a field name.
+        """
+        F: List[Fact] = []
+
+        def add(group, label, value, detail="", owner="", flag="", page=None,
+                ref=""):
+            v = " ".join(str(value or "").split())
+            if v:
+                F.append(Fact(group=group, label=label, value=v,
+                              detail=" ".join(str(detail or "").split()),
+                              owner=owner, flag=flag, page=page, ref=ref))
+
+        pa = self.paper
+        add("PAPER", "title", pa.title, ref="paper.title")
+        add("PAPER", "source", pa.source_file or "NOT RECORDED",
+            flag="" if pa.source_file else GUESS, ref="paper.source_file")
+        add("PAPER", "sha256", pa.source_sha256 or "NOT RECORDED",
+            flag="" if pa.source_sha256 else GUESS, ref="paper.source_sha256")
+        add("PAPER", "asking", self.intent.mode, self.intent.rationale,
+            ref="intent.mode")
+        add("PAPER", "mechanism", self.intent.transferred_mechanism,
+            ref="intent.transferred_mechanism")
+
+        ut = self.universe_translation
+        if ut is not None:
+            add("UNIVERSE", "tested on",
+                f"{ut.target_universe or '(none)'}"
+                + (f"   [{ut.grade}]" if ut.grade else ""),
+                ut.rationale, owner="researcher", flag=DECIDE,
+                page=ut.evidence_page, ref="universe_translation.target_universe")
+            add("UNIVERSE", "paper used", ut.source_universe,
+                ut.source_selection_rule, ref="universe_translation.source_universe")
+            add("UNIVERSE", "not instead", ", ".join(ut.alternatives_considered),
+                ut.why_not_alternatives, ref="universe_translation.alternatives_considered")
+            mn = ut.mechanism_needs
+            if mn is not None:
+                add("UNIVERSE", "needs",
+                    f">= {mn.min_names} names, {mn.cap_segment} cap, "
+                    f"{mn.min_history_years:g}y history, "
+                    + ("ranks a cross-section" if mn.needs_cross_section
+                       else "times one stream"),
+                    ref="universe_translation.mechanism_needs")
+            for r in ut.transfer_risks:
+                add("RISKS", "transfer", r, ref="universe_translation.transfer_risks")
+        for b in self.intent.broken_assumptions:
+            add("RISKS", "broken", b, ref="intent.broken_assumptions")
+
+        st = self.strategy
+        if st is not None:
+            add("SIGNAL", "name", st.signal_name or self.signal.name,
+                ref="strategy.signal_name")
+            add("SIGNAL", "kind",
+                "cross-sectional (ranks securities)" if st.cross_sectional
+                else "time-series (times one stream)", ref="strategy.cross_sectional")
+            add("SIGNAL", "definition", st.signal_definition,
+                ref="strategy.signal_definition")
+            add("SIGNAL", "selection", st.formation_rule, ref="strategy.formation_rule")
+            add("SIGNAL", "weights", st.weighting_rule, ref="strategy.weighting_rule")
+            add("SIGNAL", "reads", ", ".join(st.inputs_required),
+                ref="strategy.inputs_required")
+            for k in st.constraints:
+                add("SIGNAL", "constraint", k, ref="strategy.constraints")
+            add("SIGNAL", "engine", st.engine_template,
+                st.template_gap, flag=(BLOCK if st.engine_template ==
+                                       "NEEDS_NEW_TEMPLATE" else ""),
+                ref="strategy.engine_template")
+            add("SIGNAL", "read at", f"{st.confidence} confidence"
+                + (f", pages {st.evidence_pages}" if st.evidence_pages
+                   else ", NO PAGES CITED"),
+                flag="" if st.confidence == "high" else GUESS,
+                ref="strategy.confidence")
+            if st.is_long_short:
+                add("PORTFOLIO", "long-only",
+                    "the paper is LONG-SHORT; this fund cannot short",
+                    st.long_only_adaptation, owner="pm", flag=DECIDE,
+                    ref="strategy.long_only_adaptation")
+        add("SIGNAL", "lookback",
+            f"{self.signal.lookback_days}d" if self.signal.lookback_days else "",
+            ref="signal.lookback_days")
+        add("SIGNAL", "lag", f"{self.signal.lag_days}d",
+            "NSE closes publish after the close",
+            flag=BLOCK if self.signal.lag_days < 1 else "", ref="signal.lag_days")
+
+        po = self.portfolio
+        add("PORTFOLIO", "rebalance", po.rebalance, ref="portfolio.rebalance")
+        add("PORTFOLIO", "sample", f"{po.start or '?'} -> {po.end or '?'}",
+            ref="portfolio.start")
+        if po.mandate_allow_cash is False and po.allow_cash:
+            add("PORTFOLIO", "cash",
+                "the paper holds cash; the mandate is fully invested",
+                "two different strategies, not two views of one",
+                owner="pm", flag=DECIDE, ref="portfolio.mandate_allow_cash")
+        add("COSTS", "charged",
+            f"{self.costs.spread_bps:.0f}bp round trip ({self.costs.cost_model})",
+            "a US paper's 5bp is the commonest way an Indian backtest lies",
+            owner="researcher", flag=DECIDE if self.costs.spread_bps < 20 else "",
+            ref="costs.spread_bps")
+
+        dp = self.data_plan
+        if dp is not None:
+            add("DATA", "granularity", dp.granularity_verdict,
+                ref="data_plan.granularity_verdict")
+            for d in dp.ideal:
+                add("DATA", "MUST HAVE" if d.minimum_viable else "would help",
+                    f"{d.field} -- {d.granularity}, from {d.history_from or '?'}",
+                    " ".join(x for x in (d.why, d.why_granularity, d.why_history,
+                                         d.adjustments) if x),
+                    ref="data_plan.ideal")
+            for r in dp.rejected_alternatives:
+                add("DATA", "not", r.get("option", "?"), r.get("why_not", ""),
+                    ref="data_plan.rejected_alternatives")
+            add("DATA", "why this", dp.optimality_argument,
+                ref="data_plan.optimality_argument")
+            add("DATA", "would change it", dp.what_would_change_the_answer,
+                ref="data_plan.what_would_change_the_answer")
+
+        sel = self.selection
+        if sel is not None:
+            add("SECURITIES", "rule", sel.rule, sel.why_these,
+                ref="selection.rule")
+            if sel.explicit_securities:
+                unverified = sel.verified_against in ("", "UNVERIFIED")
+                add("SECURITIES", "named",
+                    f"{len(sel.explicit_securities)}: "
+                    + ", ".join(sel.explicit_securities),
+                    f"verified against {sel.verified_against or 'NOTHING'}"
+                    f" as of {sel.as_of or 'no date'}",
+                    owner="data_owner" if unverified else "",
+                    flag=GUESS if unverified else "", ref="selection.explicit_securities")
+
+        bp = self.backtest_plan
+        if bp is not None:
+            add("THE RUN", "window", f"{bp.sample_start} -> {bp.sample_end}",
+                bp.why_this_window, ref="backtest_plan.sample_start")
+            add("THE RUN", "warmup",
+                f"{bp.warmup_days}d" if bp.warmup_days is not None
+                else "NOT STATED", bp.why_warmup, ref="backtest_plan.warmup_days")
+            add("THE RUN", "rebalance", bp.rebalance_rule,
+                ref="backtest_plan.rebalance_rule")
+            add("THE RUN", "weights", bp.weights_rule, ref="backtest_plan.weights_rule")
+            if bp.explicit_weights:
+                add("THE RUN", "strategic mix",
+                    ", ".join(f"{k} {v:.0%}" for k, v in bp.explicit_weights.items()),
+                    ref="backtest_plan.explicit_weights")
+            for b in bp.benchmarks:
+                add("THE BAR", "measured vs", b.get("name", "?"),
+                    b.get("why_this", ""), ref="backtest_plan.benchmarks")
+            for m in bp.must_beat:
+                add("THE BAR", "must beat", m, owner="pm", flag=DECIDE,
+                    ref="backtest_plan.must_beat")
+            add("THE BAR", "success", bp.success_looks_like,
+                ref="backtest_plan.success_looks_like")
+            add("THE BAR", "failure", bp.failure_looks_like,
+                ref="backtest_plan.failure_looks_like")
+            for f_ in bp.known_failure_modes:
+                add("RISKS", "known break", f_, ref="backtest_plan.known_failure_modes")
+
+        cv = self.convertibility
+        if cv is not None:
+            add("VERDICT", "can we hold it",
+                f"{cv.verdict}   ({cv.confidence} confidence)",
+                cv.headline, owner="researcher", flag=DECIDE,
+                page=cv.evidence_page, ref="convertibility.verdict")
+            for i, link in enumerate(cv.what_must_be_true, 1):
+                add("VERDICT", f"must be true {i}", link,
+                    ref="convertibility.what_must_be_true")
+            add("VERDICT", "weakest link", cv.weakest_link,
+                ref="convertibility.weakest_link")
+            add("VERDICT", "would settle it", cv.decisive_evidence,
+                ref="convertibility.decisive_evidence")
+            add("VERDICT", "if it fails", cv.if_it_fails,
+                ref="convertibility.if_it_fails")
+            add("VERDICT", "capacity", cv.capacity_note,
+                ref="convertibility.capacity_note")
+
+        for a in self.ambiguities:
+            add("DECIDE", a.field, a.headline or a.resolution, a.resolution,
+                owner="researcher",
+                flag=DECIDE if a.material else "",
+                page=a.evidence_page, ref="ambiguities")
+        for q in self.open_questions:
+            add("DECIDE", "open question", q.headline or q.question,
+                (q.question + "  ASSUMED: " + q.what_i_assumed)
+                if q.what_i_assumed else q.question,
+                owner=q.ask_of, flag=BLOCK if q.blocks_run else DECIDE,
+                page=q.evidence_page, ref="open_questions")
+
+        for r in self.data_requests:
+            add("ASKS", r.priority, r.headline or r.item,
+                f"{r.item}. IF DECLINED: {r.without_it}",
+                owner="data_owner",
+                flag=BLOCK if r.priority == "blocking" else "",
+                page=r.evidence_page, ref="data_requests")
+        add("ASKS", "nothing else", self.no_further_data_needed,
+            ref="no_further_data_needed")
+        for n in self.india_notes:
+            add("RISKS", f"india/{n.category}", n.item, n.why,
+                page=n.evidence_page, ref="india_notes")
+        return F
 
     def at_a_glance(self) -> str:
         """The nine fields a reviewer checks first, on one screen.

@@ -44,8 +44,8 @@ from ros.data.snapshot import SnapshotBuilder
 from ros.engine.backtest import LookaheadError, assert_causal
 from ros.feasibility import UNAVAILABLE, assess
 from ros.governance.gates import (
-    Criterion, evaluate_ladder, gate_a, gate_a_document,
-    gate_a_summary, gate_b, render_ladder)
+    Criterion, evaluate_ladder, extraction_facts, gate_a,
+    gate_a_document, gate_a_summary, gate_b, render_ladder)
 from ros.governance.library import LibraryEntry, StrategyLibrary, make_entry_id
 from ros.india_requirements import derive as derive_india_requirements
 from ros.runner import align_runs, execute_card
@@ -115,112 +115,28 @@ def main(argv=None) -> int:
     R.p(f"  rationale: {' '.join(card.intent.rationale.split())}")
 
     # ---------------- STEP 01 : INGEST -----------------------------------
-    R.h("STEP 01  |  INGEST")
-    doc = None
+    # What reading the PDF turned up becomes FACTS on the card display below.
+    doc, extra = None, []
     if card.paper.source_file and card.paper.source_file.lower().endswith(".pdf") \
             and os.path.exists(card.paper.source_file):
         doc = extract_document(card.paper.source_file)
-        R.block(summarize(doc))
         tables = parse_text_tables(doc)
-        props = propose_replication_targets(tables)
-        conflicts = detect_target_conflicts(props)
-        R.p("")
-        R.p(f"  text-geometry tables recovered : {len(tables)}")
-        R.p(f"  candidate replication targets  : {len(props)}")
-        R.p(f"  CONFLICTING targets            : {len(conflicts)}")
-        for c in conflicts[:6]:
-            vals = ", ".join(f"{v:.3g}" for v in c["values"])
-            R.p(f"    ! {c['portfolio']:<20} {c['metric']:<8} = [{vals}]  pages {c['pages']}")
-        if conflicts:
-            R.p("    -> The paper reports the same metric on several accounting bases "
-                "(pre-tax / inflation-adjusted / post-tax). Harvesting all of them "
-                "yields a replication test that can never fail. A human pins ONE basis "
-                "at Gate A; the card's targets are pre-pinned to Table 1, page 11.")
-    else:
-        R.p("  no source PDF attached to this card -- ingestion skipped")
+        extra = extraction_facts(
+            doc, detect_target_conflicts(propose_replication_targets(tables)))
 
     # ---------------- STEP 02 : STRATEGY CARD ----------------------------
-    R.h("STEP 02  |  STRATEGY CARD")
-    R.p(f"  template   : {card.signal.template}   rebalance: {card.portfolio.rebalance}   "
-        f"lag: {card.signal.lag_days}d   lookback: {card.signal.lookback_days}d")
-    R.p(f"  universe   : {len(card.universe.assets)} assets, benchmark {card.universe.benchmark}")
-    R.p(f"  costs      : {card.costs.spread_bps:.0f} bps round trip ({card.costs.cost_model})")
-    R.p(f"  ambiguities: {len(card.ambiguities)} logged, "
-        f"{len(card.unresolved_ambiguities)} unresolved, "
-        f"{len(card.material_ambiguities)} material")
-    R.p("")
-    for a in card.ambiguities:
-        R.p(f"  [{a.confidence:>6}] {a.field}"
-            + (f"  (p{a.evidence_page})" if a.evidence_page else ""))
-        R.p(f"           issue   : {' '.join(a.issue.split())}")
-        R.p(f"           resolved: {' '.join(a.resolution.split())}")
-    if card.intent.broken_assumptions:
-        R.p("")
-        R.p("  ASSUMPTIONS THE SOURCE PAPER MAKES THAT DO NOT HOLD HERE:")
-        for b in card.intent.broken_assumptions:
-            R.p(f"    - {' '.join(b.split())}")
-
-    # ---------------- STEP 02c : UNIVERSE + STRATEGY ---------------------
-    # Gate A's two dominant questions, asked BEFORE the data gate binds: what
-    # are we testing this on, and what exactly is the strategy? Both are Stage
-    # 01 interpretation and both are far cheaper to correct here than after a
-    # run -- and if the answer needs data we lack, this is the moment a human
-    # can still supply it.
+    # STEP 02 / 02c used to print the card's headline fields and the universe
+    # check HERE, above the gate, and then again inside it. The card display
+    # below is the only place either appears now.
     registry = build_firm_registry()
     registry, supplied = extend_registry(registry)
     if supplied:
-        R.h("DATA SUPPLIED AT INTAKE")
-        R.p(f"  {len(supplied)} series declared in {MANIFEST} and added to the registry:")
-        for name in supplied:
-            cap = registry.get(name)
-            R.p(f"    {name:<38} kind={cap.kind:<14} pit={cap.pit_status}")
-        R.p("  Provenance is the manifest entry. Every result below carries it.")
-
+        R.p(f"  {len(supplied)} series declared in {MANIFEST} and added to the "
+            f"registry: " + ", ".join(supplied))
     tc = None
-    R.h("STEP 02c  |  UNIVERSE TRANSLATION + STRATEGY RECONSTRUCTION")
     if card.universe_translation is not None:
         tc = check_translation(card.universe_translation, registry,
                                long_only=card.portfolio.long_only)
-        R.block(tc.render())
-    else:
-        R.p("  NO UNIVERSE TRANSLATION ON THIS CARD.")
-        R.p("  The card names assets directly, so which universe the paper studied")
-        R.p("  -- and why these assets replace it -- is an unrecorded judgement.")
-        R.p("  Gate A will flag it. Add a `universe_translation:` section, or run")
-        R.p("  /ingest to have it read from the paper.")
-
-    R.p("")
-    if card.strategy is not None:
-        st = card.strategy
-        R.p("  STRATEGY AS RECONSTRUCTED FROM THE PAPER:")
-        R.p(f"    name        : {st.signal_name or '(unnamed)'}")
-        R.p(f"    definition  : {' '.join(st.signal_definition.split())}")
-        R.p(f"    type        : "
-            f"{'cross-sectional (ranks securities)' if st.cross_sectional else 'time-series (times one stream)'}")
-        if st.formation_rule:
-            R.p(f"    formation   : {' '.join(st.formation_rule.split())}")
-        if st.weighting_rule:
-            R.p(f"    weighting   : {' '.join(st.weighting_rule.split())}")
-        R.p(f"    rebalance   : {st.rebalance_frequency or card.portfolio.rebalance}"
-            f"   holding: {st.holding_period or 'n/a'}")
-        R.p(f"    inputs      : {', '.join(st.inputs_required) or '(none listed)'}")
-        if st.is_long_short:
-            R.p("    LONG-SHORT SOURCE -- this fund cannot short.")
-            R.p(f"    adaptation  : {' '.join(st.long_only_adaptation.split()) or 'NOT STATED'}")
-            R.p("    This is a DIFFERENT strategy from the paper's and must never")
-            R.p("    be scored against the paper's numbers.")
-        for k in st.constraints:
-            R.p(f"    constraint  : {' '.join(k.split())}")
-        R.p(f"    engine      : {st.engine_template or '(unset)'}"
-            f"   confidence: {st.confidence}   pages: {st.evidence_pages or 'none cited'}")
-        if st.engine_template == "NEEDS_NEW_TEMPLATE":
-            R.p("    NO REGISTERED TEMPLATE FITS. A human implements this before")
-            R.p("    the pipeline can run it. The specification:")
-            R.p(f"      {' '.join(st.template_gap.split())}")
-    else:
-        R.p("  NO STRATEGY RECONSTRUCTION ON THIS CARD.")
-        R.p("  The card names a template, but not what the paper's strategy IS in")
-        R.p("  terms a second person could implement from. Gate A will flag it.")
 
     # ---------------- GATE A ---------------------------------------------
     # ONE document: the card, once, in the order a human decides in. The
@@ -233,9 +149,9 @@ def main(argv=None) -> int:
     kw = dict(translation_check=tc, feasibility=feas, india=india,
               completeness=card_completeness(card))
     R.h("GATE A  |  HUMAN INTERPRETATION CONTROL")
-    R.block(gate_a_summary(card, ga, **kw))
+    R.block(gate_a_summary(card, ga, extra=extra, **kw))
     R.p("")
-    R.block(gate_a_document(card, ga, **kw))
+    R.block(gate_a_document(card, ga, extra=extra, **kw))
 
     R.h("WHAT IT TAKES TO RUN THIS IN INDIA  (full derivation)")
     R.block(india.render())
