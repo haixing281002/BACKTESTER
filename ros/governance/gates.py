@@ -188,7 +188,146 @@ def judgement_calls(card, translation_check=None) -> List[Dict[str, str]]:
     return out
 
 
-def gate_a_brief(card, result, translation_check=None) -> str:
+def _where_this_runs(card, tc) -> List[str]:
+    """WHERE the strategy operates, in Indian terms, as facts rather than prose.
+
+    The universe section used to print ABOVE the gate header, which made the
+    most consequential call at Stage 01 read as preamble to the thing a human
+    was signing. And the brief's own [UNIVERSE] line carried the argument for
+    the choice without ever saying what the choice IS in instruments: how many
+    names, held or missing, inside the mandate or outside it.
+    """
+    W = _W
+    ut = card.universe_translation
+    if ut is None and tc is None:
+        return []
+    L = ["", "  " + "-" * W,
+         "  WHERE THIS RUNS. The Indian universe, as instruments rather than "
+         "as an argument.",
+         "  " + "-" * W, ""]
+
+    target = (tc.target if tc is not None else ut.target_universe) or "(none chosen)"
+    L.append(f"    universe   : {target}"
+             + (f"   [{ut.grade}]" if ut is not None and ut.grade else ""))
+    if ut is not None and ut.mechanism_needs is not None:
+        mn = ut.mechanism_needs
+        L.append(f"    needs      : >= {mn.min_names} names, {mn.cap_segment} cap, "
+                 f"{mn.min_history_years:g}y history, "
+                 + ("ranks a cross-section" if mn.needs_cross_section
+                    else "times one stream"))
+
+    if tc is not None:
+        L.append(f"    resolution : {tc.computed_resolution}"
+                 + (f"   (card claims {tc.claimed_resolution})"
+                    if tc.claimed_resolution and
+                    tc.claimed_resolution != tc.computed_resolution else ""))
+        if tc.held:
+            L.append(f"    HELD ({len(tc.held)}): " + ", ".join(tc.held[:8])
+                     + (" ..." if len(tc.held) > 8 else ""))
+        if tc.missing:
+            L.append(f"    MISSING ({len(tc.missing)}): " + ", ".join(tc.missing[:8])
+                     + (" ..." if len(tc.missing) > 8 else ""))
+            L.append("               -> these have to be supplied before anything runs")
+        else:
+            L.append("    MISSING: nothing. Every instrument this universe needs "
+                     "is already held.")
+        # Out of mandate is a fact about what the fund may HOLD, and it changes
+        # what a result means, so it cannot sit in a notes list further down.
+        for note in tc.notes:
+            if "OUT OF MANDATE" in note.upper():
+                L.append("")
+                L.append("    !! OUT OF MANDATE -- the fund may TEST here but may not HOLD here.")
+                for line in _wrap(note, W - 9):
+                    L.append(f"       {line}")
+        if tc.ranked:
+            L.append("")
+            L.append("    the code ranked these against what the mechanism needs "
+                     "(the model chose; the code only scores):")
+            for f in tc.ranked[:5]:
+                u = f.universe
+                flags = []
+                if u.name == target:
+                    flags.append("<- CHOSEN")
+                if not u.in_mandate:
+                    flags.append("OUT OF MANDATE")
+                if f.disqualifying:
+                    flags.append("disqualified")
+                L.append(f"      {f.score:>5.1f}  {u.name:<38} n~{u.approx_breadth:<5}"
+                         + ("  " + ", ".join(flags) if flags else ""))
+    return L
+
+
+def _what_it_takes(card, feasibility, india) -> List[str]:
+    """What data this needs, where the fund stands today, and what India demands.
+
+    Three answers to one question -- can this be run, and at what price -- that
+    were printed in three places: the data plan below the gate, the feasibility
+    shortfall at the very end of the report, and the India requirements after
+    both. A reviewer deciding whether to buy data had to assemble them.
+    """
+    W = _W
+    dp = getattr(card, "data_plan", None)
+    if dp is None and feasibility is None and india is None:
+        return []
+    L = ["", "  " + "-" * W,
+         "  WHAT IT TAKES TO RUN THIS, AND WHAT YOU ALREADY HAVE",
+         "  " + "-" * W]
+
+    if dp is not None and dp.ideal:
+        need = [d for d in dp.ideal if d.minimum_viable]
+        extra = [d for d in dp.ideal if not d.minimum_viable]
+        L += ["", "    THE DATASET THIS PAPER DESERVES "
+                  f"({len(need)} of {len(dp.ideal)} are minimum-viable)"]
+        for d in need + extra:
+            tag = "MUST HAVE " if d.minimum_viable else "would help"
+            L.append(f"      [{tag}] {d.field}")
+            L.append(f"                   {d.granularity}, from "
+                     f"{d.history_from or '?'}"
+                     + (f", {' '.join(d.adjustments.split())}"
+                        if d.adjustments else ""))
+
+    if feasibility is not None:
+        counts = feasibility.counts() if hasattr(feasibility, "counts") else {}
+        L += ["", f"    WHERE YOU STAND: {feasibility.verdict}"
+                  + ("   " + ", ".join(f"{k}={v}" for k, v in sorted(counts.items()))
+                     if counts else "")]
+        for r in getattr(feasibility, "resolutions", []):
+            if r.status == "AVAILABLE":
+                continue
+            L.append(f"      [{r.status}] {r.requirement}"
+                     + (f" -> {r.resolved_to}" if r.resolved_to else ""))
+            for line in _wrap(r.reason, W - 16):
+                L.append(f"               {line}")
+        if not any(r.status != "AVAILABLE"
+                   for r in getattr(feasibility, "resolutions", [])):
+            L.append("      Every series on this card is held outright. Nothing "
+                     "to buy, nothing to proxy.")
+
+    if india is not None:
+        musts = india.blocking
+        L += ["", f"    WHAT INDIA DEMANDS OF THIS STRATEGY "
+                  f"({len(musts)} non-negotiable of "
+                  f"{len(india.requirements)} derived)"]
+        for r in musts:
+            L.append(f"      [{r.category.upper()}] {r.item}")
+            for line in _wrap(r.why, W - 14):
+                L.append(f"             {line}")
+        rest = len(india.requirements) - len(musts)
+        if rest:
+            L.append(f"      + {rest} advisory requirement(s) in full below, under "
+                     f"WHAT IT TAKES TO RUN THIS IN INDIA.")
+        if india.unmatched_inputs:
+            L.append("")
+            L.append("      ! these strategy inputs raised NO requirement -- the "
+                     "matching is keyword-based,")
+            L.append("        so read them yourself and check nothing is missing:")
+            for u in india.unmatched_inputs:
+                L.append(f"          {u}")
+    return L
+
+
+def gate_a_brief(card, result, translation_check=None, feasibility=None,
+                 india=None) -> str:
     """What a human is being asked to sign, before the audit trail.
 
     Gate A had all of this and none of it was converted: the asks sat 250 lines
@@ -196,6 +335,12 @@ def gate_a_brief(card, result, translation_check=None) -> str:
     calls were spread across four sections a reviewer had to assemble in their
     head. The gate is five minutes of somebody's attention. This is what those
     five minutes should be spent on.
+
+    `translation_check`, `feasibility` and `india` are optional only so that a
+    caller holding just a card can still get the judgement calls. Pass them --
+    without them the brief cannot say where the strategy runs, what data it
+    needs, or what India demands of it, which is three quarters of what a
+    reviewer is actually deciding.
     """
     W = _W
     blocking = [c for c in result.criteria if not c.passed and c.blocking]
@@ -216,6 +361,9 @@ def gate_a_brief(card, result, translation_check=None) -> str:
                      + ("" if c.value is None else f"   [{c.value}]"))
             for line in _wrap(c.evidence, W - 8):
                 L.append(f"       {line}")
+
+    L += _where_this_runs(card, translation_check)
+    L += _what_it_takes(card, feasibility, india)
 
     calls = judgement_calls(card, translation_check)
     L += ["", "  " + "-" * W,

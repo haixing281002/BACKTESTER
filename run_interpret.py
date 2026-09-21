@@ -223,8 +223,13 @@ def main() -> int:
     # The brief FIRST, the audit trail after. A reviewer gets five minutes; they
     # should be spent on the judgement calls and what the asks cost, not on
     # reading twenty-four green rows to discover that nothing tripped.
+    # Derived BEFORE the gate renders: the brief needs it. The full listing
+    # still prints below -- the brief carries the non-negotiables.
+    india = derive(card, tc)
+
     head("GATE A  |  HUMAN INTERPRETATION CONTROL")
-    para(gate_a_brief(card, ga, translation_check=tc), indent="")
+    para(gate_a_brief(card, ga, translation_check=tc, feasibility=feas,
+                      india=india), indent="")
     print()
     print(card.convertibility_block())
     print()
@@ -246,7 +251,7 @@ def main() -> int:
     para(card.asks(), indent="")
 
     head("WHAT IT TAKES TO RUN THIS IN INDIA")
-    para(derive(card, tc).render(), indent="")
+    para(india.render(), indent="")
 
     head("WHAT THIS PAPER WOULD NEED FROM YOU")
     if not shortfall:
