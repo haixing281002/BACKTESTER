@@ -201,6 +201,11 @@ def stationary_bootstrap(
     def ci(v):
         a = np.asarray(v, dtype=float)
         a = a[np.isfinite(a)]
+        if a.size == 0:
+            # every draw was non-finite (e.g. a zero-variance series makes
+            # Sharpe 0/0): no interval can be computed, so say so rather than
+            # crash on an empty-array percentile.
+            return [float("nan"), float("nan")]
         return [float(np.percentile(a, 2.5)), float(np.percentile(a, 97.5))]
 
     out: Dict[str, Any] = {
@@ -216,6 +221,11 @@ def stationary_bootstrap(
                 continue
             d = base - np.asarray(sharpe_draws[nm], dtype=float)
             d = d[np.isfinite(d)]
+            if d.size == 0:
+                diffs[nm] = {"mean_diff": float("nan"),
+                             "ci95": [float("nan"), float("nan")],
+                             "p_not_positive": float("nan")}
+                continue
             diffs[nm] = {
                 "mean_diff": float(d.mean()),
                 "ci95": [float(np.percentile(d, 2.5)), float(np.percentile(d, 97.5))],
