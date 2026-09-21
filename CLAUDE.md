@@ -105,16 +105,27 @@ nothing had tripped. So the gate now leads with **`gate_a_brief()` — what you
 are being asked to sign**:
 
 1. **STOP** — every blocking failure, in full, first.
-2. **The judgement calls** — each choice a model made that a human can overturn,
+2. **Where this runs** — the Indian universe as *instruments*, not as an
+   argument: what the mechanism needs (names, cap segment, history), the
+   resolution, every instrument HELD and every one MISSING by name, an
+   `OUT OF MANDATE` flag where it applies, and the code's ranking of the
+   runners-up. The model chose; the code only scores.
+3. **What it takes to run this, and what you already have** — the dataset the
+   paper deserves (minimum-viable separated from nice-to-have), the fund's
+   current position from the feasibility pass with every proxy and degraded
+   series named, and the non-negotiable India requirements. Plus the strategy
+   inputs the keyword matcher did not recognise, because a shallow match that
+   stays quiet is how a requirement goes missing.
+4. **The judgement calls** — each choice a model made that a human can overturn,
    one per block, tagged with who owns it: the universe over its runners-up, the
    long-only adaptation, the convertibility verdict's weakest link, costs and
    lag, the bar named before the run, an UNVERIFIED security list, every
    material ambiguity with its resolution, every open question with the
    assumption taken meanwhile. Pulled from the card, never restated, so it
    cannot drift from what the run will do.
-3. **What saying no costs** — every data request with its `without_it`, ordered
+5. **What saying no costs** — every data request with its `without_it`, ordered
    by priority. The fallback is the only part a human can weigh.
-4. **Worth a second look** — the non-blocking warnings.
+6. **Worth a second look** — the non-blocking warnings.
 
 Then, below it: at-a-glance, `card.plan()`, completeness, `card.asks()`, the
 India requirements, and the full criteria list as the audit trail.

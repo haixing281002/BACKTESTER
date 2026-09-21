@@ -229,8 +229,10 @@ def main(argv=None) -> int:
 
     feas = assess(card, registry)
     ga = gate_a(card, feas, doc.quality if doc else None, translation_check=tc)
+    india = derive_india_requirements(card, tc)
     R.h("GATE A  |  HUMAN INTERPRETATION CONTROL")
-    R.block(gate_a_brief(card, ga, translation_check=tc))
+    R.block(gate_a_brief(card, ga, translation_check=tc, feasibility=feas,
+                         india=india))
     R.p("")
     R.block(card.convertibility_block())
     R.p("")
@@ -246,7 +248,7 @@ def main(argv=None) -> int:
     R.block(card.asks())
 
     R.h("WHAT IT TAKES TO RUN THIS IN INDIA")
-    R.block(derive_india_requirements(card, tc).render())
+    R.block(india.render())
 
     shortfall = list(tc.missing) if tc else []
     shortfall += [r.requirement for r in feas.resolutions
