@@ -39,7 +39,7 @@ from ros.cards.schema import load_card
 from ros.data.firm_registry import build_firm_registry
 from ros.data.intake import MANIFEST, describe_shortfall, extend_registry
 from ros.data.universes import check_translation
-from ros.data.loaders import audit_frame, load_nse_factor_workbook
+from ros.data.loaders import audit_frame, load_nse_workbook_combined
 from ros.data.snapshot import SnapshotBuilder
 from ros.engine.backtest import LookaheadError, assert_causal
 from ros.feasibility import UNAVAILABLE, assess
@@ -85,7 +85,7 @@ class Report:
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description="Run the research pipeline for a Strategy Card")
     ap.add_argument("--card", required=True)
-    ap.add_argument("--data", default="data/raw/Factor_Indices_Historical_Price_Data.xlsx")
+    ap.add_argument("--data", default="data/raw/NSE_Broad_Factor_Indices_Historical_Data.xlsx")
     ap.add_argument("--outdir", default="outputs")
     ap.add_argument("--cash-rate", type=float, default=0.06)
     ap.add_argument("--book", default="Equal-weight sleeves",
@@ -205,7 +205,7 @@ def main(argv=None) -> int:
 
     # ---------------- STEP 04 : POINT-IN-TIME SNAPSHOT -------------------
     R.h("STEP 04  |  POINT-IN-TIME DATA + LINEAGE")
-    frame, prov = load_nse_factor_workbook(args.data)
+    frame, prov = load_nse_workbook_combined(args.data)
     needed = list(dict.fromkeys(
         [a for a in card.universe.assets]
         + ([card.universe.benchmark] if card.universe.benchmark else [])
