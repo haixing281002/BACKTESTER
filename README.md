@@ -242,33 +242,3 @@ re-derivable even though the model is not.
 
 `docs/paper_to_position_pipeline.html` charts every stage, its LLM insertion point and its
 failure modes.
-
----
-
-## Running it in Google Colab
-
-`colab/Research_OS_Colab.ipynb` is a **self-contained** notebook: the entire `ros` package is
-embedded as a base64 tarball, so it needs no GitHub access and nothing to download.
-
-1. Open [colab.research.google.com](https://colab.research.google.com) → **Upload notebook**
-2. Run cell **0.1** (installs cvxpy, clarabel, pdfplumber, openpyxl — 60–90s)
-3. Run cell **0.2** (unpacks the engine)
-4. Run cell **0.3** and upload **both** required inputs — select them together with
-   ctrl-click / cmd-click:
-   - `Factor_Indices_Historical_Price_Data.xlsx` (the price history)
-   - the research paper `.pdf` (Step 01 ingests it for page evidence)
-
-   The cell hard-fails if either is missing, and rejects a scanned PDF with no
-   extractable text.
-5. Run the rest top to bottom — about 5–8 minutes on a free CPU runtime
-
-The notebook walks all eight steps with the reasoning inline, and ends with an editable
-cell where you write and run your own Strategy Card.
-
-**Regenerating the notebook** after changing the engine:
-
-```bash
-# colab_bootstrap.py is the Colab path; build_colab.py is retired to examples/legacy/
-```
-
-Every code cell is executed end to end as a verification step before release.

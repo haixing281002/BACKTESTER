@@ -44,17 +44,25 @@ ANN = 252
 # ---------------------------------------------------------------------------
 # 1. Data, read a different way
 # ---------------------------------------------------------------------------
-def read_workbook(path: str) -> pd.DataFrame:
-    """Parse the NSE factor workbook with openpyxl directly.
+def read_workbook(path: str, sheet: int = 0) -> pd.DataFrame:
+    """Parse an NSE index workbook with openpyxl directly.
 
     Deliberately not pandas.read_excel: if the two parsers disagree about where
     the header sits or which column is which, that is a finding, and it can only
     surface if the second reader is genuinely a second reader.
+
+    An index may occupy a single field column (the original factor-sleeve
+    export: just 'Close') or a block of several (Open/High/Low/Close/PE/PB --
+    the broad-market/factor export). Within a block this always prefers
+    'Close', the only field with full-history coverage. Rows are bounded to
+    the contiguous run of valid dates right after the header, so a recap
+    table some exports append lower in the sheet, in the same columns, is
+    never read as data.
     """
     from openpyxl import load_workbook
 
     wb = load_workbook(path, read_only=True, data_only=True)
-    ws = wb[wb.sheetnames[0]]
+    ws = wb[wb.sheetnames[sheet]]
     rows = [list(r) for r in ws.iter_rows(values_only=True)]
     wb.close()
 
@@ -70,29 +78,103 @@ def read_workbook(path: str) -> pd.DataFrame:
         raise ValueError(f"{path}: no 'Date' header cell found")
 
     name_row = date_row - 1
-    body = rows[date_row + 1:]
+    field_row = date_row
+    body_all = rows[date_row + 1:]
+
+    n_rows = 0
+    for r in body_all:
+        v = r[date_col] if date_col < len(r) else None
+        if pd.to_datetime(v, errors="coerce") is pd.NaT:
+            break
+        n_rows += 1
+    if n_rows == 0:
+        raise ValueError(f"{path}: no valid dates found under the 'Date' header")
+    body = body_all[:n_rows]
     dates = pd.to_datetime([r[date_col] if date_col < len(r) else None for r in body],
                            errors="coerce")
 
+    def cell(row_idx: int, c: int):
+        row = rows[row_idx] if 0 <= row_idx < len(rows) else []
+        return row[c] if c < len(row) else None
+
+    def is_str(v) -> bool:
+        return isinstance(v, str) and v.strip() != ""
+
     cols: Dict[str, List[Optional[float]]] = {}
     width = max(len(r) for r in rows[:date_row + 1])
-    for c in range(width):
+    c = 0
+    while c < width:
         if c == date_col:
+            c += 1
             continue
-        nm = rows[name_row][c] if name_row >= 0 and c < len(rows[name_row]) else None
-        if not isinstance(nm, str) or not nm.strip():
+        nm = cell(name_row, c)
+        if not is_str(nm):
+            c += 1
             continue
+        name = str(nm).strip()
+
+        block_start = c
+        c += 1
+        while c < width:
+            if is_str(cell(name_row, c)):
+                break
+            if not is_str(cell(field_row, c)):
+                c += 1   # consume the spacer column
+                break
+            c += 1
+        block_end = c
+
+        chosen_col = None
+        for cc in range(block_start, block_end):
+            fld = cell(field_row, cc)
+            if is_str(fld) and str(fld).strip().lower() == "close":
+                chosen_col = cc
+                break
+        if chosen_col is None:
+            chosen_col = block_start
+
         vals = []
         for r in body:
-            v = r[c] if c < len(r) else None
+            v = r[chosen_col] if chosen_col < len(r) else None
             vals.append(float(v) if isinstance(v, (int, float)) and not isinstance(v, bool)
                         else None)
         if any(v is not None for v in vals):
-            cols[nm.strip()] = vals
+            cols[name] = vals
 
     frame = pd.DataFrame(cols, index=dates)
     frame = frame[frame.index.notna()].sort_index()
     return frame[~frame.index.duplicated(keep="last")]
+
+
+def read_workbook_all_sheets(path: str) -> pd.DataFrame:
+    """`read_workbook`, joined across every sheet in the file.
+
+    Mirrors ros.data.loaders.load_nse_workbook_combined on the engine side, so
+    the two implementations can still be compared column-for-column when a
+    workbook splits factor sleeves and broad-market indices into separate
+    sheets rather than separate files. A single-sheet workbook loads exactly
+    as `read_workbook` would.
+    """
+    from openpyxl import load_workbook
+
+    wb = load_workbook(path, read_only=True)
+    n_sheets = len(wb.sheetnames)
+    wb.close()
+
+    seen: Dict[str, int] = {}
+    frames = []
+    for i in range(n_sheets):
+        df = read_workbook(path, sheet=i)
+        for col in df.columns:
+            if col in seen:
+                raise ValueError(
+                    f"{path}: '{col}' appears on both sheet {seen[col]} and "
+                    f"{i} -- two histories for the same index would be "
+                    f"silently merged.")
+            seen[col] = i
+        frames.append(df)
+    frame = pd.concat(frames, axis=1).sort_index()
+    return frame
 
 
 # ---------------------------------------------------------------------------

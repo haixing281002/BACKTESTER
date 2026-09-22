@@ -38,13 +38,13 @@ from validate import independent as ind          # the clean-room side
 
 # The engine under test.
 from ros.cards.schema import load_card
-from ros.data.loaders import load_nse_factor_workbook, synthetic_cash_series
+from ros.data.loaders import load_nse_workbook_combined, synthetic_cash_series
 from ros.engine.backtest import Backtester, rebalance_dates
 from ros.engine.prepare import build_signal_inputs
 from ros.engine.templates import build_allocator
 from ros.validation import metrics as M
 
-XLSX = "data/raw/Factor_Indices_Historical_Price_Data.xlsx"
+XLSX = "data/raw/NSE_Broad_Factor_Indices_Historical_Data.xlsx"
 CARD = "examples/cards/devanathan_2026_india_factor_adaptation.yaml"
 
 # Quantities that are equal by construction get an exact-arithmetic tolerance.
@@ -87,8 +87,8 @@ def main() -> int:
     # ---- 1. the data itself -------------------------------------------
     print("\n[1] DATA  (pandas.read_excel  vs  raw openpyxl)")
     hr()
-    eng_frame, prov = load_nse_factor_workbook(args.xlsx)
-    ind_frame = ind.read_workbook(args.xlsx)
+    eng_frame, prov = load_nse_workbook_combined(args.xlsx)
+    ind_frame = ind.read_workbook_all_sheets(args.xlsx)
 
     shared = [c for c in eng_frame.columns if c in ind_frame.columns]
     print(f"    engine parsed : {eng_frame.shape[1]} series x {eng_frame.shape[0]} rows")

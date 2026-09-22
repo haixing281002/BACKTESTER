@@ -19,7 +19,7 @@ from ros.validation import metrics as M
 from validate import independent as ind
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-XLSX = str(ROOT / "data/raw/Factor_Indices_Historical_Price_Data.xlsx")
+XLSX = str(ROOT / "data/raw/NSE_Broad_Factor_Indices_Historical_Data.xlsx")
 SPREAD, LAG, WARMUP, NDAYS = 30.0, 1, 16, 400
 
 
