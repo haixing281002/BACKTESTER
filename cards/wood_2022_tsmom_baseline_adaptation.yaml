@@ -1,0 +1,1029 @@
+card_version: "1.0"
+
+paper:
+  id: wood_2022_tsmom_baseline_adaptation
+  title: "Trading with the Momentum Transformer: An Intelligent and Interpretable Architecture"
+  authors: [Kieran Wood, Sven Giegerich, Stephen Roberts, Stefan Zohren]
+  date: "2022-11-22"
+  source_file: docs/papers/wood_2022_momentum_transformer.pdf
+  source_sha256: "2fa3cf4dafe96116"
+
+intent:
+  mode: adaptation
+  parent_card: null
+  rationale: >
+    The paper's actual contribution -- a neural network (attention/LSTM hybrid
+    Temporal Fusion Transformer) trained via SGD to directly maximise realised
+    Sharpe -- cannot be built in this engine at all: there is no trainable-model
+    primitive, no train/validate/test loop and no SGD optimiser anywhere in
+    ros/engine, and CLAUDE.md's non-negotiables ("a model never computes a
+    number that reaches a report") are written specifically to keep it that
+    way. This card does NOT attempt that mechanism and its result is never
+    evidence about it. What IS testable is the paper's own classical TSMOM
+    comparator row (Exhibit 3, "TSMOM"), a Moskowitz-Ooi-Pedersen-style signed
+    trend signal the paper reports purely as a benchmark. That comparator maps
+    directly onto this engine's existing ts_momentum template.
+  transferred_mechanism: >
+    Sign-filtered, inverse-volatility-weighted, volatility-targeted time-series
+    momentum (paper eq. 9, benchmark "TSMOM" row of Exhibit 3): each of the
+    fund's factor sleeves is held only when its own trailing 12-month return is
+    positive, sized inverse to its own trailing volatility, and the whole book
+    is scaled to a 15% annualised volatility target. No cross-sectional
+    ranking; each sleeve is timed against only its own history.
+  broken_assumptions:
+    - >
+      THE HEADLINE MECHANISM ITSELF IS NOT BEING TESTED: this card tests only
+      the classical TSMOM row the paper reports as a comparator, never the
+      trained Momentum Transformer that is the paper's actual subject. A
+      result here is not evidence for or against the paper's real claim.
+    - >
+      SHORTING: z_t in (-1,1) is explicitly signed and the paper's Exhibit 10
+      shows FX and FI legs go materially negative under cost, meaning the
+      short side is economically active, not a formality. Long-only sign-
+      filtering (hold or hold-nothing, never short) removes a structurally
+      load-bearing half of the return-generating events by construction --
+      every downtrending stream that would normally contribute a positive
+      short-leg return instead contributes exactly zero. This is not a
+      haircut on the paper's TSMOM number.
+    - >
+      LEVERAGE AND DIVERSIFICATION: the paper's 50 streams span four weakly-
+      correlated asset classes and the vol-scaling machinery assumes an
+      approximately diagonal covariance matrix (p.5) enabled by that breadth.
+      This card's 8 candidate sleeves were chosen from a full correlation
+      check of all 20 series the fund's registry holds -- the widest
+      dispersion achievable is 0.76-0.96 pairwise, all single-country NIFTY-
+      derived equity. Broadening the set past the original 5 factor sleeves
+      widened the floor slightly (0.816 to 0.76) but confirms, rather than
+      solves, that almost none of the paper's cross-asset diversification is
+      available anywhere in this fund's current data.
+    - >
+      INSTRUMENT TYPE: the paper trades leveraged futures with near-zero
+      financing drag; this fund trades unlevered cash equity index sleeves.
+      The ts_momentum template structurally cannot lever (it only ever dilutes
+      a unit-gross book with cash, never scales above it), so copying the
+      paper's own 15% target vol carries none of the leverage risk that would
+      otherwise make reusing a paper's number dangerous -- but it does mean
+      the book will often sit partially in cash rather than fully invested.
+    - >
+      COST REGIME: the paper's own headline numbers (Exhibit 3) are PRE-COST.
+      Its own cost sensitivity (Exhibit 10, swept 0-3bps) already shows
+      portfolio Sharpe collapsing well before 3bps for every architecture it
+      tests. This fund's mandated 30bp round-trip cost is an order of
+      magnitude past where the paper's own sensitivity analysis stops.
+    - >
+      SIGNAL-TO-TEMPLATE FIDELITY: eq. 9 vol-scales EACH ASSET INDIVIDUALLY to
+      the SAME 15% target, then takes the simple (1/N) average of those
+      already-scaled returns -- there is no second, portfolio-level scaling
+      step and no inverse-vol weighting of one asset against another. The
+      ts_momentum template instead inverse-vol-WEIGHTS held sleeves relative
+      to each other, then scales the AGGREGATE book to target with a single
+      step. These diverge most in exactly the regime this card is riskiest
+      in: correlated sleeves trending together (all 8 trending gives ~71%
+      gross under the paper's own per-asset construction, recomputed on the
+      current 8-sleeve set and its actual realised vols -- essentially
+      unchanged from the original 5-sleeve card's ~72%, since adding
+      similarly-volatile streams barely moves an average; the template's
+      relative-weighting construction would produce a different number).
+      ts_momentum is the nearest REGISTERED template, not
+      a literal implementation of eq. 9 -- no template currently supports
+      individually vol-targeting each asset before combining.
+    - >
+      REBALANCE CADENCE: the paper recomputes and re-scales positions daily
+      (eq. 9, z_t to r_t+1). This card keeps that cadence rather than quietly
+      softening it to monthly, so whatever turnover cost this mechanism
+      actually carries at Indian prices is what gets measured, not assumed
+      away -- see the open question on this below.
+    - >
+      RETURN BASIS: these are price-return indices; dividends are missing
+      from every series (~1.3-1.5% p.a.), understating absolute returns and
+      biasing any cash-vs-equity comparison against equity.
+    - >
+      POINT-IN-TIME: NSE factor indices are backfilled to a 2005 base with
+      methodology fixed years later. Sleeve construction was chosen with
+      knowledge of the history it now reports.
+
+universe:
+  description: >
+    Eight NSE index-level return streams: the five NIFTY500 single-factor
+    sleeves plus three cap-segment indices (Midcap 150, Smallcap 250,
+    Microcap 250), all sharing the same 2005-04-01 common start date, plus a
+    declared cash proxy. This is the outcome of exploring the FULL 20-series
+    registry the combined workbook provides (data/raw/
+    NSE_Broad_Factor_Indices_Historical_Data.xlsx), not a default 5-sleeve
+    set: every series was correlation-checked against what this card already
+    held, and each of the twelve excluded series was excluded for a stated,
+    evidenced reason (short history that would truncate the sample, or
+    near-duplicate correlation >=0.94 with a series already in), never
+    because it belonged to a different "category" of index. See
+    data_plan.rejected_alternatives for the full per-series accounting.
+    NIFTY HIGH BETA 50 remains excluded (2012-11 start, truncates by seven
+    years), as does NIFTY500 MULTIFACTOR MQVLV 50 (held out as a benchmark
+    instead, since it is itself already a multi-factor blend of four of the
+    five sleeves this card times).
+  asset_class: equity
+  geography: IN
+  assets:
+    - NIFTY500 MOMENTUM 50
+    - NIFTY500 QUALITY 50
+    - NIFTY500 VALUE 50
+    - NIFTY500 LOW VOLATILITY 50
+    - NIFTY ALPHA 50
+    - NIFTY MIDCAP 150
+    - NIFTY SMALLCAP 250
+    - NIFTY MICROCAP 250
+  benchmark: NIFTY 500
+  cash_asset: CASH_PROXY
+
+universe_translation:
+  source_universe: >
+    50 liquid continuous futures contracts (25 commodities, 11 equity index,
+    5 fixed income, 9 FX), Pinnacle Data Corp CLC database, 1990-2020,
+    backwards ratio-adjusted (Exhibit 11, p.15)
+  source_breadth: 50
+  source_selection_rule: >
+    Liquid, continuous contracts with <10% missing data, winsorised at 5 EWM
+    std (252-day half-life); each asset admitted to the test set once its
+    validation window has one full input sequence, staggered 1995-2010 (p.15)
+  target_universe: "NSE factor sleeves + cap-segment indices"
+  grade: loose
+  resolution: sleeve_proxy
+  rationale: >
+    The mechanism is explicitly univariate time-series, never cross-sectional
+    (p.1: "univariate TSMOM strategies we focus on differ from the
+    cross-sectional approach"). ros.data.universes.propose_universes with
+    needs_cross_section=False scores the catalogued "NSE factor sleeves"
+    entry highest (50.0) of 24 catalogued Indian universes -- but that
+    catalogue entry is itself stale (hardcoded at 8 factor streams; see the
+    critique record and Gate A queue). This card's actual candidate set was
+    built by exploring the full registry directly rather than trusting the
+    catalogue number: all 20 held price series were correlation-checked
+    against each other, and 8 were kept on evidence (below), not because a
+    catalogued definition said so.
+  transfer_risks:
+    - >
+      The paper's diversification argument rests on near-zero cross-asset-
+      class covariance (p.5). Having now checked EVERY series this fund
+      holds, not just the original 5, the honest finding is that the floor
+      cannot be pushed lower: the widest pairwise correlation range achievable
+      across any defensible 8-series subset of the full 20-series registry is
+      0.76-0.96 (NIFTY500 LOW VOLATILITY 50 vs NIFTY MICROCAP 250 at the low
+      end), nowhere close to the near-zero or negative cross-asset-class
+      correlation the paper's own mechanism relies on. This is a stronger,
+      more decisive version of the same risk than the original 5-sleeve
+      card carried: it is not that this card under-sampled the fund's data,
+      it is that the fund's ENTIRE available Indian equity dataset is one
+      correlated market sliced many ways, and no amount of additional
+      slicing fixes that.
+    - >
+      8 streams remains thin against the 50 the paper tested, though wider
+      than the original 5; the paper only trusts its diagonal-covariance
+      simplification because of that breadth AND because of genuine
+      cross-asset-class independence, neither of which this set has in full.
+    - >
+      Reaching the paper's 15% target vol on the lowest-vol sleeve (NIFTY500
+      LOW VOLATILITY 50, ~16.0%) leaves almost no room for dilution, so the
+      vol-target step does very little for that sleeve specifically; the
+      three added cap-segment sleeves run higher (Midcap 150 ~20.8%,
+      Smallcap 250 ~21.5%, Microcap 250 ~23.0%), so they dilute more.
+  mechanism_needs:
+    needs_cross_section: false
+    min_names: 1
+    cap_segment: all
+    sector: null
+    min_history_years: 15.0
+    must_be_in_mandate: true
+    notes: >
+      Each stream is timed against only its own trailing history; there is no
+      sort and no bucket. The fund's factor sleeves are exactly such a small
+      set of pre-built long-only streams and are the only universe testable
+      today. must_be_in_mandate is true because this run is meant to inform
+      an allocation decision, not merely establish the mechanism exists.
+  alternatives_considered:
+    - NIFTY 500 constituents
+    - NIFTY Midcap 150 constituents
+    - NIFTY Total Market constituents
+  why_not_alternatives: >
+    All three score lower under needs_cross_section=False and, more
+    fundamentally, would require individual security prices the firm registry
+    does not hold at that granularity -- only index-level closes exist. Even
+    if the data existed, a univariate time-series mechanism run stock-by-stock
+    across 500 names tests a different (and far more capacity-hungry)
+    experiment than the one this paper describes; that is its own card, not
+    this one.
+  required_instruments:
+    - NIFTY500 MOMENTUM 50
+    - NIFTY500 QUALITY 50
+    - NIFTY500 VALUE 50
+    - NIFTY500 LOW VOLATILITY 50
+    - NIFTY ALPHA 50
+    - NIFTY MIDCAP 150
+    - NIFTY SMALLCAP 250
+    - NIFTY MICROCAP 250
+    - NIFTY 500
+  evidence_page: 1
+
+strategy:
+  signal_name: sign_filtered_tsmom
+  signal_definition: >
+    At each rebalance: for each of the eight candidate sleeves (five
+    NIFTY500 factor sleeves plus three cap-segment indices, chosen after
+    correlation-checking the full 20-series registry -- see universe.
+    description), compute its trailing
+    252-trading-day total return (no skip). Hold only sleeves with a positive
+    trailing return; size held sleeves inverse to their own trailing
+    volatility (60-trading-day rolling window) so each contributes comparable
+    risk; scale the resulting book to a 15% annualised volatility target,
+    diluting with cash rather than levering if realised vol would exceed the
+    target. If no sleeve is trending positive, hold cash. This restates the
+    paper's classical "TSMOM" comparator (Exhibit 3, cited to Moskowitz-Ooi-
+    Pedersen 2012 and Kim-Tse-Wald 2016 rather than restated in-body -- an
+    extraction concern, see notes) as a long-only sign filter in place of the
+    paper's own signed (-1,1) long/short position, combined with the paper's
+    own vol-scaling machinery (eq. 9, p.5: R_t+1 = z_t * (sigma_tgt/sigma_t) *
+    r_t+1, sigma_tgt = 15%, though the paper's own sigma_t is a 60-day
+    EXPONENTIALLY weighted std, whereas this engine's covariance primitive
+    computes a plain rolling std over the same 60-day window -- a resolved
+    approximation, not a silent one).
+  inputs_required:
+    - "daily close of each candidate sleeve"
+    - "daily close of NIFTY 500 (benchmark)"
+    - "a cash rate for the un-invested residual"
+  cross_sectional: false
+  formation_rule: >
+    No cross-sectional selection step. Every candidate sleeve is evaluated
+    independently every rebalance; the sign of its own trailing return decides
+    whether it is held at all.
+  weighting_rule: >
+    Among sleeves with a positive signal: weight inverse to trailing
+    volatility, normalised to sum to the vol-target-scaled gross exposure.
+    Long-only, gross at most 1 (the template dilutes with cash, never levers).
+  holding_period: "one trading day (position recomputed and the book re-scaled every rebalance)"
+  rebalance_frequency: daily
+  is_long_short: true
+  long_only_adaptation: >
+    The paper's z_t in (-1,1) takes a full short position on a negative
+    trend; this fund cannot short, so a sleeve with a negative signal
+    contributes zero instead of a symmetric positive short-leg return. This is
+    the ts_momentum template's built-in behaviour (sign filter to zero, never
+    to a negative weight) and is structurally identical to how a Moskowitz-
+    style long-only TSMOM adaptation is normally built. The paper does not
+    break out long-only vs long-short legs for its own TSMOM comparator, so
+    the Sharpe cost of dropping the short side cannot be quoted from the
+    paper's own tables -- only measured by running this card.
+  constraints:
+    - "long-only: no sleeve weight below zero"
+    - "unlevered: gross exposure capped at 1.0 (the vol target dilutes with cash, never levers)"
+    - "daily rebalance, as the paper specifies -- not softened to monthly"
+    - "this fund cannot short and cannot use derivatives"
+  engine_template: ts_momentum
+  template_gap: >
+    Two distinct gaps, not one. First, the paper's actual headline mechanism
+    -- a neural network trained end-to-end via SGD to directly optimise
+    realised Sharpe (eq. 10-11) -- has no template gap in the ordinary sense
+    (a template allocates from an already-computed signal); it is a
+    categorically different, non-deterministic component this engine's design
+    deliberately excludes, and this card does not attempt it. Second, and
+    caught only on critique: even the classical TSMOM comparator this card
+    DOES attempt is not literally reproduced by ts_momentum. Eq. 9 vol-scales
+    each asset individually to the 15% target, then equal-weights the
+    already-scaled returns; ts_momentum instead inverse-vol-weights sleeves
+    relative to each other, then scales the aggregate book once. No
+    registered template currently does individual-then-combine; ts_momentum
+    is the nearest available approximation, not a faithful implementation, and
+    the two constructions diverge most in the correlated-sleeve regime this
+    card is already flagged as riskiest in.
+  confidence: high
+  evidence_pages: [1, 5, 7, 9, 12, 15]
+
+signal:
+  name: sign_filtered_tsmom
+  template: ts_momentum
+  lookback_days: 60
+  lag_days: 1
+  description: >
+    Paper eq. 9's vol-scaling applied to a sign-filtered 252-day trailing
+    return, long-only. lag_days is 1, not 0: NSE index closes publish after
+    the close, so a signal computed on date t cannot be traded at t's close.
+    The paper's own z_t->r_t+1 notation already assumes a minimum one-day
+    lag, so this is consistent with the paper's own construction, not merely
+    an India overlay on top of it.
+  params:
+    alpha_source: momentum
+    alpha_window: 252
+    alpha_skip: 0
+    target_vol: 0.15
+    vol_weighted: true
+    min_positive: 1
+
+portfolio:
+  rebalance: daily
+  long_only: true
+  max_gross: 1.0
+  allow_cash: true
+  mandate_allow_cash: false      # the fund is long-only and fully invested
+  target_vol: 0.15
+  start: "2005-04-01"
+  end: "2026-09-18"
+
+costs:
+  # 30bp round trip, not the paper's near-zero futures spread. The paper's own
+  # Exhibit 10 already shows Sharpe collapsing well before 3bps at DAILY
+  # rebalance; 30bp is an order of magnitude past anything the paper tested.
+  spread_bps: 30.0
+  cost_model: half_spread
+
+data_requirements:
+  - {name: "NIFTY500 MOMENTUM 50", kind: price, frequency: daily, start: "2005-04-01", mandatory: true, purpose: "candidate timed sleeve"}
+  - {name: "NIFTY500 QUALITY 50", kind: price, frequency: daily, start: "2005-04-01", mandatory: true, purpose: "candidate timed sleeve"}
+  - {name: "NIFTY500 VALUE 50", kind: price, frequency: daily, start: "2005-04-01", mandatory: true, purpose: "candidate timed sleeve"}
+  - {name: "NIFTY500 LOW VOLATILITY 50", kind: price, frequency: daily, start: "2005-04-01", mandatory: true, purpose: "candidate timed sleeve"}
+  - {name: "NIFTY ALPHA 50", kind: price, frequency: daily, start: "2005-04-01", mandatory: true, purpose: "candidate timed sleeve"}
+  - {name: "NIFTY MIDCAP 150", kind: price, frequency: daily, start: "2005-04-01", mandatory: true, purpose: "candidate timed sleeve -- added after correlation-checking the full registry"}
+  - {name: "NIFTY SMALLCAP 250", kind: price, frequency: daily, start: "2005-04-01", mandatory: true, purpose: "candidate timed sleeve -- added after correlation-checking the full registry"}
+  - {name: "NIFTY MICROCAP 250", kind: price, frequency: daily, start: "2005-04-01", mandatory: true, purpose: "candidate timed sleeve -- lowest correlation to the factor sleeves of anything in the registry"}
+  - {name: "NIFTY 500", kind: price, frequency: daily, start: "2005-04-01", mandatory: true, purpose: "fund benchmark"}
+  - {name: "NIFTY500 MULTIFACTOR MQVLV 50", kind: price, frequency: daily, mandatory: true, purpose: "off-the-shelf zero-turnover multifactor competitor"}
+  - {name: india_cash_rate, kind: risk_free_rate, frequency: daily, mandatory: true, purpose: "cash accrual during hold-nothing periods and the Sharpe numeraire"}
+
+ambiguities:
+  - field: universe.mapping
+    headline: "50-future comparator on 8 correlated equity sleeves -- adaptation, not replication"
+    issue: >
+      Mapping a 50-instrument, four-asset-class futures book onto eight
+      single-country equity sleeves is a judgement, not a translation.
+    resolution: >
+      Proceed as an explicit ADAPTATION of the paper's classical TSMOM
+      comparator only, never scored against the paper's numbers -- and never
+      described as testing the paper's actual (deep-learning) claim at all.
+    confidence: high
+    material: true
+    evidence_page: 1
+
+  - field: strategy.signal_definition
+    headline: "TSMOM comparator cited to Moskowitz (2012), not restated; resolved as 252d return, no skip"
+    issue: >
+      Exhibit 3's "TSMOM" row is never defined in-body -- only cited to refs
+      [1] (Moskowitz-Ooi-Pedersen 2012) and [23] (Kim-Tse-Wald 2016).
+    resolution: >
+      Use the standard literature construction: sign of the trailing 252-day
+      (12-month) total return, no skip -- the same convention this fund's
+      vol_scaled_momentum primitive was built to match.
+    confidence: medium
+    material: true
+    evidence_page: 7
+
+  - field: signal.lookback_days
+    headline: "Paper's 60d vol is EWM; engine uses plain rolling std over the same window"
+    issue: >
+      Eq. 9 specifies a 60-day EWM standard deviation for vol scaling.
+      ros.engine.primitives computes a plain (non-exponential) rolling std.
+    resolution: >
+      Accept the engine's standard rolling-window estimator at the same
+      60-day length as a reasonable approximation, reported as a resolved
+      deviation rather than silently substituted.
+    confidence: medium
+    material: false
+    evidence_page: 5
+
+  - field: portfolio.target_vol
+    headline: "Paper's 15% target vol reused directly -- safe: template dilutes with cash, never levers"
+    issue: >
+      Reusing a paper's own risk parameter is normally the way a backtest
+      quietly inherits leverage it should not have.
+    resolution: >
+      ts_momentum's vol-scaling step is capped at gross 1.0 by construction
+      (_scale_to_vol: "Never levers"), so copying 15% carries none of that
+      risk here -- it only decides how often the book dilutes into cash. Kept
+      at the paper's own number rather than invented.
+    confidence: high
+    material: false
+    evidence_page: 5
+
+  - field: costs.spread_bps
+    headline: "30bp round trip as base case; the paper's own cost table already breaks well before this"
+    issue: >
+      The paper's headline table is pre-cost; its own sensitivity only sweeps
+      to 3bps and already shows Sharpe collapsing across architectures by
+      then.
+    resolution: >
+      Use 30bp round trip as the base case per fund-wide standing policy, and
+      report the breakeven cost at which the edge disappears.
+    confidence: high
+    material: true
+    evidence_page: 12
+
+  - field: universe.cash_asset
+    headline: "No Indian rate series: cash accrues a flat 6%, swept 4-8%. LOW confidence."
+    issue: No Indian risk-free series in the snapshot.
+    resolution: >
+      Declared constant 6% proxy, recorded as a proxy, swept 4-8%. This
+      mechanism holds cash whenever no sleeve trends positive -- a frequent,
+      mechanism-central state, not an edge case -- so results are reported as
+      rate-dependent throughout, not only in a footnote.
+    confidence: low
+    material: true
+
+  - field: data.pit_status
+    headline: "Backfilled sleeve history accepted for mechanism testing only; caps the ladder at ROBUST"
+    issue: >
+      NSE defined these sleeves years after their 2005 backfilled base date,
+      with knowledge of the intervening returns.
+    resolution: >
+      Accept for mechanism testing only. Caps the ladder at ROBUST: no live
+      claim may rest on backfilled sleeve history.
+    confidence: high
+    material: true
+
+  - field: signal.template
+    headline: "ts_momentum approximates eq.9, it does not implement it -- caught on critique, not the first draft"
+    issue: >
+      Eq. 9 vol-targets each asset individually then equal-weights; ts_momentum
+      inverse-vol-weights sleeves against each other then vol-targets the
+      combined book once. No registered template does the paper's literal
+      construction, and the gap is largest exactly where this card is
+      riskiest: correlated sleeves trending together.
+    resolution: >
+      Run on ts_momentum as the nearest registered template, with this
+      divergence stated plainly rather than implied by a "closest template"
+      label. If the result is promotion-relevant, a human should treat it as
+      a test of "sign-filtered, relatively-vol-weighted trend timing", not a
+      literal test of the paper's own TSMOM row -- a second-order adaptation
+      on top of the already-declared long-only one.
+    confidence: high
+    material: true
+    evidence_page: 5
+
+  - field: portfolio.allow_cash
+    headline: "Both variants run; the fully-invested mandate one governs promotion"
+    issue: >
+      The fund's mandate is long-only and fully invested; sign-filtered
+      TSMOM's core mechanism is to hold cash when nothing trends.
+    resolution: >
+      Run BOTH: the faithful cash-holding variant (does the mechanism work?)
+      and a fully-invested mandate variant (may we actually run it?). The
+      mandate variant governs the promotion decision.
+    confidence: high
+    material: true
+
+replication_targets: []
+
+benchmark_templates:
+  - {name: "Equal-weight sleeves", template: fixed_weight, params: {weights: equal}, rebalance: annual}
+  - {name: "Inverse vol",          template: inverse_vol,  params: {}}
+  - {name: "Vol-target overlay",   template: vol_target,   params: {weights: equal, target_vol: 0.15}}
+
+data_plan:
+  # Designed from the paper first. The mechanism times a small set of
+  # long-only streams against their own history; it never ranks securities.
+  # So the right dataset is clean stream histories at daily granularity, not
+  # stock-level breadth -- breadth would test a different (cross-sectional)
+  # mechanism entirely.
+  ideal:
+    - field: "Total-return daily series for each of the eight NSE candidate sleeves"
+      granularity: daily
+      history_from: "2005-04-01"
+      why: >
+        The trailing-return signal and the vol estimate both need a clean
+        return stream per sleeve. Total return, not price return, because a
+        missing dividend biases absolute performance and the cash-vs-equity
+        comparison this mechanism turns on (frequent hold-cash periods) in
+        one direction.
+      why_granularity: >
+        Daily and no finer. The vol window is 60 days and the momentum
+        window is 252 days; both need daily observations to form. The
+        rebalance is itself daily, matching the paper's own z_t
+        recomputation, so there is no coarser frequency that preserves the
+        mechanism as specified.
+      why_history: >
+        2005-04 is the earliest date all eight sleeves exist. Starting later
+        truncates the 2008 drawdown, the only severe stress in the Indian
+        sample and the regime where a trend-following sign filter either
+        earns its keep (by sitting out the crash) or does not.
+      adjustments: "dividends reinvested; no survivorship question -- an index does not delist"
+      minimum_viable: true
+    - field: "Indian overnight or 91-day T-bill rate, daily"
+      granularity: daily
+      history_from: "2005-04-01"
+      why: >
+        Two roles: accrual on the (frequent) cash-holding periods, and the
+        numeraire every Sharpe here is measured against. Sign-filtered TSMOM
+        holds cash whenever no sleeve trends positive, which is a mechanism-
+        central state here, not a residual -- more central than in a
+        risk-budgeted optimiser that is normally near-fully invested.
+      why_granularity: "daily, to match the accrual and the daily rebalance"
+      why_history: "same window as the sleeves, or the Sharpe is spliced"
+      adjustments: "annualised decimal; state the day-count convention"
+      minimum_viable: true
+    - field: "Daily traded value (ADV) for each sleeve's tracking ETF or constituents"
+      granularity: daily
+      history_from: "2010-01-01"
+      why: >
+        Daily rebalancing means this mechanism's turnover -- and therefore
+        its capacity ceiling -- is far more sensitive to real tradability
+        than a monthly-rotation strategy. Without ADV, turnover_capacity runs
+        on a hand-supplied argument rather than a measurement.
+      why_granularity: "daily, because turnover is charged per rebalance and the rebalance is daily"
+      why_history: "2010 onward is enough; a capacity number from a thinner, earlier market would err conservative, not dangerous"
+      adjustments: "traded VALUE in INR, not share count"
+      minimum_viable: false
+    - field: "Each sleeve index's true launch date and methodology-change history"
+      granularity: monthly
+      history_from: "2005-04-01"
+      why: >
+        The held history is backfilled to a 2005 base with rules fixed years
+        later; knowing the real launch date is what allows a post-launch-only
+        re-run, the only version that could support a live claim.
+      why_granularity: "a handful of dates, not a series"
+      why_history: "the full window, so the backfilled portion is identifiable"
+      adjustments: "one row per index: name, launch_date, any methodology revision"
+      minimum_viable: false
+  rejected_alternatives:
+    - option: "NIFTY 500 constituent-level prices, timed stock-by-stock"
+      why_not: >
+        Tests a different, cross-sectional-flavoured experiment at far
+        greater capacity risk. This paper's mechanism is univariate: each
+        stream timed against only its own history. Running it on 500 single
+        names is its own card, not this one, and the registry does not hold
+        stock-level prices at all.
+    - option: "Weekly or monthly sleeve closes"
+      why_not: >
+        The vol window is 60 trading days and the paper's own construction
+        recomputes daily. Coarser data cannot form either estimate as
+        specified, and would silently become a different (monthly-timed)
+        strategy this card does not claim to test.
+    - option: "Minute or tick data on the sleeve ETFs"
+      why_not: >
+        There is no intraday decision in this mechanism: a position is set
+        once per trading day at the close. Intraday data would inform
+        EXECUTION, a different question, at a cost this card does not need.
+    - option: "The price-return sleeve series we already hold, unchanged"
+      why_not: >
+        It is what this card will actually run on, and it is not the right
+        dataset. Dividends are missing from every series, biasing the
+        cash-vs-equity comparison this mechanism turns on throughout, not
+        occasionally. Listed here so the gap is recorded, not forgotten.
+    - option: "The three newly-available NIFTY200-scope factor sleeves (VALUE 30, MOMENTUM 30, Quality 30)"
+      why_not: >
+        Measured directly on the new combined workbook: NIFTY200 MOMENTUM 30
+        correlates 0.94 with the already-held NIFTY500 MOMENTUM 50, and
+        NIFTY200 VALUE 30 correlates 0.97 with NIFTY500 VALUE 50 -- both are
+        near-duplicate bets on the same factor at a narrower cap scope, not
+        independent streams, and adding them would worsen rather than fix
+        this card's central risk (sleeve correlation). NIFTY200 Quality 30
+        correlates 0.93 with NIFTY500 QUALITY 50 on top of only starting
+        2015-12-31, ten years later than the other sleeves -- doubly
+        disqualified.
+    - option: "NIFTY 50, NIFTY 100, NIFTY 200 as additional timed streams (the broad-market ladder below NIFTY 500)"
+      why_not: >
+        Measured: NIFTY 50 vs NIFTY 100 correlate 1.00; NIFTY 100 vs
+        NIFTY 200 correlate 1.00; NIFTY 200 vs NIFTY 500 correlate 1.00 (2
+        d.p.). This ladder is effectively ONE bet at four points of
+        resolution. NIFTY 500 already occupies that bet as the fund
+        benchmark; adding any of the other three would time the same
+        large-cap-market exposure a second (or third, or fourth) time under
+        a different name, diluting genuine diversification with duplicated
+        beta rather than adding it.
+    - option: "NIFTY MIDCAP 100 and NIFTY SMALLCAP 100 alongside the chosen MIDCAP 150 / SMALLCAP 250"
+      why_not: >
+        Near-duplicates of the sleeves already chosen: MIDCAP 100 vs
+        MIDCAP 150 correlate 0.99; SMALLCAP 100 vs SMALLCAP 250 correlate
+        0.98. Keeping one representative per size cluster captures
+        essentially all the available information; keeping both doubles
+        turnover and complexity for a fraction of a correlation point.
+    - option: "NIFTY MIDSMALLCAP 400 as a fourth cap-segment sleeve"
+      why_not: >
+        By construction a blend of the mid- and small-cap segments already
+        held: correlates 0.99 with MIDCAP 150 and 0.98 with SMALLCAP 250.
+        Adds no information the other two do not already carry.
+    - option: "NIFTY HIGH BETA 50"
+      why_not: >
+        History starts 2012-11-30, seven years later than the rest of the
+        panel; including it would either truncate the whole sample to 2012
+        or force a staggered-start panel this card's engine mapping does not
+        support. Also correlates 0.93 with NIFTY500 VALUE 50 and 0.91-0.93
+        with the cap-segment sleeves -- not obviously more diversifying even
+        setting the history problem aside.
+  granularity_verdict: >
+    DAILY, and nothing finer. The signal recomputes daily over a 60-day vol
+    window and a 252-day return window, and the rebalance is itself daily as
+    the paper specifies. Weekly loses the vol estimate; intraday answers an
+    execution question this card does not ask.
+  optimality_argument: >
+    Eight clean total-return sleeve streams -- the outcome of correlation-
+    checking the full 20-series registry, not a default subset -- a real
+    short rate, and (for
+    capacity) real traded value is the smallest dataset that can answer this
+    paper's actual testable question -- does a sign-filtered, vol-scaled
+    trend timer beat a static mix of the same streams, after Indian costs, at
+    daily rebalance. It is optimal rather than merely sufficient: stock-level
+    breadth tests a different mechanism this paper does not describe, coarser
+    data cannot form the 60-day/252-day estimators the paper specifies, and
+    intraday data prices an execution decision this strategy never makes.
+  what_would_change_the_answer: >
+    Total-return series would raise every absolute return and narrow the gap
+    between the cash-holding and fully-invested variants -- the comparison
+    the promotion decision turns on. A real rate series would let the
+    (frequent) cash-holding periods de-risk at the actual rate cycle instead
+    of a flat line, which is exactly where a trend-following sign filter's
+    value is supposed to come from. Either could move the verdict. ADV and
+    launch dates change what may be CLAIMED from the answer, not the answer
+    itself.
+
+selection:
+  rule: >
+    No cross-sectional selection step. All eight candidate sleeves are
+    evaluated independently every trading day; each is held, inverse-vol-
+    weighted, only if its own trailing 252-day return is positive. The eight
+    are the survivors of a full-registry correlation check (20 series
+    evaluated; see data_plan.rejected_alternatives for each exclusion and its
+    reason). NIFTY HIGH BETA 50 is excluded: its history starts 2012-11 and
+    including it would truncate the sample by seven years. NIFTY500
+    MULTIFACTOR MQVLV 50 is excluded as a candidate (it is a benchmark
+    instead) because it already blends four of the five factor sleeves and
+    would double-count them as a timed stream. NIFTY 50/100/200, MIDCAP 100,
+    SMALLCAP 100, MIDSMALLCAP 400 and the three NIFTY200-scope factor sleeves
+    are excluded as near-duplicates (correlation >=0.94) of a sleeve already
+    held.
+  explicit_securities:
+    - NIFTY500 MOMENTUM 50
+    - NIFTY500 QUALITY 50
+    - NIFTY500 VALUE 50
+    - NIFTY500 LOW VOLATILITY 50
+    - NIFTY ALPHA 50
+    - NIFTY MIDCAP 150
+    - NIFTY SMALLCAP 250
+    - NIFTY MICROCAP 250
+  verified_against: firm_registry
+  as_of: "2026-09-18"
+  why_these: >
+    Five NIFTY500 single-factor indices plus three cap-segment indices, all
+    sharing the same 2005-04-01 common start date, chosen after correlation-
+    checking every one of the 20 price series the fund's registry now holds.
+    Checkable against ros/data/firm_registry.py, not recalled from memory.
+
+backtest_plan:
+  sample_start: "2005-04-01"
+  sample_end: "2026-09-18"
+  why_this_window: >
+    Starts at the earliest date all eight sleeves exist, so none is spliced in
+    mid-sample. Ends at the last common close across all held series
+    (2026-09-18): the combined workbook (NSE_Broad_Factor_Indices_
+    Historical_Data.xlsx) carries NIFTY 500 to the same end date as the
+    sleeves, which resolves what was a real 9-trading-day truncation gap in
+    the previous single-sheet workbook -- no truncation is needed this run.
+    Includes 2008, the only severe stress in the Indian sample and the regime
+    a sign-filtered trend timer exists to sit out of.
+  warmup_days: 257
+  why_warmup: >
+    max(momentum window 252, vol window 60) + 5. The 252-day trailing return
+    cannot be formed before the window fills, and trading on a partial
+    estimate would silently make burn-in part of the track record. Every
+    benchmark uses the same warmup so no run gets a head start.
+  rebalance_rule: >
+    Every trading day present in the data, as the paper's own daily
+    z_t->r_t+1 construction specifies. Signals are shifted by 1 + lag_days
+    before use.
+  weights_rule: >
+    Among sleeves with a positive trailing-252-day return: weight inverse to
+    trailing 60-day volatility, then scale the whole book to a 15%
+    annualised volatility target, diluting with cash rather than levering.
+    Hold cash entirely if no sleeve is trending positive.
+  explicit_weights: {}
+  benchmarks:
+    - name: "NIFTY 500"
+      why_this: >
+        The fund's mandate benchmark and the do-nothing alternative. Beating
+        it is necessary and nowhere near sufficient.
+    - name: "NIFTY500 MULTIFACTOR MQVLV 50"
+      why_this: >
+        The real off-the-shelf alternative: a multifactor index with ZERO
+        turnover and no signal to maintain. If sign-filtered TSMOM does not
+        beat it after 30bp, the honest recommendation is to buy the index.
+    - name: "NIFTY500 MOMENTUM 50"
+      why_this: >
+        The single existing sleeve closest in spirit to "chase whatever is
+        trending". If the eight-sleeve timed book cannot beat simply holding
+        this one sleeve, the extra machinery buys nothing.
+  must_beat:
+    - "NIFTY 500, on the paired bootstrap, at 5%"
+    - "NIFTY500 MULTIFACTOR MQVLV 50, after 30bp round-trip costs"
+    - "Equal-weight sleeves, or the sign filter buys nothing"
+  success_looks_like: >
+    Beats equal-weight, inverse-vol, and MQVLV on geometric Sharpe with a
+    paired stationary bootstrap p <= 0.05; deflated Sharpe P(skill) >= 0.95 at
+    the honest trial count; alpha survives the factor-sleeve regression with
+    |HAC t| >= 2; turnover within tolerance even at daily rebalance and 30bp
+    cost; and the ranking stable across the cash-rate sweep and a
+    daily-vs-monthly rebalance sensitivity.
+  failure_looks_like: >
+    Any of: statistically tied with equal-weight or inverse-vol, so the sign
+    filter buys nothing beyond static risk-parity; loses to MQVLV, so the
+    answer is to buy the index; Sharpe that collapses well before 30bp (the
+    paper's own 0-3bps table already shows this pattern for every
+    architecture it tests); or a verdict that flips between the daily and a
+    monthly-rebalance variant, which would mean the result is an artefact of
+    an unexamined cadence choice rather than a real trend-timing edge.
+  known_failure_modes:
+    - >
+      Daily rebalance at 30bp round-trip: the paper's own cost sensitivity
+      (Exhibit 10) already shows Sharpe collapsing from >2 to negative
+      between 0 and 3bps for every architecture tested; 30bp is far beyond
+      that, and this is the single most likely way this card fails.
+    - >
+      Correlated sleeves (0.76-0.96 pairwise across the full 8-sleeve set,
+      re-checked against all 20 series the registry holds) moving in and out
+      of a positive trailing return together, so the sign filter behaves like
+      a slow
+      NIFTY-500-wide market-timing overlay rather than genuine cross-sleeve
+      trend diversification.
+    - >
+      A rolling (not exponential) 60-day vol estimate reacting more slowly to
+      a volatility regime shift than the paper's own EWM estimator, which
+      could either help (less whipsaw) or hurt (slower de-risking into a
+      crash) -- direction unknown without running it.
+    - >
+      Backfilled sleeve history: no live claim may rest on it, capping the
+      ladder at ROBUST regardless of the result.
+
+data_requests:
+  - item: "An Indian overnight or T-bill rate series, daily, 2005 onward"
+    why: >
+      This mechanism holds cash whenever no sleeve trends positive -- a
+      frequent, mechanism-central state -- and every Sharpe here is measured
+      against a numeraire that is currently a flat 6% constant.
+    unlocks: >
+      A defensible Sharpe, and a cash-holding variant whose accrual reflects
+      the actual rate cycle rather than a straight line -- exactly where a
+      trend-following sign filter's drawdown protection is supposed to earn
+      its keep.
+    without_it: >
+      Declared constant 6% proxy, swept 4-8%. Wrong in level and wrong in
+      SHAPE -- a constant cannot capture a rate-cut cycle -- so every result
+      touching the cash-holding periods is reported as rate-dependent and the
+      ladder stays capped.
+    priority: high
+    headline: "A real Indian short rate: this mechanism holds cash often, and today that cash earns a flat guess"
+    format_hint: "two columns: date, annualised_rate (decimal, e.g. 0.0655)"
+    satisfies: ["Indian overnight or 91-day T-bill rate, daily"]
+  - item: "Total-return versions of the eight candidate sleeves"
+    why: "The held series are price-return, so dividends are missing from every one."
+    unlocks: >
+      An honest absolute return, and a cash-vs-equity comparison that is not
+      structurally biased against equity by roughly the dividend yield a year
+      -- material here because this mechanism spends real time in cash.
+    without_it: >
+      Absolute returns understate throughout, and the faithful cash-holding
+      variant is flattered relative to the fully-invested one. Reported, not
+      corrected.
+    priority: high
+    headline: "Total-return sleeves: dividends are missing, and this mechanism spends real time in cash"
+    format_hint: "same shape as the existing workbook, TRI instead of PRI"
+    satisfies: ["Total-return daily series for each of the eight NSE candidate sleeves"]
+  - item: "Daily traded value for the sleeve constituents, or for a tracking ETF"
+    why: >
+      Daily rebalancing makes this mechanism's turnover, and therefore its
+      capacity ceiling, far more sensitive to real tradability than a
+      monthly-rotation strategy would be.
+    unlocks: "A capacity number instead of an assumption, at the cadence this mechanism actually trades."
+    without_it: >
+      turnover_capacity runs on a hand-supplied ADV and AUM argument, so the
+      capacity conclusion is an input, not a finding -- and daily rebalance
+      makes that gap matter more than it would monthly.
+    priority: high
+    headline: "Sleeve traded value: daily rebalance makes capacity far more sensitive than a monthly card"
+    format_hint: "date, index_or_etf, traded_value_inr_cr"
+    satisfies: ["Daily traded value (ADV) for each sleeve's tracking ETF or constituents"]
+  - item: "Post-launch-only sleeve history, with each index's real launch date"
+    why: "NSE backfilled these to a 2005 base with methodology fixed years later."
+    unlocks: "Lifting the ladder above ROBUST -- no live claim may rest on backfilled history."
+    without_it: "Mechanism testing only, ladder capped at ROBUST, and the card says so."
+    priority: nice_to_have
+    headline: "Real index launch dates, the only route to lifting the ladder above ROBUST"
+    format_hint: "one row per index: name, launch_date"
+    satisfies: ["Each sleeve index's true launch date and methodology-change history"]
+
+open_questions:
+  - question: >
+      Should this card keep the paper's own daily rebalance cadence, or run a
+      monthly variant closer to how Moskowitz-style TSMOM is usually traded
+      in practice?
+    why_it_matters: >
+      Daily rebalancing at 30bp round-trip is the single biggest threat to
+      this card (see known_failure_modes). A monthly variant would be far
+      cheaper to trade but would no longer be testing the mechanism exactly
+      as the paper specifies it -- it would be testing a different, more
+      conservative relative.
+    what_i_assumed: >
+      Daily, faithful to the paper's own eq. 9 construction, precisely so
+      that whatever turnover cost this mechanism carries at Indian prices is
+      measured rather than assumed away by a cadence nobody argued for. A
+      monthly re-run is cheap to add afterwards if daily fails on cost alone.
+    headline: "Kept the paper's daily rebalance; a monthly variant is a cheap follow-on if this fails on cost"
+    ask_of: pm
+    blocks_run: false
+  - question: >
+      Which variant governs the promotion decision -- the faithful
+      cash-holding run, or the fully-invested mandate run?
+    why_it_matters: >
+      They are different strategies. The cash-holding variant is where
+      trend-following's drawdown protection actually lives, and the fund
+      cannot run it as specified.
+    what_i_assumed: >
+      The mandate variant governs; the faithful variant is reported alongside
+      as the mechanism test.
+    headline: "Which variant governs promotion -- the faithful cash run or the mandate one?"
+    ask_of: pm
+    blocks_run: false
+  - question: >
+      Is n_configs_tried = 1 honest, given that the source paper itself ran
+      an extensive hyperparameter search -- even though none of that search
+      touched the classical TSMOM comparator this card actually tests?
+    why_it_matters: >
+      The deflated Sharpe rests entirely on this number. The paper's search
+      (Exhibit 16: up to 50 grid-search iterations across 6 architectures)
+      applies only to its deep-learning models, never to the untuned,
+      literature-standard TSMOM baseline this card reconstructs -- so folding
+      that search into this card's trial count would overstate the honest
+      figure in the opposite direction from the usual failure mode.
+    what_i_assumed: >
+      1: this card's own configuration (252-day momentum window, 60-day vol
+      window, 15% target vol), all literature-standard choices, none swept
+      or searched here.
+    headline: "n_configs_tried=1: the paper's hyperparameter search never touched this TSMOM comparator"
+    ask_of: researcher
+    blocks_run: false
+  - question: >
+      This card now mixes two economically distinct bets -- factor-tilt
+      trend-timing (5 sleeves) and cap-segment/size trend-timing (3 indices)
+      -- inside one signal. Is that the right call, or should they be split
+      into two cards so a result is unambiguous about which bet drove it?
+    why_it_matters: >
+      The paper's own mechanism is agnostic to what KIND of stream it times
+      (it treats commodities, equities, bonds and FX identically), which is
+      the argument for combining them here. But if the combined book's
+      result is positive, it will not by itself say whether the factor
+      sleeves or the cap-segment sleeves did the work -- that requires
+      reading the per-sleeve turnover and hit-rate diagnostics the
+      deterministic run produces, not just the headline Sharpe.
+    what_i_assumed: >
+      Combined into one 8-sleeve book, matching the paper's own
+      stream-agnostic construction, on the view that a card testing "does
+      sign-filtered trend-timing survive here" should use every reasonably
+      non-redundant Indian equity stream available, not just one flavour of
+      it. If the fund wants the two bets kept separately attributable, this
+      card should be split before it runs.
+    headline: "Factor-tilt and cap-segment sleeves are combined in one signal; split if per-bet attribution matters"
+    ask_of: pm
+    blocks_run: false
+
+n_configs_tried: 1
+
+notes: >
+  This card exists to answer one narrow question: does the paper's own
+  classical TSMOM comparator -- not its headline deep-learning contribution,
+  which this engine cannot build -- survive translation onto correlated
+  Indian equity factor sleeves, long-only, at Indian costs, at the daily
+  cadence the paper actually specifies? The promotion question is never "is
+  the Sharpe good" but whether this beats, after 30bp costs, what the fund
+  can already do for free: hold NIFTY 500, or buy NIFTY500 MULTIFACTOR
+  MQVLV 50. Both are run as benchmarks.
+
+# The question the fund is actually paying to have answered. Everything above
+# says what the paper is and how it would be tested; this says whether any of
+# it could become something we could hold. It is an opinion, it decides
+# nothing, and a human at Gate A can overturn it in one line.
+convertibility:
+  verdict: convertible
+  confidence: medium
+  headline: "Runnable today, but daily rebalance at 30bp is exactly where the paper's own cost table breaks"
+  what_must_be_true:
+    - >
+      Sign-filtered trend timing must find genuine dispersion across sleeves
+      that correlate 0.76-0.96 even after broadening from 5 to 8 candidates
+      by correlation-checking the fund's ENTIRE 20-series registry -- this is
+      not an under-sampled universe any more, it is the diversification floor
+      this fund's Indian equity data can offer. If the sleeves mostly trend
+      together, the sign filter degenerates into a slow in/out-of-NIFTY-500
+      market timer, not the cross-asset trend diversification the paper's
+      mechanism relies on.
+    - >
+      A 12-month trailing-return sign signal must carry genuine timing
+      information in Indian equity factor sleeves -- unverified here; the
+      paper's own evidence for it comes entirely from diversified global
+      futures, a structurally different asset class.
+    - >
+      It must survive daily rebalancing at 30bp round-trip. The paper's own
+      Exhibit 10 already shows every architecture's Sharpe collapsing well
+      before 3bps; 30bp is an order of magnitude further, and this is the
+      single link most likely to break the result.
+    - >
+      It must beat what the fund can already do for free: hold NIFTY 500, or
+      buy NIFTY500 MULTIFACTOR MQVLV 50.
+    - >
+      Sleeve exposure must be obtainable at fund size at a DAILY cadence --
+      an index is not a portfolio, and daily turnover is far less forgiving
+      of tracking error and rebalance impact than the monthly cadence other
+      cards on this desk have used.
+  weakest_link: >
+    Two links tied, deliberately, after critique revised this down from a
+    single pick. Cost survival at daily cadence is the most concrete and most
+    paper-evidenced risk (Exhibit 10 already shows this exact mechanism class
+    collapsing well inside 3bps; this card charges ten times that). But
+    naming only that risks reading the eventual result through a "did it
+    clear a cost hurdle" lens. Co-equal and arguably prior: whether univariate
+    trend-timing carries ANY information on a correlated single-country
+    equity sleeve set at all. Every piece of evidence in this paper for
+    TSMOM's edge comes from a diversified, near-zero-correlation multi-asset-
+    class futures book; nothing in the paper or its citations speaks to
+    single-market trend persistence, which has a weaker, more contested
+    record net of costs than cross-asset TSMOM in the wider literature. A
+    signal with no information content makes the cost question moot rather
+    than decisive, so this link should be checked FIRST: the deterministic
+    pipeline's own walk-forward and factor-fingerprint diagnostics (Steps
+    06-07) are the real decisive evidence here, more than any new data
+    request could be.
+  decisive_evidence: >
+    In descending order of what they would settle. (1) The realised sleeve
+    correlation and the signal's actual dispersion across sleeves over the
+    sample -- costs nothing, already held. (2) Sleeve-level traded value,
+    which turns the capacity and true-turnover-cost question from an
+    assumption into a measurement, more urgently than for a monthly card. (3)
+    An Indian short-rate series, since the mechanism's value proposition
+    rests partly on how it accrues during its (frequent) cash-holding
+    periods.
+  if_it_fails: >
+    A null here is worth more than the run costs. It would establish that
+    univariate sign-filtered trend-timing does not survive realistic daily-
+    rebalance Indian costs on a correlated single-country factor-sleeve set --
+    which retires a whole family of "add a trend overlay" proposals on this
+    book, not just this paper's comparator, and is a reusable answer the
+    library keeps regardless of what happens to the (untestable) deep-
+    learning claim the paper actually makes.
+  capacity_note: >
+    Unknown, and currently an assumption. Daily rebalancing makes this
+    mechanism's realised turnover -- and therefore its capacity ceiling --
+    considerably more sensitive to real tradability than the monthly cards
+    already on this desk, and every number here is computed on index series
+    that charge no impact. Until sleeve ADV arrives, any AUM ceiling quoted
+    from this run is an argument, not a measurement.
+
+# India requirements the RULES cannot derive, read out of the paper by a
+# model. Additive only: a note never blocks and never removes a rules
+# requirement. ros/india_requirements.py keys on properties of the strategy --
+# does it rank, does it read a fundamental, how fast does it trade -- so it is
+# deaf to what is particular to THIS paper in this market. That is what these
+# cover.
+india_notes:
+  - category: validity
+    item: "Each sleeve index's methodology-revision history, not just its launch date"
+    why: >
+      A single continuous series can splice two different rule sets at an
+      undisclosed date. A trend-timing signal reads that splice as a change
+      in the asset's own behaviour and can generate a false trend signal
+      exactly at the seam -- a more acute failure mode for a mechanism that
+      times each stream's own history than for a cross-sectional ranker,
+      which would only misrank one name for one period.
+    triggered_by: "the mechanism times each sleeve purely against its own trailing history"
+    addresses: ["candidate timed sleeve"]
+    evidence_page: 1
+  - category: timing
+    item: "Daily signal recomputation compounds any close-publication timing slip roughly 21x more often per year than a monthly-rotation card"
+    why: >
+      lag_days>=1 is already a fund-wide rule, but its consequence is far
+      larger here: a strategy that recomputes and trades daily has ~21x more
+      opportunities per year for a same-day-close assumption to leak
+      information than a monthly one, and this mechanism's own signal
+      (eq. 9) is explicitly next-day (z_t governs r_t+1), so the paper's own
+      construction already assumes at least this lag -- the India rule is
+      not an extra conservatism layered on top of the paper, it matches what
+      the paper itself assumes.
+    triggered_by: "paper eq. 9's daily z_t -> r_t+1 recomputation, kept as-specified rather than softened to monthly"
+    addresses: ["candidate timed sleeve"]
+    evidence_page: 5
+  - category: execution
+    item: "Which of the eight sleeves has a liquid tracking ETF at DAILY trading frequency, and its tracking error at that cadence"
+    why: >
+      The backtest trades index levels; the fund would trade instruments.
+      Indian factor- and cap-segment-ETF liquidity is uneven across these
+      eight sleeves at the
+      best of times, and a daily-rebalanced strategy is far more exposed to
+      that unevenness than the monthly-rotation cards already on this desk --
+      the implementable version may be a smaller subset of sleeves than the
+      one tested, changing the sign-filter's dispersion, not merely its cost.
+    triggered_by: "daily rebalance, held as instruments rather than as index levels"
+    addresses: ["candidate timed sleeve"]
+    evidence_page: 5
+  - category: cost
+    item: "The paper's own cost-sensitivity table (Exhibit 10) is the strongest available evidence against this exact mechanism surviving Indian costs, and should be read alongside this card's results, not just its own"
+    why: >
+      Exhibit 10 sweeps 0-3bps for signed trend positions recomputed daily
+      and shows portfolio Sharpe collapsing to negative for every
+      architecture it tests well inside that range. This card's mechanism is
+      structurally the same kind of object (a daily-recomputed, vol-scaled
+      trend position) at 30bp -- ten times further out than the paper's own
+      table goes. A result here that looks merely disappointing should be
+      read against a backdrop where the paper's OWN authors already showed
+      this class of strategy is highly cost-fragile.
+    triggered_by: "eq. 12 and Exhibit 10, p.11-12"
+    addresses: ["candidate timed sleeve"]
+    evidence_page: 12
