@@ -21,45 +21,81 @@ NOT_INVESTABLE_CAVEAT = (
     "An index is not a portfolio: no replication tracking error, no rebalance impact, "
     "no sleeve-level turnover cost is charged inside the index level."
 )
+PARTIAL_FIELDS_CAVEAT = (
+    "Source workbook also carries Open/High/Low/PE/PB alongside Close for this "
+    "index, but only Close spans the full history -- Open/High/Low and PE/PB "
+    "are populated for a recent window only. The registry (and the engine) uses "
+    "Close exclusively; treat the other fields as informational, not backtestable."
+)
 
-_FACTOR_INDICES = [
-    "NIFTY ALPHA 50", "NIFTY500 MOMENTUM 50", "NIFTY500 MULTIFACTOR MQVLV 50",
-    "NIFTY500 QUALITY 50", "NIFTY500 VALUE 50", "NIFTY500 LOW VOLATILITY 50",
-    "NIFTY HIGH BETA 50",
-]
+# Factor sleeves, from the 'Factor Indices' sheet.
+_FACTOR_INDICES = {
+    "NIFTY ALPHA 50": "2003-12-31",
+    "NIFTY500 MOMENTUM 50": "2005-04-01",
+    "NIFTY500 MULTIFACTOR MQVLV 50": "2005-04-01",
+    "NIFTY500 QUALITY 50": "2005-04-01",
+    "NIFTY500 VALUE 50": "2005-04-01",
+    "NIFTY500 LOW VOLATILITY 50": "2005-04-01",
+    "NIFTY HIGH BETA 50": "2012-11-30",
+    "NIFTY200 VALUE 30": "2005-04-01",
+    "NIFTY200 MOMENTUM 30": "2005-04-01",
+    "NIFTY200 Quality 30": "2015-12-31",
+}
+
+# Broad-market and cap-segment indices, from the 'Broad Market' sheet. These
+# back several of the catalogued universes in ros/data/universes.py at the
+# index level (not constituent level -- no membership history or per-name
+# prices come with this workbook, so a cross-sectional sort on any of these
+# universes still needs the constituent data ros/data/intake.py asks for).
+_BROAD_MARKET_INDICES = {
+    "NIFTY 50": "1996-01-01",
+    "NIFTY 100": "2003-01-01",
+    "NIFTY 200": "2005-01-03",
+    "NIFTY 500": "1996-01-01",
+    "NIFTY MIDCAP 100": "2003-01-01",
+    "NIFTY MIDCAP 150": "2005-04-01",
+    "NIFTY SMALLCAP 100": "2004-01-01",
+    "NIFTY SMALLCAP 250": "2005-04-01",
+    "NIFTY MIDSMALLCAP 400": "2005-04-01",
+    "NIFTY MICROCAP 250": "2005-04-01",
+}
+
+_WORKBOOK = "data/raw/NSE_Broad_Factor_Indices_Historical_Data.xlsx"
+_END = "2026-09-18"
 
 
 def build_firm_registry() -> DataRegistry:
     reg = DataRegistry()
 
-    for name in _FACTOR_INDICES:
+    for name, start in _FACTOR_INDICES.items():
         reg.add(DataCapability(
             name=name, kind="price", frequency="daily",
-            start="2005-04-01" if name != "NIFTY ALPHA 50" else "2003-12-31",
-            end="2026-06-11",
+            start=start, end=_END,
             pit_status="backfilled",
             licence="NSE Indices (internal use)",
-            coverage_note="daily close only; no volume, no constituents, no dividends",
-            caveats=[NSE_BACKFILL_CAVEAT, PRICE_RETURN_CAVEAT, NOT_INVESTABLE_CAVEAT],
+            coverage_note=f"daily close, from {_WORKBOOK}; no volume, no "
+                           f"constituents, no dividends",
+            caveats=[NSE_BACKFILL_CAVEAT, PRICE_RETURN_CAVEAT,
+                     NOT_INVESTABLE_CAVEAT, PARTIAL_FIELDS_CAVEAT],
         ))
-    reg.get("NIFTY HIGH BETA 50").start = "2012-11-30"
 
-    reg.add(DataCapability(
-        name="NIFTY 500", kind="price", frequency="daily",
-        start="2003-09-30", end="2026-05-29",
-        pit_status="backfilled",
-        licence="NSE Indices (internal use)",
-        coverage_note="fund benchmark; daily close only",
-        caveats=[PRICE_RETURN_CAVEAT,
-                 "Benchmark series ends 2026-05-29, nine trading days before the "
-                 "factor sleeves. Comparisons are truncated to the common window."],
-    ))
+    for name, start in _BROAD_MARKET_INDICES.items():
+        reg.add(DataCapability(
+            name=name, kind="price", frequency="daily",
+            start=start, end=_END,
+            pit_status="backfilled",
+            licence="NSE Indices (internal use)",
+            coverage_note=f"daily close, from {_WORKBOOK}; index-level only -- "
+                           f"no constituent prices or membership history",
+            caveats=[PRICE_RETURN_CAVEAT, NOT_INVESTABLE_CAVEAT,
+                     PARTIAL_FIELDS_CAVEAT],
+        ))
 
     # A DECLARED proxy. It appears in every feasibility report as a proxy, and every
     # result that depends on it is reported under a rate sweep.
     reg.add(DataCapability(
         name="CASH_PROXY_CONSTANT_6PCT", kind="risk_free_rate", frequency="daily",
-        start="2003-09-30", end="2026-06-11",
+        start="2003-09-30", end=_END,
         pit_status="backfilled",
         licence="internal assumption",
         is_proxy_for=["india_cash_rate"],
