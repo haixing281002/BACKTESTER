@@ -82,11 +82,9 @@ def main() -> int:
             "      python -m pip install --upgrade --force-reinstall pdfminer.six pdfplumber")
 
     xlsx = "data/raw/NSE_Broad_Factor_Indices_Historical_Data.xlsx"
-    legacy_xlsx = "data/raw/Factor_Indices_Historical_Price_Data.xlsx"
-    have_data = os.path.exists(xlsx) or os.path.exists(legacy_xlsx)
-    used = xlsx if os.path.exists(xlsx) else legacy_xlsx
+    have_data = os.path.exists(xlsx)
     print(f"{OK if have_data else BAD}price data"
-          + (f"  {used}  {os.path.getsize(used):,} bytes" if have_data else "  MISSING"))
+          + (f"  {xlsx}  {os.path.getsize(xlsx):,} bytes" if have_data else "  MISSING"))
     if not have_data:
         problems.append(f"{xlsx} is missing -- are you in the repo root?")
 

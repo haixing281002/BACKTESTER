@@ -31,10 +31,6 @@ the single most common reason `python` is not recognised afterwards.
 keeps the old PATH and will still say "not recognized" even after a correct
 install. Re-run the check above; all three should print a version.
 
-*Don't want to install anything?* The Colab route needs nothing on your machine —
-see `colab_bootstrap.py`. You lose the Claude Code stages, but the whole
-deterministic pipeline runs.
-
 ## 1. What you need
 
 - **VS Code**
@@ -147,9 +143,9 @@ There is also a no-LLM path, useful for seeing what a plain regex reader can and
 cannot do:
 
 ```python
-from colab_papers import analyse, compare, draft_card, run
-analyse("docs/papers/x.pdf")     # what the deterministic reader finds
-draft_card("docs/papers/x.pdf")  # a runnable card skeleton, no model
+from ros.cards.extract import extract_document, classify_document, parse_text_tables
+doc = extract_document("docs/papers/x.pdf")
+print(classify_document(doc, len(parse_text_tables(doc))).render())
 ```
 
 ## What to expect, honestly
@@ -160,8 +156,6 @@ draft_card("docs/papers/x.pdf")  # a runnable card skeleton, no model
   the system working, not a bug.
 - **The stage commands are new and lightly exercised.** The mechanics are tested;
   the prompts get their real test on a paper nobody has run yet.
-- Colab alternative, if you would rather not install anything: paste the one-liner
-  in `colab_bootstrap.py` into a blank notebook.
 
 ## Where to read next
 

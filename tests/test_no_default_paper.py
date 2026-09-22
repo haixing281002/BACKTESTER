@@ -205,7 +205,7 @@ def test_claude_md_carries_the_rule():
 # ---------------------------------------------------------------------------
 def test_run_interpret_reaches_gate_a_with_the_workbook_absent(tmp_path):
     """The claim, tested by removing the data rather than by reading the code."""
-    xlsx = ROOT / "data/raw/Factor_Indices_Historical_Price_Data.xlsx"
+    xlsx = ROOT / "data/raw/NSE_Broad_Factor_Indices_Historical_Data.xlsx"
     stash = tmp_path / xlsx.name
     had = xlsx.exists()
     if had:
