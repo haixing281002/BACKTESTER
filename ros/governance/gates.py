@@ -500,6 +500,31 @@ def code_facts(card, translation_check=None, feasibility=None,
             "caps any live claim; fine for asking whether a mechanism exists",
             flag=GUESS, owner="researcher")
     if feasibility is not None:
+        # Feasibility resolves EVERY named requirement, but until now only the
+        # UNAVAILABLE half ever reached Gate A (as the blocking criterion's
+        # evidence). A reviewer could not see what the fund already holds
+        # without opening the STEP 03 report separately -- and a card drafted
+        # before the firm registry grew (a new workbook landing, a supplied
+        # series) went on quoting a stale ask for something now already held.
+        # This is the fix: every resolution, not just the failures.
+        resolutions = list(getattr(feasibility, "resolutions", []) or [])
+        held = [r for r in resolutions if r.status in ("AVAILABLE", "DEGRADED")]
+        if held:
+            add("DATA", "already held",
+                "; ".join(
+                    f"{r.requirement} (as {r.resolved_to}"
+                    + (", backfilled" if r.status == "DEGRADED" else "") + ")"
+                    for r in held),
+                "resolves against the fund's current registry -- nothing to "
+                "supply for these, whatever an older draft of this card asks for")
+        optional_gaps = [r for r in resolutions
+                         if r.status == "UNAVAILABLE" and not r.mandatory]
+        if optional_gaps:
+            add("DATA", "optional, not held",
+                "; ".join(r.requirement for r in optional_gaps),
+                "not required for the minimum-viable test as designed, but "
+                "would need to be supplied to use it",
+                owner="data_owner", flag=GUESS)
         add("DATA", "verdict", getattr(feasibility, "verdict", ""))
 
     if india is not None:
