@@ -120,6 +120,56 @@ broad ladder (NIFTY 50 → Next 50 → 100 → 200 → 500 → Total Market), th
 segments (Midcap 150, Smallcap 250, Microcap 250, LargeMidcap 250,
 MidSmallcap 400), eight sector indices, and the factor sleeves the fund holds.
 
+### 3b. If the mechanism needs several INDEPENDENT streams, measure that — don't assume it
+
+`propose_universes` scores what an index IS (breadth, cap segment, sector,
+history). It says nothing about whether two candidates actually MOVE
+independently, and that is the question a time-series mechanism (anything
+that diversifies across several streams — TSMOM, risk parity, a multi-sleeve
+overlay) lives or dies on. This fund's held series are ~20 different cuts of
+the same NIFTY-derived large/mid-cap market, so "pick N sleeves" can silently
+mean "pick one bet, restated N times." Never assume the sleeves you already
+know about are independent enough — measure it:
+
+```bash
+python -c "
+from ros.data.loaders import load_nse_workbook_combined
+from ros.data.diversification import diversification_report, greedy_diverse_subset
+
+frame, _ = load_nse_workbook_combined(
+    'data/raw/NSE_Broad_Factor_Indices_Historical_Data.xlsx')
+
+# every candidate the mechanism could plausibly use, not just the obvious 5-8
+candidates = [c for c in frame.columns if c != 'NIFTY 500']   # keep the benchmark out
+best = greedy_diverse_subset(frame, candidates, k=8)          # k = how many streams the paper needs
+print(diversification_report(frame, best).render())"
+```
+
+`greedy_diverse_subset` is a selection AID (minimax: each addition minimises
+its worst correlation to what's already picked) — it finds the best available
+subset, not a good one. Read the `verdict` on what it returns:
+
+- **GENUINE / MODEST** — the fund's held data can support a real test of this
+  mechanism. Proceed, and cite the actual numbers (not "these seem varied")
+  in `universe.description`.
+- **THIN / COLLAPSED** — even the best achievable subset of what the fund
+  holds cannot supply the independence the mechanism's own evidence rests on.
+  **Say so plainly, with the numbers**, in `transfer_risks` and
+  `data_plan.rejected_alternatives` — this is exactly the finding a prior
+  card on this fund's own TSMOM-shaped paper reached (0.76–0.96 pairwise
+  even in the best 8-of-20 subset; run above to reproduce it) — and raise a
+  `data_request` for what WOULD lower the floor: stock-level breadth (a
+  cross-sectional mechanism doesn't need index independence, it needs enough
+  names), a different asset class via `exposure_proxy` (gold, crude,
+  duration — see `ros/data/universes.py`'s exposure-proxy catalogue), or
+  literally supplied non-equity data. **A collapsed floor is not a reason to
+  quietly proceed on the least-bad subset** — that produces a card that
+  looks diversified and is not. It is a reason to name the ceiling and ask.
+
+This only runs where real price history exists to measure — Stage 01/02
+drafting, never inside `run_interpret.py`, which reads no market data by
+design.
+
 ### 4. Pick, and justify — including against the runners-up
 
 Take the ranking as advice, not instruction. It scores fit; it does not read

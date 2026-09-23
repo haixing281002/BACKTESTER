@@ -177,7 +177,13 @@ Then:
   rejected alternative was not designed, it was assumed. Include the obvious
   ones and say why they lose: a coarser frequency, a finer one, a broader
   universe, and — if you are about to run on data the fund already holds — that
-  option too, with its shortcomings stated rather than forgotten.
+  option too, with its shortcomings stated rather than forgotten. For a
+  mechanism that diversifies across several streams, "shortcomings stated"
+  means the MEASURED pairwise correlation of whatever sleeve set you are
+  about to use (`ros/data/diversification.py`, see `/ingest` step 3b) — not
+  an assertion that they seem different enough. A `COLLAPSED` or `THIN`
+  verdict there is itself the rejection reason for "run on the sleeves we
+  already hold," stated in numbers, not eyeballed.
 - **`granularity_verdict`** — the headline call in one sentence, with its reason.
 - **`optimality_argument`** — why THIS dataset is the right way to test THIS
   paper in Indian equities. Optimal, not merely sufficient: every addition you
