@@ -59,6 +59,19 @@ from __future__ import annotations
 
 import argparse
 import os
+import sys
+
+# Make the repo root importable regardless of how this script is invoked.
+# Running `python scripts/foo.py` puts scripts/ (not the repo root) on
+# sys.path[0], so `import universal_backtester` only worked before by
+# accident, via a stale `pip install -e .` from unrelated work on a
+# DIFFERENT copy of this package in another repo -- which silently shadowed
+# this repo's own copy for every module that happened to exist in both,
+# and broke outright once that stale install was removed. This is the real
+# fix: put the repo root (this script's parent directory) on sys.path
+# explicitly, so the import always resolves to the package sitting right
+# here, never to whatever else might be installed.
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import numpy as np
 import pandas as pd
@@ -69,6 +82,7 @@ from universal_backtester.metrics import metrics_table, render_table
 from universal_backtester.signals import rolling_regression_momentum, sma, max_abs_move_flag, atr, regime_filter
 from universal_backtester.validation import bootstrap_sharpe_ci, deflated_sharpe_from_returns
 from universal_backtester.tearsheet import compute_tearsheet, render_tearsheet
+from universal_backtester.excel_tearsheet import write_se_return_analytics_workbook
 
 REG_WINDOW = 90
 SMA_WINDOW = 100          # 100-day trend qualifier
@@ -259,6 +273,20 @@ def main():
               "full tearsheet skipped; only the core metrics table above applies)")
 
     os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+    if benchmark_col:
+        monthly_strategy = (1 + result.returns).resample("ME").prod() - 1
+        bench_daily_ret = close_full[benchmark_col].reindex(result.value.index).pct_change()
+        monthly_bench = (1 + bench_daily_ret).resample("ME").prod() - 1
+        common = monthly_strategy.index.intersection(monthly_bench.index)
+        monthly_strategy, monthly_bench = monthly_strategy.loc[common], monthly_bench.loc[common]
+        xlsx_path = os.path.join(OUTPUT_DIR, "se_return_analytics.xlsx")
+        write_se_return_analytics_workbook(
+            xlsx_path, common, monthly_strategy, monthly_bench,
+            strategy_name="Strategy", benchmark_name=benchmark_col)
+        print(f"\nLive-formula tearsheet (SE Return Analytics layout) written to "
+              f"{os.path.relpath(xlsx_path, REPO_ROOT)} -- every ratio is a real Excel "
+              f"formula referencing the monthly-return columns, not a baked-in value.")
     trade_log = derive_trade_log(result)
     log_path = os.path.join(OUTPUT_DIR, "universal_backtester_trade_log.csv")
     trade_log.to_csv(log_path, index=False)
