@@ -1,0 +1,716 @@
+card_version: "1.0"
+
+paper:
+  id: alquist_2018_india_small_cap_tilt_adaptation
+  title: "India adaptation: naive long-only small-cap tilt, real stock-level selection (from Alquist, Israel & Moskowitz 2018)"
+  authors: [Ron Alquist, Ronen Israel, Tobias Moskowitz]
+  date: "2018-08-01"
+  source_file: docs/papers/alquist_israel_moskowitz_2018_size_effect.pdf
+  source_sha256: "571977be24aa6d9"
+
+intent:
+  mode: adaptation
+  parent_card: alquist_2018_size_effect_replication
+  rationale: >
+    The paper's real, load-bearing finding -- that size is a strong premium
+    once QUALITY is controlled for -- is NOT testable today: it needs a
+    joined Indian firm-level profitability signal this fund has the raw
+    data for but has not yet built (see data_requests). But the paper's
+    OTHER finding -- that the NAIVE size effect (no quality control) is
+    weak, January-concentrated, driven by the smallest few percent of
+    names, and largely explained by illiquidity -- is directly testable
+    with real Indian stock-level data this fund now holds: daily prices,
+    market cap, volume and traded value for 1,314 NSE-listed names
+    (ACCORD_STOCK_LEVEL_PRICE_MCAP, 2012-01-02 to 2026-07-31), restricted to
+    a VERIFIED point-in-time top-500 universe (Monthly_uni_new.xlsx,
+    corrected into use 2026-09-24 -- see below). This card builds an ACTUAL
+    cross-sectional stock selection -- not an index-sleeve proxy -- and
+    tests whether a long-only small-cap tilt earns anything over NIFTY 500,
+    predicting (per the paper's own "Fiction: size is a strong effect") that
+    it mostly does not, once liquidity is accounted for.
+  transferred_mechanism: >
+    Each month-end: within the verified top-500 point-in-time universe
+    (Monthly_uni_new.xlsx, get_top_n_universe + restrict_to_priced_universe),
+    apply a relative liquidity floor, then rank the remaining names into cap
+    quintiles by market cap; hold the bottom quintile (smallest 20% by
+    count) equal-weighted, long-only, rebalanced monthly. A top-quintile
+    ("BIG") portfolio is built the same way as a non-tradable reference, so a
+    small-minus-big spread can be reported alongside the tradable small-only
+    product, mirroring the paper's own SMB construction without attempting
+    to trade the short leg.
+  broken_assumptions:
+    - >
+      NO QUALITY CONTROL: the paper's actual headline result needs a
+      quality/profitability factor (QMJ or similar). This card tests only
+      the naive size sort, which the paper's own evidence predicts is weak.
+      A positive OR negative result here says nothing about whether India's
+      size effect would strengthen under quality control -- that is
+      explicitly the next, currently-blocked, step.
+    - >
+      TOTAL MARKET CAP, NOT FREE FLOAT: Indian promoter holdings are large,
+      so the size ranking is measurably biased toward names with large
+      promoter stakes appearing "bigger" than their investable float --
+      same caveat ros/data/master.py raises for any market-cap-only file.
+    - >
+      EQUAL-WEIGHTED, NOT VALUE-WEIGHTED: the paper's SMB is value-weighted
+      within each leg (Fama-French six-portfolio construction). Equal
+      weighting here avoids the equal-weight book collapsing toward the
+      "big small caps" within the quintile, but is a genuine construction
+      difference from the paper's own SMB, not merely an implementation detail.
+    - >
+      LIQUIDITY FLOOR IS A DESIGN CHOICE, NOT THE PAPER'S: the paper studies
+      the RAW size effect and separately documents how much of it liquidity
+      explains. This card applies a liquidity floor UP FRONT (bottom 20% by
+      trailing ADV excluded from eligibility), so it is already testing a
+      "size effect after removing the least-liquid names" version, closer to
+      the paper's own robustness checks (p.29-30, excluding the smallest ~5%)
+      than to its headline, unfiltered construction.
+    - >
+      RETURN BASIS AND POINT-IN-TIME: Accord prices are not confirmed
+      dividend-adjusted (see accord_data.py docstring); daily market cap is
+      a recent addition to this dataset and has not been cross-checked
+      against an independent vendor (its own DAILY CLOSE prices have been:
+      0 mismatches against the independently-loaded wide price panel over
+      3,441,486 compared cells -- market cap itself has no second source).
+    - >
+      CORRECTED 2026-09-24: this card's first draft used "every Accord-
+      priced name, liquidity floor only" as the eligible pool, stating
+      incorrectly that Monthly_uni_new.xlsx "is not present on this
+      machine" -- it is (one of the four original Accord files, already in
+      use by scripts/accord_stock_selection_backtest.py). The eligible pool
+      is now the verified top-500 point-in-time universe from that file,
+      restricted to priced names, THEN the liquidity floor -- not all 1,314
+      names. This closes what was previously flagged as this card's
+      "NOT A VERIFIED INDEX UNIVERSE" gap; see universe_translation below.
+
+universe:
+  description: >
+    A verified, point-in-time top-500-by-market-rank Indian equity universe
+    (Monthly_uni_new.xlsx via get_top_n_universe, which fixes that file's
+    own alternating-coverage irregularity -- see data/raw/stocks/README.md),
+    restricted to Accord-priced names, then liquidity-screened. Ranked into
+    cap quintiles at each monthly rebalance. Not a single named index, but
+    no longer an unrestricted "all priced names" pool either.
+  asset_class: equity
+  geography: IN
+  assets:
+    - ACCORD_STOCK_LEVEL_PRICE_MCAP
+  benchmark: NIFTY 500
+  cash_asset: CASH_PROXY_CONSTANT_6PCT
+
+universe_translation:
+  source_universe: >
+    NYSE/AMEX/Nasdaq common stocks (CRSP), market-cap decile/quintile sort,
+    NYSE breakpoints, 1926-2017; 24-country MSCI universes for the
+    international test.
+  source_breadth: 3000
+  source_selection_rule: >
+    Independent market-cap decile breakpoints, recomputed monthly -- a
+    genuine cross-sectional stock sort, which this card reproduces in kind
+    (not a fixed asset list, and not an index-sleeve proxy).
+  target_universe: "Top-500 point-in-time Indian equities (Monthly_uni_new.xlsx), Accord-priced, liquidity-screened"
+  grade: close
+  resolution: direct
+  rationale: >
+    Not a sleeve-proxy adaptation: the mechanism itself (rank individual
+    stocks by market cap, hold the smallest slice) is reproduced directly on
+    individual Indian stocks, using real daily price and market-cap data,
+    within a VERIFIED point-in-time universe -- CORRECTED 2026-09-24 from an
+    earlier draft that used an unrestricted "all priced names" pool. What
+    differs from the paper is the UNIVERSE's breadth (Accord's top-500,
+    ~750 names/day average after the liquidity floor, vs CRSP's full US
+    exchange listing) and the source of the point-in-time membership rule
+    (Accord's own market-rank field, not a named index's own constituent
+    rule) -- not the mechanism, and no longer an unverified proxy.
+  transfer_risks:
+    - >
+      Measured directly, with the corrected (top-500-restricted) universe:
+      re-run to confirm the exact eligible-count distribution under this
+      universe (the earlier ~758 names/day average was measured against the
+      UNRESTRICTED pool and is no longer the right reference number).
+    - >
+      A single vendor (Accord Fintech), single data pull, with no
+      independent cross-check of the market-cap field against a second
+      source (the daily-mcap file's close prices DO cross-check exactly
+      against the independently-loaded wide price panel: 0 mismatches over
+      3,441,486 compared cells -- but mcap itself has no second source to
+      check against).
+    - >
+      Monthly_uni_new.xlsx's own market-rank field is itself an Accord
+      product, not an independently-published index membership list --
+      "verified point-in-time" here means verified against the file's own
+      internal irregularities (get_top_n_universe's fix), not cross-checked
+      against NSE's own published NIFTY 500 constituent history.
+  mechanism_needs:
+    needs_cross_section: true
+    min_names: 500
+    cap_segment: all
+    sector: null
+    min_history_years: 10.0
+    must_be_in_mandate: true
+    notes: >
+      A genuine stock-level cross-sectional size sort, matching the paper's
+      own construction in kind. Needs real breadth (hundreds of names) to
+      form a meaningful quintile, which only a constituent-level panel (not
+      an index sleeve) can supply.
+  alternatives_considered:
+    - "NIFTY SMALLCAP 250 / NIFTY MICROCAP 250 index sleeves (already held, index-level only)"
+    - "No universe restriction at all (Accord-priced + liquid only) -- this card's own first draft, corrected"
+  why_not_alternatives: >
+    Holding an existing small-cap INDEX sleeve tests "does the professionally
+    -constructed small-cap index beat the broad market", which is a useful
+    but different question from the paper's own mechanism ("does ranking
+    individual stocks by market cap and holding the smallest slice earn a
+    premium") -- and this fund already holds NIFTY SMALLCAP 250 as an
+    off-the-shelf comparator, run alongside this card's own selection as a
+    benchmark. The unrestricted-universe version (this card's first draft)
+    was closer to CRSP's full-listing breadth but gave up any point-in-time
+    membership discipline at all -- the corrected, top-500-restricted
+    version is closer to the paper's own NYSE-breakpoint discipline without
+    losing real breadth.
+  required_instruments:
+    - ACCORD_STOCK_LEVEL_PRICE_MCAP
+    - NIFTY 500
+    - NIFTY SMALLCAP 250
+    - NIFTY MIDCAP 150
+  evidence_page: 29
+
+strategy:
+  signal_name: india_small_cap_quintile_tilt
+  signal_definition: >
+    At each month-end rebalance: universe_t = top-500 by market rank as of
+    the last known Monthly_uni_new.xlsx snapshot (get_top_n_universe, fixing
+    that file's own alternating-coverage irregularity), restricted to
+    Accord-priced names. eligible_t = universe_t INTERSECT {names whose
+    trailing 21-trading-day average traded value exceeds the
+    bottom-20th-percentile of that day's otherwise-eligible set}. Rank
+    eligible_t by trailing daily market cap (ascending). SMALL_t = bottom
+    20% by count, equal-weighted. [Reference only, not traded: BIG_t = top
+    20% by count, equal-weighted, for an SMB-style spread.] Both use REAL
+    daily market cap and traded value from ACCORD_STOCK_LEVEL_PRICE_MCAP
+    (load_accord_daily_price_mcap), cross-checked exactly against the
+    independently-loaded price panel (0 mismatches, 3,441,486 cells
+    compared).
+  inputs_required:
+    - "daily close, Accord-priced Indian equities (~1,314 names)"
+    - "daily market capitalization, same universe and dates"
+    - "daily traded value, same universe and dates, for the liquidity floor"
+    - "monthly point-in-time market-rank universe (Monthly_uni_new.xlsx)"
+    - "NIFTY 500 daily close (benchmark, buy-and-hold reference)"
+    - "NIFTY SMALLCAP 250 / NIFTY MIDCAP 150 daily close (off-the-shelf comparators)"
+  cross_sectional: true
+  formation_rule: >
+    Quantile cut at 20% by market cap among that day's eligible names (not a
+    fixed name count) -- matches the paper's own decile/quintile construction
+    in kind, letting the held-name count float with how many names actually
+    clear the top-500-and-liquidity floor each month.
+  weighting_rule: >
+    Equal-weighted within the SMALL slice, long-only, unlevered. (The paper's
+    own SMB is value-weighted within each leg; equal weighting is a stated
+    deviation -- see broken_assumptions.)
+  holding_period: one month
+  rebalance_frequency: monthly
+  is_long_short: false
+  long_only_adaptation: ""
+  constraints:
+    - "long-only: w >= 0"
+    - "unlevered: sum(w) <= 1"
+    - "eligibility requires top-500 point-in-time universe membership AND a liquidity floor (bottom 20% trailing ADV excluded)"
+  engine_template: cross_sectional
+  template_gap: ""
+  confidence: medium
+  evidence_pages: [8, 29, 34]
+
+signal:
+  name: india_small_cap_quintile_tilt
+  template: cross_sectional
+  lookback_days: 21
+  lag_days: 1
+  description: >
+    lag_days is 1, matching this repo's non-negotiable floor. lookback_days
+    (21 trading days) is the liquidity-floor's ADV estimation window, not a
+    momentum or covariance window -- this signal ranks on LEVEL (market cap
+    and trailing ADV), it has no return-based component at all.
+    EXECUTION NOTE: this card's Step 05 does NOT run through
+    ros/runner.py's execute_card(), because that path is coupled to the NSE
+    index workbook loader and does not yet accept an Accord-sourced,
+    membership-bearing stock panel. It runs through
+    universal_backtester.engine.Backtester with
+    universal_backtester.allocators.build_allocator("cross_sectional", ...)
+    instead (scripts/alquist_2018_india_small_cap_backtest.py) -- the
+    template named here (`cross_sectional`) is the real mechanism used, the
+    execution PATH is the one documented difference from every other card
+    in this repo, itself a scoped gap worth closing (a future
+    runner.execute_card extension to accept a supplied membership panel).
+  params:
+    quantile: 0.20
+    ascending: true
+    weighting: equal
+    min_names: 30
+
+portfolio:
+  rebalance: monthly
+  long_only: true
+  max_gross: 1.0
+  allow_cash: true
+  mandate_allow_cash: false
+  start: "2013-03-31"
+  end: "2026-08-31"
+
+costs:
+  spread_bps: 30.0
+  cost_model: half_spread
+
+data_requirements:
+  - {name: ACCORD_STOCK_LEVEL_PRICE_MCAP, kind: price, frequency: daily, start: "2013-03-31", mandatory: true, purpose: "stock-level price, market cap and traded value for the size sort"}
+  - {name: "Monthly_uni_new.xlsx point-in-time universe", kind: membership, frequency: monthly, start: "2013-03-31", mandatory: true, purpose: "verified top-500 point-in-time universe restriction"}
+  - {name: "NIFTY 500", kind: price, frequency: daily, start: "2013-03-31", mandatory: true, purpose: "fund benchmark and do-nothing comparator"}
+  - {name: "NIFTY SMALLCAP 250", kind: price, frequency: daily, start: "2013-03-31", mandatory: true, purpose: "off-the-shelf small-cap index comparator"}
+  - {name: "NIFTY MIDCAP 150", kind: price, frequency: daily, start: "2013-03-31", mandatory: true, purpose: "off-the-shelf mid-cap index comparator"}
+  - {name: "NIFTY500 QUALITY 50", kind: price, frequency: daily, start: "2013-03-31", mandatory: true, purpose: "factor-fingerprint check: is this tilt secretly a quality bet?"}
+  - {name: india_cash_rate, kind: risk_free_rate, frequency: daily, mandatory: true, purpose: "Sharpe numeraire"}
+
+ambiguities:
+  - field: selection.liquidity_floor
+    headline: "Bottom-20%-by-ADV floor is a design choice; a tighter/looser floor was not swept"
+    issue: >
+      The paper shows the size effect's strength is highly sensitive to how
+      much of the illiquid tail is trimmed (p.29-30: alpha falls from 4.3% to
+      -2.3% as the smallest 30% are progressively excluded). A single 20%
+      floor, chosen once, is exactly the kind of knob the paper warns is
+      load-bearing.
+    resolution: >
+      Use a 20% relative (percentile-of-the-day) floor as the base case,
+      self-calibrating rather than an absolute rupee cutoff. Report this as
+      an open question for a sensitivity sweep rather than presenting one
+      floor as definitive.
+    confidence: medium
+    material: true
+    evidence_page: 29
+
+  - field: strategy.weighting_rule
+    headline: "Equal-weighted, not value-weighted -- a real construction difference from the paper's SMB"
+    issue: >
+      Fama-French SMB is value-weighted within each leg; equal weighting
+      here changes what the portfolio actually is, not just how it is coded.
+    resolution: >
+      Equal weighting is used deliberately, to avoid the quintile collapsing
+      toward its own largest ("least small") names -- but it is recorded
+      honestly as a deviation, not an implementation detail.
+    confidence: high
+    material: true
+
+  - field: costs.spread_bps
+    headline: "30bp round trip; the paper's own evidence says small-cap trading costs are materially higher"
+    issue: >
+      The paper's own trading-cost table (p.34) shows the smallest decile's
+      market impact (61bp) is six times the largest decile's (10bp); a flat
+      30bp likely UNDERSTATES this book's true cost, in the direction that
+      flatters the strategy.
+    resolution: >
+      Use this fund's standard 30bp floor as the base case, and flag
+      explicitly (open_questions) that the paper's own evidence suggests
+      this is optimistic for a small-cap-concentrated book specifically.
+    confidence: medium
+    material: true
+
+  - field: data.pit_status
+    headline: "Accord price/mcap accepted as true_pit; no independent cross-check exists for mcap itself"
+    issue: >
+      Registered pit_status=true_pit on the vendor's own representation;
+      close prices cross-check exactly against the independent wide-panel
+      export (0 mismatches), but market cap has no second source checked.
+    resolution: >
+      Accept as true_pit given the vendor relationship and the close-price
+      cross-check, but flag mcap specifically as unverified against an
+      independent source.
+    confidence: medium
+    material: true
+
+replication_targets: []
+
+benchmark_templates: []
+
+data_plan:
+  ideal:
+    - field: "Daily price, market cap and traded value for a broad, liquid Indian equity universe"
+      granularity: daily
+      history_from: "2012-01-02"
+      why: >
+        The mechanism needs a genuine stock-level cross-section to rank by
+        size at all -- an index sleeve cannot substitute for this.
+      why_granularity: >
+        Daily, and no finer. The liquidity floor needs a 21-trading-day
+        rolling window; monthly data cannot form it, and intraday prices
+        would only inform an execution decision this monthly-rebalanced
+        strategy does not make.
+      why_history: >
+        2012-01-02 is the start of the Accord panel itself; the fund's
+        hardcoded backtest window (accord_data.BACKTEST_START) begins
+        2013-03-31, giving over a year of runway before any rebalance is
+        trusted.
+      adjustments: "price and market cap as supplied by Accord Fintech; dividend-adjustment status not independently confirmed"
+      minimum_viable: true
+    - field: "Verified point-in-time index membership (e.g. NIFTY 500), monthly"
+      granularity: monthly
+      history_from: "2012-01-02"
+      why: >
+        Now supplied (Monthly_uni_new.xlsx, corrected into use 2026-09-24)
+        -- this closes what was previously an open item.
+      why_granularity: "monthly matches the source file's own snapshot frequency (data/raw/stocks/Monthly_uni_new.xlsx)"
+      why_history: "same window as the price panel"
+      adjustments: "market_rank field, forward-filled between monthly snapshots"
+      minimum_viable: true
+    - field: "Firm-level Indian profitability (ROE/ROA/ROCE), point-in-time via real publication dates"
+      granularity: quarterly
+      history_from: "2012-01-02"
+      why: >
+        This is what would let the paper's ACTUAL headline claim (size,
+        controlling for quality) be tested, rather than only the naive
+        version this card runs. The RAW data is present locally
+        (profitability_ratios_consol_stdalon_till_march2025.xlsx +
+        w_publishing_date_data.xlsx); it has not yet been joined into a
+        usable quality signal for this test.
+      why_granularity: "quarterly/annual, matching Indian disclosure frequency"
+      why_history: "as far back as reliable point-in-time publication dates exist"
+      adjustments: "as-reported, with the real public announcement date, not just the fiscal-period end"
+      minimum_viable: false
+  rejected_alternatives:
+    - option: "Hold NIFTY SMALLCAP 250 / MICROCAP 250 as the small-cap product directly, no stock-level sort"
+      why_not: >
+        Tests "does the pre-built index beat the benchmark", a genuinely
+        different and easier question than the paper's own mechanism (rank
+        individual stocks, hold the smallest). Both are run: the index
+        sleeves as comparators, this card's own sort as the actual mechanism
+        test.
+    - option: "Unrestricted eligible pool (all Accord-priced names, liquidity floor only, no index-level restriction)"
+      why_not: >
+        This card's own first draft. Gives up point-in-time membership
+        discipline entirely -- corrected 2026-09-24 to use
+        Monthly_uni_new.xlsx's verified top-500 universe instead, once it
+        was confirmed the file is in fact present locally.
+    - option: "Monthly rather than daily price/mcap data"
+      why_not: >
+        The liquidity floor needs a 21-TRADING-day rolling average; monthly
+        data cannot form it, and the rebalance date's own eligibility would
+        be stale by up to a month.
+  granularity_verdict: >
+    DAILY. The liquidity floor's 21-day window and the monthly rebalance's
+    exact date both need daily granularity; nothing finer is used or needed.
+  optimality_argument: >
+    Real daily price, market cap and traded value for ~1,314 Indian equities,
+    restricted to a verified top-500 point-in-time universe, is the smallest
+    dataset that can test the paper's actual MECHANISM (individual-stock
+    size ranking within a real, auditable membership rule) rather than an
+    index-sleeve proxy of it or an unrestricted stock pool. It cannot yet
+    test the paper's own headline (quality-controlled) claim, which needs a
+    joined Indian profitability signal not yet built from data this fund
+    already has.
+  what_would_change_the_answer: >
+    Joining the already-present Indian profitability data into a real,
+    point-in-time quality signal would let this card test the paper's REAL
+    claim (quality-controlled size) instead of only the naive version it
+    predicts is weak -- this is the single highest-value addition and could
+    move the verdict from "weak, as expected" to "strong, once quality is
+    controlled for", exactly mirroring the paper's own narrative arc.
+
+selection:
+  rule: >
+    Monthly: universe = top-500 by market rank as of the last known
+    Monthly_uni_new.xlsx snapshot (get_top_n_universe), restricted to
+    Accord-priced names. eligible = universe AND trailing 21-day average
+    traded value clears the bottom 20th percentile of that day's otherwise-
+    eligible set. Rank eligible names by trailing daily market cap; SMALL =
+    bottom 20% by count (equal-weighted, the traded portfolio); BIG = top
+    20% by count (equal-weighted, reference only). Re-measure the eligible-
+    count distribution under this corrected (top-500-restricted) universe
+    on the next run -- the earlier ~758 names/day figure was measured
+    against the unrestricted pool and is no longer the right reference.
+  explicit_securities: []
+  verified_against: firm_registry
+  as_of: "2026-07-31"
+  why_these: >
+    Not a named list -- the rule re-derives the eligible set and the SMALL/
+    BIG quintiles fresh at every monthly rebalance from
+    ACCORD_STOCK_LEVEL_PRICE_MCAP restricted by Monthly_uni_new.xlsx,
+    confirmed against ros/data/firm_registry.py. No stock is named from
+    memory; every held name on any date is whichever Accord Codes the rule
+    above selects that day, which the trade log (Step 05 output) records
+    exactly.
+
+backtest_plan:
+  sample_start: "2013-03-31"
+  sample_end: "2026-08-31"
+  why_this_window: >
+    HARDCODED (fund decision, 2026-09-24): accord_data.BACKTEST_START /
+    BACKTEST_END, matching every other script built on this dataset. Gives
+    the 21-trading-day liquidity window and the top-500 universe file's own
+    ramp-up room after the Accord panel's start (2012-01-02) before any
+    rebalance is trusted.
+  warmup_days: 26
+  why_warmup: >
+    21-day ADV window + a 5-day buffer, matching this repo's convention of
+    lookback + 5 elsewhere. Every comparator uses the same effective start
+    so no run gets a head start.
+  rebalance_rule: >
+    Last TRADING day of each calendar month present in the Accord price
+    panel. Signals are shifted by 1 + lag_days (=2) before use.
+  weights_rule: >
+    Equal weight across every name in the bottom market-cap quintile of that
+    day's eligible (top-500-universe, priced and liquid) set, long-only,
+    unlevered.
+  benchmarks:
+    - name: "NIFTY 500"
+      why_this: >
+        The fund's mandate benchmark and the do-nothing alternative.
+    - name: "NIFTY SMALLCAP 250"
+      why_this: >
+        The real alternative to building this: an off-the-shelf, already-
+        held small-cap index with zero incremental turnover cost to
+        maintain. If this hand-built stock-level tilt does not beat it, the
+        honest recommendation is to buy the index.
+    - name: "NIFTY MIDCAP 150"
+      why_this: >
+        A second off-the-shelf comparator one notch up the cap spectrum, to
+        see whether any premium found is specific to the SMALLEST names
+        (per the paper's own "concentrated in microcaps" finding) or spread
+        more broadly.
+    - name: "BIG (top quintile, same universe and rule)"
+      why_this: >
+        The non-tradable reference leg that turns this into an actual
+        small-minus-big spread, comparable in SPIRIT to the paper's own SMB,
+        even though only the SMALL leg is a real, tradable long-only product.
+  must_beat:
+    - "NIFTY 500, on the paired stationary bootstrap, at 5%"
+    - "NIFTY SMALLCAP 250, after 30bp round-trip costs -- or the honest recommendation is to buy the index"
+  success_looks_like: >
+    SMALL beats NIFTY 500 and NIFTY SMALLCAP 250 on geometric Sharpe with a
+    paired stationary bootstrap p <= 0.05; deflated Sharpe P(skill) >= 0.95
+    at the honest trial count; alpha survives a factor-fingerprint check
+    against NIFTY SMALLCAP 250, NIFTY MIDCAP 150 and NIFTY500 QUALITY 50
+    with |HAC t| >= 2 (i.e. it is not just relabelled exposure to an
+    index the fund already holds); and the ranking is stable to a
+    liquidity-floor sensitivity check (10%/20%/30%).
+  failure_looks_like: >
+    Any of: statistically tied with or worse than NIFTY SMALLCAP 250, so the
+    stock-level sort buys nothing over the off-the-shelf index; alpha
+    vanishes against the SMALLCAP 250/MIDCAP 150/QUALITY 50 factor
+    fingerprint, so any excess return is unaccounted factor beta already
+    available for free; a result driven entirely by January (per the
+    paper's own finding) rather than persisting through the year; or a
+    verdict that flips materially across the 10-30% liquidity-floor sweep.
+  known_failure_modes:
+    - >
+      JANUARY CONCENTRATION: the paper's own US evidence says essentially
+      all of SMB's raw return comes from January alone. This card does not
+      isolate January separately in its base run; a positive full-sample
+      result could still be a January effect in disguise.
+    - >
+      MICROCAP CONCENTRATION: the paper shows the premium is driven by the
+      smallest ~5% of names and a 20% liquidity floor may not remove enough
+      of that tail. A positive result could evaporate under a tighter floor.
+    - >
+      NO QUALITY CONTROL: per the paper's own central finding, a naive size
+      tilt is the WEAK version of this effect. A null result here is fully
+      consistent with, not contrary to, the paper -- and does not rule out
+      a much stronger result once quality is controlled for.
+    - >
+      TOTAL-CAP BIAS: ranking on total (not free-float) market cap may
+      systematically misclassify high-promoter-holding names, understating
+      their true free-float-adjusted "smallness."
+
+data_requests:
+  - item: "Join Indian profitability data (already present locally) into a real, point-in-time quality signal"
+    why: >
+      This is the ONLY way to test the paper's actual headline claim --
+      that size is a strong premium once quality is controlled for -- rather
+      than only the naive version this card runs, which the paper's own
+      evidence predicts is weak. The RAW data
+      (profitability_ratios_consol_stdalon_till_march2025.xlsx +
+      w_publishing_date_data.xlsx) is present locally; only the join into a
+      usable signal is missing.
+    unlocks: >
+      A genuine test of the paper's real finding: an India-specific version
+      of "SMB regressed on MKT+HML+UMD+QMJ", or a more direct long-only
+      analogue (e.g. small-and-high-quality vs small-and-junky).
+    without_it: >
+      This card tests only the naive size sort. A weak or null result is
+      consistent with the paper's own framing and should NOT be read as "the
+      size effect does not exist in India" -- only as "the naive version
+      does not, which the paper predicts everywhere."
+    priority: high
+    headline: "Join already-present Indian profitability data into a real quality signal -- the only route to this paper's real claim"
+    format_hint: "raw data already available: profitability_ratios_consol_stdalon_till_march2025.xlsx + w_publishing_date_data.xlsx, per data/raw/stocks/README.md -- needs code, not new data"
+    satisfies: ["Firm-level Indian profitability (ROE/ROA/ROCE), point-in-time via real publication dates"]
+
+  - item: "An Indian overnight or 91-day T-bill rate series, daily, 2012 onward"
+    why: "Every Sharpe here is measured against a flat 6% constant numeraire."
+    unlocks: "A defensible Sharpe numeraire."
+    without_it: "Declared constant 6% proxy, swept 4-8%."
+    priority: nice_to_have
+    headline: "A real Indian short rate, to replace the flat 6% Sharpe numeraire"
+    format_hint: "two columns: date, annualised_rate (decimal)"
+    satisfies: []
+
+open_questions:
+  - question: >
+      Is a 20% liquidity floor (by trailing ADV percentile) the right cut,
+      or should it be swept, given the paper's own evidence that the size
+      effect's sign and magnitude are highly sensitive to how much of the
+      illiquid tail is trimmed?
+    why_it_matters: >
+      The paper's own table (p.29) shows alpha moving from +4.3% to -2.3% as
+      progressively more of the smallest names are excluded. A single,
+      un-swept 20% floor is exactly the kind of choice that could be
+      quietly determining the headline result.
+    what_i_assumed: >
+      20%, as a reasonable single base case; not yet swept. A follow-up run
+      should sweep 10%/20%/30% before this result is trusted as more than
+      indicative.
+    headline: "Is 20% the right liquidity floor, or does the paper's own sensitivity mean this should be swept?"
+    ask_of: researcher
+    blocks_run: false
+
+  - question: >
+      Should the base-case cost assumption stay at this fund's standard 30bp,
+      given the paper's own evidence that small-cap market impact (61bp) is
+      roughly six times large-cap's (10bp)?
+    why_it_matters: >
+      A flat 30bp likely understates this book's true cost specifically
+      because it concentrates in the smallest, least liquid names -- in the
+      direction that flatters the result.
+    what_i_assumed: >
+      30bp as the fund-standard base case, with this concern flagged
+      explicitly rather than silently adjusted.
+    headline: "Is 30bp too low for a small-cap-concentrated book, per the paper's own cost evidence?"
+    ask_of: researcher
+    blocks_run: false
+
+  - question: >
+      Does a positive full-sample result reflect a genuine, persistent
+      premium, or (per the paper's own finding for the US) almost entirely a
+      January effect that should be isolated and reported separately?
+    why_it_matters: >
+      If the paper's US pattern holds here, a headline number that looks
+      like a real, year-round edge could be entirely a turn-of-year effect
+      -- a materially different, and less robust, finding.
+    what_i_assumed: >
+      Not isolated in this run's base case; the sub-period table (Step 06)
+      is the nearest available check, and a dedicated January-vs-rest split
+      is a natural follow-up if the headline result is positive.
+    headline: "Is a positive result a real premium, or a January effect in disguise?"
+    ask_of: researcher
+    blocks_run: false
+
+n_configs_tried: 1
+
+notes: >
+  The promotion question is NOT "is the Sharpe good". It is whether a
+  hand-built, individual-stock small-cap tilt beats, after 30bp costs, the
+  two things the fund can already do for free: hold NIFTY 500, or buy the
+  off-the-shelf NIFTY SMALLCAP 250 index. Both are run as benchmarks. Per
+  the paper's own framing, this card tests the WEAK, naive version of the
+  size effect -- a null result is an expected, informative outcome, not a
+  failure, and the paper's own real claim (quality-controlled size) remains
+  untested pending the signal-join named in data_requests. CORRECTED
+  2026-09-24: this card's first draft used an unrestricted eligible pool
+  (all 1,314 Accord-priced names + liquidity floor only) and incorrectly
+  claimed Monthly_uni_new.xlsx was not present locally; it is, and the
+  universe is now the verified top-500 point-in-time list from that file.
+  The backtest window is also now hardcoded to accord_data.BACKTEST_START/
+  BACKTEST_END (2013-03-31 to 2026-08-31) rather than the raw data's own
+  range, matching every other script in this repo.
+
+convertibility:
+  verdict: convertible_with_data
+  confidence: medium
+  headline: "Runs today with a real, verified stock-level selection; the paper's real claim needs a signal we haven't built"
+  what_must_be_true:
+    - >
+      Eligible (top-500-universe, priced, liquid) Indian names must carry
+      enough genuine independent size-related variation for a quintile sort
+      to mean anything -- a real, broad cross-section under the corrected
+      universe; re-measure the exact eligible-count distribution on the
+      next run now that the universe is restricted.
+    - >
+      The naive size tilt must survive 30bp round-trip costs, though the
+      paper's own evidence (p.34) suggests small-cap trading costs are
+      materially higher than this fund's standard floor.
+    - >
+      A positive result must survive a factor-fingerprint check against
+      already-held sleeves (NIFTY SMALLCAP 250, MIDCAP 150, QUALITY 50) to
+      count as something beyond relabelled existing exposure.
+    - >
+      The paper's OWN evidence (January concentration, microcap
+      concentration, illiquidity explanation) predicts this naive version
+      is weak -- so the honest bar for "does this fund's data disagree with
+      the paper" is a genuinely persistent, liquidity-floor-robust,
+      fingerprint-surviving premium, not merely a positive raw number.
+  weakest_link: >
+    The fourth one. Given the paper's own extensive evidence that the naive
+    size effect is fragile everywhere it has been tested, the prior on this
+    card finding something both real and NEW (not already captured by
+    NIFTY SMALLCAP 250) should be low -- and that is the correct, paper-
+    consistent expectation, not a flaw in this card's design.
+  decisive_evidence: >
+    In order of what they would settle: (1) joining the already-present
+    firm-level Indian profitability data into a real, point-in-time quality
+    signal, which would let this become a test of the paper's ACTUAL claim
+    rather than its weak naive cousin -- the single biggest lever, and now
+    a code task rather than a data-acquisition one. (2) A liquidity-floor
+    sweep (10/20/30%), cheap to run with data already held, to see how much
+    of any result the floor choice is driving.
+  if_it_fails: >
+    A null here is exactly what the paper's own evidence would predict, and
+    is a reusable finding: it would show the Indian size effect behaves like
+    the well-documented, fragile US one, which argues against any future
+    "buy small-cap India for the size premium alone" proposal -- while
+    leaving the quality-controlled version, which the paper argues is the
+    real story, as the genuinely open question.
+  capacity_note: >
+    Likely UNFAVOURABLE at scale, per the paper's own evidence: the edge (if
+    any) concentrates in the smallest, least liquid names, which is exactly
+    where Indian market impact is worst. turnover_capacity (Step 07) reports
+    a number for this specific book's measured turnover; the paper's own
+    finding that trading costs rise steeply as size falls should be read
+    alongside it, not around it.
+
+india_notes:
+  - category: data
+    item: >
+      Accord's daily market cap has no independent second-source cross-check
+      -- only its CLOSE prices have been verified (exactly, 0 mismatches)
+      against the independently-loaded wide price panel from the same vendor.
+    why: >
+      The entire mechanism ranks on market cap. If the mcap field itself
+      carries vendor-specific errors uncorrelated with the (verified) price
+      field, the size ranking could be wrong in ways the price cross-check
+      cannot catch.
+    triggered_by: "the strategy's only ranking signal is market capitalization"
+    addresses: ["Daily price, market cap and traded value for a broad, liquid Indian equity universe"]
+  - category: execution
+    item: >
+      The tradable wrapper for a stock-level small-cap tilt with 100+ names,
+      rebalanced monthly, is a real basket -- not a single instrument. Actual
+      implementation costs (custody, corporate-action handling across
+      100+ names, execution algo choice) are not modelled at all here, only
+      a flat spread-based cost.
+    why: >
+      The backtest trades index-style aggregated weights; a real book trades
+      100+ individual instruments with individually-varying liquidity,
+      corporate actions and settlement -- a materially more operationally
+      complex product than any single-sleeve card in this repo so far.
+    triggered_by: "the strategy holds ~100-180 individual names at once, not a single sleeve"
+    addresses: ["Daily price, market cap and traded value for a broad, liquid Indian equity universe"]
+  - category: validity
+    item: >
+      Corporate actions (splits, bonuses, rights issues -- common in Indian
+      small/mid-caps) are assumed handled by Accord's own price adjustment,
+      not independently verified by this card.
+    why: >
+      An unadjusted or mis-adjusted split/bonus would show as a spurious
+      overnight "delisting-sized" price move, which could distort both the
+      size ranking (via the mcap field, if similarly affected) and the
+      realised return series.
+    triggered_by: "the universe is dominated by small/mid-cap names, where corporate actions are more frequent"
+    addresses: ["Daily price, market cap and traded value for a broad, liquid Indian equity universe"]

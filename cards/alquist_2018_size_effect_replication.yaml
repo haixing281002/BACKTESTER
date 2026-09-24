@@ -1,0 +1,288 @@
+card_version: "1.0"
+
+paper:
+  id: alquist_2018_size_effect_replication
+  title: "Fact, Fiction, and the Size Effect"
+  authors: [Ron Alquist, Ronen Israel, Tobias Moskowitz]
+  date: "2018-08-01"
+  source_file: docs/papers/alquist_israel_moskowitz_2018_size_effect.pdf
+  source_sha256: "571977be24aa6d9"
+
+intent:
+  mode: replication
+  rationale: >
+    Reproduce the paper's own headline findings on its own data before asking
+    what, if anything, transfers to India: (1) SMB and a decile 1-10
+    long-short size portfolio have a weak, CAPM-explained raw premium over
+    1926-2017 (Sharpe 0.22 and 0.24, CAPM alpha t-stats 0.86 and 0.89); (2)
+    the premium is concentrated in January and vanishes elsewhere; (3) it is
+    driven by the smallest ~5% of names and largely disappears with non-price
+    size measures; (4) it fails out-of-sample across 24 international
+    markets; (5) it is explained by illiquidity proxies; and (6) crucially,
+    it becomes strong and robust again once QUALITY (QMJ) is controlled for
+    -- the alpha t-stat on SMB jumps from 0.91 (FF3+UMD) to 4.84
+    (FF3+UMD+QMJ). This card is expected to, and does, fail fast at Step 03:
+    the fund holds no US CRSP/Compustat stock-level data, no Fama-French or
+    AQR factor libraries, and no MSCI international constituent data. That is
+    the correct and cheap outcome, not a bug in the card.
+
+universe:
+  description: >
+    NYSE/AMEX/Nasdaq common stocks (CRSP), sorted into deciles/quintiles on
+    market capitalization each month (Fama-French NYSE breakpoints), plus 24
+    international MSCI-universe equity markets for the out-of-sample test.
+  asset_class: equity
+  geography: US
+  assets:
+    - US_CRSP_COMMON_STOCK_UNIVERSE
+  benchmark: null
+  cash_asset: null
+
+universe_translation:
+  source_universe: >
+    NYSE + AMEX + Nasdaq common stocks (CRSP), 1926-2017 for the domestic
+    tests; 24 MSCI-universe developed and emerging equity markets (WorldScope
+    data), 1975/1984/1988-2017, for the international robustness section.
+  source_breadth: 3000
+  source_selection_rule: >
+    Market-cap decile/quintile breakpoints computed from NYSE firms only,
+    applied to the full CRSP universe each month; independent, recomputed
+    monthly, not a fixed list.
+  target_universe: ""
+  grade: none
+  resolution: infeasible
+  rationale: >
+    This is the REPLICATION card and it deliberately stays on the paper's own
+    US/international construction. The fund's data registry holds NSE
+    index-level series (ros/data/firm_registry.py's _BROAD_MARKET_INDICES/
+    _FACTOR_INDICES) and, as of 2026-09-24, real Indian stock-level panels
+    (ACCORD_STOCK_LEVEL_PRICE_MCAP plus a verified point-in-time universe/
+    market-rank file, Monthly_uni_new.xlsx) -- but nothing for the US or for
+    any of the 24 international markets this paper actually studies, and no
+    Fama-French/AQR factor library of any kind. Step 03 is expected to and
+    does fail fast on that gap.
+  transfer_risks:
+    - >
+      No translation is attempted here on purpose. This card exists to test
+      the paper's own claims against the paper's own data, and to exercise
+      the fail-fast path rather than skip straight to an adaptation.
+    - >
+      The paper's central, load-bearing finding -- that the size effect is
+      resurrected by controlling for QUALITY -- needs BOTH a clean size sort
+      AND a real quality/profitability factor. The fund holds a verified,
+      point-in-time Indian universe and real daily price/market-cap data for
+      the size sort (see the adaptation card), but not yet firm-level
+      profitability data with real, point-in-time publication dates for the
+      quality control (profitability_ratios_consol_stdalon_till_march2025.xlsx
+      IS present locally, but w_publishing_date_data.xlsx's real result dates
+      have not yet been joined into a quality signal for this specific test
+      -- see the adaptation card's data_requests).
+  required_instruments:
+    - US_CRSP_COMMON_STOCK_UNIVERSE
+    - US_COMPUSTAT_BOOK_ASSETS_EQUITY_SALES_PPE_EMPLOYEES
+    - FAMA_FRENCH_FACTORS_RMRF_SMB_HML_UMD_RMW
+    - AQR_QMJ_BAB_FACTOR_LIBRARY
+    - MSCI_24_COUNTRY_CONSTITUENT_UNIVERSE
+  evidence_page: 8
+
+strategy:
+  signal_name: size_decile_and_quality_controlled_smb
+  signal_definition: >
+    Two constructions, both from the paper. (1) NAIVE SIZE: each month, sort
+    NYSE/AMEX/Nasdaq common stocks into deciles by market cap (NYSE
+    breakpoints); long decile 1 (smallest), short decile 10 (largest); SMB is
+    the Fama-French six-portfolio version (long smallest half by cap, half
+    value/half growth; short largest half). (2) QUALITY-CONTROLLED SIZE: same
+    SMB portfolio, but its return is regressed on MKT, HML, UMD and QMJ
+    (quality minus junk -- profitability, payout, growth, safety, Asness/
+    Frazzini/Pedersen 2014); the paper's finding is that SMB's alpha in this
+    regression is large and highly significant (t=4.84), even though SMB's
+    OWN CAPM alpha, and its FF3+UMD alpha, are not. Table (p.6): SMB CAPM
+    alpha t-stat 0.86, decile 1-10 CAPM alpha t-stat 0.89, full sample
+    1926-2017.
+  inputs_required:
+    - "monthly common-stock market capitalization, NYSE/AMEX/Nasdaq, 1926-2017"
+    - "delisting-adjusted monthly returns (CRSP, post-Shumway 1997 correction)"
+    - "non-price size measures: book assets, book equity, sales, PP&E, employee count"
+    - "Fama-French MKT, SMB, HML, UMD, RMW, CMA factor returns"
+    - "AQR QMJ (quality minus junk) and BAB (betting against beta) factor returns"
+    - "MSCI-universe constituent prices/mcap for 24 countries, 1975/1984/1988-2017"
+  cross_sectional: true
+  formation_rule: >
+    Independent market-cap decile/quintile sort, NYSE breakpoints, recomputed
+    monthly; long the bottom decile/quintile, short the top.
+  weighting_rule: >
+    Value-weighted within each decile (standard Fama-French construction).
+  holding_period: one month
+  rebalance_frequency: monthly
+  is_long_short: true
+  long_only_adaptation: >
+    A long-only "buy the small-cap decile, do nothing else" version exists
+    and is a much more faithful adaptation than is typical for a long-short
+    paper -- the paper's own point is precisely that the SHORT (large-cap)
+    leg is what makes SMB's raw premium hard to detect: small stocks are
+    riskier/higher-beta and the CAPM already prices most of that, so a raw
+    long-only small tilt is not obviously investable on its own (Sharpe 0.22-
+    0.24 gross, before the trading-cost evidence in this same paper: 88-240bp/
+    year at realistic AUM, eating most of any premium). The paper's actual
+    resurrection of the effect needs a QUALITY control this fund does not
+    yet have a joined Indian signal for. This card does not attempt a
+    long-only version; the separate adaptation card tests the naive
+    long-only small-cap tilt directly (predicting a weak result, per the
+    paper's own "Fiction: size is a strong effect") and names the quality
+    control as the decisive, currently-blocked next step.
+  constraints:
+    - "requires shorting large-cap stocks for the SMB/decile spread construction -- outside this fund's mandate"
+    - "requires firm-level, point-in-time profitability data joined into a quality signal for the quality-control test -- data exists locally but is not yet built into one"
+  engine_template: cross_sectional
+  template_gap: ""
+  confidence: high
+  evidence_pages: [5, 6, 43, 45]
+
+signal:
+  name: size_decile_and_quality_controlled_smb
+  template: cross_sectional
+  lookback_days: 21
+  lag_days: 0
+  description: >
+    Placeholder only -- never invoked. Step 03 is expected to fail fast on
+    missing US/international data before any allocator is built for this card.
+  params: {}
+
+portfolio:
+  rebalance: monthly
+  long_only: false
+  max_gross: 1.0
+  allow_cash: true
+  start: "1926-07-01"
+  end: "2017-12-31"
+
+costs:
+  spread_bps: 0.0
+  cost_model: half_spread
+
+data_requirements:
+  - {name: US_CRSP_COMMON_STOCK_UNIVERSE, kind: price, frequency: monthly, start: "1926-07-01", mandatory: true, purpose: "size sort and holding-period returns", evidence_page: 8}
+  - {name: US_COMPUSTAT_BOOK_ASSETS_EQUITY_SALES_PPE_EMPLOYEES, kind: fundamental, frequency: annual, start: "1951-01-01", mandatory: true, purpose: "non-price size measures (Fig., p.15-16)", evidence_page: 15}
+  - {name: FAMA_FRENCH_FACTORS_RMRF_SMB_HML_UMD_RMW, kind: factor_return, frequency: monthly, start: "1926-07-01", mandatory: true, purpose: "CAPM/FF3/FF5 risk adjustment", evidence_page: 8}
+  - {name: AQR_QMJ_BAB_FACTOR_LIBRARY, kind: factor_return, frequency: monthly, start: "1930-12-01", mandatory: true, purpose: "the quality control that resurrects the size premium (p.44-46)", evidence_page: 44}
+  - {name: MSCI_24_COUNTRY_CONSTITUENT_UNIVERSE, kind: price, frequency: monthly, start: "1975-01-01", mandatory: true, purpose: "international out-of-sample test (p.22-24)", evidence_page: 22}
+
+ambiguities:
+  - field: strategy.is_long_short
+    headline: "Naive long-only small tilt is testable; the QUALITY-resurrected version needs a signal not yet built"
+    issue: >
+      The paper's own headline result (Table, p.45-46) needs SMB regressed
+      against a quality factor built from firm-level profitability, payout,
+      growth and safety data. The fund holds the raw profitability data
+      locally (profitability_ratios_consol_stdalon_till_march2025.xlsx +
+      w_publishing_date_data.xlsx for real, point-in-time publication
+      dates), but it has not yet been joined into a usable quality signal
+      for this test -- so only the naive (weak, per the paper's own framing)
+      size tilt can be tested today.
+    resolution: >
+      Record the strategy as long-short per the paper's construction and do
+      not invent a quality control from proxies that are not the real thing.
+      The separate adaptation card tests the naive long-only tilt honestly,
+      names the quality-signal-construction gap explicitly, and treats a
+      weak result as an expected, informative outcome rather than a failure
+      to reproduce the paper.
+    confidence: high
+    material: true
+    evidence_page: 45
+
+  - field: data_requirements
+    headline: "No US/international stock, fundamentals or factor-library data held; Step 03 fails fast"
+    issue: >
+      This fund's data registry holds NSE index-level series and real Indian
+      stock-level panels (ACCORD_STOCK_LEVEL_PRICE_MCAP, a verified
+      point-in-time universe file, and Indian firm-level profitability
+      data). Nothing for the US or the 24 other markets this paper studies,
+      in the registry or via a declared proxy.
+    resolution: >
+      Let Step 03 fail fast rather than inventing a substitute for CRSP,
+      Compustat, or the Fama-French/AQR factor libraries.
+    confidence: high
+    material: true
+
+replication_targets:
+  - {portfolio: "SMB (full sample)", metric: annual_return_pct, value: 2.5, absolute_tolerance: 0.5, evidence_page: 8}
+  - {portfolio: "SMB (full sample)", metric: sharpe, value: 0.22, absolute_tolerance: 0.05, evidence_page: 8}
+  - {portfolio: "SMB (full sample)", metric: capm_alpha_tstat, value: 0.86, absolute_tolerance: 0.30, evidence_page: 8}
+  - {portfolio: "Decile 1-10 (full sample)", metric: annual_return_pct, value: 6.1, absolute_tolerance: 1.0, evidence_page: 8}
+  - {portfolio: "Decile 1-10 (full sample)", metric: sharpe, value: 0.24, absolute_tolerance: 0.05, evidence_page: 8}
+  - {portfolio: "SMB vs FF3+UMD+QMJ", metric: alpha_tstat, value: 4.84, absolute_tolerance: 1.0, evidence_page: 45}
+
+benchmark_templates: []
+
+# min_names, quantile/decile cut, non-price-measure choice (5 measures),
+# FF3/FF3+UMD/FF5/FF3+UMD+QMJ (4 control sets), 24-country international
+# test, January-vs-non-January split, ex-smallest-1/5/10/20/30% trims (6
+# variants) -- the paper itself runs dozens of specifications on the same
+# underlying SMB series. Understating this would launder a lucky draw
+# through the deflated Sharpe, even though this card never reaches that step.
+n_configs_tried: 30
+
+convertibility:
+  verdict: convertible_with_data
+  confidence: medium
+  headline: "Naive small-cap tilt is testable today; the quality-controlled finding needs a signal not yet built"
+  what_must_be_true:
+    - >
+      A verified, point-in-time Indian stock universe and size ranking must
+      exist to test even the naive tilt honestly -- AVAILABLE today via
+      ACCORD_STOCK_LEVEL_PRICE_MCAP (price + daily market cap for ~1,314
+      names) restricted to a verified top-500 point-in-time universe
+      (Monthly_uni_new.xlsx), tested on the separate adaptation card.
+    - >
+      Firm-level, point-in-time Indian profitability data must exist AND be
+      joined into a usable quality signal to build anything resembling QMJ
+      -- the raw data exists locally; the joined signal does not yet (see
+      the adaptation card's data_requests).
+    - >
+      Even with both, the paper's own trading-cost evidence (88-240bp/year
+      at realistic AUM for the US small-cap decile) suggests any real-world
+      Indian version would need to survive materially higher costs than a
+      developed-market book, given lower average liquidity.
+    - >
+      The paper explicitly does NOT recommend shorting large caps to harvest
+      this; a long-only fund was never going to hold the paper's own
+      construction regardless of data.
+  weakest_link: >
+    The second one. Without a joined Indian profitability signal (real data
+    exists; the join does not yet), nothing built on this fund's current
+    data can test the paper's actual headline claim -- that size is a real,
+    quality-conditional premium -- only the naive version the paper itself
+    predicts is weak.
+  decisive_evidence: >
+    Joining profitability_ratios_consol_stdalon_till_march2025.xlsx and
+    w_publishing_date_data.xlsx (both already present locally, per
+    data/raw/stocks/README.md) into a real, point-in-time quality signal for
+    the Accord-priced universe -- this is the single highest-value next step
+    this paper generates and is named explicitly on the adaptation card's
+    data_requests.
+  if_it_fails: >
+    Even a null on the naive small-cap tilt (which the paper's own US
+    evidence predicts) is useful: it would show the Indian size effect
+    behaves the same way as the US one -- present in raw terms, fragile once
+    examined properly -- which is itself informative for any future "buy
+    small-cap India" proposal, and sets up exactly the quality-controlled
+    re-test the paper argues is the real story, once the signal is built.
+  capacity_note: >
+    The paper's own evidence (p.34, Frazzini/Israel/Moskowitz trading-cost
+    model) is that a size-based strategy is unusually EXPENSIVE to run at
+    scale precisely because its edge concentrates in the smallest, least
+    liquid names -- directly relevant to sizing any Indian small-cap sleeve
+    and worth carrying into the adaptation card's capacity discussion.
+
+notes: >
+  Expected to FAIL FAST at Step 03: the fund holds no US/international
+  stock-level, fundamentals or factor-library data. See
+  alquist_2018_india_small_cap_tilt_adaptation.yaml for the naive,
+  long-only, real-stock-level test that IS runnable today with data already
+  on the shelf -- and for exactly what would be needed to test the paper's
+  actual (quality-controlled) claim. CORRECTED 2026-09-24: this card's
+  first draft understated what the fund holds locally for the quality
+  control (it said "not yet supplied"; the raw profitability data IS
+  present, only the joined signal is missing) -- fixed here rather than
+  left standing.
