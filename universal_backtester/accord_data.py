@@ -66,6 +66,18 @@ DEFAULT_REPORTING_LAG_DAYS = 75   # ~2.5 months; used ONLY when a real result da
                                   # (from load_publishing_dates) isn't available for a
                                   # given (accord_code, fiscal_year_end) -- see below.
 
+# HARDCODED backtest window, fund decision (2026-09-24), applies to every
+# stock-selection backtest built on this dataset: 31 March 2013 through
+# 31 August 2026. Not derived, not left to the model to pick per run.
+# Matches the reference "SE Return Analytics" workbook's own window
+# exactly (its first monthly return is for April 2013 -- i.e. the day
+# BEFORE that, 31 March 2013, is its base/inception date -- and its last
+# is for August 2026), and sits inside the Accord price panel's full
+# 2012-01-02 to 2026-07-31 coverage with room for a 252-day momentum
+# lookback before the window opens.
+BACKTEST_START = pd.Timestamp("2013-03-31")
+BACKTEST_END = pd.Timestamp("2026-08-31")
+
 TOP_N_NIFTY500_PROXY = 500   # market_rank cutoff used as the NIFTY 500 proxy; applied
                              # per month regardless of how many rows that month's sheet
                              # happens to carry -- see get_top_n_universe().
