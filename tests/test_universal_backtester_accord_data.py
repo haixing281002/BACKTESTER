@@ -15,12 +15,14 @@ import pytest
 
 from universal_backtester.accord_data import (
     load_accord_price_panel, load_accord_fundamentals, load_accord_monthly_universe,
+    load_publishing_dates, get_top_n_universe, restrict_to_priced_universe,
     diagnose_accord_dataset, DEFAULT_REPORTING_LAG_DAYS,
 )
 
 REAL_PRICE = "data/raw/stocks/price_data_till_03aug2026.xlsx"
 REAL_UNIVERSE = "data/raw/stocks/Monthly_uni_new.xlsx"
 REAL_VALUATION = "data/raw/stocks/valuation_ratios_all_till_2025.xlsx"
+REAL_PUBLISHING_DATES = "data/raw/stocks/w_publishing_date_data.xlsx"
 
 
 def _make_price_file(path, codes=(100001, 100002, 100003), n_days=40):
@@ -155,10 +157,74 @@ def test_diagnose_reports_blocking_severity_for_real_problems(synthetic_files):
     price_path, _, uni_path = synthetic_files
     diag = diagnose_accord_dataset(price_path, uni_path)
     blocking = diag[diag["severity"] == "block"]
-    assert len(blocking) >= 2   # empty sheet + coverage swing, at minimum
+    assert len(blocking) >= 1   # empty sheet is a real, unresolved block
     checks = set(diag["check"])
     assert "empty universe-file sheets" in checks
     assert "month-to-month coverage swings >50%" in checks
+    # the coverage swing is downgraded to "warn" (not "block") now that
+    # get_top_n_universe() is a confirmed fix for it
+    swing_row = diag[diag["check"] == "month-to-month coverage swings >50%"].iloc[0]
+    assert swing_row["severity"] == "warn"
+
+
+def _make_publishing_dates_file(path):
+    rows = [
+        {"Sr.No.": 1, "Accord Code": 100001, "Company Name": "Alpha Ltd.", "YR_Date End": 202403,
+         "YR_Year": 2024, "YR_Result Date": pd.Timestamp("2024-05-20"), "CONS_YR_1": "C"},
+        {"Sr.No.": 2, "Accord Code": 100002, "Company Name": "Beta Ltd.", "YR_Date End": 202403,
+         "YR_Year": 2024, "YR_Result Date": pd.Timestamp("2024-05-25"), "CONS_YR_1": "S"},
+    ]
+    df = pd.DataFrame(rows)
+    blanks = pd.DataFrame([{c: None for c in df.columns}] * 3)
+    out = pd.concat([blanks, pd.DataFrame([df.columns.tolist()], columns=df.columns), df],
+                     ignore_index=True)
+    out.to_excel(path, index=False, header=False)
+
+
+def test_get_top_n_universe_recovers_a_consistent_count_across_swinging_months(synthetic_files):
+    _, _, uni_path = synthetic_files
+    df, _ = load_accord_monthly_universe(uni_path)
+    top2, prov = get_top_n_universe(df, n=2)
+    counts = top2.groupby("month_end").size()
+    # Jan(3 names)->Mar(20 names) swing in the fixture: filtered to rank<=2,
+    # both months should now report exactly 2 (or fewer if a month has <2
+    # ranked names), not the raw 3-vs-20 swing.
+    assert (counts <= 2).all()
+    assert prov["n"] == 2
+
+
+def test_restrict_to_priced_universe_drops_only_unpriced_codes(synthetic_files):
+    price_path, _, uni_path = synthetic_files
+    price, _ = load_accord_price_panel(price_path)
+    uni, _ = load_accord_monthly_universe(uni_path)
+    restricted, prov = restrict_to_priced_universe(uni, price.columns)
+    assert set(restricted["accord_code"].dropna().astype(int)) <= set(price.columns)
+    # the fixture's March sheet has codes 100001..100020; only 100001-100003 are priced
+    assert prov["n_codes_dropped_no_price_series"] > 0
+
+
+def test_load_publishing_dates_parses_real_result_dates(tmp_path):
+    path = tmp_path / "pub.xlsx"
+    _make_publishing_dates_file(str(path))
+    df, prov = load_publishing_dates(str(path))
+    assert prov["n_rows"] == 2
+    assert set(df["accord_code"]) == {100001, 100002}
+    assert (df["result_date"] > df["fiscal_year_end_date"]).all()
+
+
+def test_fundamentals_uses_real_publishing_date_when_available(tmp_path, synthetic_files):
+    _, fund_path, _ = synthetic_files
+    pub_path = tmp_path / "pub.xlsx"
+    _make_publishing_dates_file(str(pub_path))
+    df, prov = load_accord_fundamentals(fund_path, publishing_dates_path=str(pub_path))
+    row = df[(df["accord_code"] == 100001) & (df["fiscal_year_end"] == 202403)].iloc[0]
+    assert row["known_date"] == pd.Timestamp("2024-05-20")
+    assert row["known_date_source"] == "real_result_date"
+    assert prov["n_known_date_from_real_date"] >= 1
+    # the 202303 row for 100001 has no match in the publishing-dates fixture
+    # and should fall back to the assumed lag
+    fallback_row = df[(df["accord_code"] == 100001) & (df["fiscal_year_end"] == 202303)].iloc[0]
+    assert fallback_row["known_date_source"] == "assumed_lag"
 
 
 @pytest.mark.skipif(not os.path.exists(REAL_PRICE), reason="real Accord files not present locally")
@@ -173,3 +239,22 @@ def test_against_the_real_universe_file_if_present():
     _, prov = load_accord_monthly_universe(REAL_UNIVERSE)
     assert prov["n_empty_sheets"] >= 1
     assert prov["n_irregular_swings"] >= 1
+
+
+@pytest.mark.skipif(not os.path.exists(REAL_UNIVERSE) or not os.path.exists(REAL_PRICE),
+                     reason="real Accord files not present locally")
+def test_top500_of_real_universe_is_consistent_after_the_fix():
+    uni, _ = load_accord_monthly_universe(REAL_UNIVERSE)
+    top500, prov = get_top_n_universe(uni, 500)
+    counts = top500.groupby("month_end").size()
+    # every real month should now carry (at least) 500 names -- confirms
+    # the fix resolves the alternating-coverage finding on the real file
+    assert (counts >= 500).all()
+
+
+@pytest.mark.skipif(not os.path.exists(REAL_PUBLISHING_DATES),
+                     reason="real Accord files not present locally")
+def test_against_the_real_publishing_dates_file_if_present():
+    df, prov = load_publishing_dates(REAL_PUBLISHING_DATES)
+    assert prov["n_securities"] > 5000
+    assert prov["lag_days_median"] > 0

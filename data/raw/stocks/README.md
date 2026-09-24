@@ -18,62 +18,94 @@ rule for ISIN applies the same way here: symbols get reused, names change.
 
 | File | Canonical name expected by the loader | Shape |
 |---|---|---|
-| Daily prices | `price_data_till_03aug2026.xlsx` | Wide: 1 `NDP_Date` column + 1314 security columns (headers = Accord Code), daily, 2012-01-02 → 2026-07-31 |
+| Daily prices | `price_data_till_03aug2026.xlsx` | Wide: 1 `NDP_Date` column + 1314 security columns (headers = Accord Code), daily, 2012-01-02 → 2026-07-31. **This is the file to use for both pricing and, joined against the universe below, stock selection** — the fund's own call, see §Resolutions. |
 | Valuation ratios | `valuation_ratios_all_till_2025.xlsx` | Long: one row per (Accord Code, fiscal year end, Consolidated/Standalone). PE, EV/EBIT. 1988 → 2025, 1266 companies |
 | Profitability ratios | `profitability_ratios_consol_stdalon_till_march2025.xlsx` | Same shape as valuation. ROA, ROE, ROCE. Same coverage |
-| Monthly universe | `Monthly_uni_new.xlsx` | 163 sheets, one per month-end (Dec 2011 → Jul 2026), each ranking that month's universe by market cap |
+| Monthly universe | `Monthly_uni_new.xlsx` | 176 sheets (163 real months + some duplicated/mislabeled, see below), one per month-end (Dec 2011 → Jul 2026 nominal), each ranking that month's universe by market cap. **Use only via `get_top_n_universe()`, not the raw rows** — see §Resolutions. |
+| Results publication dates | `w_publishing_date_data.xlsx` | Long: one row per (Accord Code, fiscal year end, C/S basis) with a **real** `YR_Result Date` — 65,853 rows, 8,536 companies, 2012–2026. Fixes finding #4 below. |
 
 Loaders: `universal_backtester/accord_data.py` — `load_accord_price_panel()`,
 `load_accord_fundamentals()`, `load_accord_monthly_universe()`,
-`diagnose_accord_dataset()`.
+`load_publishing_dates()`, `get_top_n_universe()`,
+`restrict_to_priced_universe()`, `diagnose_accord_dataset()`.
 
-## Four real problems, found by actually reading the data — read before trusting anything built on this
+## How the fund has resolved each finding (2026-09-24)
 
-**1. The monthly universe file's breadth is not continuous after mid-2023.**
-2011–2022 grows smoothly (~1450 → ~1950 names/month). From July 2023 on,
-it **alternates almost every other month** between ~500 names and
-~2000–2400 names:
+**1. The monthly universe file's raw row count alternates after mid-2023 — RESOLVED.**
+Confirmed by the fund: the ~500-row months are a genuine top-500-by-`Market Rank`
+export, and the ~2000+-row months are the *same* top 500 plus the rest of the
+universe beneath it — both carry a correct, usable `Market Rank` column. So the
+fix is not to discard months, it's to stop reading the raw row count as the
+universe: **`get_top_n_universe(df, n=500)` filters every month to
+`market_rank <= 500`**, recovering one consistent NIFTY 500 proxy across the
+whole file. Verified against the real file: every real month now reports
+exactly 500 names (occasionally 1000, where a sheet has duplicate ranks — see
+finding #5).
 
-```
-Jul-2023: 2005 names   Oct-2023: 501    Nov-2023: 2114   Dec-2023: 501
-Feb-2024: 2160         Mar-2024: 501    Sep-2024: 2388   Oct-2024: 501
-Dec-2024: 2407         Jan-2025: 601
-```
+**2. One entire sheet is mislabeled, not just alternating in size.** The tab
+named `31-Jul-2023` contains, in full, the `30-Jun-2023` top-500 snapshot —
+every row's own `NDP_Date` says 30 June, not 31 July. July 2023 therefore has
+**no real data of its own** anywhere in this file. `load_accord_monthly_universe()`
+now derives `month_end` from each sheet's own row-date *mode* rather than the
+tab name, so this sheet's content correctly folds into June instead of
+fabricating a distinct July snapshot — and `diagnose_accord_dataset()` flags
+any such case as `block` under "sheets whose entire content is dated to a
+different month than their tab name" (currently: exactly this one).
 
-This is not real market turnover — it looks like two different extraction
-processes were interleaved when the file was built. **A "top-500 by rank"
-universe selected naively from this file will alternate, every other
-month, between a genuine top-500 pick and a pick out of an effectively
-top-500-only pool** — a real, structural bias, not something that averages
-out. `diagnose_accord_dataset()` flags every such swing (`severity: block`)
-before you build anything on top of this.
+**3. Universe coverage ends ~4 months before the price data does — still open.**
+The last four sheets (Apr–Jul 2026) are completely empty. Price data runs to
+3 Aug 2026; treat anything past March 2026 as having no membership information
+at all. No new data has closed this gap.
 
-**2. Universe coverage ends ~4 months before the price data does.** The
-last four sheets (Apr–Jul 2026) are completely empty. Price data runs to
-3 Aug 2026; treat anything past March 2026 as having no membership
-information at all.
-
-**3. The universe file's own column schema varies sheet to sheet.** 135 of
-163 sheets have 7 columns (adds `NDP_Close` and `NSE_symbol`); 36 sheets
+**4. The universe file's own column schema varies sheet to sheet — handled, not a blocker.**
+135 of 176 sheets have 7 columns (adds `NDP_Close` and `NSE_symbol`); the rest
 have only 5. The loader handles both — `close`/`nse_symbol` come back as
-`NaN`/`None` on the shorter sheets, never fabricated — but a naive
-fixed-column parser will silently break or silently drop data here.
+`NaN`/`None` on the shorter sheets, never fabricated.
 
-**4. Valuation/profitability have no results-publication date, only fiscal
-year end** (`FR_Year End`, e.g. `202503` = FY ended March 2025). Indian
-companies report annual results 1–3 months after fiscal year-end. Using
-the fiscal year-end itself as "the date this number became known" is a
-look-ahead bias — this repo's own `lag_days >= 1` non-negotiable is about
-exactly this mistake, just months wide here instead of a day.
-`load_accord_fundamentals()` adds a `known_date` column
-(`fiscal_year_end + DEFAULT_REPORTING_LAG_DAYS`, currently 75 days) — a
-**stated assumption**, not a fact; there is no better number in this file.
+**5. Valuation/profitability had no results-publication date — RESOLVED.**
+`w_publishing_date_data.xlsx` (uploaded 2026-09-24) carries a **real**
+`YR_Result Date` for ~65,800 (Accord Code, fiscal year, basis) rows. Pass its
+path as `publishing_dates_path=` to `load_accord_fundamentals()` and the real
+date is used as `known_date` wherever a match exists (confirmed median real
+lag: **58 days** after fiscal year-end, close to but not identical to the old
+75-day guess). `DEFAULT_REPORTING_LAG_DAYS` now only covers rows with no match,
+or with an implausible result date in the source (negative lag, or >365 days —
+both are data errors present in the raw file, ~29 and ~1277 rows respectively;
+kept on the assumption rather than trusted). Every row's `known_date_source`
+column says which case applied (`real_result_date` or `assumed_lag`).
 
-**Also note:** the price panel (1314 securities) only covers a subset of
-the ~3060 distinct Accord Codes that ever appear in the universe file —
-1767 universe-file codes never have a matching price series. A
-cross-sectional strategy ranking further down the universe than the price
-panel covers will have names it cannot actually price or trade.
+**Also note (still relevant):** the price panel (1314 securities) only covers
+a subset of the ~3060 distinct Accord Codes that ever appear in the universe
+file. **Per the fund's own guidance, stock selection and backtesting should
+draw only from the 1314-security priced set** — `restrict_to_priced_universe()`
+intersects a (typically top-500-filtered) universe frame against the price
+panel's own columns, dropping names that could be ranked but never priced or
+traded. In practice this drops almost nothing from the top-500 proxy (1 code,
+2 rows, in the real file) — the mismatch is concentrated well outside the top
+500.
+
+## The recommended join, end to end
+
+```python
+from universal_backtester.accord_data import (
+    load_accord_price_panel, load_accord_monthly_universe, load_accord_fundamentals,
+    get_top_n_universe, restrict_to_priced_universe,
+)
+
+price, _ = load_accord_price_panel("data/raw/stocks/price_data_till_03aug2026.xlsx")
+uni, _ = load_accord_monthly_universe("data/raw/stocks/Monthly_uni_new.xlsx")
+top500, _ = get_top_n_universe(uni, n=500)                       # fixes finding #1
+tradable, _ = restrict_to_priced_universe(top500, price.columns)  # only what's priceable
+
+fund, fund_prov = load_accord_fundamentals(
+    "data/raw/stocks/valuation_ratios_all_till_2025.xlsx",
+    publishing_dates_path="data/raw/stocks/w_publishing_date_data.xlsx",  # fixes finding #5
+)
+```
+
+`tradable` is a monthly, point-in-time, NIFTY-500-proxy universe restricted to
+names that can actually be priced — this is the frame a Stage 02 card's
+`selection` section should be built against.
 
 ## Run the diagnostic yourself
 
@@ -87,8 +119,9 @@ print(diagnose_accord_dataset(
 
 ## Still missing
 
-The ~100MB CSV mentioned alongside these four files has not arrived (size
-limits, most likely — same story as the earlier 38MB/162MB zips). Whatever
-it turns out to hold, run it through the same discipline: read it before
-trusting it, and add a real diagnostic here once its actual shape is known,
-not a guessed one.
+The ~100MB CSV mentioned alongside the original four files still hasn't
+arrived over chat upload (size limits — same story as the earlier 38MB/162MB
+zips); the fund's plan is to add it to `data/raw/stocks/` directly from a
+local VS Code checkout instead. Whatever it turns out to hold, run it through
+the same discipline: read it before trusting it, and add a real diagnostic
+here once its actual shape is known, not a guessed one.
