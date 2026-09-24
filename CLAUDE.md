@@ -256,6 +256,91 @@ never a haircut — academic factor premia often live substantially in it — so
 long-only version is a DIFFERENT strategy and is never scored against the
 paper's numbers.
 
+## One card and one backtest, or two — decided by the paper, not by habit
+
+A paper's own construction decides how many cards it gets. There is no default
+of "always draft one card"; the rule below is checked at Stage 01, every time.
+
+**If the paper is long-only by construction**, run it once. Draft one card,
+adapted to India per the sections above (universe, mechanism), and take it
+straight to backtest. There is nothing to strip out, so there is nothing to
+compare against — a single card, a single result.
+
+**If the paper is not long-only** (any short leg, a long-short spread, a
+market-neutral construction — `is_long_short: true` on the card), draft **two**
+cards and run **two** backtests, because "does the mechanism work?" and "can this
+fund hold it?" are different questions and collapsing them into one card answers
+neither cleanly:
+
+1. **The India long-short card** — the paper's own construction, both legs
+   intact, translated only for the Indian universe (using the individual-stock
+   data now available — see below). This is a credibility check on the
+   mechanism itself and on the paper's claim, run in the market that actually
+   matters to this fund, not the paper's original one. It runs through
+   `universal_backtester`'s explicit `allow_short=True` engine path (see
+   `universal_backtester/engine.py` — long-short is an opt-in, never-default
+   capability added specifically for this), **never through `ros/engine`**,
+   which stays long-only exactly as this file states above. A result from this
+   card is a research finding, never an investable number, and must be labelled
+   as such everywhere it's shown.
+2. **The long-only adaptation card** — the actual investable version, built the
+   way this document already describes: drop the short leg, state
+   `long_only_adaptation` explicitly, and carry the "this may be a materially
+   different, weaker strategy than the paper's own spread" caveat through to
+   Gate B. This is the only one of the two that can ever reach a fund decision.
+
+Name them so the pairing is obvious in a directory listing —
+`<slug>_india_longshort.yaml` and `<slug>_adaptation.yaml` — and cross-reference
+each in the other's `intent.rationale`. Both are `intent.mode: adaptation` in
+the schema's terms (both translate the paper into something testable in India);
+what distinguishes them is which leg structure survives, stated plainly in each
+card's own `long_only_adaptation` field — including, on the long-short card,
+writing "N/A by design, see the paired adaptation card" rather than leaving the
+question unanswered.
+
+## Adapt to India by default — unless the paper is already there
+
+The universe-translation work in Stage 01 is not optional busywork that only
+applies to some papers. **Default to adapting any paper to the Indian equity
+context.** If a paper's source universe is already Indian equities (an NSE/BSE
+study), there is no translation to perform — `universe_translation` can say so
+plainly and move on. For every other paper — US, global, any other market —
+adaptation to India happens by default, the same way it already does for every
+card in this repo. This is what makes the pipeline able to take *any* paper,
+not only ones already about this market.
+
+## Individual-stock data changes what Stage 02 has to decide
+
+`data/raw/stocks/` (gitignored — see its own README for why and for the
+loader that reads it, `universal_backtester.data.load_stock_universe`) holds
+individual-stock price history when it's been supplied locally. This is a
+different kind of input than the index-level workbooks the fund already
+holds, and it changes what the Strategy Card has to do at Stage 02:
+
+- **The indexes are now benchmarks and regime references only** — NIFTY 500 and
+  the factor sleeves are what a result is measured against and what a regime
+  filter reads, not what gets ranked and traded, whenever stock-level data can
+  answer the question instead. A cross-sectional mechanism (rank, select,
+  weight) asks a real question against ~500+ individual names; it asks almost
+  nothing against ten correlated index baskets (see the earlier finding on this
+  branch: every rotation candidate in the index-only universe correlated
+  0.81–0.98 with NIFTY 500 itself — selection barely mattered).
+- **Stock selection is now a Stage 02 decision the card must state and justify**,
+  not an engine detail. Which names form the eligible universe (index
+  membership at each date, liquidity floor, listing history), how the
+  mechanism ranks them, how many are held, how positions are sized — all of it
+  belongs in the card's `strategy` and `universe_translation` sections, argued
+  from the paper's own `mechanism_needs`, the same discipline Stage 01 already
+  applies to picking an index. The model choosing which stocks to include is
+  doing the same job as the model choosing which index to test on — it just has
+  a much larger, much more informative space to choose from now.
+- **Survivorship is the first thing to get right.** A stock file with only
+  currently-listed names is the classic bias — see `universal_backtester`'s own
+  `test_a_survivor_only_universe_flatters_the_result` test for why, and its
+  `membership=` mechanism (mirrored from `ros/engine/backtest.py`'s) for the
+  fix: a name that leaves membership is sold at cost on the day it's learned,
+  never quietly dropped.
+
 ## Architecture
 
 ```
@@ -288,6 +373,21 @@ ros/
 run_interpret.py       stages 00 to Gate A. No market data. Any paper, today.
 run_pipeline.py        steps 03-08, fully deterministic (needs data)
 run_agentic.py         steps 01-03 via the API
+
+universal_backtester/  GENERIC engine, separate from ros/ on purpose -- see
+                       "One card and one backtest, or two" above. Long-only
+                       by default like ros/engine, but supports an explicit
+                       allow_short=True opt-in for the India long-short
+                       credibility card. Never touches ros/, Strategy Cards,
+                       or Gate A/B -- nothing here is a governed result.
+      data.py          load_stock_universe(): individual-stock loader, long/
+                       tidy or wide shape, reads data/raw/stocks/ (gitignored)
+scripts/
+      universal_backtester_momentum_rotation.py  worked example, runs against
+                       this fund's own registered index data
+data/raw/stocks/       individual-stock price data, LOCAL ONLY (gitignored,
+                       100MB+ files can't be pushed to GitHub at all). See its
+                       README for the loader and the expected shape.
 ```
 
 ## Commands you will actually use

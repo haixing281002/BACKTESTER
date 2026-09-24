@@ -1,8 +1,12 @@
 """Allocator templates: turn a signal into target portfolio weights.
 
-Long-only by construction (weights are clipped at zero). Add a new strategy
-shape by adding an Allocator subclass here -- the engine, the causal shifting
-and the cost accounting never need to change.
+Long-only BY DEFAULT (the engine clips at zero unless `Backtester(...,
+allow_short=True)` is explicitly passed). Add a new strategy shape by adding
+an Allocator subclass here -- the engine, the causal shifting and the cost
+accounting never need to change. `cross_sectional_long_short` is the one
+allocator here that emits negative weights; it does nothing unless paired
+with `allow_short=True` on the engine (the engine clips negatives away
+otherwise), so it is inert, not dangerous, if wired up wrong.
 """
 from __future__ import annotations
 
@@ -293,3 +297,96 @@ class ATRRiskParity(Allocator):
                 "mean_names_held": (float(np.mean(self._held)) if self._held else 0.0),
                 "mean_cash_shortfall_from_sizing": (
                     float(np.mean(self._cash_shortfall)) if self._cash_shortfall else 0.0)}
+
+
+@register("cross_sectional_long_short")
+class CrossSectionalLongShort(Allocator):
+    """Long the top slice of a cross-sectional score, short the bottom
+    slice. Requires `Backtester(..., allow_short=True)` -- with the default
+    long-only engine this allocator's negative weights are simply clipped
+    to zero, so pairing it with the wrong engine produces a long-only,
+    half-invested book rather than a silent long-short one.
+
+    THIS IS A RESEARCH TOOL, NOT THIS FUND'S INVESTABLE ENGINE. Its purpose
+    is narrow: test whether a paper's mechanism shows a genuine effect with
+    both legs intact, on real Indian stock data, BEFORE asking whether a
+    long-only adaptation of it is something this fund could actually run.
+    A result from this allocator is never a number this fund could hold --
+    see CLAUDE.md's own non-negotiable ("this fund cannot short") for the
+    governed pipeline (ros/), which this package does not touch.
+
+    Parameters
+    ----------
+    n_hold / quantile : names held PER LEG (not total). quantile is a
+                        fraction of the eligible count, same as cross_sectional.
+    weighting         : "equal" | "signal" -- within each leg.
+    long_weight       : total gross weight on the long leg (default 0.5).
+    short_weight      : total gross weight on the short leg (default 0.5).
+                        long_weight == short_weight is dollar/gross-neutral;
+                        making them unequal expresses a net long or net
+                        short tilt on top of the long-short spread.
+    min_names         : refuse to trade below this many eligible names
+                        TOTAL (both legs must still be non-trivial).
+    """
+    requires = ("alpha", "eligible")
+
+    def __init__(self, assets, n_hold=None, quantile=None, weighting="equal",
+                 long_weight=0.5, short_weight=0.5, min_names=10, **kw):
+        super().__init__(assets, n_hold=n_hold, quantile=quantile, weighting=weighting,
+                         long_weight=long_weight, short_weight=short_weight,
+                         min_names=min_names, **kw)
+        if (n_hold is None) == (quantile is None):
+            raise ValueError("cross_sectional_long_short needs exactly one of n_hold or quantile")
+        if weighting not in ("equal", "signal"):
+            raise ValueError(f"unknown weighting '{weighting}'")
+        self.n_hold = int(n_hold) if n_hold is not None else None
+        self.quantile = float(quantile) if quantile is not None else None
+        self.weighting = weighting
+        self.long_weight = float(long_weight)
+        self.short_weight = float(short_weight)
+        self.min_names = int(min_names)
+        self._skipped = 0
+        self._held: List[int] = []
+
+    def target_weights(self, ctx: AllocatorContext) -> np.ndarray:
+        score = np.asarray(ctx.alpha, dtype=float)
+        ok = np.asarray(ctx.eligible, dtype=bool) & np.isfinite(score)
+        n_ok = int(ok.sum())
+
+        if n_ok < self.min_names:
+            self._skipped += 1
+            return ctx.current_weights.copy()
+
+        k = self.n_hold if self.n_hold is not None else max(1, int(round(self.quantile * n_ok)))
+        k = min(k, n_ok // 2) if n_ok >= 2 else 0
+        if k < 1:
+            self._skipped += 1
+            return ctx.current_weights.copy()
+
+        idx = np.flatnonzero(ok)
+        s = score[idx]
+        order = np.argsort(-s, kind="stable")   # descending: best score first
+        long_idx = idx[order[:k]]
+        short_idx = idx[order[-k:]]
+        self._held.append(2 * k)
+
+        if not ctx.buys_allowed:
+            chosen = np.concatenate([long_idx, short_idx])
+            return _sell_only(ctx.current_weights, chosen)
+
+        w = np.zeros(self.n)
+        if self.weighting == "equal":
+            w[long_idx] = self.long_weight / k
+            w[short_idx] = -self.short_weight / k
+        else:  # signal -- proportional to distance from the score's median among the chosen names
+            long_s = score[long_idx]
+            short_s = score[short_idx]
+            lv = long_s - long_s.min()
+            sv = short_s.max() - short_s
+            w[long_idx] = (self.long_weight * lv / lv.sum()) if lv.sum() > 0 else self.long_weight / k
+            w[short_idx] = -(self.short_weight * sv / sv.sum()) if sv.sum() > 0 else -self.short_weight / k
+        return w
+
+    def diagnostics(self) -> Dict[str, Any]:
+        return {"rebalances_skipped_thin_universe": self._skipped,
+                "mean_names_held_both_legs": (float(np.mean(self._held)) if self._held else 0.0)}

@@ -5,6 +5,7 @@ so a result can always be traced back to the exact bytes it came from.
 from __future__ import annotations
 
 import hashlib
+import os
 import re
 from typing import Any, Dict, Tuple
 
@@ -177,6 +178,83 @@ def load_field_only(path: str, field: str = "Close", sheets=None) -> Tuple[pd.Da
 def load_close_only(path: str, sheets=None) -> Tuple[pd.DataFrame, Dict[str, Any]]:
     """Backward-compatible alias: `load_field_only(path, field="Close", ...)`."""
     return load_field_only(path, field="Close", sheets=sheets)
+
+
+def load_stock_universe(path: str, id_col: str = None) -> Tuple[Dict[str, pd.DataFrame], Dict[str, Any]]:
+    """Load an individual-stock price file in either of the two common
+    shapes and return {'close': df, 'high': df, 'low': df, 'volume': df}
+    (whichever fields the file actually has -- 'close' is always required,
+    the rest are None if absent), each a wide DatetimeIndex x security frame.
+
+    NOT YET VERIFIED AGAINST A REAL FILE -- see data/raw/stocks/README.md.
+    This detects and handles:
+
+      LONG/TIDY  : one row per (date, security). Needs a Date column and
+                   an id column (ISIN preferred; pass id_col to force one,
+                   otherwise the first of ISIN/Symbol/Ticker found is used),
+                   plus Close (Open/High/Low/Volume optional).
+      WIDE       : one column per security, Close-only, a shared Date
+                   column -- same shape as `load_wide_csv`.
+
+    Raises a clear, specific error naming what it found instead of
+    guessing silently if neither shape matches -- a wrong guess here
+    would silently backtest the wrong securities.
+    """
+    ext = os.path.splitext(path)[1].lower()
+    if ext == ".csv":
+        raw = pd.read_csv(path)
+    elif ext in (".xlsx", ".xls"):
+        raw = pd.read_excel(path)
+    elif ext == ".parquet":
+        raw = pd.read_parquet(path)
+    else:
+        raise ValueError(f"{path}: unrecognized extension '{ext}' -- expected .csv, .xlsx, or .parquet")
+
+    cols_lower = {c.lower(): c for c in raw.columns}
+    date_col = next((cols_lower[c] for c in ("date", "trade_date", "trading_date") if c in cols_lower), None)
+    if date_col is None:
+        raise ValueError(f"{path}: no recognizable date column among {list(raw.columns)[:20]}")
+
+    id_candidates = ("isin", "symbol", "ticker", "security", "scrip_code")
+    detected_id = id_col or next((cols_lower[c] for c in id_candidates if c in cols_lower), None)
+
+    field_map = {"open": "Open", "high": "High", "low": "Low", "close": "Close",
+                "volume": "Volume", "vol": "Volume"}
+    available_fields = {field_map[c]: cols_lower[c] for c in field_map if c in cols_lower}
+
+    if detected_id is not None and "Close" in available_fields:
+        # LONG/TIDY shape
+        raw[date_col] = pd.to_datetime(raw[date_col], errors="coerce")
+        raw = raw.dropna(subset=[date_col])
+        out: Dict[str, pd.DataFrame] = {}
+        for field, col in available_fields.items():
+            pivot = raw.pivot_table(index=date_col, columns=detected_id, values=col, aggfunc="last")
+            pivot.index.name = "date"
+            out[field.lower()] = pivot.sort_index()
+        prov = {"loader": "load_stock_universe", "shape": "long_tidy", "path": path,
+                "sha256": file_sha256(path), "id_column": detected_id,
+                "fields_found": list(available_fields.keys()),
+                "n_securities": int(out["close"].shape[1]), "n_dates": int(out["close"].shape[0])}
+        for f in ("open", "high", "low", "volume"):
+            out.setdefault(f, None)
+        return out, prov
+
+    # WIDE shape: everything except the date column is a security's Close
+    value_cols = [c for c in raw.columns if c != date_col]
+    if not value_cols:
+        raise ValueError(
+            f"{path}: found a date column ('{date_col}') but no id column among "
+            f"{id_candidates} AND no other columns to treat as wide-format securities. "
+            f"Columns present: {list(raw.columns)[:30]}")
+    raw[date_col] = pd.to_datetime(raw[date_col], errors="coerce")
+    raw = raw.dropna(subset=[date_col]).set_index(date_col).sort_index()
+    raw.index.name = "date"
+    close = raw[value_cols].apply(pd.to_numeric, errors="coerce")
+    prov = {"loader": "load_stock_universe", "shape": "wide_close_only", "path": path,
+            "sha256": file_sha256(path), "id_column": None,
+            "fields_found": ["Close"], "n_securities": int(close.shape[1]),
+            "n_dates": int(close.shape[0])}
+    return {"close": close, "high": None, "low": None, "volume": None}, prov
 
 
 def audit_frame(df: pd.DataFrame) -> pd.DataFrame:

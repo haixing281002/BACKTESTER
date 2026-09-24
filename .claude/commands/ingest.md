@@ -78,6 +78,23 @@ and to say why that place and not the others.
 
 **You choose. The code checks the fit. A human signs.**
 
+**Two decisions from CLAUDE.md apply before anything below.** (1) One card and
+one backtest if the paper is long-only by construction; **two** — an India
+long-short credibility card AND a long-only adaptation card — if it isn't. (2)
+Adapt to India by default; skip the translation only when the paper's source
+universe already is Indian equities. Both are decided here, at Stage 01, not
+guessed at later.
+
+**If `data/raw/stocks/` has individual-stock data** (check
+`universal_backtester.data.load_stock_universe` — it will tell you plainly if
+nothing is there yet), the index universes below become benchmark/regime
+references, not the thing you rank. A cross-sectional mechanism gets ranked
+against actual stocks, with the same discipline as picking an index: state
+`mechanism_needs`, argue the eligible universe (index membership at each date,
+a liquidity floor, listing history), and justify the selection in the card the
+same way `universe_translation` already requires. Silence on how stocks were
+chosen is not acceptable just because there are more of them to choose from.
+
 ### 1. Name the source universe exactly as the paper CONSTRUCTS it
 
 Not as its abstract summarises it. "S&P 500 ex-financials, 1963–2016, NYSE
@@ -245,6 +262,12 @@ long-short spreads.
 Set `is_long_short: true` whenever the paper's headline result involves a short
 leg, then state `long_only_adaptation` explicitly. The schema will reject the
 card without it, deliberately.
+
+`is_long_short: true` is also the trigger for the two-card rule: draft this
+long-only adaptation card AND a paired `<slug>_india_longshort.yaml` that keeps
+both legs, translated to India but not stripped. The credibility card runs
+through `universal_backtester`'s explicit `allow_short=True` path, never
+`ros/engine` — see CLAUDE.md's "One card and one backtest, or two."
 
 Three honest adaptations, in rough order of preference:
 
