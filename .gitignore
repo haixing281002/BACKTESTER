@@ -27,3 +27,11 @@ outputs/*
 data/raw/stocks/*
 !data/raw/stocks/.gitkeep
 !data/raw/stocks/README.md
+
+# The master-universe drop folder (ros/data/master.py). Same reasoning as
+# data/raw/stocks/ above -- a master CSV is exactly the kind of file that's
+# too big for GitHub, and it was never gitignored here until this file
+# almost went in unprotected. Never commit anything dropped in here.
+data/raw/master/*
+!data/raw/master/.gitkeep
+!data/raw/master/README.md
