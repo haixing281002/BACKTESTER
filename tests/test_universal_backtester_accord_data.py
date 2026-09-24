@@ -16,13 +16,14 @@ import pytest
 from universal_backtester.accord_data import (
     load_accord_price_panel, load_accord_fundamentals, load_accord_monthly_universe,
     load_publishing_dates, get_top_n_universe, restrict_to_priced_universe,
-    diagnose_accord_dataset, DEFAULT_REPORTING_LAG_DAYS,
+    diagnose_accord_dataset, load_accord_daily_price_mcap, DEFAULT_REPORTING_LAG_DAYS,
 )
 
 REAL_PRICE = "data/raw/stocks/price_data_till_03aug2026.xlsx"
 REAL_UNIVERSE = "data/raw/stocks/Monthly_uni_new.xlsx"
 REAL_VALUATION = "data/raw/stocks/valuation_ratios_all_till_2025.xlsx"
 REAL_PUBLISHING_DATES = "data/raw/stocks/w_publishing_date_data.xlsx"
+REAL_DAILY_OHLC_MCAP = "data/raw/stocks/prices_marketcap_data_till_03082026.csv"
 
 
 def _make_price_file(path, codes=(100001, 100002, 100003), n_days=40):
@@ -78,6 +79,23 @@ def _make_universe_file(path):
 
     ws4 = wb.create_sheet("30-Apr-2023")   # completely empty trailing sheet
     wb.save(path)
+
+
+def _make_daily_ohlc_mcap_file(path, codes=(100001, 100002), n_days=5, with_dupe=False):
+    rows = []
+    dates = pd.bdate_range("2022-01-03", periods=n_days)
+    for d in dates:
+        for i, code in enumerate(codes, start=1):
+            rows.append({
+                "Accord Code": float(code), "Company Name": f"Company{i}",
+                "NDP_Date": d.strftime("%Y-%m-%d"),
+                "NDP_Open": 100.0 + i, "NDP_High": 101.0 + i, "NDP_Low": 99.0 + i,
+                "NDP_Close": 100.5 + i, "NDP_Mcap": 5000.0 + i * 100,
+                "NDP_Volume ('000)": 10.0 + i, "NDP_Value": 1.5 + i * 0.1,
+            })
+    if with_dupe:
+        rows.append(dict(rows[0]))  # exact duplicate (accord_code, date) row
+    pd.DataFrame(rows).to_csv(path, index=False)
 
 
 @pytest.fixture(scope="module")
@@ -227,6 +245,42 @@ def test_fundamentals_uses_real_publishing_date_when_available(tmp_path, synthet
     assert fallback_row["known_date_source"] == "assumed_lag"
 
 
+def test_daily_ohlc_mcap_parses_and_renames_columns(tmp_path):
+    path = tmp_path / "daily.csv"
+    _make_daily_ohlc_mcap_file(str(path))
+    df, prov = load_accord_daily_price_mcap(str(path))
+    assert list(df.columns) == ["date", "accord_code", "company_name", "open", "high",
+                                "low", "close", "mcap", "volume", "traded_value"]
+    assert prov["n_rows"] == 10
+    assert prov["n_securities"] == 2
+    assert prov["duplicate_code_date_rows"] == 0
+    # volume is converted from thousands to a share count
+    row = df[(df["accord_code"] == 100001) & (df["date"] == pd.Timestamp("2022-01-03"))].iloc[0]
+    assert row["volume"] == pytest.approx(11.0 * 1000.0)
+
+
+def test_daily_ohlc_mcap_flags_duplicate_rows(tmp_path):
+    path = tmp_path / "daily_dupe.csv"
+    _make_daily_ohlc_mcap_file(str(path), with_dupe=True)
+    with pytest.warns(UserWarning, match="duplicate"):
+        df, prov = load_accord_daily_price_mcap(str(path))
+    assert prov["duplicate_code_date_rows"] == 1
+
+
+def test_daily_ohlc_mcap_verifies_against_a_price_panel(tmp_path):
+    price_path = tmp_path / "price.xlsx"
+    daily_path = tmp_path / "daily.csv"
+    _make_price_file(str(price_path), codes=(100001, 100002, 100003), n_days=5)
+    _make_daily_ohlc_mcap_file(str(daily_path), codes=(100001, 100002), n_days=5)
+    _, prov = load_accord_daily_price_mcap(
+        str(daily_path), verify_against_price_panel_path=str(price_path))
+    # different synthetic values on each side -- this exists to prove the
+    # check actually compares values rather than only presence
+    assert prov["n_close_cells_compared"] > 0
+    assert prov["n_close_mismatches"] == prov["n_close_cells_compared"]
+    assert prov["n_codes_only_in_price_panel"] == 1   # 100003 has no daily-OHLC row
+
+
 @pytest.mark.skipif(not os.path.exists(REAL_PRICE), reason="real Accord files not present locally")
 def test_against_the_real_price_file_if_present():
     df, prov = load_accord_price_panel(REAL_PRICE)
@@ -258,3 +312,27 @@ def test_against_the_real_publishing_dates_file_if_present():
     df, prov = load_publishing_dates(REAL_PUBLISHING_DATES)
     assert prov["n_securities"] > 5000
     assert prov["lag_days_median"] > 0
+
+
+@pytest.mark.skipif(not os.path.exists(REAL_DAILY_OHLC_MCAP),
+                     reason="real Accord files not present locally")
+def test_against_the_real_daily_ohlc_mcap_file_if_present():
+    df, prov = load_accord_daily_price_mcap(REAL_DAILY_OHLC_MCAP)
+    assert prov["n_securities"] > 1000
+    assert prov["duplicate_code_date_rows"] == 0
+    assert prov["date_min"] < "2013-01-01"
+
+
+@pytest.mark.skipif(not (os.path.exists(REAL_DAILY_OHLC_MCAP) and os.path.exists(REAL_PRICE)),
+                     reason="real Accord files not present locally")
+def test_real_daily_ohlc_mcap_matches_the_real_price_panel_exactly():
+    # This is the finding the module docstring asserts: same 1,314-security
+    # panel, re-exported long-format with OHLC+mcap+volume added -- not a
+    # different security set. Re-run here so it is checked on every CI run
+    # against whatever copy of the real files is present, not just once by hand.
+    _, prov = load_accord_daily_price_mcap(
+        REAL_DAILY_OHLC_MCAP, verify_against_price_panel_path=REAL_PRICE)
+    assert prov["n_codes_only_in_this_file"] == 0
+    assert prov["n_codes_only_in_price_panel"] == 0
+    assert prov["n_close_mismatches"] == 0
+    assert prov["n_close_cells_compared"] > 3_000_000
