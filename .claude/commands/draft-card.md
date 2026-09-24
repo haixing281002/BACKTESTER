@@ -24,6 +24,16 @@ Write `cards/<slug>_<mode>.yaml`. Hard rules:
 - An **adaptation** card runs our data, must state `transferred_mechanism`, must
   enumerate `broken_assumptions`, and carries **no** replication targets. It is a
   different question and may never be scored against the paper's numbers.
+- **The India long-short credibility card** (`<slug>_india_longshort.yaml`, drafted
+  alongside `<slug>_adaptation.yaml` whenever `is_long_short: true` — see
+  CLAUDE.md's "One card and one backtest, or two") is still `mode: adaptation`
+  in schema terms, but its `signal.template` must NOT name a `ros.engine.templates`
+  entry — those are long-only by construction and cannot express a short leg.
+  Name it `universal_backtester:cross_sectional_long_short` (or whichever
+  `universal_backtester` allocator applies) instead: this is a deliberate,
+  visible signal that the card runs through `universal_backtester`'s
+  `allow_short=True` path, not `run_pipeline.py`, and a human reading the card
+  should never mistake it for something `ros/engine` could execute.
 - Every ambiguity carries a resolution. An unresolved one blocks Gate A, so if you
   cannot resolve it, it belongs in the human queue instead of half-written.
 - `n_configs_tried` counts what the **paper** tried, appendix sweeps included.

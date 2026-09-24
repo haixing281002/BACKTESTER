@@ -104,7 +104,27 @@ class Backtester:
         allow_cash: bool = True,
         ann: int = 252,
         membership: Optional[pd.DataFrame] = None,
+        allow_short: bool = False,
+        max_gross_exposure: float = 1.0,
+        short_borrow_bps: float = 0.0,
     ):
+        """`allow_short=False` (the default) preserves the original
+        long-only invariant exactly: every target weight is clipped at
+        `>= 0` and total (net == gross, since nothing is negative) exposure
+        is capped at `max_gross_exposure`.
+
+        `allow_short=True` is a DELIBERATE, explicit opt-in for research
+        that needs a real long-short book -- e.g. testing whether a paper's
+        original (short-leg-included) mechanism shows a genuine effect at
+        all, before asking whether a long-only version of it is investable.
+        It is never the default and nothing silently turns it on. With it:
+          - target weights may be negative (a short position)
+          - GROSS exposure (sum of |weight|) is capped at
+            `max_gross_exposure` (e.g. 2.0 for a "100/100" book), not net
+          - `short_borrow_bps` (annualized) is charged EVERY DAY as a
+            financing cost on short notional, not just on trade days --
+            real short positions cost a borrow fee to hold, not just to open
+        """
         missing = [a for a in assets if a not in prices.columns]
         if missing:
             raise KeyError(f"prices frame is missing assets: {missing}")
@@ -132,6 +152,9 @@ class Backtester:
         self.allow_cash = bool(allow_cash)
         self.ann = ann
         self.n = len(self.assets)
+        self.allow_short = bool(allow_short)
+        self.max_gross_exposure = float(max_gross_exposure)
+        self.short_borrow_daily = float(short_borrow_bps) / 1e4 / ann
 
     def _shift_causal(self, obj, extra_lag: int = 0):
         """Shift so a signal is knowable strictly before the bar it trades.
@@ -204,6 +227,13 @@ class Backtester:
             day_to = 0.0
             day_cost = 0.0
 
+            if self.allow_short and self.short_borrow_daily > 0 and first_rebal_done:
+                short_notional = float(-np.minimum(w, 0.0).sum())
+                if short_notional > 0:
+                    borrow_cost = short_notional * self.short_borrow_daily
+                    day_cost += borrow_cost
+                    V *= (1.0 - borrow_cost)
+
             if elig_arr is not None and first_rebal_done:
                 dead = (w > 1e-12) & ~elig_arr[i]
                 if dead.any():
@@ -234,12 +264,17 @@ class Backtester:
                     if target.shape != (self.n,):
                         raise ValueError(
                             f"{allocator.template_name} returned {target.shape}, expected {(self.n,)}")
-                    target = np.clip(target, 0.0, None)
-                    if not self.allow_cash:
-                        tot = target.sum()
-                        target = target / tot if tot > 0 else np.ones(self.n) / self.n
-                    if target.sum() > 1.0 + 1e-9:
-                        target = target / target.sum()
+                    if not self.allow_short:
+                        target = np.clip(target, 0.0, None)
+                        if not self.allow_cash:
+                            tot = target.sum()
+                            target = target / tot if tot > 0 else np.ones(self.n) / self.n
+                        if target.sum() > 1.0 + 1e-9:
+                            target = target / target.sum()
+                    else:
+                        gross = float(np.abs(target).sum())
+                        if gross > self.max_gross_exposure + 1e-9:
+                            target = target * (self.max_gross_exposure / gross)
 
                     traded = np.abs(target - w).sum()
                     day_cost = self.half_spread * traded
@@ -263,7 +298,10 @@ class Backtester:
                 "rebalance": rebalance, "lag_days": self.lag_days,
                 "spread_bps": self.half_spread * 2 * 1e4, "allow_cash": self.allow_cash,
                 "n_rebalances": len(used_rebals), "warmup_days": warmup,
-                "regime_gated": regime is not None}
+                "regime_gated": regime is not None,
+                "allow_short": self.allow_short,
+                "max_gross_exposure": self.max_gross_exposure if self.allow_short else 1.0,
+                "short_borrow_bps": self.short_borrow_daily * self.ann * 1e4}
         if regime_shift is not None:
             meta["mean_buys_allowed"] = float(regime_shift.reindex(idx).fillna(True).astype(bool).mean())
         if elig_arr is not None:

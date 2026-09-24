@@ -17,3 +17,13 @@ __pycache__/
 outputs/*
 !outputs/.gitkeep
 !outputs/README.md
+
+# Individual-stock-level data. Same reasoning as outputs/ above, plus a hard
+# constraint: GitHub blocks any file over 100MB outright, and this data is
+# expected to be far larger than the index-level workbooks already tracked
+# in data/raw/. The loader code and its documented expected schema are
+# tracked; the data itself lives only on the machine that has it.
+# See data/raw/stocks/README.md.
+data/raw/stocks/*
+!data/raw/stocks/.gitkeep
+!data/raw/stocks/README.md
