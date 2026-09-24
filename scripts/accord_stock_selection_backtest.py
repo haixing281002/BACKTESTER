@@ -33,6 +33,31 @@ overwrite these fields):
   for the file's own alternating-coverage irregularity), restricted to
   the ~1314 names with an actual price series (restrict_to_priced_universe).
 
+  Weighting: DAILY market-cap weighted (weighting="mcap" -- see
+  allocators.py) among the names actually chosen by the momentum+quality
+  ranking above, using the fifth Accord file
+  (prices_marketcap_data_till_03082026.csv, load_accord_daily_price_mcap)
+  -- real daily market cap, not the monthly-only figure the ranking
+  universe uses. Capped at MAX_WEIGHT per name so one mega-cap can't
+  dominate the book. TOTAL market cap, not free float (Accord carries no
+  free-float field) -- Indian promoter holdings are large, so this
+  overstates true investable weight the same way ros/data/master.py
+  flags for any market-cap-only file; a free-float series would fix
+  this if the fund ever gets one.
+
+  Liquidity floor: a PERCENTILE floor on trailing 21-day average traded
+  value (also from the fifth file), not an absolute rupee threshold --
+  the source column's exact unit scale hasn't been verified from this
+  environment, so a relative floor (bottom X% of the otherwise-eligible
+  set, by their OWN trailing ADV, are excluded) is self-calibrating and
+  can't be wrong by an order of magnitude the way a guessed absolute
+  cutoff could be.
+
+  If the fifth file isn't present locally (it's a 366MB CSV, gitignored,
+  local-only), this script prints exactly that and degrades to equal
+  weighting with no liquidity floor -- never silently. Its cross-sectional
+  ranking and quality screen still run either way.
+
 Backtest window is HARDCODED (fund decision, 2026-09-24): BACKTEST_START
 .. BACKTEST_END, imported from accord_data.py, not a script argument.
 
@@ -55,7 +80,7 @@ import pandas as pd
 
 from universal_backtester.accord_data import (
     load_accord_price_panel, load_accord_monthly_universe, load_accord_fundamentals,
-    get_top_n_universe, restrict_to_priced_universe,
+    load_accord_daily_price_mcap, get_top_n_universe, restrict_to_priced_universe,
     BACKTEST_START, BACKTEST_END,
 )
 from universal_backtester.data import load_banner_workbook
@@ -73,6 +98,8 @@ UNIVERSE_PATH = os.path.join(REPO_ROOT, "data", "raw", "stocks", "Monthly_uni_ne
 PROFITABILITY_PATH = os.path.join(
     REPO_ROOT, "data", "raw", "stocks", "profitability_ratios_consol_stdalon_till_march2025.xlsx")
 PUBLISHING_DATES_PATH = os.path.join(REPO_ROOT, "data", "raw", "stocks", "w_publishing_date_data.xlsx")
+DAILY_MCAP_PATH = os.path.join(REPO_ROOT, "data", "raw", "stocks",
+                               "prices_marketcap_data_till_03082026.csv")
 INDEX_PATH = os.path.join(REPO_ROOT, "data", "raw", "NSE_Broad_Factor_Indices_Historical_Data.xlsx")
 OUTPUT_DIR = os.path.join(REPO_ROOT, "outputs")
 os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -82,13 +109,17 @@ STRATEGY = {
     "name": "Profitable Momentum",
     "mechanism_needs": (
         "cross-sectional 12-1 price momentum among profitable (ROE > 0, "
-        "point-in-time) large/mid-cap Indian equities"
+        "point-in-time) large/mid-cap Indian equities, cap-weighted, "
+        "liquidity-screened"
     ),
-    "n_hold": 40,                # names held, equal-weighted
+    "n_hold": 40,                # names held
     "momentum_lookback_days": 252,
     "momentum_skip_days": 21,    # 12-1 convention: skip the most recent month
     "min_roe_pct": 0.0,          # quality screen: latest known trailing ROE must clear this
     "sector_keywords": None,     # e.g. ["bank", "finance", "nbfc"] for a sector-specific mechanism
+    "max_weight": 0.15,          # per-name cap so one mega-cap can't dominate the cap-weighted book
+    "liquidity_lookback_days": 21,     # trailing window for average traded value
+    "min_liquidity_percentile": 0.20,  # bottom 20% by trailing ADV (of the otherwise-eligible set) excluded
 }
 
 SPREAD_BPS = 30.0            # this repo's non-negotiable factor-sleeve cost floor
@@ -173,6 +204,46 @@ def momentum_signal(prices: pd.DataFrame, lookback: int, skip: int) -> pd.DataFr
     return prices.shift(skip) / prices.shift(lookback) - 1.0
 
 
+def load_daily_mcap_and_liquidity(daily_mcap_path: str, price_panel_path: str,
+                                  price_index: pd.DatetimeIndex, assets: list,
+                                  adv_lookback_days: int, min_adv_percentile: float):
+    """Real daily market cap (for cap-weighting) and a real, point-in-time
+    liquidity floor (for eligibility) from the fifth Accord file. Returns
+    (mcap_frame, liquidity_pass_frame, prov). Both are None if the file
+    isn't present -- the caller decides how to degrade, this function
+    never guesses a fallback value."""
+    if not os.path.exists(daily_mcap_path):
+        return None, None, None
+
+    long_df, prov = load_accord_daily_price_mcap(
+        daily_mcap_path, verify_against_price_panel_path=price_panel_path)
+    print(f"  daily mcap file: {prov['n_rows']:,} rows, {prov['n_securities']} securities, "
+          f"{prov['date_min']} -> {prov['date_max']}")
+    if "n_close_mismatches" in prov:
+        print(f"  cross-check vs. the wide price panel: {prov['n_close_cells_compared']:,} cells "
+              f"compared, {prov['n_close_mismatches']} mismatches")
+        if prov["n_close_mismatches"] > 0:
+            print("  WARNING: this file's close prices disagree with the wide panel -- "
+                  "treat its mcap/volume as suspect until that's understood.")
+
+    mcap_wide = long_df.pivot_table(index="date", columns="accord_code", values="mcap", aggfunc="last")
+    mcap_wide = mcap_wide.reindex(columns=assets).reindex(price_index).ffill()
+
+    traded_value = long_df.pivot_table(index="date", columns="accord_code",
+                                       values="traded_value", aggfunc="last")
+    traded_value = traded_value.reindex(columns=assets).reindex(price_index)
+    adv = traded_value.rolling(adv_lookback_days, min_periods=max(5, adv_lookback_days // 2)).mean()
+
+    # A relative (percentile-of-the-day) floor, not an absolute rupee
+    # cutoff -- see the module docstring for why. Computed row-wise so a
+    # name only needs to clear the bar against its PEERS that day, not
+    # against the whole history's liquidity regime.
+    threshold = adv.quantile(min_adv_percentile, axis=1)
+    liquidity_pass = adv.gt(threshold, axis=0).fillna(False)
+
+    return mcap_wide, liquidity_pass, prov
+
+
 def main():
     print(f"Strategy: {STRATEGY['name']} -- {STRATEGY['mechanism_needs']}")
     print(f"Backtest window (hardcoded): {BACKTEST_START.date()} -> {BACKTEST_END.date()}")
@@ -222,6 +293,27 @@ def main():
     membership = universe_membership & quality_pass
     print(f"  mean names eligible (universe AND quality) per day: {membership.sum(axis=1).mean():.0f}")
 
+    print(f"\nLooking for the daily market-cap/liquidity file: {DAILY_MCAP_PATH}")
+    mcap_frame, liquidity_pass, mcap_prov = load_daily_mcap_and_liquidity(
+        DAILY_MCAP_PATH, PRICE_PATH, price_window.index, assets,
+        STRATEGY["liquidity_lookback_days"], STRATEGY["min_liquidity_percentile"])
+
+    if mcap_frame is not None:
+        membership = membership & liquidity_pass
+        print(f"  liquidity floor applied (bottom {STRATEGY['min_liquidity_percentile']:.0%} trailing-ADV "
+              f"names excluded): mean names eligible per day now {membership.sum(axis=1).mean():.0f}")
+        weighting = "mcap"
+        weighting_frame = mcap_frame
+        print(f"  weighting: real daily market cap (weighting='mcap'), capped at "
+              f"{STRATEGY['max_weight']:.0%} per name")
+    else:
+        weighting = "equal"
+        weighting_frame = None
+        print(f"  NOT FOUND -- this is expected in an environment that doesn't have the 366MB "
+              f"fifth Accord file (it's local-only, gitignored). Degrading to equal weighting, "
+              f"no liquidity floor. Run this same script where that file exists for the real "
+              f"cap-weighted, liquidity-screened output.")
+
     print(f"Building 12-1 momentum signal ({STRATEGY['momentum_lookback_days']}d lookback, "
           f"{STRATEGY['momentum_skip_days']}d skip)...")
     alpha = momentum_signal(price_window, STRATEGY["momentum_lookback_days"], STRATEGY["momentum_skip_days"])
@@ -232,13 +324,14 @@ def main():
 
     n_hold = STRATEGY["n_hold"]
     print(f"\nRunning cross-sectional backtest: top {n_hold} names by 12-1 momentum among "
-          f"profitable names, equal-weighted, {REBALANCE} rebalance, {SPREAD_BPS:.0f}bp cost, "
+          f"profitable names, {weighting}-weighted, {REBALANCE} rebalance, {SPREAD_BPS:.0f}bp cost, "
           f"{LAG_DAYS}d lag...")
     bt = Backtester(prices=price_window, assets=assets, spread_bps=SPREAD_BPS,
                     lag_days=LAG_DAYS, allow_cash=True, membership=membership)
-    alloc = build_allocator("cross_sectional", assets, n_hold=n_hold, weighting="equal",
+    alloc = build_allocator("cross_sectional", assets, n_hold=n_hold, weighting=weighting,
+                            max_weight=(STRATEGY["max_weight"] if weighting == "mcap" else None),
                             min_names=n_hold, ascending=False)
-    result = bt.run(allocator=alloc, rebalance=REBALANCE, alpha=alpha,
+    result = bt.run(allocator=alloc, rebalance=REBALANCE, alpha=alpha, vols=weighting_frame,
                     name="accord_stock_selection",
                     warmup=STRATEGY["momentum_lookback_days"] + STRATEGY["momentum_skip_days"] + 5)
 

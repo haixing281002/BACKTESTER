@@ -37,6 +37,34 @@ def list_allocators() -> List[str]:
     return sorted(_REGISTRY)
 
 
+def _cap_and_redistribute(w: np.ndarray, max_weight: float) -> np.ndarray:
+    """Cap every weight at `max_weight`, redistributing the excess among
+    the names still under the cap, iterated until nothing exceeds it (or
+    every held name is already at the cap, in which case the remainder
+    is simply not invested -- k * max_weight < 1 is a real constraint,
+    not a bug).
+
+    A single `np.minimum(w, cap)` followed by one renormalization -- what
+    this allocator did before -- does NOT actually enforce the cap: it
+    renormalizes by dividing by the POST-CLIP total, which pushes every
+    weight (including the ones just clipped TO the cap) back up, and the
+    previously-capped names end up above it again. Caught by a test with
+    3 names and a highly skewed size array (max_weight=0.5, sizes
+    1:1:100) -- the naive version left the largest name at 96%."""
+    w = w.copy()
+    for _ in range(len(w) + 1):
+        over = w > max_weight + 1e-12
+        if not over.any():
+            break
+        excess = float((w[over] - max_weight).sum())
+        w[over] = max_weight
+        under = (~over) & (w > 0)
+        if not under.any():
+            break
+        w[under] = w[under] + excess * (w[under] / w[under].sum())
+    return w
+
+
 @dataclass
 class AllocatorContext:
     """Everything an allocator may look at on a rebalance date. Every array
@@ -113,7 +141,13 @@ class CrossSectional(Allocator):
     ----------
     n_hold      : how many names to hold. Mutually exclusive with `quantile`.
     quantile    : top fraction to hold (0.2 = top quintile of ELIGIBLE names).
-    weighting   : "equal" | "signal" | "inverse_vol"
+    weighting   : "equal" | "signal" | "inverse_vol" | "mcap"
+                  "mcap" weights each chosen name proportional to `ctx.vols`
+                  -- the SAME generic per-asset array "inverse_vol" reads,
+                  just reinterpreted as a size (e.g. market cap) rather than
+                  a volatility: pass a market-cap DataFrame as `vols=` on
+                  `Backtester.run()` when using this mode. It is still
+                  causally shifted like everything else in `ctx`.
     max_weight  : per-name cap, applied after weighting and renormalised.
     ascending   : True if a LOW score is good (e.g. cheapness, low vol).
     min_names   : refuse to trade below this many eligible names (holds
@@ -129,7 +163,7 @@ class CrossSectional(Allocator):
                          ascending=ascending, min_names=min_names, **kw)
         if (n_hold is None) == (quantile is None):
             raise ValueError("cross_sectional needs exactly one of n_hold or quantile")
-        if weighting not in ("equal", "signal", "inverse_vol"):
+        if weighting not in ("equal", "signal", "inverse_vol", "mcap"):
             raise ValueError(f"unknown weighting '{weighting}'")
         self.n_hold = int(n_hold) if n_hold is not None else None
         self.quantile = float(quantile) if quantile is not None else None
@@ -168,6 +202,14 @@ class CrossSectional(Allocator):
             v = score[chosen]
             v = (v.max() - v) if self.ascending else (v - v.min())
             w[chosen] = (v / v.sum()) if v.sum() > 0 else 1.0 / k
+        elif self.weighting == "mcap":
+            if ctx.vols is None:
+                w[chosen] = 1.0 / k
+            else:
+                size = np.asarray(ctx.vols, dtype=float)[chosen]
+                size = np.where(np.isfinite(size) & (size > 0), size, np.nan)
+                w[chosen] = (np.nan_to_num(size) / np.nansum(size)
+                             if np.isfinite(size).any() else 1.0 / k)
         else:  # inverse_vol
             if ctx.vols is None:
                 w[chosen] = 1.0 / k
@@ -178,10 +220,7 @@ class CrossSectional(Allocator):
                              if np.isfinite(inv).any() else 1.0 / k)
 
         if self.max_weight is not None:
-            w = np.minimum(w, self.max_weight)
-            tot = w.sum()
-            if tot > 0:
-                w = w / tot
+            w = _cap_and_redistribute(w, self.max_weight)
         return w
 
     def diagnostics(self) -> Dict[str, Any]:
@@ -290,6 +329,13 @@ class ATRRiskParity(Allocator):
         self._cash_shortfall.append(max(0.0, 1.0 - total))
         if total > 1.0:
             w = w / total
+            if self.max_weight is not None:
+                # Renormalizing can push a name that was AT the cap back
+                # above it -- re-clip rather than redistribute: this
+                # allocator's whole design is risk-parity sizing that may
+                # deliberately leave cash, not a fully-invested portfolio,
+                # so an unspent remainder here is correct, not a bug.
+                w = np.minimum(w, self.max_weight)
         return w
 
     def diagnostics(self) -> Dict[str, Any]:
