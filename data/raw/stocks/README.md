@@ -5,29 +5,32 @@ Gitignored (`data/raw/stocks/*`), never pushed to GitHub. See the reasoning
 in the git history if you want it; the short version is GitHub hard-blocks
 any file over 100MB, and this data doesn't belong in a shared repo anyway.
 
-## The four files, verified against the real thing (2026-09-24)
+## The five files, verified against the real thing (2026-09-24)
 
 Everything below was checked by actually reading these files — not
-guessed. All four join on **Accord Code**, a stable internal numeric
+guessed. All five join on **Accord Code**, a stable internal numeric
 security id from the data vendor (Accord Fintech / Ace Equity) used
 consistently across every file (verified: Reliance Industries = 100325,
 TCS = 132540, in the price panel's column headers AND the fundamentals
-files' `Accord Code` column AND the universe file's `Accord Code` column).
+files' `Accord Code` column AND the universe file's `Accord Code` column
+AND the daily OHLC+mcap file's `Accord Code` column).
 **Never key anything on NSE symbol or company name** — this repo's own
 rule for ISIN applies the same way here: symbols get reused, names change.
 
 | File | Canonical name expected by the loader | Shape |
 |---|---|---|
 | Daily prices | `price_data_till_03aug2026.xlsx` | Wide: 1 `NDP_Date` column + 1314 security columns (headers = Accord Code), daily, 2012-01-02 → 2026-07-31. **This is the file to use for both pricing and, joined against the universe below, stock selection** — the fund's own call, see §Resolutions. |
+| Daily OHLC + market cap + volume | `prices_marketcap_data_till_03082026.csv` | Long: one row per (Accord Code, date), 3,441,492 rows, 1,314 securities, daily, 2012-01-02 → 2026-07-31. Added 2026-09-24. **Confirmed by direct comparison to be the SAME panel as the wide price file above** (same 1,314 codes, same date range, `close` matches to floating-point precision, 0 mismatches over 3.44M compared cells) — it is a superset, not a different security set: full daily O/H/L (the wide file is close-only) plus the dataset's first DAILY market cap, volume and traded value. `mcap` is TOTAL, not free-float, same caveat as the monthly universe file below. |
 | Valuation ratios | `valuation_ratios_all_till_2025.xlsx` | Long: one row per (Accord Code, fiscal year end, Consolidated/Standalone). PE, EV/EBIT. 1988 → 2025, 1266 companies |
 | Profitability ratios | `profitability_ratios_consol_stdalon_till_march2025.xlsx` | Same shape as valuation. ROA, ROE, ROCE. Same coverage |
-| Monthly universe | `Monthly_uni_new.xlsx` | 176 sheets (163 real months + some duplicated/mislabeled, see below), one per month-end (Dec 2011 → Jul 2026 nominal), each ranking that month's universe by market cap. **Use only via `get_top_n_universe()`, not the raw rows** — see §Resolutions. |
+| Monthly universe | `Monthly_uni_new.xlsx` | 176 sheets (163 real months + some duplicated/mislabeled, see below), one per month-end (Dec 2011 → Jul 2026 nominal), each ranking that month's universe by market cap. **Use only via `get_top_n_universe()`, not the raw rows** — see §Resolutions. Its `mcap` column is monthly-only; the daily OHLC+mcap file above is the one to use where a DAILY market cap is needed (e.g. daily-rebalanced size sorts, liquidity/ADV checks). |
 | Results publication dates | `w_publishing_date_data.xlsx` | Long: one row per (Accord Code, fiscal year end, C/S basis) with a **real** `YR_Result Date` — 65,853 rows, 8,536 companies, 2012–2026. Fixes finding #4 below. |
 
 Loaders: `universal_backtester/accord_data.py` — `load_accord_price_panel()`,
-`load_accord_fundamentals()`, `load_accord_monthly_universe()`,
-`load_publishing_dates()`, `get_top_n_universe()`,
-`restrict_to_priced_universe()`, `diagnose_accord_dataset()`.
+`load_accord_daily_price_mcap()`, `load_accord_fundamentals()`,
+`load_accord_monthly_universe()`, `load_publishing_dates()`,
+`get_top_n_universe()`, `restrict_to_priced_universe()`,
+`diagnose_accord_dataset()`.
 
 ## How the fund has resolved each finding (2026-09-24)
 
@@ -117,11 +120,20 @@ print(diagnose_accord_dataset(
 ).to_string())
 ```
 
-## Still missing
+## Resolved: the fifth CSV
 
-The ~100MB CSV mentioned alongside the original four files still hasn't
-arrived over chat upload (size limits — same story as the earlier 38MB/162MB
-zips); the fund's plan is to add it to `data/raw/stocks/` directly from a
-local VS Code checkout instead. Whatever it turns out to hold, run it through
-the same discipline: read it before trusting it, and add a real diagnostic
-here once its actual shape is known, not a guessed one.
+The CSV mentioned alongside the original four files arrived 2026-09-24, via
+local VS Code checkout as planned (not chat upload — it's 366MB, well past
+the earlier 38MB/162MB zip limits, and 3.5x the ~100MB originally guessed).
+Read before trusting it, per the discipline above: `load_accord_daily_price_mcap()`
+in `universal_backtester/accord_data.py`, with an optional
+`verify_against_price_panel_path=` argument that re-runs the cross-check
+against `price_data_till_03aug2026.xlsx` live rather than trusting this
+README. Finding: it is the same 1,314-security, 2012-2026 panel as the
+existing wide price file, re-exported long-format with OHLC + the dataset's
+first DAILY market cap, volume and traded value added (previously mcap only
+existed monthly, in `Monthly_uni_new.xlsx`, for ranking). Not a different
+security set, not new names to reconcile — a superset. Tests:
+`tests/test_universal_backtester_accord_data.py::test_real_daily_ohlc_mcap_matches_the_real_price_panel_exactly`
+re-runs the same check on every CI run against whatever copy of the real
+files is present.

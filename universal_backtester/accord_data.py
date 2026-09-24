@@ -1,11 +1,13 @@
 """Loaders for the Accord Fintech stock-level dataset supplied for this
 fund: individual-stock daily prices, annual valuation/profitability
-ratios, and a monthly point-in-time universe/market-rank file. All four
-join on **Accord Code**, an internal numeric security id used consistently
-across all four files (confirmed by inspection: the price panel's column
-headers, the fundamentals files' "Accord Code" column, and the monthly
-universe file's "Accord Code" column all draw from the same numbering,
-e.g. Reliance Industries = 100325, TCS = 132540, in every file).
+ratios, a monthly point-in-time universe/market-rank file, and (added
+2026-09-24) a daily OHLC + market cap + volume file. All five join on
+**Accord Code**, an internal numeric security id used consistently
+across all five files (confirmed by inspection: the price panel's column
+headers, the fundamentals files' "Accord Code" column, the monthly
+universe file's "Accord Code" column, and the daily OHLC+mcap file's own
+"Accord Code" column all draw from the same numbering, e.g. Reliance
+Industries = 100325, TCS = 132540, in every file).
 
 Do not key anything on NSE_symbol or Company Name -- symbols get reused
 and names change; Accord Code is this dataset's stable identifier, the
@@ -44,6 +46,16 @@ fund, 2026-09-24 -- not hypothetical, found by reading these files):
    implausible result date (before the fiscal year end, or >1yr after it
    -- both true data errors present in the source, handled by keeping the
    assumption for just those rows rather than trusting a broken date).
+5. A fifth file, prices_marketcap_data_till_03082026.csv (366MB, 3.44M
+   rows, added 2026-09-24), is NOT a different security set from the
+   price panel above -- confirmed by direct comparison
+   (load_accord_daily_price_mcap): identical 1,314 Accord Codes, identical
+   2012-01-02 to 2026-07-31 date range, `close` matching the wide panel to
+   floating-point precision. It is a SUPERSET: full daily O/H/L (the wide
+   panel is close-only) plus the first DAILY market cap, volume and traded
+   value this dataset has anywhere -- the monthly universe file's `mcap`
+   is monthly-only, for ranking. Total market cap, not free float, same
+   caveat as the monthly file.
 
 Tradable universe: the price panel (1314 securities) is smaller than the
 full universe file (~3060 distinct codes ever seen). restrict_to_priced_universe()
@@ -161,6 +173,105 @@ def load_accord_price_panel(path: str) -> Tuple[pd.DataFrame, Dict[str, Any]]:
         "n_securities": int(df.shape[1]), "n_dates": int(df.shape[0]),
         "date_min": str(df.index.min().date()), "date_max": str(df.index.max().date()),
     }
+    return df, prov
+
+
+def load_accord_daily_price_mcap(
+    path: str, verify_against_price_panel_path: Optional[str] = None,
+) -> Tuple[pd.DataFrame, Dict[str, Any]]:
+    """Long-format daily OHLC + market cap + volume + traded value, one row
+    per (Accord Code, date): [date, accord_code, company_name, open, high,
+    low, close, mcap, volume, traded_value].
+
+    A FIFTH Accord file, added 2026-09-24 alongside the original four
+    (confirmed by the fund from a local VS Code checkout, not the ~100MB
+    upload that never arrived over chat -- the real file is 366MB / 3.44M
+    rows). Confirmed by direct comparison, not assumed: this is the SAME
+    1,314-security, 2012-01-02 to 2026-07-31 panel as
+    price_data_till_03aug2026.xlsx (load_accord_price_panel) -- identical
+    Accord Code set (1,314 in both, 0 in only one side), identical date
+    range, and `close` values that match to floating-point precision
+    (max abs diff ~5.7e-14 across 3.44M common cells). It is a SUPERSET in
+    information, not a different security set: it adds full daily O/H/L
+    (the wide panel is close-only), and -- the genuinely new thing -- DAILY
+    market cap, volume and traded value. Market cap previously existed only
+    at MONTHLY granularity, inside load_accord_monthly_universe()'s per-month
+    ranking snapshots; this is the first source of a daily mcap series, and
+    the first source of volume/traded value at all.
+
+    `mcap` here is TOTAL market cap, like the monthly universe file's own
+    `mcap` column -- not free-float. Indian promoter holdings are large, so
+    ranking or sizing directly off this column overstates investable float;
+    this is the same caveat ros/data/master.py raises for a market-cap-only
+    file, and it applies here for the same reason.
+
+    Pass `verify_against_price_panel_path` (the path to
+    price_data_till_03aug2026.xlsx) to re-run the cross-check above against
+    whatever copy of that file is actually present, rather than trusting the
+    one-off comparison in this docstring -- `n_close_mismatches` in the
+    returned provenance is the number of (accord_code, date) cells where the
+    two files disagree by more than 1e-6; it should be 0.
+    """
+    dtypes = {
+        "Accord Code": "float64", "NDP_Open": "float64", "NDP_High": "float64",
+        "NDP_Low": "float64", "NDP_Close": "float64", "NDP_Mcap": "float64",
+        "NDP_Volume ('000)": "float64", "NDP_Value": "float64",
+    }
+    df = pd.read_csv(path, dtype=dtypes)
+    df = df.rename(columns={
+        "Accord Code": "accord_code", "Company Name": "company_name",
+        "NDP_Date": "date", "NDP_Open": "open", "NDP_High": "high",
+        "NDP_Low": "low", "NDP_Close": "close", "NDP_Mcap": "mcap",
+        "NDP_Value": "traded_value",
+    })
+    df = df.rename(columns={"NDP_Volume ('000)": "volume_thousands"})
+
+    n_before = len(df)
+    df = df.dropna(subset=["accord_code", "date"]).copy()
+    n_dropped = n_before - len(df)
+
+    df["accord_code"] = df["accord_code"].astype(int)
+    df["date"] = pd.to_datetime(df["date"], errors="coerce")
+    n_unparsed_dates = int(df["date"].isna().sum())
+    df = df.dropna(subset=["date"])
+    # Reported in shares (the source column is in thousands), matching the
+    # units every other volume/ADV field in this repo is expressed in.
+    df["volume"] = df["volume_thousands"] * 1000.0
+    df = df.drop(columns=["volume_thousands"])
+    df = df[["date", "accord_code", "company_name", "open", "high", "low",
+             "close", "mcap", "volume", "traded_value"]]
+
+    dupes = int(df.duplicated(["accord_code", "date"]).sum())
+    if dupes:
+        warnings.warn(f"{path}: {dupes} duplicate (accord_code, date) rows -- "
+                      f"last one wins if you pivot, silently, unless you check this yourself.")
+
+    prov: Dict[str, Any] = {
+        "loader": "load_accord_daily_price_mcap", "path": path, "sha256": file_sha256(path),
+        "n_rows": int(len(df)), "n_securities": int(df["accord_code"].nunique()),
+        "date_min": str(df["date"].min().date()), "date_max": str(df["date"].max().date()),
+        "n_rows_dropped_no_code_or_date": int(n_dropped),
+        "n_rows_unparseable_date": n_unparsed_dates,
+        "duplicate_code_date_rows": dupes,
+    }
+
+    if verify_against_price_panel_path is not None:
+        panel, _panel_prov = load_accord_price_panel(verify_against_price_panel_path)
+        this_codes = set(df["accord_code"].unique())
+        panel_codes = set(panel.columns)
+        wide_close = df.pivot_table(index="date", columns="accord_code", values="close", aggfunc="last")
+        common_idx = panel.index.intersection(wide_close.index)
+        common_cols = sorted(panel_codes & this_codes)
+        a = panel.loc[common_idx, common_cols]
+        b = wide_close.loc[common_idx, common_cols]
+        both_present = a.notna() & b.notna()
+        mismatch = both_present & ((a - b).abs() > 1e-6)
+        prov["verified_against"] = verify_against_price_panel_path
+        prov["n_codes_only_in_this_file"] = len(this_codes - panel_codes)
+        prov["n_codes_only_in_price_panel"] = len(panel_codes - this_codes)
+        prov["n_close_cells_compared"] = int(both_present.values.sum())
+        prov["n_close_mismatches"] = int(mismatch.values.sum())
+
     return df, prov
 
 
