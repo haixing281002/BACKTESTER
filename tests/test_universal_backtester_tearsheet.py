@@ -34,8 +34,8 @@ def test_average_annual_max_drawdown_on_a_known_two_year_path():
     path2 = np.concatenate([np.linspace(1.0, 0.9, n2 // 2), np.linspace(0.9, 1.05, n2 - n2 // 2)])
     v.loc[y1] = path1
     v.loc[y2] = path2 * path1[-1]
-    result = ts.average_annual_max_drawdown(v)
-    assert 0.09 < result < 0.21
+    result = ts.average_annual_max_drawdown(v.pct_change().dropna())
+    assert -0.21 < result < -0.09
 
 
 def test_beta_of_a_series_against_itself_is_one():
@@ -157,20 +157,19 @@ def _monthly_series(values, start="2010-01-31"):
     return pd.Series(values, index=idx)
 
 
-def test_upside_and_downside_capture_of_a_levered_clone_both_exceed_100():
-    """A portfolio at 1.5x the benchmark's return every month should show
-    upside AND downside capture both above 100% -- NOT exactly 150% each,
-    because compounding many periods together is convex in the scale
-    factor (Jensen's inequality): a scalar multiple of every period does
-    NOT produce that same multiple in the compounded total once you
-    compound more than one period. That is a property of the standard
-    (Morningstar-style) capture-ratio definition itself, not a bug here --
-    confirmed by hand before writing this assertion, rather than assumed."""
+def test_upside_and_downside_capture_of_a_levered_clone_both_equal_150pct():
+    """Capture ratios here are a simple mean-of-monthly-returns ratio (the
+    reference "SE Return Analytics" workbook's own definition, verified
+    against its real numbers -- NOT a compounded-product ratio). A
+    portfolio at exactly 1.5x the benchmark every month is therefore
+    exactly 1.5x on both upside and downside capture, with no convexity
+    distortion (that distortion only shows up under a compounded-product
+    definition, which this repo no longer uses)."""
     rng = np.random.default_rng(9)
     mb = _monthly_series(rng.normal(0.01, 0.04, size=60))
     mr = 1.5 * mb
-    assert ts.upside_capture(mr, mb) > 100.0
-    assert ts.downside_capture(mr, mb) > 100.0
+    assert ts.upside_capture(mr, mb) == pytest.approx(1.5)
+    assert ts.downside_capture(mr, mb) == pytest.approx(1.5)
 
 
 def test_a_defensive_strategy_has_capture_ratio_above_one():
@@ -183,16 +182,20 @@ def test_a_defensive_strategy_has_capture_ratio_above_one():
 
 
 def test_cvar_is_at_least_as_extreme_as_var():
+    """historical_var/historical_cvar are UNNEGATED (a negative number is
+    the raw tail value, matching the reference workbook's real
+    convention) -- so "more extreme" now means more negative, i.e. CVaR
+    <= VaR, not >=."""
     rng = np.random.default_rng(11)
     r = _series(rng, n=2000)
-    assert ts.historical_cvar(r, 0.95) >= ts.historical_var(r, 0.95) - 1e-9
-    assert ts.historical_cvar(r, 0.99) >= ts.historical_var(r, 0.99) - 1e-9
+    assert ts.historical_cvar(r, 0.95) <= ts.historical_var(r, 0.95) + 1e-9
+    assert ts.historical_cvar(r, 0.99) <= ts.historical_var(r, 0.99) + 1e-9
 
 
 def test_var_99_is_more_extreme_than_var_95():
     rng = np.random.default_rng(12)
     r = _series(rng, n=2000)
-    assert ts.historical_var(r, 0.99) >= ts.historical_var(r, 0.95)
+    assert ts.historical_var(r, 0.99) <= ts.historical_var(r, 0.95)
 
 
 def test_compute_tearsheet_runs_end_to_end():
@@ -210,7 +213,7 @@ def test_compute_tearsheet_runs_end_to_end():
     bench = pd.Series(100 * (1 + pd.Series(rng.normal(0.0003, 0.011, size=1500), index=idx)).cumprod(), index=idx)
     sheet = ts.compute_tearsheet(result, bench)
     d = sheet.to_dict()
-    assert len(d) == 27
+    assert len(d) == 33
     assert all(k in ts._LABELS for k in d)
     rendered = ts.render_tearsheet(sheet)
     assert "Sharpe Ratio" in rendered

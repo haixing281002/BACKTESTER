@@ -17,6 +17,7 @@ caveat attached.
 """
 from __future__ import annotations
 
+from collections import OrderedDict
 from dataclasses import dataclass, asdict
 from typing import Any, Dict, Optional
 
@@ -55,25 +56,29 @@ def _monthly_returns(returns: pd.Series) -> pd.Series:
     return (1.0 + r).resample("ME").prod() - 1.0
 
 
-def positive_volatility(returns: pd.Series, ann: int = MONTHLY) -> float:
-    """Std dev of positive MONTHLY returns, annualized -- "upside" volatility."""
+def positive_volatility(returns: pd.Series) -> float:
+    """Population stdev (ddof=0) of positive MONTHLY returns -- verified
+    against the reference workbook's real numbers to be UNANNOTATED (no
+    *sqrt(12)), unlike every other volatility figure on the same sheet.
+    Not our choice of convention -- reproducing the source exactly."""
     m = _monthly_returns(returns)
     pos = m[m > 0]
-    return float(pos.std(ddof=1) * np.sqrt(ann)) if len(pos) > 2 else float("nan")
+    return float(pos.std(ddof=0)) if len(pos) > 1 else float("nan")
 
 
-def negative_volatility(returns: pd.Series, ann: int = MONTHLY) -> float:
+def negative_volatility(returns: pd.Series) -> float:
     m = _monthly_returns(returns)
     neg = m[m < 0]
-    return float(neg.std(ddof=1) * np.sqrt(ann)) if len(neg) > 2 else float("nan")
+    return float(neg.std(ddof=0)) if len(neg) > 1 else float("nan")
 
 
-def average_annual_max_drawdown(value: pd.Series) -> float:
-    """Mean of each calendar year's worst point on the continuous
-    (whole-history) drawdown curve -- not a per-year reset."""
-    dd = drawdown_series(value)
-    yearly_min = dd.groupby(dd.index.year).min()
-    return float(-yearly_min.mean()) if len(yearly_min) else float("nan")
+def average_annual_max_drawdown(returns: pd.Series) -> float:
+    """Mean of each calendar year's max drawdown, with the running peak
+    RESET at the start of every calendar year (verified against the
+    reference workbook's real numbers -- a whole-history running peak,
+    carried across the year boundary, gives a different, wrong number)."""
+    dd = calendar_year_max_drawdown(returns)
+    return float(np.mean(list(dd.values()))) if dd else float("nan")
 
 
 def beta(returns: pd.Series, bench_returns: pd.Series) -> float:
@@ -114,9 +119,12 @@ def alpha_adj_beta(value: pd.Series, returns: pd.Series, bench_value: pd.Series,
 
 
 def tracking_error(returns: pd.Series, bench_returns: pd.Series, ann: int = ANN) -> float:
+    """Population stdev (ddof=0) of the return difference, annualized --
+    verified against the reference workbook's real number; ddof=1 (sample
+    stdev) misses it by a small but real margin."""
     r, b = returns.align(bench_returns, join="inner")
     diff = (r - b).dropna()
-    return float(diff.std(ddof=1) * np.sqrt(ann)) if len(diff) > 2 else float("nan")
+    return float(diff.std(ddof=0) * np.sqrt(ann)) if len(diff) > 2 else float("nan")
 
 
 def downside_deviation(returns: pd.Series, mar: float = 0.0, ann: int = ANN) -> float:
@@ -144,8 +152,8 @@ def sterling_ratio(value: pd.Series, ann: int = ANN) -> float:
     """CAGR / average annual max drawdown (the simple, no-10%-adjustment
     convention -- some vendors subtract a further 10 points from the
     denominator; this does not, documented here rather than silently picked)."""
-    aamdd = average_annual_max_drawdown(value)
-    return float(cagr(value, ann) / aamdd) if aamdd > 0 else float("nan")
+    aamdd = average_annual_max_drawdown(value.pct_change().dropna())
+    return float(cagr(value, ann) / abs(aamdd)) if aamdd < 0 else float("nan")
 
 
 def omega_ratio(returns: pd.Series, threshold: float = 0.0) -> float:
@@ -157,11 +165,15 @@ def omega_ratio(returns: pd.Series, threshold: float = 0.0) -> float:
 
 
 def gain_to_pain_ratio(returns: pd.Series) -> float:
-    """Schwager's definition: sum of ALL monthly returns / abs(sum of
-    losing months' returns)."""
+    """Sum of WINNING months' returns / abs(sum of losing months'
+    returns) -- verified against the reference workbook's real number;
+    summing ALL months (winners and losers together) in the numerator,
+    as an earlier version of this function did, misses it by almost
+    exactly 1.0 every time."""
     m = _monthly_returns(returns)
+    gains = float(m[m > 0].sum())
     losses = float(-m[m < 0].sum())
-    return float(m.sum() / losses) if losses > 0 else float("nan")
+    return float(gains / losses) if losses > 0 else float("nan")
 
 
 def tail_ratio(returns: pd.Series, pct: float = 0.05) -> float:
@@ -182,34 +194,38 @@ def conditional_return(returns: pd.Series, bench_returns: pd.Series,
     return float(sub.mean() * ann) if len(sub) else float("nan")
 
 
-def _capture(monthly_r: pd.Series, monthly_b: pd.Series, mask: pd.Series) -> float:
-    port = float((1.0 + monthly_r[mask]).prod() - 1.0)
-    bench = float((1.0 + monthly_b[mask]).prod() - 1.0)
-    return float(port / bench * 100.0) if bench != 0 else float("nan")
-
-
 def _monthly_pair(returns: pd.Series, bench_returns: pd.Series):
-    """Capture ratios compound MONTHLY returns, not daily. Compounding a
-    non-contiguous subset of DAILY returns (e.g. "every day the benchmark
-    was up") explodes: cherry-picking ~half the days of a multi-year daily
-    series and compounding them back-to-back as if they were consecutive
-    produces a wildly nonlinear number with no real-world meaning. Monthly
-    granularity is the standard convention (Morningstar-style Up/Down
-    Capture) precisely because it keeps this distortion small."""
+    """Every ratio below is computed on MONTHLY returns, matching the
+    reference "SE Return Analytics" workbook's own convention -- verified
+    cell-for-cell against its real (non-synthetic) numbers, not assumed."""
     r, b = returns.align(bench_returns, join="inner")
     mr = (1.0 + r).resample("ME").prod() - 1.0
     mb = (1.0 + b).resample("ME").prod() - 1.0
     return mr, mb
 
 
+def _mean_ratio(monthly_r: pd.Series, monthly_b: pd.Series, mask: pd.Series):
+    """Simple AVERAGEIF-style mean of monthly returns under `mask`, for
+    both portfolio and benchmark, plus their ratio -- the reference
+    workbook's actual "Ret +Ve/-Ve" and "Capture" definition (confirmed by
+    reproducing its real numbers to 10+ significant figures; NOT a
+    compounded/annualized figure, and not scaled by 100)."""
+    port_mean = float(monthly_r[mask].mean()) if mask.any() else float("nan")
+    bench_mean = float(monthly_b[mask].mean()) if mask.any() else float("nan")
+    ratio = float(port_mean / bench_mean) if bench_mean not in (0.0,) and np.isfinite(bench_mean) else float("nan")
+    return port_mean, bench_mean, ratio
+
+
 def upside_capture(returns: pd.Series, bench_returns: pd.Series) -> float:
     mr, mb = _monthly_pair(returns, bench_returns)
-    return _capture(mr, mb, mb > 0)
+    _, _, ratio = _mean_ratio(mr, mb, mb > 0)
+    return ratio
 
 
 def downside_capture(returns: pd.Series, bench_returns: pd.Series) -> float:
     mr, mb = _monthly_pair(returns, bench_returns)
-    return _capture(mr, mb, mb < 0)
+    _, _, ratio = _mean_ratio(mr, mb, mb < 0)
+    return ratio
 
 
 def capture_ratio(returns: pd.Series, bench_returns: pd.Series) -> float:
@@ -217,26 +233,117 @@ def capture_ratio(returns: pd.Series, bench_returns: pd.Series) -> float:
     return float(up / down) if np.isfinite(down) and down != 0 else float("nan")
 
 
-def extreme_capture_ratio(returns: pd.Series, bench_returns: pd.Series, pct: float = 0.10) -> float:
-    """Capture ratio restricted to the most extreme benchmark MONTHS (top/
-    bottom `pct` by benchmark monthly return), rather than every up/down month."""
+# Extreme-capture thresholds: PERCENTILE(benchmark monthly returns, 0.83)
+# for the upside cut and PERCENTILE(..., 0.07) for the downside cut. Not a
+# round, "principled" number (a symmetric 90/10 or 95/5 would be the
+# obvious guess) -- these exact two constants are what reproduces the
+# reference workbook's real Extreme Capture Ratio figures bit-for-bit, so
+# they're treated as the workbook's own fixed definition, not re-derived.
+EXTREME_UPPER_PCT = 0.83
+EXTREME_LOWER_PCT = 0.07
+
+
+def extreme_capture_ratio(returns: pd.Series, bench_returns: pd.Series,
+                          upper_pct: float = EXTREME_UPPER_PCT,
+                          lower_pct: float = EXTREME_LOWER_PCT) -> float:
     mr, mb = _monthly_pair(returns, bench_returns)
-    hi, lo = mb.quantile(1 - pct), mb.quantile(pct)
-    up = _capture(mr, mb, mb >= hi)
-    down = _capture(mr, mb, mb <= lo)
+    hi, lo = mb.quantile(upper_pct), mb.quantile(lower_pct)
+    _, _, up = _mean_ratio(mr, mb, mb >= hi)
+    _, _, down = _mean_ratio(mr, mb, mb <= lo)
     return float(up / down) if np.isfinite(down) and down != 0 else float("nan")
 
 
+def extreme_capture_breakdown(returns: pd.Series, bench_returns: pd.Series,
+                              upper_pct: float = EXTREME_UPPER_PCT,
+                              lower_pct: float = EXTREME_LOWER_PCT) -> Dict[str, float]:
+    """The five rows the reference workbook's "Extreme Capture Ratio"
+    section actually shows, for both the strategy and the benchmark."""
+    mr, mb = _monthly_pair(returns, bench_returns)
+    hi, lo = mb.quantile(upper_pct), mb.quantile(lower_pct)
+    strat_pos, bench_pos, up = _mean_ratio(mr, mb, mb >= hi)
+    strat_neg, bench_neg, down = _mean_ratio(mr, mb, mb <= lo)
+    ratio = float(up / down) if np.isfinite(down) and down != 0 else float("nan")
+    return {
+        "ex_ret_positive_strategy": strat_pos, "ex_ret_positive_benchmark": bench_pos,
+        "ex_ret_negative_strategy": strat_neg, "ex_ret_negative_benchmark": bench_neg,
+        "ex_upside_capture": up, "ex_downside_capture": down,
+        "extreme_capture_ratio": ratio,
+    }
+
+
+def capture_breakdown(returns: pd.Series, bench_returns: pd.Series) -> Dict[str, float]:
+    """The five rows of the reference workbook's regular "Capture Ratio"
+    section (not the extreme one)."""
+    mr, mb = _monthly_pair(returns, bench_returns)
+    strat_pos, bench_pos, up = _mean_ratio(mr, mb, mb > 0)
+    strat_neg, bench_neg, down = _mean_ratio(mr, mb, mb < 0)
+    ratio = float(up / down) if np.isfinite(down) and down != 0 else float("nan")
+    return {
+        "ret_positive_strategy": strat_pos, "ret_positive_benchmark": bench_pos,
+        "ret_negative_strategy": strat_neg, "ret_negative_benchmark": bench_neg,
+        "upside_capture": up, "downside_capture": down, "capture_ratio": ratio,
+    }
+
+
+def financial_year_label(dt: pd.Timestamp) -> str:
+    """Indian FY: April Y to March Y+1 is "FY{Y+1 mod 100}"."""
+    y = dt.year + 1 if dt.month >= 4 else dt.year
+    return f"FY{y % 100:02d}"
+
+
+def financial_year_returns(returns: pd.Series) -> "OrderedDict[str, float]":
+    """Compounded return per Indian financial year (Apr-Mar), from MONTHLY
+    returns -- matches the reference workbook's "Financial Year
+    Performance" table exactly (verified against its real numbers)."""
+    mr, _ = _monthly_pair(returns, returns)
+    labels = mr.index.map(financial_year_label)
+    out = OrderedDict()
+    for label in sorted(set(labels), key=lambda s: int(s[2:])):
+        mask = labels == label
+        out[label] = float((1.0 + mr[mask]).prod() - 1.0)
+    return out
+
+
+def calendar_year_returns(returns: pd.Series) -> "OrderedDict[str, float]":
+    """Compounded return per calendar year, from MONTHLY returns."""
+    mr, _ = _monthly_pair(returns, returns)
+    out = OrderedDict()
+    for year, g in mr.groupby(mr.index.year):
+        out[f"CY{year % 100:02d}"] = float((1.0 + g).prod() - 1.0)
+    return out
+
+
+def calendar_year_max_drawdown(returns: pd.Series) -> "OrderedDict[str, float]":
+    """Worst peak-to-trough drawdown WITHIN each calendar year, with the
+    running peak reset to the year's first NAV point (not the whole-
+    history running peak) -- verified against the reference workbook's
+    real "Max Calendar Year Drawdown" table, including a year that shows
+    exactly 0.0 because the strategy never dipped below its own Jan-1
+    level that year."""
+    mr, _ = _monthly_pair(returns, returns)
+    out = OrderedDict()
+    for year, g in mr.groupby(mr.index.year):
+        nav = (1.0 + g).cumprod()
+        peak = nav.cummax()
+        out[f"CY{year % 100:02d}"] = float((nav / peak - 1.0).min())
+    return out
+
+
 def historical_var(returns: pd.Series, confidence: float = 0.95) -> float:
+    """Returned WITHOUT negation -- a negative number, the raw tail
+    percentile itself. Verified against the reference workbook's real
+    number, which reports VaR this way (not as a positive loss
+    magnitude, despite the glossary's "expected loss" phrasing)."""
     r = returns.dropna()
-    return float(-np.percentile(r, 100 * (1 - confidence)))
+    return float(np.percentile(r, 100 * (1 - confidence)))
 
 
 def historical_cvar(returns: pd.Series, confidence: float = 0.95) -> float:
+    """Also unnegated, for the same reason as historical_var above."""
     r = returns.dropna()
     cutoff = np.percentile(r, 100 * (1 - confidence))
     tail = r[r <= cutoff]
-    return float(-tail.mean()) if len(tail) else float("nan")
+    return float(tail.mean()) if len(tail) else float("nan")
 
 
 @dataclass
@@ -261,6 +368,12 @@ class Tearsheet:
     upside_capture: float
     downside_capture: float
     capture_ratio: float
+    ex_ret_positive_strategy: float
+    ex_ret_positive_benchmark: float
+    ex_ret_negative_strategy: float
+    ex_ret_negative_benchmark: float
+    ex_upside_capture: float
+    ex_downside_capture: float
     extreme_capture_ratio: float
     skewness: float
     kurtosis: float
@@ -294,6 +407,12 @@ _LABELS = {
     "upside_capture": "Upside Capture",
     "downside_capture": "Downside Capture",
     "capture_ratio": "Capture Ratio",
+    "ex_ret_positive_strategy": "Ex. Ret +Ve (strategy)",
+    "ex_ret_positive_benchmark": "Ex. Ret +Ve Nifty 500 TRI",
+    "ex_ret_negative_strategy": "Ex. Ret -Ve (strategy)",
+    "ex_ret_negative_benchmark": "Ex. Ret -Ve Nifty 500 TRI",
+    "ex_upside_capture": "Ex. Upside Capture",
+    "ex_downside_capture": "Ex. Downside Capture",
     "extreme_capture_ratio": "Extreme Capture Ratio",
     "skewness": "Skewness",
     "kurtosis": "Kurtosis",
@@ -306,8 +425,11 @@ _LABELS = {
 _PCT_FIELDS = {"annualized_volatility", "positive_volatility", "negative_volatility",
               "max_drawdown", "average_annual_max_drawdown", "tracking_error",
               "ret_positive_benchmark_days", "ret_negative_benchmark_days",
+              "ex_ret_positive_strategy", "ex_ret_positive_benchmark",
+              "ex_ret_negative_strategy", "ex_ret_negative_benchmark",
               "var_95", "var_99", "cvar_95", "cvar_99"}
-_RATIO_FIELDS = {"upside_capture", "downside_capture", "capture_ratio", "extreme_capture_ratio"}
+_RATIO_FIELDS = {"upside_capture", "downside_capture", "capture_ratio",
+                 "ex_upside_capture", "ex_downside_capture", "extreme_capture_ratio"}
 
 
 def compute_tearsheet(result, bench_close: pd.Series, rf_daily: Optional[pd.Series] = None,
@@ -320,12 +442,15 @@ def compute_tearsheet(result, bench_close: pd.Series, rf_daily: Optional[pd.Seri
     bench_returns = bench_close.pct_change()
     bench_value = bench_close / bench_close.dropna().iloc[0]
 
+    cap = capture_breakdown(r, bench_returns)
+    excap = extreme_capture_breakdown(r, bench_returns)
+
     return Tearsheet(
         annualized_volatility=ann_vol(r, ann),
         positive_volatility=positive_volatility(r),
         negative_volatility=negative_volatility(r),
         max_drawdown=max_drawdown(result.value),
-        average_annual_max_drawdown=average_annual_max_drawdown(result.value),
+        average_annual_max_drawdown=average_annual_max_drawdown(r),
         sharpe_ratio=_sharpe(result.value, r, rf_daily, ann),
         treynor_ratio=treynor_ratio(result.value, r, bench_returns, rf_daily, ann),
         sortino_ratio=sortino_ratio(r, ann=ann, rf_daily=rf_daily),
@@ -336,12 +461,18 @@ def compute_tearsheet(result, bench_close: pd.Series, rf_daily: Optional[pd.Seri
         tail_ratio=tail_ratio(r),
         alpha_adj_beta=alpha_adj_beta(result.value, r, bench_value, bench_returns, rf_daily, ann),
         tracking_error=tracking_error(r, bench_returns, ann),
-        ret_positive_benchmark_days=conditional_return(r, bench_returns, positive=True, ann=ann),
-        ret_negative_benchmark_days=conditional_return(r, bench_returns, positive=False, ann=ann),
-        upside_capture=upside_capture(r, bench_returns),
-        downside_capture=downside_capture(r, bench_returns),
-        capture_ratio=capture_ratio(r, bench_returns),
-        extreme_capture_ratio=extreme_capture_ratio(r, bench_returns),
+        ret_positive_benchmark_days=cap["ret_positive_strategy"],
+        ret_negative_benchmark_days=cap["ret_negative_strategy"],
+        upside_capture=cap["upside_capture"],
+        downside_capture=cap["downside_capture"],
+        capture_ratio=cap["capture_ratio"],
+        ex_ret_positive_strategy=excap["ex_ret_positive_strategy"],
+        ex_ret_positive_benchmark=excap["ex_ret_positive_benchmark"],
+        ex_ret_negative_strategy=excap["ex_ret_negative_strategy"],
+        ex_ret_negative_benchmark=excap["ex_ret_negative_benchmark"],
+        ex_upside_capture=excap["ex_upside_capture"],
+        ex_downside_capture=excap["ex_downside_capture"],
+        extreme_capture_ratio=excap["extreme_capture_ratio"],
         skewness=float(r.dropna().skew()),
         kurtosis=float(r.dropna().kurtosis()),
         var_95=historical_var(r, 0.95),
