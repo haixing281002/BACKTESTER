@@ -92,7 +92,7 @@ GAP_THRESHOLD = 0.15
 ATR_WINDOW = 20
 RISK_FACTOR = 0.001       # Clenow's target daily $ impact per position = 0.1% of NAV
 SPREAD_BPS = 30.0         # this fund's own 30bp round-trip floor for Indian factor sleeves (CLAUDE.md)
-LAG_DAYS = 1
+LAG_DAYS = 100
 TOP_QUANTILE = 0.20       # "top 20% of the ranking"
 MIN_NAMES = 3
 WARMUP = max(REG_WINDOW, SMA_REGIME) + 5
