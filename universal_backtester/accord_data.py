@@ -517,6 +517,76 @@ def restrict_to_priced_universe(
     return kept, prov
 
 
+def build_accord_ticker_bridge(universe_df: pd.DataFrame) -> Tuple[pd.DataFrame, Dict[str, Any]]:
+    """The Accord Code <-> NSE ticker bridge key, one row per Accord Code,
+    built from the monthly universe frame's own nse_symbol/company_name
+    columns -- never a separate guessed mapping.
+
+    Per-code fields:
+      accord_code, nse_symbol, company_name  -- the MOST RECENT non-null
+        symbol/name seen for this code (a company can rename or re-list
+        under a new symbol; the latest snapshot is the one a human wants
+        by default).
+      as_of                                  -- the month_end that latest
+        symbol/name was read from.
+      n_months_seen                          -- how many monthly sheets
+        this code appears in at all (context for how well-attested it is).
+      n_months_symbol_known                  -- how many of those months
+        actually carried a non-null nse_symbol (the ~36 schema-short
+        sheets never do). 0 means this code's symbol is genuinely unknown
+        in this file, not merely unresolved.
+      symbol_ever_changed / prior_symbols    -- flags the exact risk this
+        module's own module docstring warns about ("symbols get reused
+        and names change") rather than silently picking one and hiding
+        that it moved.
+
+    Never fabricates: a code with no non-null symbol in any sheet gets
+    nse_symbol=None here, not a guess.
+    """
+    df = universe_df.dropna(subset=["accord_code"]).copy()
+    df["accord_code"] = df["accord_code"].astype("Int64")
+    df = df.sort_values("month_end")
+
+    rows = []
+    for code, g in df.groupby("accord_code", sort=False):
+        known = g.dropna(subset=["nse_symbol"])
+        n_seen = int(g["month_end"].nunique())
+        if known.empty:
+            rows.append({
+                "accord_code": int(code), "nse_symbol": None,
+                "company_name": g["company_name"].dropna().iloc[-1] if g["company_name"].notna().any() else None,
+                "as_of": None, "n_months_seen": n_seen, "n_months_symbol_known": 0,
+                "symbol_ever_changed": False, "prior_symbols": "",
+            })
+            continue
+        distinct_symbols = list(dict.fromkeys(known["nse_symbol"]))  # order of first appearance, de-duped
+        latest = known.iloc[-1]
+        rows.append({
+            "accord_code": int(code), "nse_symbol": latest["nse_symbol"],
+            "company_name": latest["company_name"],
+            "as_of": latest["month_end"], "n_months_seen": n_seen,
+            "n_months_symbol_known": int(len(known)),
+            "symbol_ever_changed": len(distinct_symbols) > 1,
+            "prior_symbols": ", ".join(s for s in distinct_symbols if s != latest["nse_symbol"]),
+        })
+
+    bridge = pd.DataFrame(rows).sort_values("accord_code").reset_index(drop=True)
+    prov = {
+        "n_codes_total": int(len(bridge)),
+        "n_codes_with_known_symbol": int(bridge["nse_symbol"].notna().sum()),
+        "n_codes_symbol_unknown": int(bridge["nse_symbol"].isna().sum()),
+        "n_codes_symbol_ever_changed": int(bridge["symbol_ever_changed"].sum()),
+    }
+    return bridge, prov
+
+
+def write_accord_ticker_bridge_csv(path: str, bridge: pd.DataFrame) -> None:
+    """The standalone, sendable file: just the bridge key, nothing else."""
+    cols = ["accord_code", "nse_symbol", "company_name", "as_of", "n_months_seen",
+            "n_months_symbol_known", "symbol_ever_changed", "prior_symbols"]
+    bridge[cols].to_csv(path, index=False)
+
+
 def diagnose_accord_dataset(price_path: str, universe_path: str) -> pd.DataFrame:
     """The equivalent of ros/data/master.py's diagnose() for this dataset:
     what would silently flatter or break a backtest built on it, named
