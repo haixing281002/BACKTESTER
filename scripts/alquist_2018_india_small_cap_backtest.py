@@ -49,7 +49,7 @@ from universal_backtester.accord_data import (
     load_accord_daily_price_mcap, get_top_n_universe, restrict_to_priced_universe,
     BACKTEST_START, BACKTEST_END,
 )
-from universal_backtester.data import load_banner_workbook
+from universal_backtester.data import load_banner_workbook, write_holdings_log
 from universal_backtester.engine import Backtester
 from universal_backtester.allocators import build_allocator
 from universal_backtester.tearsheet import compute_tearsheet
@@ -258,6 +258,20 @@ def main():
     summary_path = os.path.join(OUTPUT_DIR, "alquist_2018_india_small_cap_comparison.csv")
     summary.to_csv(summary_path, index=False)
     print(f"\nMulti-benchmark comparison written to: {summary_path}")
+
+    # THE ANSWER TO "which stocks are actually in SMALL and BIG": one row
+    # per (rebalance date, held Accord Code, weight), read directly off
+    # each leg's own engine weights -- this is what the market-cap quintile
+    # rule actually selected on each date, not a description of the rule.
+    name_lookup = (tradable.drop_duplicates("accord_code")
+                          .set_index("accord_code")["company_name"].to_dict())
+    for label, result in [("SMALL", result_small), ("BIG", result_big)]:
+        holdings_path = os.path.join(OUTPUT_DIR, f"alquist_2018_india_small_cap_holdings_{label}.csv")
+        holdings = write_holdings_log(holdings_path, result, name_lookup=name_lookup,
+                                      start=BACKTEST_START, end=BACKTEST_END)
+        print(f"{label} holdings log written to: {holdings_path} "
+              f"({holdings['date'].nunique()} rebalance dates, "
+              f"{holdings.groupby('date').size().mean():.0f} names/rebalance on average)")
 
     boot = bootstrap_sharpe_ci(ret_small, block_size=20, n_resamples=1000, seed=0)
     print(f"\nSMALL Sharpe ratio, 90% block-bootstrap CI: [{boot.ci_low:.2f}, {boot.ci_high:.2f}] "

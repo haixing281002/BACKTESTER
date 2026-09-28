@@ -83,7 +83,7 @@ from universal_backtester.accord_data import (
     load_accord_daily_price_mcap, get_top_n_universe, restrict_to_priced_universe,
     BACKTEST_START, BACKTEST_END,
 )
-from universal_backtester.data import load_banner_workbook
+from universal_backtester.data import load_banner_workbook, write_holdings_log
 from universal_backtester.engine import Backtester
 from universal_backtester.allocators import build_allocator
 from universal_backtester.tearsheet import compute_tearsheet, render_tearsheet
@@ -387,6 +387,18 @@ def main():
         "cash_weight": result.cash_weight.reindex(live.index).values,
     }).to_csv(trade_log_path, index=False)
     print(f"Trade log written to: {trade_log_path}")
+
+    # THE ANSWER TO "which stocks did the AI actually pick": one row per
+    # (rebalance date, held Accord Code, weight), read directly off the
+    # engine's own weights -- not reconstructed, not summarized away.
+    name_lookup = (tradable.drop_duplicates("accord_code")
+                          .set_index("accord_code")["company_name"].to_dict())
+    holdings_path = os.path.join(OUTPUT_DIR, "accord_stock_selection_holdings.csv")
+    holdings = write_holdings_log(holdings_path, result, name_lookup=name_lookup,
+                                  start=BACKTEST_START, end=BACKTEST_END)
+    print(f"Holdings log written to: {holdings_path} "
+          f"({holdings['date'].nunique()} rebalance dates, "
+          f"{holdings.groupby('date').size().mean():.0f} names/rebalance on average)")
 
 
 if __name__ == "__main__":
