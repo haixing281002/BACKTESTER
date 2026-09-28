@@ -57,6 +57,7 @@ from universal_backtester.excel_tearsheet import (
     write_se_return_analytics_workbook, write_se_return_analytics_csv,
 )
 from universal_backtester.validation import bootstrap_sharpe_ci, deflated_sharpe_from_returns
+from universal_backtester.charting import save_backtest_charts
 from universal_backtester.metrics import cagr as _cagr, ann_vol as _ann_vol, max_drawdown as _mdd
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -68,7 +69,12 @@ INDEX_PATH = os.path.join(REPO_ROOT, "data", "raw", "NSE_Broad_Factor_Indices_Hi
 OUTPUT_DIR = os.path.join(REPO_ROOT, "outputs")
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-QUINTILE = 0.20
+# fund decision (2026-09-28): simplified to a hardcoded top/bottom decile of the
+# point-in-time top-500 universe, recomputed every rebalance as membership changes
+# year to year. No AI/API step anywhere in this mechanism -- deterministic
+# market-cap sort only, so any number of papers can be backtested in a batch with
+# nothing to configure or call out to.
+DECILE = 0.10
 MIN_NAMES = 30
 SPREAD_BPS = 30.0
 LAG_DAYS = 1                 # this card's own stated choice -- the repo's non-negotiable floor,
@@ -124,13 +130,13 @@ def load_daily_mcap_and_liquidity(daily_mcap_path, price_panel_path, price_index
     return mcap_wide, liquidity_pass
 
 
-def run_quintile_leg(price_window, assets, eligible, mcap_daily, ascending, name, spread_bps, lag_days):
+def run_decile_leg(price_window, assets, eligible, mcap_daily, ascending, name, spread_bps, lag_days):
     """One leg (SMALL or BIG): rank eligible names by market cap (ascending
     True = smallest wins), take the bottom/top 20% by COUNT (matching the
     card's own quantile-not-fixed-count construction), equal-weighted."""
     bt = Backtester(prices=price_window, assets=assets, spread_bps=spread_bps,
                     lag_days=lag_days, allow_cash=True, membership=eligible)
-    alloc = build_allocator("cross_sectional", assets, quantile=QUINTILE, weighting="equal",
+    alloc = build_allocator("cross_sectional", assets, quantile=DECILE, weighting="equal",
                             ascending=ascending, min_names=MIN_NAMES)
     # Rank on market cap directly: mcap_daily may be None (no daily-mcap
     # file in this environment) -- signal.py in the card is explicit that
@@ -204,19 +210,19 @@ def main():
         bench_closes[disp_name] = idx_df[col].reindex(price_window.index).ffill()
         print(f"  {disp_name}: loaded")
 
-    print(f"\nRunning SMALL (bottom {QUINTILE:.0%} by market cap, tradable)...")
-    bt_small, alloc_small, alpha_small = run_quintile_leg(
+    print(f"\nRunning SMALL (bottom {DECILE:.0%} by market cap, tradable)...")
+    bt_small, alloc_small, alpha_small = run_decile_leg(
         price_window, assets, eligible, mcap_daily, ascending=True,
         name="SMALL", spread_bps=SPREAD_BPS, lag_days=LAG_DAYS)
     result_small = bt_small.run(allocator=alloc_small, rebalance=REBALANCE, alpha=alpha_small,
-                                name="India small-cap quintile (SMALL)", warmup=WARMUP_BUFFER_DAYS)
+                                name="India small-cap decile (SMALL)", warmup=WARMUP_BUFFER_DAYS)
 
-    print(f"Running BIG (top {QUINTILE:.0%} by market cap, reference only, never traded)...")
-    bt_big, alloc_big, alpha_big = run_quintile_leg(
+    print(f"Running BIG (top {DECILE:.0%} by market cap, reference only, never traded)...")
+    bt_big, alloc_big, alpha_big = run_decile_leg(
         price_window, assets, eligible, mcap_daily, ascending=False,
         name="BIG", spread_bps=SPREAD_BPS, lag_days=LAG_DAYS)
     result_big = bt_big.run(allocator=alloc_big, rebalance=REBALANCE, alpha=alpha_big,
-                            name="BIG (top quintile, same universe and rule)", warmup=WARMUP_BUFFER_DAYS)
+                            name="BIG (top decile, same universe and rule)", warmup=WARMUP_BUFFER_DAYS)
 
     def to_live(v):
         return v.loc[(v.index >= BACKTEST_START) & (v.index <= BACKTEST_END)]
@@ -234,8 +240,8 @@ def main():
 
     rows = []
     for label, value, returns in [
-        ("India small-cap quintile (SMALL)", live_small, ret_small),
-        ("BIG (top quintile, same universe and rule)", live_big, ret_big),
+        ("India small-cap decile (SMALL)", live_small, ret_small),
+        ("BIG (top decile, same universe and rule)", live_big, ret_big),
     ]:
         rows.append({
             "name": label, "cagr": _cagr(value), "vol": _ann_vol(returns),
@@ -261,7 +267,7 @@ def main():
 
     # THE ANSWER TO "which stocks are actually in SMALL and BIG": one row
     # per (rebalance date, held Accord Code, weight), read directly off
-    # each leg's own engine weights -- this is what the market-cap quintile
+    # each leg's own engine weights -- this is what the market-cap decile
     # rule actually selected on each date, not a description of the rule.
     name_lookup = (tradable.drop_duplicates("accord_code")
                           .set_index("accord_code")["company_name"].to_dict())
@@ -272,6 +278,19 @@ def main():
         print(f"{label} holdings log written to: {holdings_path} "
               f"({holdings['date'].nunique()} rebalance dates, "
               f"{holdings.groupby('date').size().mean():.0f} names/rebalance on average)")
+
+    print("\nWriting chart set (SMALL vs BIG vs benchmarks)...")
+    chart_series = {"SMALL (bottom decile, tradable)": live_small,
+                    "BIG (top decile, reference only)": live_big}
+    for disp_name, close in bench_closes.items():
+        chart_series[disp_name] = close.reindex(live_small.index).dropna()
+    save_backtest_charts(
+        chart_series, outdir=os.path.join(OUTPUT_DIR, "charts"),
+        tag="alquist_2018_india_small_cap",
+        weights=result_small.weights.loc[live_small.index],
+        weights_name="SMALL (bottom decile)",
+        cash_weight=result_small.cash_weight.loc[live_small.index],
+    )
 
     boot = bootstrap_sharpe_ci(ret_small, block_size=20, n_resamples=1000, seed=0)
     print(f"\nSMALL Sharpe ratio, 90% block-bootstrap CI: [{boot.ci_low:.2f}, {boot.ci_high:.2f}] "
