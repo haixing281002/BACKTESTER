@@ -18,6 +18,18 @@ Read that as three prohibitions, because that is how it is enforced:
 3. **A model never writes engine code as part of a run.** It selects from nine
    audited allocator templates. If none fits, it writes a specification and a
    human implements it.
+4. **A model never advances to the next stage without being told to.** Every
+   stage in the table below — not just Gate A and Gate B — ends with the
+   model stopping, showing what it produced, and waiting for the operator to
+   say to continue. This applies whether the pipeline is driven through
+   `run_interpret.py`/`run_pipeline.py` or performed in-session by an editor
+   agent following `.claude/commands/*.md`. Finishing Stage 00 and writing
+   "moving to Stage 01" in the same turn is exactly the failure this rule
+   exists to prevent: report the stage's result, then STOP. Gates A and B are
+   where a *decision* gets recorded; this is a narrower, more frequent
+   checkpoint so a paper never runs ahead of the human reading it — a
+   multi-paper session must pause between every single stage of every single
+   paper, no exceptions, no "continuing since you'll probably say yes."
 
 ## Who owns each stage
 
