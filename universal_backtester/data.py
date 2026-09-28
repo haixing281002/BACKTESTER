@@ -7,7 +7,7 @@ from __future__ import annotations
 import hashlib
 import os
 import re
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 import pandas as pd
 
@@ -255,6 +255,39 @@ def load_stock_universe(path: str, id_col: str = None) -> Tuple[Dict[str, pd.Dat
             "fields_found": ["Close"], "n_securities": int(close.shape[1]),
             "n_dates": int(close.shape[0])}
     return {"close": close, "high": None, "low": None, "volume": None}, prov
+
+
+def write_holdings_log(path: str, result, name_lookup: Optional[dict] = None,
+                       start=None, end=None) -> pd.DataFrame:
+    """The actual answer to "which stocks did the AI pick": a long-format
+    CSV, one row per (rebalance date, held asset, weight), read directly off
+    `result.weights` and `result.rebalances` -- the exact numbers the engine
+    traded on, not a reconstruction after the fact. No asset is ever named
+    from memory; every row here is what the cross-sectional ranking rule
+    actually selected on that date, from the real, point-in-time eligible
+    universe -- this is the file that makes the selection auditable rather
+    than a black box.
+
+    `name_lookup` optionally maps an asset id (e.g. an Accord Code) to a
+    human-readable label (e.g. company name); left blank if not supplied,
+    never guessed.
+    """
+    w = result.weights
+    dates = [d for d in result.rebalances if d in w.index
+            and (start is None or d >= start) and (end is None or d <= end)]
+    rows = []
+    for d in dates:
+        row = w.loc[d]
+        held = row[row > 1e-9].sort_values(ascending=False)
+        for rank, (asset, weight) in enumerate(held.items(), start=1):
+            rows.append({
+                "date": d, "rank": rank, "asset": asset,
+                "name": (name_lookup or {}).get(asset, ""),
+                "weight": float(weight),
+            })
+    out = pd.DataFrame(rows, columns=["date", "rank", "asset", "name", "weight"])
+    out.to_csv(path, index=False)
+    return out
 
 
 def audit_frame(df: pd.DataFrame) -> pd.DataFrame:

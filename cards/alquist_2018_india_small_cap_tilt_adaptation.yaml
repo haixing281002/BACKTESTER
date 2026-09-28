@@ -430,13 +430,22 @@ selection:
   verified_against: firm_registry
   as_of: "2026-07-31"
   why_these: >
-    Not a named list -- the rule re-derives the eligible set and the SMALL/
-    BIG quintiles fresh at every monthly rebalance from
-    ACCORD_STOCK_LEVEL_PRICE_MCAP restricted by Monthly_uni_new.xlsx,
-    confirmed against ros/data/firm_registry.py. No stock is named from
-    memory; every held name on any date is whichever Accord Codes the rule
-    above selects that day, which the trade log (Step 05 output) records
-    exactly.
+    Not a named list -- the rule above (this field) is the model's entire
+    decision: the quintile cut, the universe restriction, the liquidity
+    floor, the weighting. Nothing past this point is a model judgement call
+    again. Step 05 (scripts/alquist_2018_india_small_cap_backtest.py) hands
+    that rule to universal_backtester.allocators.CrossSectional, which
+    re-derives the eligible set and the SMALL/BIG quintiles fresh at every
+    monthly rebalance from ACCORD_STOCK_LEVEL_PRICE_MCAP restricted by
+    Monthly_uni_new.xlsx, confirmed against ros/data/firm_registry.py. No
+    stock is ever named from memory; every held name on any date is
+    whichever Accord Codes the rule above selects that day, written out in
+    full by write_holdings_log() (universal_backtester/data.py) to
+    outputs/alquist_2018_india_small_cap_holdings_SMALL.csv and
+    _BIG.csv -- one row per (rebalance date, Accord Code, company name,
+    weight), read directly off the engine's own weights, not reconstructed
+    or summarized. That is the file to open to see exactly which stocks
+    this card is actually holding on any date.
 
 backtest_plan:
   sample_start: "2013-03-31"
