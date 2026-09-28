@@ -17,6 +17,7 @@ from universal_backtester.accord_data import (
     load_accord_price_panel, load_accord_fundamentals, load_accord_monthly_universe,
     load_publishing_dates, get_top_n_universe, restrict_to_priced_universe,
     diagnose_accord_dataset, load_accord_daily_price_mcap, DEFAULT_REPORTING_LAG_DAYS,
+    build_accord_ticker_bridge, write_accord_ticker_bridge_csv,
 )
 
 REAL_PRICE = "data/raw/stocks/price_data_till_03aug2026.xlsx"
@@ -336,3 +337,65 @@ def test_real_daily_ohlc_mcap_matches_the_real_price_panel_exactly():
     assert prov["n_codes_only_in_price_panel"] == 0
     assert prov["n_close_mismatches"] == 0
     assert prov["n_close_cells_compared"] > 3_000_000
+
+
+def _bridge_input():
+    return pd.DataFrame([
+        {"month_end": pd.Timestamp("2023-01-31"), "accord_code": 1, "company_name": "Alpha Ltd", "nse_symbol": "ALPHA"},
+        {"month_end": pd.Timestamp("2023-02-28"), "accord_code": 1, "company_name": "Alpha Ltd", "nse_symbol": "ALPHA"},
+        {"month_end": pd.Timestamp("2023-01-31"), "accord_code": 2, "company_name": "Beta Ltd", "nse_symbol": None},
+        {"month_end": pd.Timestamp("2023-02-28"), "accord_code": 2, "company_name": "Beta Ltd", "nse_symbol": "BETA"},
+        {"month_end": pd.Timestamp("2023-01-31"), "accord_code": 3, "company_name": "Gamma Old", "nse_symbol": "GAMMAOLD"},
+        {"month_end": pd.Timestamp("2023-02-28"), "accord_code": 3, "company_name": "Gamma New", "nse_symbol": "GAMMANEW"},
+        {"month_end": pd.Timestamp("2023-01-31"), "accord_code": 4, "company_name": "Delta Ltd", "nse_symbol": None},
+    ])
+
+
+def test_ticker_bridge_takes_the_most_recent_known_symbol():
+    bridge, _ = build_accord_ticker_bridge(_bridge_input())
+    row = bridge.set_index("accord_code").loc[1]
+    assert row["nse_symbol"] == "ALPHA"
+    assert row["as_of"] == pd.Timestamp("2023-02-28")
+
+
+def test_ticker_bridge_fills_forward_a_symbol_missing_only_in_an_early_sheet():
+    bridge, _ = build_accord_ticker_bridge(_bridge_input())
+    row = bridge.set_index("accord_code").loc[2]
+    assert row["nse_symbol"] == "BETA"
+    assert row["n_months_seen"] == 2
+    assert row["n_months_symbol_known"] == 1
+
+
+def test_ticker_bridge_flags_a_symbol_that_changed_and_names_the_prior_one():
+    bridge, _ = build_accord_ticker_bridge(_bridge_input())
+    row = bridge.set_index("accord_code").loc[3]
+    assert row["nse_symbol"] == "GAMMANEW"
+    assert row["symbol_ever_changed"] is True or row["symbol_ever_changed"] == True  # noqa: E712
+    assert "GAMMAOLD" in row["prior_symbols"]
+
+
+def test_ticker_bridge_never_fabricates_a_symbol_for_a_code_that_never_had_one():
+    bridge, _ = build_accord_ticker_bridge(_bridge_input())
+    row = bridge.set_index("accord_code").loc[4]
+    assert pd.isna(row["nse_symbol"])
+    assert row["n_months_symbol_known"] == 0
+    assert row["company_name"] == "Delta Ltd"
+
+
+def test_ticker_bridge_provenance_counts_match_the_frame():
+    bridge, prov = build_accord_ticker_bridge(_bridge_input())
+    assert prov["n_codes_total"] == 4
+    assert prov["n_codes_with_known_symbol"] == 3
+    assert prov["n_codes_symbol_unknown"] == 1
+    assert prov["n_codes_symbol_ever_changed"] == 1
+
+
+def test_ticker_bridge_csv_is_self_contained(tmp_path):
+    bridge, _ = build_accord_ticker_bridge(_bridge_input())
+    path = str(tmp_path / "bridge.csv")
+    write_accord_ticker_bridge_csv(path, bridge)
+    reloaded = pd.read_csv(path)
+    assert set(reloaded.columns) == {"accord_code", "nse_symbol", "company_name", "as_of",
+                                     "n_months_seen", "n_months_symbol_known",
+                                     "symbol_ever_changed", "prior_symbols"}
+    assert len(reloaded) == 4
