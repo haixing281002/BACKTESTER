@@ -168,3 +168,119 @@ def save_backtest_charts(
         for p in written:
             print(f"    {p}")
     return written
+
+
+def save_decile_charts(
+    decile_values: Dict[int, pd.Series],
+    decile_summary: pd.DataFrame,
+    outdir: str,
+    tag: str,
+    benchmark: Optional[pd.Series] = None,
+    benchmark_name: str = "Benchmark",
+    benchmark_cagr: Optional[float] = None,
+    benchmark_sharpe: Optional[float] = None,
+) -> List[str]:
+    """The NIFTY 500 decile deep-dive picture set -- not just SMALL vs BIG,
+    all ten deciles at once, so a monotonic size effect (or the lack of one)
+    is visible directly rather than inferred from two numbers.
+
+    `decile_values`: {1..10 -> cumulative value series}. `decile_summary`:
+    the DataFrame from decile_analysis.summarize_deciles() (columns decile,
+    cagr, vol, sharpe, max_dd). Same "skip, never fake" discipline as
+    save_backtest_charts -- an empty input skips the picture, not a blank one.
+    """
+    try:
+        plt = _mpl()
+    except ImportError:
+        print("  [decile charts skipped: matplotlib not installed]")
+        return []
+    if not decile_values:
+        return []
+
+    os.makedirs(outdir, exist_ok=True)
+    written: List[str] = []
+    cmap = plt.get_cmap("RdYlBu")
+    n = len(decile_values)
+    colors = {k: cmap(i / max(n - 1, 1)) for i, k in enumerate(sorted(decile_values))}
+
+    def _save(fig, view: str) -> None:
+        path = os.path.join(outdir, f"{tag}__{view}.png")
+        fig.tight_layout()
+        fig.savefig(path, dpi=110)
+        plt.close(fig)
+        written.append(path)
+
+    # 1. Cumulative return, all 10 deciles at once (decile 1 = smallest =
+    # blue-to-red gradient toward decile 10 = largest), plus the benchmark
+    # in black so it reads as the reference line, not just another series.
+    fig, ax = plt.subplots(figsize=(11, 6.5))
+    for k, s in sorted(decile_values.items()):
+        s = s.dropna()
+        if len(s) < 2:
+            continue
+        ax.plot(s.index, s.values / s.iloc[0], lw=1.1, color=colors[k],
+                label=f"Decile {k}" + (" (smallest)" if k == min(decile_values) else
+                                       " (largest)" if k == max(decile_values) else ""))
+    if benchmark is not None and len(benchmark.dropna()) > 1:
+        b = benchmark.dropna()
+        ax.plot(b.index, b.values / b.iloc[0], lw=2.0, color="black", label=benchmark_name)
+    ax.set_title(f"{tag}: cumulative return by NIFTY 500 decile (base 1.0)")
+    ax.legend(fontsize=7, loc="upper left", ncol=2)
+    ax.grid(alpha=.3)
+    _save(fig, "decile_cumulative_return")
+
+    # 2. CAGR by decile -- the bar chart that shows whether the size effect
+    # is monotonic across the whole market-cap range or concentrated at one end.
+    if not decile_summary.empty:
+        fig, ax = plt.subplots(figsize=(10, 5.5))
+        ks = decile_summary["decile"].tolist()
+        cagrs = (decile_summary["cagr"] * 100).tolist()
+        bar_colors = [colors.get(k, "gray") for k in ks]
+        ax.bar([str(k) for k in ks], cagrs, color=bar_colors)
+        if benchmark_cagr is not None and not pd.isna(benchmark_cagr):
+            ax.axhline(benchmark_cagr * 100, color="black", lw=1.5, ls="--",
+                      label=f"{benchmark_name} ({benchmark_cagr:.1%})")
+            ax.legend(fontsize=8)
+        ax.set_xlabel("Decile (1 = smallest, 10 = largest)")
+        ax.set_ylabel("CAGR (%)")
+        ax.set_title(f"{tag}: CAGR by decile")
+        ax.grid(alpha=.3, axis="y")
+        _save(fig, "decile_cagr_bar")
+
+        # 3. Sharpe by decile -- the same question, risk-adjusted.
+        fig, ax = plt.subplots(figsize=(10, 5.5))
+        sharpes = decile_summary["sharpe"].tolist()
+        ax.bar([str(k) for k in ks], sharpes, color=bar_colors)
+        if benchmark_sharpe is not None and not pd.isna(benchmark_sharpe):
+            ax.axhline(benchmark_sharpe, color="black", lw=1.5, ls="--",
+                      label=f"{benchmark_name} ({benchmark_sharpe:.2f})")
+            ax.legend(fontsize=8)
+        ax.set_xlabel("Decile (1 = smallest, 10 = largest)")
+        ax.set_ylabel("Sharpe ratio")
+        ax.set_title(f"{tag}: Sharpe ratio by decile")
+        ax.grid(alpha=.3, axis="y")
+        _save(fig, "decile_sharpe_bar")
+
+    # 4. The size-premium spread: long the smallest decile, short the
+    # largest (financed, not a real position -- a research diagnostic,
+    # never itself a tradable leg per this fund's long-only mandate).
+    small, big = min(decile_values), max(decile_values)
+    s_small, s_big = decile_values[small].dropna(), decile_values[big].dropna()
+    common = s_small.index.intersection(s_big.index)
+    if len(common) > 2:
+        r_small = s_small.loc[common].pct_change(fill_method=None).fillna(0.0)
+        r_big = s_big.loc[common].pct_change(fill_method=None).fillna(0.0)
+        spread = (1 + (r_small - r_big)).cumprod()
+        fig, ax = plt.subplots(figsize=(11, 5))
+        ax.plot(spread.index, spread.values, lw=1.3, color="purple")
+        ax.axhline(1.0, color="black", lw=0.8, ls=":")
+        ax.set_title(f"{tag}: size-premium spread (Decile {small} minus Decile {big}, "
+                    "research diagnostic only -- not a tradable position)")
+        ax.grid(alpha=.3)
+        _save(fig, "decile_size_premium_spread")
+
+    if written:
+        print(f"  decile charts written ({len(written)}):")
+        for p in written:
+            print(f"    {p}")
+    return written

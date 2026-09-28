@@ -107,15 +107,16 @@ def main(argv=None) -> int:
                     help="tradable ADV of the sleeve basket, INR crore")
     ap.add_argument("--n-boot", type=int, default=2000)
     ap.add_argument("--no-charts", action="store_true")
-    # Gate A is a human checkpoint too (CLAUDE.md: "the decision is PENDING
+    # Every stage is a human checkpoint (CLAUDE.md: "the decision is PENDING
     # until a named human records it"). Run interactively (a real terminal)
-    # and the pipeline pauses here, showing Gate A alone, before it spends
-    # any time on Steps 04-08 or computes Gate B at all. --auto-approve-gate-a
-    # skips the pause deliberately (batch runs across many cards, CI); running
-    # non-interactively (piped stdin, a subprocess with no tty) skips it too,
-    # but says so, rather than silently blocking on input that will never come.
-    ap.add_argument("--auto-approve-gate-a", action="store_true",
-                    help="Skip the interactive Gate A pause and continue straight "
+    # and the pipeline pauses after EACH stage -- Gate A, Steps 03-07, Gate
+    # B -- showing that stage alone before it spends any time on the next
+    # one. --auto-approve skips every pause deliberately (batch runs across
+    # many cards, CI); running non-interactively (piped stdin, a subprocess
+    # with no tty) skips them too, but says so at each one, rather than
+    # silently blocking on input that will never come.
+    ap.add_argument("--auto-approve", action="store_true",
+                    help="Skip every interactive stage pause and run straight "
                     "through to Gate B, e.g. for batch runs across many cards.")
     # Gate B is a human decision. These flags are how a named person records it;
     # without them the run ends at PENDING and the library says so.
@@ -185,31 +186,9 @@ def main(argv=None) -> int:
         R.p("")
         R.block(describe_shortfall(shortfall))
 
-    # ---------------- GATE A CHECKPOINT -----------------------------------
-    # Show Gate A ALONE, now, before Steps 03-08 run or Gate B is computed at
-    # all -- not bundled into one end-of-run dump where "approving Gate A"
-    # would be meaningless because Gate B already happened. A named human's
-    # approval to CONTINUE is recorded here; the actual Gate B DECISION is
-    # still recorded the existing way, via --decision/--decided-by/--rationale
-    # on a run (this one or a later one).
-    R.flush()
-    if args.auto_approve_gate_a:
-        print("\n[--auto-approve-gate-a: continuing straight to Steps 03-08 and Gate B]")
-    elif sys.stdin.isatty():
-        answer = input(
-            "\nGate A is displayed above. Type 'approve' to continue to Steps "
-            "03-08 and Gate B, anything else to halt here: ").strip().lower()
-        if answer not in ("approve", "y", "yes"):
-            R.h("HALTED AT GATE A -- NOT APPROVED")
-            R.p(f"  human response: {answer!r}")
-            R.p("  No further steps ran. Nothing past Gate A was computed.")
-            _finish(R, args, card)
-            return 0
-    else:
-        print("\n[no interactive terminal detected (stdin is not a TTY) -- "
-              "continuing automatically. Run this in a real terminal, or pass "
-              "--auto-approve-gate-a explicitly, for the pause to be a "
-              "deliberate choice rather than an accident of how this was run.]")
+    rc = _checkpoint(R, args, card, "GATE A")
+    if rc is not None:
+        return rc
 
     # ---------------- STEP 03 : DATA FEASIBILITY -------------------------
     R.h("STEP 03  |  DATA FEASIBILITY")
@@ -251,6 +230,10 @@ def main(argv=None) -> int:
         _finish(R, args, card)
         return 0
 
+    rc = _checkpoint(R, args, card, "STEP 03  |  DATA FEASIBILITY")
+    if rc is not None:
+        return rc
+
     # ---------------- STEP 04 : POINT-IN-TIME SNAPSHOT -------------------
     R.h("STEP 04  |  POINT-IN-TIME DATA + LINEAGE")
     frame, prov = load_nse_workbook_combined(args.data)
@@ -289,6 +272,10 @@ def main(argv=None) -> int:
         R.p("  PROXIES IN USE (recorded, never silent):")
         for p_ in snap.proxies_used:
             R.p(f"    - {p_['series']} standing in for {p_['proxy_for']}")
+
+    rc = _checkpoint(R, args, card, "STEP 04  |  POINT-IN-TIME DATA + LINEAGE")
+    if rc is not None:
+        return rc
 
     # ---------------- STEP 05 : BUILD + EXECUTE --------------------------
     R.h("STEP 05  |  BUILD + EXECUTE")
@@ -337,6 +324,10 @@ def main(argv=None) -> int:
     R.p("")
     R.p("  PERFORMANCE (net of costs; 'sharpe' is the paper's geometric definition):")
     R.block("    " + render_table(tbl[cols]).replace("\n", "\n    "))
+
+    rc = _checkpoint(R, args, card, "STEP 05  |  BUILD + EXECUTE")
+    if rc is not None:
+        return rc
 
     # ---------------- STEP 06 : RESEARCH VALIDATION ----------------------
     R.h("STEP 06  |  RESEARCH VALIDATION")
@@ -502,6 +493,10 @@ def main(argv=None) -> int:
         R.p("  CASH-RATE PROXY SWEEP (the proxy is an assumption, so it gets swept):")
         R.block("    " + pd.DataFrame(rows).round(4).to_string(index=False).replace("\n", "\n    "))
 
+    rc = _checkpoint(R, args, card, "STEP 06  |  RESEARCH VALIDATION")
+    if rc is not None:
+        return rc
+
     # ---------------- STEP 07 : PORTFOLIO VALIDATION ---------------------
     R.h("STEP 07  |  PORTFOLIO VALIDATION")
     port: Dict[str, Any] = {}
@@ -585,10 +580,18 @@ def main(argv=None) -> int:
     R.p(f"    notional per rebalance       : Rs{cap['notional_per_rebalance_inr_cr']:,.0f} cr")
     R.p(f"    days to execute a rebalance  : {cap['days_to_execute_rebalance']:.1f}")
 
+    rc = _checkpoint(R, args, card, "STEP 07  |  PORTFOLIO VALIDATION")
+    if rc is not None:
+        return rc
+
     # ---------------- GATE B ---------------------------------------------
     gb = gate_b(card, research, port)
     R.h("GATE B  |  INVESTMENT DECISION")
     R.block(gb.render())
+
+    rc = _checkpoint(R, args, card, "GATE B  |  INVESTMENT DECISION")
+    if rc is not None:
+        return rc
 
     # ---------------- STEP 08 : LADDER + LIBRARY -------------------------
     rungs = _build_ladder(card, research, port, tbl, primary, runset, fp if "error" not in fp else {})
@@ -808,8 +811,42 @@ def _finish(R: Report, args, card):
     path = os.path.join(args.outdir, f"report_{card.paper.id}.txt")
     R.save(path)
     R.flush()   # print only what hasn't already reached the terminal (e.g. at
-                # the Gate A checkpoint above), never the whole report twice
+                # a stage checkpoint above), never the whole report twice
     print(f"\n[report saved to {path}]")
+
+
+def _checkpoint(R: Report, args, card, stage_name: str) -> Optional[int]:
+    """Show `stage_name` ALONE, now, and pause for a human's typed approval
+    before the NEXT stage runs -- not bundled into one end-of-run dump where
+    "approving" any one stage would be meaningless because everything after
+    it already happened. Returns None to continue; a non-None return is the
+    exit code the caller must return immediately, halting the run here with
+    nothing past this stage computed.
+
+    --auto-approve skips every pause deliberately (batch runs, CI); a
+    non-interactive run (piped stdin, a subprocess with no tty) skips it
+    too, but says so explicitly each time rather than silently blocking
+    forever on input that will never come.
+    """
+    R.flush()
+    if args.auto_approve:
+        print(f"\n[--auto-approve: continuing past {stage_name} without a pause]")
+        return None
+    if not sys.stdin.isatty():
+        print(f"\n[no interactive terminal detected (stdin is not a TTY) -- "
+              f"continuing past {stage_name} automatically. Run this in a real "
+              f"terminal, or pass --auto-approve explicitly, for this to be a "
+              f"deliberate choice rather than an accident of how this was run.]")
+        return None
+    answer = input(f"\n{stage_name} is displayed above. Type 'approve' to continue "
+                   f"to the next stage, anything else to halt here: ").strip().lower()
+    if answer in ("approve", "y", "yes"):
+        return None
+    R.h(f"HALTED AT {stage_name} -- NOT APPROVED")
+    R.p(f"  human response: {answer!r}")
+    R.p("  No further steps ran past this point.")
+    _finish(R, args, card)
+    return 0
 
 
 if __name__ == "__main__":

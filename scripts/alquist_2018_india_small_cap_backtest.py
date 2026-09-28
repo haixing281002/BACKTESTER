@@ -57,7 +57,11 @@ from universal_backtester.excel_tearsheet import (
     write_se_return_analytics_workbook, write_se_return_analytics_csv,
 )
 from universal_backtester.validation import bootstrap_sharpe_ci, deflated_sharpe_from_returns
-from universal_backtester.charting import save_backtest_charts
+from universal_backtester.charting import save_backtest_charts, save_decile_charts
+from universal_backtester.decile_analysis import (
+    compute_decile_membership, run_decile_backtests, summarize_deciles,
+    write_decile_membership_log, write_decile_summary_workbook,
+)
 from universal_backtester.metrics import cagr as _cagr, ann_vol as _ann_vol, max_drawdown as _mdd
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -290,6 +294,59 @@ def main():
         weights=result_small.weights.loc[live_small.index],
         weights_name="SMALL (bottom decile)",
         cash_weight=result_small.cash_weight.loc[live_small.index],
+    )
+
+    # ---------------- THE FULL NIFTY 500 DECILE DEEP-DIVE ----------------
+    # SMALL/BIG above are decile 1 and decile 10 of this same split -- this
+    # runs all ten deciles (~50 names each) so the size effect's shape across
+    # the WHOLE market-cap range is visible, not just its two extremes.
+    print("\nRunning full NIFTY 500 decile deep-dive (10 deciles, ~50 names each)...")
+    decile_masks = compute_decile_membership(mcap_daily, eligible, n_deciles=10)
+    decile_results = run_decile_backtests(
+        price_window, assets, mcap_daily, decile_masks,
+        spread_bps=SPREAD_BPS, lag_days=LAG_DAYS, rebalance=REBALANCE,
+        warmup=WARMUP_BUFFER_DAYS, min_names=MIN_NAMES)
+
+    live_deciles = {k: to_live(r.value) for k, r in decile_results.items()}
+    decile_summary = summarize_deciles(decile_results, start=BACKTEST_START, end=BACKTEST_END,
+                                       cash_rate=0.06)
+    print(decile_summary.to_string(index=False))
+
+    bench_primary_live = bench_closes[PRIMARY_BENCHMARK].reindex(live_small.index)
+    bench_primary_ret = bench_primary_live.pct_change(fill_method=None).fillna(0.0)
+    bench_cagr = _cagr(bench_primary_live)
+    bench_vol = _ann_vol(bench_primary_ret)
+    bench_sharpe = (bench_cagr - 0.06) / bench_vol if bench_vol > 0 else float("nan")
+    bench_row = pd.DataFrame([{
+        "decile": PRIMARY_BENCHMARK, "n_obs": len(bench_primary_live),
+        "start": str(bench_primary_live.index.min().date()),
+        "end": str(bench_primary_live.index.max().date()),
+        "cagr": bench_cagr, "vol": bench_vol, "sharpe": bench_sharpe,
+        "max_dd": _mdd(bench_primary_live),
+    }])
+
+    decile_summary_csv = os.path.join(OUTPUT_DIR, "alquist_2018_india_decile_summary.csv")
+    pd.concat([decile_summary, bench_row], ignore_index=True, sort=False).to_csv(
+        decile_summary_csv, index=False)
+    print(f"Decile summary (CSV) written to: {decile_summary_csv}")
+
+    decile_summary_xlsx = os.path.join(OUTPUT_DIR, "alquist_2018_india_decile_summary.xlsx")
+    write_decile_summary_workbook(decile_summary_xlsx, decile_summary, benchmark_rows=bench_row)
+    print(f"Decile summary (workbook) written to: {decile_summary_xlsx}")
+
+    live_rebalances = result_small.rebalances[
+        (result_small.rebalances >= BACKTEST_START) & (result_small.rebalances <= BACKTEST_END)]
+    decile_membership_path = os.path.join(OUTPUT_DIR, "alquist_2018_india_decile_membership.csv")
+    membership_log = write_decile_membership_log(
+        decile_membership_path, decile_masks, live_rebalances, mcap_daily, name_lookup=name_lookup)
+    print(f"Decile membership (the universe, stock by stock) written to: {decile_membership_path} "
+          f"({membership_log['accord_code'].nunique()} distinct names across "
+          f"{membership_log['date'].nunique()} rebalance dates)")
+
+    save_decile_charts(
+        live_deciles, decile_summary, outdir=os.path.join(OUTPUT_DIR, "charts"),
+        tag="alquist_2018_india_decile", benchmark=bench_primary_live,
+        benchmark_name=PRIMARY_BENCHMARK, benchmark_cagr=bench_cagr, benchmark_sharpe=bench_sharpe,
     )
 
     boot = bootstrap_sharpe_ci(ret_small, block_size=20, n_resamples=1000, seed=0)
