@@ -63,6 +63,18 @@ class Report:
 
     def __init__(self):
         self.lines: List[str] = []
+        self._flushed = 0
+
+    def flush(self) -> None:
+        """Print whatever has been added since the last flush -- lets Gate A
+        (and everything after it) appear in the terminal AS the run reaches
+        each stage, instead of the whole report landing in one dump only at
+        the very end, which is what made a human approving Gate A before
+        Gate B is even computed impossible to do for real."""
+        new = self.lines[self._flushed:]
+        if new:
+            print("\n".join(new))
+        self._flushed = len(self.lines)
 
     def h(self, title: str) -> None:
         self.lines += ["", "=" * 100, title, "=" * 100]
@@ -95,6 +107,16 @@ def main(argv=None) -> int:
                     help="tradable ADV of the sleeve basket, INR crore")
     ap.add_argument("--n-boot", type=int, default=2000)
     ap.add_argument("--no-charts", action="store_true")
+    # Gate A is a human checkpoint too (CLAUDE.md: "the decision is PENDING
+    # until a named human records it"). Run interactively (a real terminal)
+    # and the pipeline pauses here, showing Gate A alone, before it spends
+    # any time on Steps 04-08 or computes Gate B at all. --auto-approve-gate-a
+    # skips the pause deliberately (batch runs across many cards, CI); running
+    # non-interactively (piped stdin, a subprocess with no tty) skips it too,
+    # but says so, rather than silently blocking on input that will never come.
+    ap.add_argument("--auto-approve-gate-a", action="store_true",
+                    help="Skip the interactive Gate A pause and continue straight "
+                    "through to Gate B, e.g. for batch runs across many cards.")
     # Gate B is a human decision. These flags are how a named person records it;
     # without them the run ends at PENDING and the library says so.
     ap.add_argument("--decision", choices=["APPROVE", "OBSERVE", "FIX", "REJECT"],
@@ -163,6 +185,32 @@ def main(argv=None) -> int:
         R.p("")
         R.block(describe_shortfall(shortfall))
 
+    # ---------------- GATE A CHECKPOINT -----------------------------------
+    # Show Gate A ALONE, now, before Steps 03-08 run or Gate B is computed at
+    # all -- not bundled into one end-of-run dump where "approving Gate A"
+    # would be meaningless because Gate B already happened. A named human's
+    # approval to CONTINUE is recorded here; the actual Gate B DECISION is
+    # still recorded the existing way, via --decision/--decided-by/--rationale
+    # on a run (this one or a later one).
+    R.flush()
+    if args.auto_approve_gate_a:
+        print("\n[--auto-approve-gate-a: continuing straight to Steps 03-08 and Gate B]")
+    elif sys.stdin.isatty():
+        answer = input(
+            "\nGate A is displayed above. Type 'approve' to continue to Steps "
+            "03-08 and Gate B, anything else to halt here: ").strip().lower()
+        if answer not in ("approve", "y", "yes"):
+            R.h("HALTED AT GATE A -- NOT APPROVED")
+            R.p(f"  human response: {answer!r}")
+            R.p("  No further steps ran. Nothing past Gate A was computed.")
+            _finish(R, args, card)
+            return 0
+    else:
+        print("\n[no interactive terminal detected (stdin is not a TTY) -- "
+              "continuing automatically. Run this in a real terminal, or pass "
+              "--auto-approve-gate-a explicitly, for the pause to be a "
+              "deliberate choice rather than an accident of how this was run.]")
+
     # ---------------- STEP 03 : DATA FEASIBILITY -------------------------
     R.h("STEP 03  |  DATA FEASIBILITY")
     R.block(feas.render())
@@ -223,7 +271,7 @@ def main(argv=None) -> int:
             sb.proxies_used.append(
                 {"series": r.resolved_to, "proxy_for": r.requirement, "rationale": r.reason})
     snap = sb.freeze()
-    snap.save(os.path.join(args.outdir, "snapshots"))
+    snapshot_manifest_path = snap.save(os.path.join(args.outdir, "snapshots"))
 
     R.p(f"  snapshot_id   : {snap.snapshot_id}")
     R.p(f"  content_hash  : {snap.content_hash[:32]}")
@@ -604,7 +652,7 @@ def main(argv=None) -> int:
             "Snapshot + code hash stored: this run is re-derivable.",
             f"Factor fingerprint stored for similarity search ({len(fp.get('fingerprint', {}))} loadings).",
         ])
-    lib.write(entry)
+    library_entry_path = lib.write(entry)
     R.p("")
     R.p(f"  library entry : {eid}")
     dups = lib.find_duplicate_experiment(card.fingerprint(), exclude=eid)
@@ -618,11 +666,27 @@ def main(argv=None) -> int:
         for s_ in similar[:5]:
             R.p(f"      {s_['card_id']}  cos={s_['cosine']}  outcome={s_['outcome']}")
 
+    chart_path = None
     if not args.no_charts:
         _charts(runset, rf, args.outdir, card.paper.id)
-        R.p(f"  charts written to {args.outdir}/charts_{card.paper.id}.png")
+        chart_path = os.path.join(args.outdir, f"charts_{card.paper.id}.png")
+        R.p(f"  charts written to {chart_path}")
 
-    tbl.to_csv(os.path.join(args.outdir, f"metrics_{card.paper.id}.csv"))
+    metrics_path = os.path.join(args.outdir, f"metrics_{card.paper.id}.csv")
+    tbl.to_csv(metrics_path)
+
+    report_path = os.path.join(args.outdir, f"report_{card.paper.id}.txt")
+    R.h("DOCUMENTS AND OUTPUTS PRODUCED THIS RUN")
+    for label, p in [
+        ("strategy card (input)", args.card),
+        ("point-in-time snapshot", snapshot_manifest_path),
+        ("library entry", library_entry_path),
+        ("metrics table (csv)", metrics_path),
+        ("chart set (png)", chart_path),
+        ("full run report (this document)", report_path),
+    ]:
+        if p:
+            R.p(f"  {label + ':':<36}{os.path.abspath(p)}")
     _finish(R, args, card)
     return 0
 
@@ -743,7 +807,8 @@ def _charts(runset, rf, outdir, tag):
 def _finish(R: Report, args, card):
     path = os.path.join(args.outdir, f"report_{card.paper.id}.txt")
     R.save(path)
-    print(R.text())
+    R.flush()   # print only what hasn't already reached the terminal (e.g. at
+                # the Gate A checkpoint above), never the whole report twice
     print(f"\n[report saved to {path}]")
 
 

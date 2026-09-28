@@ -91,6 +91,7 @@ from universal_backtester.excel_tearsheet import (
     write_se_return_analytics_workbook, write_se_return_analytics_csv,
 )
 from universal_backtester.validation import bootstrap_sharpe_ci, deflated_sharpe_from_returns
+from universal_backtester.charting import save_backtest_charts
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PRICE_PATH = os.path.join(REPO_ROOT, "data", "raw", "stocks", "price_data_till_03aug2026.xlsx")
@@ -399,6 +400,15 @@ def main():
     print(f"Holdings log written to: {holdings_path} "
           f"({holdings['date'].nunique()} rebalance dates, "
           f"{holdings.groupby('date').size().mean():.0f} names/rebalance on average)")
+
+    print("\nWriting chart set (strategy vs. benchmark)...")
+    save_backtest_charts(
+        {STRATEGY["name"]: live}, outdir=os.path.join(OUTPUT_DIR, "charts"),
+        tag="accord_stock_selection",
+        benchmark=bench_live, benchmark_name=BENCHMARK_DISPLAY_NAME,
+        weights=result.weights.loc[live.index], weights_name=STRATEGY["name"],
+        cash_weight=result.cash_weight.loc[live.index],
+    )
 
 
 if __name__ == "__main__":

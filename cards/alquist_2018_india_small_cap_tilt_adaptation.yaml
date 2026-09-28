@@ -32,13 +32,25 @@ intent:
     Each month-end: within the verified top-500 point-in-time universe
     (Monthly_uni_new.xlsx, get_top_n_universe + restrict_to_priced_universe),
     apply a relative liquidity floor, then rank the remaining names into cap
-    quintiles by market cap; hold the bottom quintile (smallest 20% by
-    count) equal-weighted, long-only, rebalanced monthly. A top-quintile
+    deciles by market cap; hold the bottom decile (smallest 10% by
+    count) equal-weighted, long-only, rebalanced monthly. A top-decile
     ("BIG") portfolio is built the same way as a non-tradable reference, so a
     small-minus-big spread can be reported alongside the tradable small-only
     product, mirroring the paper's own SMB construction without attempting
     to trade the short leg.
   broken_assumptions:
+    - >
+      FUND DECISION 2026-09-28: the size-sort cut was tightened from a
+      quintile (20% by count) to a decile (10% by count) on both legs, to
+      make the SMALL/BIG contrast sharper and avoid the largest 20%
+      diluting into names that aren't meaningfully "big" or "small" within
+      the top-500 universe. This is a hardcoded, deterministic cut with no
+      AI/API step -- market-cap sort only, recomputed at every monthly
+      rebalance as top-500 membership changes -- chosen specifically so any
+      number of papers can be batch-backtested without per-paper
+      configuration. The paper's own construction used decile/quintile
+      breakpoints interchangeably (see universe_translation below), so this
+      is within the paper's own stated range, not a departure from it.
     - >
       NO QUALITY CONTROL: the paper's actual headline result needs a
       quality/profitability factor (QMJ or similar). This card tests only
@@ -176,7 +188,7 @@ universe_translation:
   evidence_page: 29
 
 strategy:
-  signal_name: india_small_cap_quintile_tilt
+  signal_name: india_small_cap_decile_tilt
   signal_definition: >
     At each month-end rebalance: universe_t = top-500 by market rank as of
     the last known Monthly_uni_new.xlsx snapshot (get_top_n_universe, fixing
@@ -185,8 +197,8 @@ strategy:
     trailing 21-trading-day average traded value exceeds the
     bottom-20th-percentile of that day's otherwise-eligible set}. Rank
     eligible_t by trailing daily market cap (ascending). SMALL_t = bottom
-    20% by count, equal-weighted. [Reference only, not traded: BIG_t = top
-    20% by count, equal-weighted, for an SMB-style spread.] Both use REAL
+    10% by count, equal-weighted. [Reference only, not traded: BIG_t = top
+    10% by count, equal-weighted, for an SMB-style spread.] Both use REAL
     daily market cap and traded value from ACCORD_STOCK_LEVEL_PRICE_MCAP
     (load_accord_daily_price_mcap), cross-checked exactly against the
     independently-loaded price panel (0 mismatches, 3,441,486 cells
@@ -200,10 +212,11 @@ strategy:
     - "NIFTY SMALLCAP 250 / NIFTY MIDCAP 150 daily close (off-the-shelf comparators)"
   cross_sectional: true
   formation_rule: >
-    Quantile cut at 20% by market cap among that day's eligible names (not a
+    Quantile cut at 10% by market cap among that day's eligible names (not a
     fixed name count) -- matches the paper's own decile/quintile construction
-    in kind, letting the held-name count float with how many names actually
-    clear the top-500-and-liquidity floor each month.
+    in kind (tightened to a decile, fund decision 2026-09-28, see
+    broken_assumptions), letting the held-name count float with how many
+    names actually clear the top-500-and-liquidity floor each month.
   weighting_rule: >
     Equal-weighted within the SMALL slice, long-only, unlevered. (The paper's
     own SMB is value-weighted within each leg; equal weighting is a stated
@@ -222,7 +235,7 @@ strategy:
   evidence_pages: [8, 29, 34]
 
 signal:
-  name: india_small_cap_quintile_tilt
+  name: india_small_cap_decile_tilt
   template: cross_sectional
   lookback_days: 21
   lag_days: 1
@@ -243,7 +256,7 @@ signal:
     in this repo, itself a scoped gap worth closing (a future
     runner.execute_card extension to accept a supplied membership panel).
   params:
-    quantile: 0.20
+    quantile: 0.10
     ascending: true
     weighting: equal
     min_names: 30
@@ -421,8 +434,8 @@ selection:
     Accord-priced names. eligible = universe AND trailing 21-day average
     traded value clears the bottom 20th percentile of that day's otherwise-
     eligible set. Rank eligible names by trailing daily market cap; SMALL =
-    bottom 20% by count (equal-weighted, the traded portfolio); BIG = top
-    20% by count (equal-weighted, reference only). Re-measure the eligible-
+    bottom 10% by count (equal-weighted, the traded portfolio); BIG = top
+    10% by count (equal-weighted, reference only). Re-measure the eligible-
     count distribution under this corrected (top-500-restricted) universe
     on the next run -- the earlier ~758 names/day figure was measured
     against the unrestricted pool and is no longer the right reference.
@@ -431,11 +444,11 @@ selection:
   as_of: "2026-07-31"
   why_these: >
     Not a named list -- the rule above (this field) is the model's entire
-    decision: the quintile cut, the universe restriction, the liquidity
+    decision: the decile cut, the universe restriction, the liquidity
     floor, the weighting. Nothing past this point is a model judgement call
     again. Step 05 (scripts/alquist_2018_india_small_cap_backtest.py) hands
     that rule to universal_backtester.allocators.CrossSectional, which
-    re-derives the eligible set and the SMALL/BIG quintiles fresh at every
+    re-derives the eligible set and the SMALL/BIG deciles fresh at every
     monthly rebalance from ACCORD_STOCK_LEVEL_PRICE_MCAP restricted by
     Monthly_uni_new.xlsx, confirmed against ros/data/firm_registry.py. No
     stock is ever named from memory; every held name on any date is
@@ -465,7 +478,7 @@ backtest_plan:
     Last TRADING day of each calendar month present in the Accord price
     panel. Signals are shifted by 1 + lag_days (=2) before use.
   weights_rule: >
-    Equal weight across every name in the bottom market-cap quintile of that
+    Equal weight across every name in the bottom market-cap decile of that
     day's eligible (top-500-universe, priced and liquid) set, long-only,
     unlevered.
   benchmarks:
@@ -484,7 +497,7 @@ backtest_plan:
         see whether any premium found is specific to the SMALLEST names
         (per the paper's own "concentrated in microcaps" finding) or spread
         more broadly.
-    - name: "BIG (top quintile, same universe and rule)"
+    - name: "BIG (top decile, same universe and rule)"
       why_this: >
         The non-tradable reference leg that turns this into an actual
         small-minus-big spread, comparable in SPIRIT to the paper's own SMB,
@@ -548,7 +561,7 @@ data_requests:
       size effect does not exist in India" -- only as "the naive version
       does not, which the paper predicts everywhere."
     priority: high
-    headline: "Join already-present Indian profitability data into a real quality signal -- the only route to this paper's real claim"
+    headline: "Join Indian profitability data into a quality signal -- the only route to this paper's real claim"
     format_hint: "raw data already available: profitability_ratios_consol_stdalon_till_march2025.xlsx + w_publishing_date_data.xlsx, per data/raw/stocks/README.md -- needs code, not new data"
     satisfies: ["Firm-level Indian profitability (ROE/ROA/ROCE), point-in-time via real publication dates"]
 
@@ -633,7 +646,7 @@ notes: >
 convertibility:
   verdict: convertible_with_data
   confidence: medium
-  headline: "Runs today with a real, verified stock-level selection; the paper's real claim needs a signal we haven't built"
+  headline: "Runs today with real stock-level selection; the paper's real claim needs a signal we haven't built"
   what_must_be_true:
     - >
       Eligible (top-500-universe, priced, liquid) Indian names must carry
