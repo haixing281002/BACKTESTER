@@ -271,6 +271,13 @@ def write_holdings_log(path: str, result, name_lookup: Optional[dict] = None,
     `name_lookup` optionally maps an asset id (e.g. an Accord Code) to a
     human-readable label (e.g. company name); left blank if not supplied,
     never guessed.
+
+    Includes SHORT positions (negative weights) as well as long ones --
+    an earlier version of this function filtered to `weight > 1e-9` only,
+    which silently dropped every short leg from the log for any
+    allow_short=True book (e.g. CrossSectionalLongShort). A `side` column
+    (LONG/SHORT) is included so the two are never conflated when sorting
+    or reading the file.
     """
     w = result.weights
     dates = [d for d in result.rebalances if d in w.index
@@ -278,14 +285,15 @@ def write_holdings_log(path: str, result, name_lookup: Optional[dict] = None,
     rows = []
     for d in dates:
         row = w.loc[d]
-        held = row[row > 1e-9].sort_values(ascending=False)
+        held = row[row.abs() > 1e-9].sort_values(key=lambda s: s.abs(), ascending=False)
         for rank, (asset, weight) in enumerate(held.items(), start=1):
             rows.append({
                 "date": d, "rank": rank, "asset": asset,
                 "name": (name_lookup or {}).get(asset, ""),
                 "weight": float(weight),
+                "side": "LONG" if weight > 0 else "SHORT",
             })
-    out = pd.DataFrame(rows, columns=["date", "rank", "asset", "name", "weight"])
+    out = pd.DataFrame(rows, columns=["date", "rank", "asset", "name", "weight", "side"])
     out.to_csv(path, index=False)
     return out
 

@@ -46,6 +46,7 @@ try:
     from openpyxl.styles import Font, PatternFill, Alignment
     from openpyxl.utils import get_column_letter
     from openpyxl.worksheet.formula import ArrayFormula
+    from openpyxl.workbook.properties import CalcProperties
 except ImportError as e:
     raise ImportError("excel_tearsheet.py needs openpyxl: pip install openpyxl") from e
 
@@ -131,6 +132,37 @@ def write_se_return_analytics_workbook(
     wb = Workbook()
     ws = wb.active
     ws.title = "SE Return Analytics"
+
+    _STRAT_FILL = PatternFill(start_color="1F4E78", end_color="1F4E78", fill_type="solid")
+    _BENCH_FILL = PatternFill(start_color="7F7F7F", end_color="7F7F7F", fill_type="solid")
+    _WHITE_BOLD = Font(color="FFFFFF", bold=True, size=10)
+
+    # Row 1: an unmissable "which column is which" banner -- both in the raw
+    # monthly-data table (B:D) and the Parameters/Analytics panel (F:H) use
+    # the SAME column convention (strategy left, benchmark right), stated
+    # here once so neither table needs re-explaining.
+    ws.cell(row=1, column=2, value="READ THIS FIRST:").font = Font(bold=True, size=10)
+    ws.merge_cells(start_row=1, start_column=3, end_row=1, end_column=4)
+    ws.cell(row=1, column=3,
+            value=f"\"{strategy_name}\" = THIS STRATEGY (columns C and G)").font = _WHITE_BOLD
+    ws.cell(row=1, column=3).fill = _STRAT_FILL
+    ws.merge_cells(start_row=1, start_column=7, end_row=1, end_column=8)
+    ws.cell(row=1, column=7,
+            value=f"\"{benchmark_name}\" = BENCHMARK (columns D and H)").font = _WHITE_BOLD
+    ws.cell(row=1, column=7).fill = _BENCH_FILL
+    ws.row_dimensions[1].height = 24
+    for c in (3, 7):
+        ws.cell(row=1, column=c).alignment = Alignment(wrap_text=True, vertical="center")
+
+    ws.cell(row=2, column=2,
+            value="Every ratio in the Analytics panel (columns F-H) is a real Excel formula "
+                  "referencing the raw monthly-return columns C/D -- click any G/H cell to see it. "
+                  "Percent-formatted rows (Total Return, CAGR, Volatility, drawdowns, VaR/CVaR, ...) "
+                  "are fractions shown as %; ratio rows (Sharpe, Beta, Capture Ratio, Omega, ...) are "
+                  "plain decimals, not percentages -- a Sharpe of 0.46 is not '0.46%'.").font = Font(italic=True, size=9)
+    ws.cell(row=2, column=2).alignment = Alignment(wrap_text=True)
+    ws.merge_cells(start_row=2, start_column=2, end_row=2, end_column=8)
+    ws.row_dimensions[2].height = 30
 
     first_row = 4
     last_row = first_row + n - 1
@@ -248,7 +280,23 @@ def write_se_return_analytics_workbook(
 
     r = 5
     section(r, "Performance"); r += 1
-    metric(r, "Total Return", f"=PRODUCT(1+{C})-1", f"=PRODUCT(1+{D})-1"); r += 1
+    # THE ACTUAL BUG THAT MADE TOTAL RETURN AND CAGR SHOW ~0: "1+{C}" is
+    # elementwise arithmetic across a whole range BEFORE it enters PRODUCT.
+    # Without CSE/array entry, Excel resolves that with "implicit
+    # intersection" -- it silently collapses the range down to the single
+    # cell that shares this formula's OWN row (e.g. row 5 -> C5, one
+    # month's return) instead of the whole column, so Total Return quietly
+    # became "just this one month's return" and CAGR (which is derived
+    # from it) inherited the same wrong, near-zero number. Every other
+    # formula on this sheet that does range arithmetic (NAV/PEAK division,
+    # C-D subtraction, IF(...) inside PRODUCT/STDEVP/AVERAGE) was already
+    # wrapped in ArrayFormula elsewhere in this function -- this one row
+    # was the one place that got missed. Confirmed by a user screenshot:
+    # Total Return/CAGR showed the exact values of the row's own C/D
+    # cells, not the whole-column product.
+    metric(r, "Total Return",
+          ArrayFormula(f"G{r}", f"=PRODUCT(1+{C})-1"),
+          ArrayFormula(f"H{r}", f"=PRODUCT(1+{D})-1")); r += 1
     metric(r, "CAGR", f"=(1+{g('Total Return')})^(12/COUNT({C}))-1", f"=(1+{h('Total Return')})^(12/COUNT({D}))-1"); r += 1
     metric(r, "Avg Month Ret", f"=AVERAGE({C})", f"=AVERAGE({D})"); r += 1
     metric(r, "Positive Months", f"=COUNTIF({C},\">0\")", f"=COUNTIF({D},\">0\")", pct=False); r += 1
@@ -439,6 +487,12 @@ def write_se_return_analytics_workbook(
 
     assert "PENDING_CY_TABLE" not in str(ws.cell(row=aamdd_row, column=7).value), \
         "Average Annual Max Drawdown was never backfilled -- a real bug, not a placeholder left on purpose"
+
+    # Force Excel to recalculate every formula on open, regardless of the
+    # user's Automatic/Manual calculation setting -- openpyxl never writes a
+    # cached formula result, so without this a formula cell can sit at 0
+    # (or blank) until the user manually presses F9.
+    wb.calculation = CalcProperties(fullCalcOnLoad=True)
 
     wb.save(path)
 

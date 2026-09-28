@@ -143,7 +143,7 @@ def write_decile_summary_workbook(path: str, summary: pd.DataFrame,
     next to the SE Return Analytics workbook without needing Excel formulas
     of its own (the underlying numbers are already fully computed)."""
     import openpyxl
-    from openpyxl.styles import Font
+    from openpyxl.styles import Font, Alignment
 
     wb = openpyxl.Workbook()
     ws = wb.active
@@ -153,13 +153,21 @@ def write_decile_summary_workbook(path: str, summary: pd.DataFrame,
     if benchmark_rows is not None and not benchmark_rows.empty:
         combined = pd.concat([summary, benchmark_rows], ignore_index=True, sort=False)
 
+    ws.cell(row=1, column=1,
+            value="Decile 10 = cheapest by composite value score, decile 1 = most expensive. "
+                  "cagr/vol/max_dd are fractions formatted as %; sharpe is a plain ratio, not a percent.")
+    ws.cell(row=1, column=1).font = Font(italic=True, size=9)
+    ws.cell(row=1, column=1).alignment = Alignment(wrap_text=True)
+    ws.row_dimensions[1].height = 28
+    ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=8)
+
     headers = ["decile", "start", "end", "n_obs", "cagr", "vol", "sharpe", "max_dd"]
     for col, h in enumerate(headers, start=1):
-        cell = ws.cell(row=1, column=col, value=h)
+        cell = ws.cell(row=2, column=col, value=h)
         cell.font = Font(bold=True)
 
     pct_cols = {"cagr", "vol", "max_dd"}
-    for r, row in enumerate(combined.to_dict("records"), start=2):
+    for r, row in enumerate(combined.to_dict("records"), start=3):
         for c, h in enumerate(headers, start=1):
             val = row.get(h, "")
             cell = ws.cell(row=r, column=c, value=val)
@@ -170,5 +178,6 @@ def write_decile_summary_workbook(path: str, summary: pd.DataFrame,
 
     for col in range(1, len(headers) + 1):
         ws.column_dimensions[openpyxl.utils.get_column_letter(col)].width = 12
+    ws.freeze_panes = "A3"
 
     wb.save(path)

@@ -183,9 +183,14 @@ def assess(card) -> Completeness:
               st.confidence,
               "below high, a human must re-read the governing pages")
         if st.is_long_short:
-            check("strategy", "long-only adaptation", bool(_txt(st.long_only_adaptation)), 3,
-                  "", "this fund cannot short and the dropped leg often carries "
-                      "most of the published spread")
+            # 2026-09-28 mandate update: this fund can short, so
+            # long_only_adaptation is informational, not required. A card
+            # that keeps both legs intact (blank adaptation) passes; one
+            # that alters a leg should say why, but either is valid.
+            check("strategy", "leg structure stated", True, 3,
+                  "both legs live" if not _txt(st.long_only_adaptation)
+                  else "leg altered: " + _txt(st.long_only_adaptation)[:60],
+                  "informational since the mandate update; no longer blocking")
 
     # ---- engine + execution --------------------------------------------
     check("signal", "template named", bool(card.signal.template), 3, "",

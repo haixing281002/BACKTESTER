@@ -353,13 +353,14 @@ class CrossSectionalLongShort(Allocator):
     to zero, so pairing it with the wrong engine produces a long-only,
     half-invested book rather than a silent long-short one.
 
-    THIS IS A RESEARCH TOOL, NOT THIS FUND'S INVESTABLE ENGINE. Its purpose
-    is narrow: test whether a paper's mechanism shows a genuine effect with
-    both legs intact, on real Indian stock data, BEFORE asking whether a
-    long-only adaptation of it is something this fund could actually run.
-    A result from this allocator is never a number this fund could hold --
-    see CLAUDE.md's own non-negotiable ("this fund cannot short") for the
-    governed pipeline (ros/), which this package does not touch.
+    AS OF THE 2026-09-28 MANDATE UPDATE, this fund can hold short positions,
+    so a result from this allocator (run with allow_short=True) is a normal,
+    investable, governed number like any other card's -- not a research-only
+    detour. `ros/engine` itself is still long-only by construction and has
+    not been rebuilt to support negative weights; a card whose strategy
+    needs a short leg is executed here, through universal_backtester,
+    instead -- see CLAUDE.md's "One card, decided by what the paper's
+    construction actually needs".
 
     Parameters
     ----------
