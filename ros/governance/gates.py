@@ -158,10 +158,13 @@ def judgement_calls(card, translation_check=None) -> List[Dict[str, str]]:
                 out.append(_call("MANDATE", "the chosen universe is OUT OF MANDATE",
                                  " ".join(note.split()), "pm"))
 
-    if st is not None and st.is_long_short:
+    if st is not None and st.is_long_short and st.long_only_adaptation.strip():
+        # A leg was genuinely dropped or altered for a named reason (not a
+        # blanket long-only mandate, which no longer applies as of the
+        # 2026-09-28 update) -- that is still a human call.
         out.append(_call(
-            "LONG-ONLY", "the paper is long-short; this fund cannot short",
-            " ".join(st.long_only_adaptation.split()) or "NOT STATED",
+            "LONG-SHORT", "the paper is long-short; this card alters a leg -- see why",
+            " ".join(st.long_only_adaptation.split()),
             "pm"))
     if card.portfolio.mandate_allow_cash is False and card.portfolio.allow_cash:
         out.append(_call(
@@ -894,11 +897,16 @@ def gate_a(card, feasibility, extraction_quality=None,
             value=st.signal_name or "(unnamed)",
             evidence="; ".join(errs) or " ".join(st.signal_definition.split())))
         c.append(Criterion(
-            "long-only adaptation stated",
-            not st.is_long_short or bool(st.long_only_adaptation.strip()),
-            value="long-short source" if st.is_long_short else "already long-only",
-            evidence=(" ".join(st.long_only_adaptation.split()) if st.is_long_short
-                      else "paper is long-only; nothing to adapt")))
+            "leg structure stated",
+            True,   # always passes: long_only_adaptation is optional since
+                    # the 2026-09-28 mandate update (this fund can short)
+            value="long-short, both legs live" if st.is_long_short
+                  and not st.long_only_adaptation.strip()
+                  else ("long-short, leg altered" if st.is_long_short
+                        else "long-only"),
+            evidence=(" ".join(st.long_only_adaptation.split())
+                      if st.is_long_short and st.long_only_adaptation.strip()
+                      else "no adaptation needed")))
         c.append(Criterion(
             "the engine can express this strategy",
             st.engine_template != "NEEDS_NEW_TEMPLATE",

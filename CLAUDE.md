@@ -213,9 +213,9 @@ they are answered — because the failure mode of keyword matching is silence.
 Two decisions dominate everything downstream, and both are made by reading the
 paper: **which universe we test on** and **what the strategy actually is**.
 
-A paper sorts S&P 500 constituents; this fund is Indian equity, long-only. There
-is no single "Indian equivalent" — the right answer is the best place in the
-Indian market to find out whether the mechanism is real, and that depends on the
+A paper sorts S&P 500 constituents; this fund is Indian equity. There is no
+single "Indian equivalent" — the right answer is the best place in the Indian
+market to find out whether the mechanism is real, and that depends on the
 mechanism.
 
 So: the model states what the mechanism NEEDS (`mechanism_needs` — names for the
@@ -250,53 +250,60 @@ the fund lacks can supply it there — drop the file in `data/raw/`, declare it 
 `licence`, `caveats`) are mandatory and travel with every result computed from
 the series.
 
-**This fund cannot short.** A long-short paper must state `long_only_adaptation`
-explicitly; the schema rejects the card without it. Dropping the short leg is
-never a haircut — academic factor premia often live substantially in it — so the
-long-only version is a DIFFERENT strategy and is never scored against the
-paper's numbers.
+**FUND MANDATE UPDATED 2026-09-28: this fund can now hold short positions.**
+Whether a given card is long-only or long-short is decided by what the PAPER's
+own mechanism needs, not forced by a blanket constraint — the same discipline
+Stage 01 already applies to picking a universe. `is_long_short` on the card
+states which this one is. When `is_long_short: true`, `long_only_adaptation`
+is no longer mandatory: state it only if a leg is actually being dropped for a
+reason OTHER than "this fund used to be unable to short" (e.g. an instrument
+that cannot be shorted in India at all, or a leg the fund's risk limits
+genuinely forbid). A card that keeps both legs intact needs no adaptation
+field at all.
 
-## One card and one backtest, or two — decided by the paper, not by habit
+Execution: `ros/engine` remains long-only by construction (it predates this
+mandate change and has not been rebuilt to support negative weights). A
+long-short card therefore runs through `universal_backtester`'s explicit
+`allow_short=True` engine path (see `universal_backtester/engine.py`) — this
+is now a normal, investable execution path for a card whose `is_long_short`
+is true and whose legs are both live, not a research-only detour. **Never
+through `ros/engine`**, which would silently clip or misread negative
+weights. A future migration of `ros/engine` itself to support shorting
+natively is possible but has not been done; until then, `universal_backtester`
+is the correct and only path for a genuinely long-short investable card.
 
-A paper's own construction decides how many cards it gets. There is no default
-of "always draft one card"; the rule below is checked at Stage 01, every time.
+## One card, decided by what the paper's construction actually needs
 
-**If the paper is long-only by construction**, run it once. Draft one card,
-adapted to India per the sections above (universe, mechanism), and take it
-straight to backtest. There is nothing to strip out, so there is nothing to
-compare against — a single card, a single result.
+A paper's own construction decides what the card looks like. There is no
+default of "always adapt to long-only"; the rule below is checked at Stage 01,
+every time.
 
-**If the paper is not long-only** (any short leg, a long-short spread, a
-market-neutral construction — `is_long_short: true` on the card), draft **two**
-cards and run **two** backtests, because "does the mechanism work?" and "can this
-fund hold it?" are different questions and collapsing them into one card answers
-neither cleanly:
+**If the paper is long-only by construction**, or if a long-short paper's
+mechanism transfers cleanly to this fund's actual mandate and risk limits,
+draft **one** card matching that construction and take it straight to
+backtest. There is nothing to strip out, so there is nothing to compare
+against — a single card, a single result.
 
-1. **The India long-short card** — the paper's own construction, both legs
-   intact, translated only for the Indian universe (using the individual-stock
-   data now available — see below). This is a credibility check on the
-   mechanism itself and on the paper's claim, run in the market that actually
-   matters to this fund, not the paper's original one. It runs through
-   `universal_backtester`'s explicit `allow_short=True` engine path (see
-   `universal_backtester/engine.py` — long-short is an opt-in, never-default
-   capability added specifically for this), **never through `ros/engine`**,
-   which stays long-only exactly as this file states above. A result from this
-   card is a research finding, never an investable number, and must be labelled
-   as such everywhere it's shown.
-2. **The long-only adaptation card** — the actual investable version, built the
-   way this document already describes: drop the short leg, state
-   `long_only_adaptation` explicitly, and carry the "this may be a materially
-   different, weaker strategy than the paper's own spread" caveat through to
-   Gate B. This is the only one of the two that can ever reach a fund decision.
+**Only draft a second, adaptation card when a leg genuinely cannot be run** —
+not because the fund is long-only (it no longer is), but for a real,
+named constraint: an instrument India does not allow shorting on, a risk
+limit this specific short exceeds, a borrow that is not available at the
+needed size. In that case:
 
-Name them so the pairing is obvious in a directory listing —
-`<slug>_india_longshort.yaml` and `<slug>_adaptation.yaml` — and cross-reference
-each in the other's `intent.rationale`. Both are `intent.mode: adaptation` in
-the schema's terms (both translate the paper into something testable in India);
-what distinguishes them is which leg structure survives, stated plainly in each
-card's own `long_only_adaptation` field — including, on the long-short card,
-writing "N/A by design, see the paired adaptation card" rather than leaving the
-question unanswered.
+1. **The full-construction card** — the paper's own mechanism, both legs
+   intact where the fund's actual constraints allow it, translated for the
+   Indian universe (using the individual-stock data now available — see
+   below). Runs through `universal_backtester`'s `allow_short=True` path.
+   This is the investable card whenever nothing blocks it.
+2. **The adaptation card** — only drafted when something specific and named
+   forces a leg to be dropped or altered; states exactly what changed and why
+   in `long_only_adaptation` (kept as the field name for continuity, even
+   though the constraint driving it is no longer "this fund cannot short" in
+   general).
+
+Name them so the pairing is obvious in a directory listing when both exist —
+`<slug>_longshort.yaml` and `<slug>_adaptation.yaml` — and cross-reference
+each in the other's `intent.rationale`.
 
 ## Adapt to India by default — unless the paper is already there
 
@@ -375,11 +382,14 @@ run_pipeline.py        steps 03-08, fully deterministic (needs data)
 run_agentic.py         steps 01-03 via the API
 
 universal_backtester/  GENERIC engine, separate from ros/ on purpose -- see
-                       "One card and one backtest, or two" above. Long-only
-                       by default like ros/engine, but supports an explicit
-                       allow_short=True opt-in for the India long-short
-                       credibility card. Never touches ros/, Strategy Cards,
-                       or Gate A/B -- nothing here is a governed result.
+                       "One card, decided by what the paper's construction
+                       actually needs" above. This is now the execution path
+                       for any card with is_long_short: true and both legs
+                       live (allow_short=True), and results from it ARE
+                       governed and investable like any other card's. ros/
+                       stays long-only by construction; a card whose strategy
+                       needs a short leg is executed here instead of through
+                       ros/engine, never blended with it.
       data.py          load_stock_universe(): individual-stock loader, long/
                        tidy or wide shape, reads data/raw/stocks/ (gitignored)
 scripts/

@@ -292,9 +292,10 @@ class BacktestPlan:
             if tot > 1.0 + 1e-6:
                 errs.append(f"{ctx}: explicit_weights sum to {tot:.4f}; this fund "
                             f"is unlevered")
-            if any(w < 0 for w in self.explicit_weights.values()):
-                errs.append(f"{ctx}: a negative explicit weight -- this fund "
-                            f"cannot short")
+            # Negative explicit weights (a short leg) are permitted as of the
+            # 2026-09-28 mandate update. A long-only card should still say so
+            # via portfolio.long_only=true and keep weights non-negative by
+            # its own choice, not because the schema forces it.
         return errs
 
 
@@ -697,10 +698,14 @@ class StrategyReconstruction:
     this is the level of detail at which a template can be chosen, or a human
     told exactly what is missing.
 
-    `long_only_adaptation` is mandatory when the paper is long-short, because
-    this fund cannot short. Dropping the short leg is not a haircut -- academic
-    factor premia often live substantially in it -- so the adaptation is
-    recorded, not assumed.
+    `long_only_adaptation` is OPTIONAL as of the 2026-09-28 mandate update:
+    this fund can now hold short positions, so `is_long_short: true` no
+    longer forces an adaptation by itself. Fill it only when a leg is
+    genuinely being dropped or altered for a named, specific reason (an
+    instrument that cannot be shorted in India, a risk limit the short
+    exceeds, unavailable borrow) -- not as a blanket consequence of the
+    paper being long-short. A card that keeps both legs intact leaves this
+    blank.
     """
     signal_name: str = ""
     signal_definition: str = ""        # unambiguous, executable prose
@@ -725,10 +730,9 @@ class StrategyReconstruction:
         if not self.signal_definition.strip():
             errs.append(f"{ctx}: signal_definition is required -- prose like "
                         f"'buy cheap stocks' is not a strategy")
-        if self.is_long_short and not self.long_only_adaptation.strip():
-            errs.append(f"{ctx}: paper is long-short and this fund cannot short. "
-                        f"State long_only_adaptation explicitly; dropping the "
-                        f"short leg silently changes the strategy")
+        # long_only_adaptation is no longer mandatory just because
+        # is_long_short is true (2026-09-28 mandate update: this fund can
+        # short). Leave it blank on a card that keeps both legs intact.
         if self.engine_template == "NEEDS_NEW_TEMPLATE" and not self.template_gap.strip():
             errs.append(f"{ctx}: engine_template is NEEDS_NEW_TEMPLATE but "
                         f"template_gap does not say what to build")
@@ -1055,10 +1059,18 @@ class StrategyCard:
                    else ", NO PAGES CITED"),
                 flag="" if st.confidence == "high" else GUESS,
                 ref="strategy.confidence")
-            if st.is_long_short:
-                add("PORTFOLIO", "long-only",
-                    "the paper is LONG-SHORT; this fund cannot short",
+            if st.is_long_short and st.long_only_adaptation.strip():
+                # A leg was genuinely altered for a named reason (not a
+                # blanket long-only mandate, which no longer applies as of
+                # the 2026-09-28 update) -- that is still a human call.
+                add("PORTFOLIO", "long-short",
+                    "the paper is long-short; this card alters a leg -- see why",
                     st.long_only_adaptation, owner="pm", flag=DECIDE,
+                    ref="strategy.long_only_adaptation")
+            elif st.is_long_short:
+                add("PORTFOLIO", "long-short",
+                    "both legs traded, per the fund's short-selling mandate (2026-09-28)",
+                    "no adaptation needed", owner="pm", flag="",
                     ref="strategy.long_only_adaptation")
         add("SIGNAL", "lookback",
             f"{self.signal.lookback_days}d" if self.signal.lookback_days else "",
