@@ -85,7 +85,7 @@ from universal_backtester.accord_data import (
     BACKTEST_START, BACKTEST_END,
 )
 from universal_backtester.data import load_banner_workbook, write_holdings_log
-from universal_backtester.engine import Backtester
+from universal_backtester.engine import Backtester, assert_causal, LookaheadError
 from universal_backtester.allocators import build_allocator
 from universal_backtester.tearsheet import compute_tearsheet, render_tearsheet
 from universal_backtester.excel_tearsheet import (
@@ -207,6 +207,30 @@ def momentum_signal(prices: pd.DataFrame, lookback: int, skip: int) -> pd.DataFr
     return prices.shift(skip) / prices.shift(lookback) - 1.0
 
 
+def run_causality_checks(signals: dict, returns: pd.DataFrame, lag_days: int) -> None:
+    """Look-ahead tripwire on every real signal this script feeds the
+    engine, plus two negative controls proving the tripwire itself would
+    catch a real leak in THIS run's own return series -- the same
+    discipline run_pipeline.py's governed path already applies
+    automatically. A REAL signal that fails halts the run (LookaheadError
+    propagates): a leak here would silently poison every downstream
+    number, so this is not a warning, it's a gate."""
+    print("\nLook-ahead tripwires (signal[t] vs return[t] and return[t+1]):")
+    for label, sig in signals.items():
+        if sig is None:
+            continue
+        shifted = sig.shift(1 + lag_days)
+        assert_causal(shifted, returns, label=label)
+        print(f"  PASS  {label}")
+    for label, planted in [("planted same-bar leak", returns),
+                           ("planted next-bar leak", returns.shift(-1))]:
+        try:
+            assert_causal(planted, returns, label=label)
+            print(f"  BROKEN  negative control '{label}' was NOT caught")
+        except LookaheadError:
+            print(f"  PASS  negative control '{label}' correctly caught")
+
+
 def load_daily_mcap_and_liquidity(daily_mcap_path: str, price_panel_path: str,
                                   price_index: pd.DatetimeIndex, assets: list,
                                   adv_lookback_days: int, min_adv_percentile: float):
@@ -326,6 +350,10 @@ def main():
     print(f"Building 12-1 momentum signal ({STRATEGY['momentum_lookback_days']}d lookback, "
           f"{STRATEGY['momentum_skip_days']}d skip)...")
     alpha = momentum_signal(price_window, STRATEGY["momentum_lookback_days"], STRATEGY["momentum_skip_days"])
+
+    returns_check = price_window[assets].pct_change(fill_method=None)
+    run_causality_checks({"momentum_alpha": alpha, "mcap_weighting": weighting_frame},
+                         returns_check, LAG_DAYS)
 
     print(f"\nLoading benchmark: {BENCHMARK_COL} from {INDEX_PATH}")
     idx_df, _ = load_banner_workbook(INDEX_PATH, sheet="Broad Market")
