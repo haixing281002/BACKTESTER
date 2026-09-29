@@ -45,7 +45,7 @@ from universal_backtester.accord_data import (
     get_top_n_universe, restrict_to_priced_universe, BACKTEST_START, BACKTEST_END,
 )
 from universal_backtester.data import load_banner_workbook, write_holdings_log
-from universal_backtester.engine import Backtester
+from universal_backtester.engine import Backtester, assert_causal, LookaheadError
 from universal_backtester.allocators import build_allocator
 from universal_backtester.tearsheet import compute_tearsheet, render_tearsheet
 from universal_backtester.validation import bootstrap_sharpe_ci, deflated_sharpe_from_returns
@@ -127,6 +127,30 @@ def zscore_cross_section(frame: pd.DataFrame, mask: pd.DataFrame) -> pd.DataFram
     mean = valid.mean(axis=1)
     std = valid.std(axis=1)
     return valid.sub(mean, axis=0).div(std.replace(0.0, np.nan), axis=0)
+
+
+def run_causality_checks(signals: dict, returns: pd.DataFrame, lag_days: int) -> None:
+    """Look-ahead tripwire on every real signal this script feeds the
+    engine, plus two negative controls proving the tripwire itself would
+    catch a real leak in THIS run's own return series -- the same
+    discipline run_pipeline.py's governed path already applies
+    automatically. A REAL signal that fails halts the run (LookaheadError
+    propagates): a leak here would silently poison every downstream
+    number, so this is not a warning, it's a gate."""
+    print("\nLook-ahead tripwires (signal[t] vs return[t] and return[t+1]):")
+    for label, sig in signals.items():
+        if sig is None:
+            continue
+        shifted = sig.shift(1 + lag_days)
+        assert_causal(shifted, returns, label=label)
+        print(f"  PASS  {label}")
+    for label, planted in [("planted same-bar leak", returns),
+                           ("planted next-bar leak", returns.shift(-1))]:
+        try:
+            assert_causal(planted, returns, label=label)
+            print(f"  BROKEN  negative control '{label}' was NOT caught")
+        except LookaheadError:
+            print(f"  PASS  negative control '{label}' correctly caught")
 
 
 def main():
@@ -227,6 +251,9 @@ def main():
     corr_by_date = ep_z.corrwith(ebitev_z, axis=1)
     print(f"  E/P vs EBIT/EV cross-sectional correlation: mean {corr_by_date.mean():.3f}, "
           f"median {corr_by_date.median():.3f} across {corr_by_date.notna().sum()} rebalance-eligible days")
+
+    returns_check = price_window[assets].pct_change(fill_method=None)
+    run_causality_checks({"composite_value_z": composite}, returns_check, LAG_DAYS)
 
     print(f"\nLoading benchmarks from {INDEX_PATH}")
     bench_closes = {}

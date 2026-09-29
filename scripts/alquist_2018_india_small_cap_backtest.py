@@ -51,7 +51,7 @@ from universal_backtester.accord_data import (
     BACKTEST_START, BACKTEST_END,
 )
 from universal_backtester.data import load_banner_workbook, write_holdings_log
-from universal_backtester.engine import Backtester
+from universal_backtester.engine import Backtester, assert_causal, LookaheadError
 from universal_backtester.allocators import build_allocator
 from universal_backtester.tearsheet import compute_tearsheet
 from universal_backtester.excel_tearsheet import (
@@ -136,6 +136,30 @@ def load_daily_mcap_and_liquidity(daily_mcap_path, price_panel_path, price_index
     return mcap_wide, liquidity_pass
 
 
+def run_causality_checks(signals: dict, returns: pd.DataFrame, lag_days: int) -> None:
+    """Look-ahead tripwire on every real signal this script feeds the
+    engine, plus two negative controls proving the tripwire itself would
+    catch a real leak in THIS run's own return series -- the same
+    discipline run_pipeline.py's governed path already applies
+    automatically. A REAL signal that fails halts the run (LookaheadError
+    propagates): a leak here would silently poison every downstream
+    number, so this is not a warning, it's a gate."""
+    print("\nLook-ahead tripwires (signal[t] vs return[t] and return[t+1]):")
+    for label, sig in signals.items():
+        if sig is None:
+            continue
+        shifted = sig.shift(1 + lag_days)
+        assert_causal(shifted, returns, label=label)
+        print(f"  PASS  {label}")
+    for label, planted in [("planted same-bar leak", returns),
+                           ("planted next-bar leak", returns.shift(-1))]:
+        try:
+            assert_causal(planted, returns, label=label)
+            print(f"  BROKEN  negative control '{label}' was NOT caught")
+        except LookaheadError:
+            print(f"  PASS  negative control '{label}' correctly caught")
+
+
 def run_decile_leg(price_window, assets, eligible, mcap_daily, ascending, name, spread_bps, lag_days):
     """One leg (SMALL or BIG): rank eligible names by market cap (ascending
     True = smallest wins), take the bottom/top 20% by COUNT (matching the
@@ -214,6 +238,9 @@ def main():
                                 .pivot_table(index="month_end", columns="accord_code",
                                             values="mcap", aggfunc="first"))
         mcap_daily = monthly_mcap.reindex(columns=assets).reindex(price_window.index).ffill()
+
+    returns_check = price_window[assets].pct_change(fill_method=None)
+    run_causality_checks({"mcap_rank_signal": mcap_daily}, returns_check, LAG_DAYS)
 
     print(f"\nLoading benchmarks from {INDEX_PATH}")
     bench_closes = {}
