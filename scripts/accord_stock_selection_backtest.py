@@ -70,6 +70,7 @@ is SOLD at cost on the day it's learned, never quietly dropped.
 """
 from __future__ import annotations
 
+import argparse
 import os
 import sys
 
@@ -92,6 +93,7 @@ from universal_backtester.excel_tearsheet import (
 )
 from universal_backtester.validation import bootstrap_sharpe_ci, deflated_sharpe_from_returns
 from universal_backtester.charting import save_backtest_charts
+from universal_backtester.checkpoint import checkpoint
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PRICE_PATH = os.path.join(REPO_ROOT, "data", "raw", "stocks", "price_data_till_03aug2026.xlsx")
@@ -246,6 +248,12 @@ def load_daily_mcap_and_liquidity(daily_mcap_path: str, price_panel_path: str,
 
 
 def main():
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--auto-approve", action="store_true",
+                    help="Skip every interactive stage pause and run straight through.")
+    args = ap.parse_args()
+    produced: list = []   # absolute local paths, shown at every checkpoint below
+
     print(f"Strategy: {STRATEGY['name']} -- {STRATEGY['mechanism_needs']}")
     print(f"Backtest window (hardcoded): {BACKTEST_START.date()} -> {BACKTEST_END.date()}")
 
@@ -323,6 +331,10 @@ def main():
     idx_df, _ = load_banner_workbook(INDEX_PATH, sheet="Broad Market")
     bench_close = idx_df[BENCHMARK_COL].reindex(price_window.index).ffill()
 
+    if not checkpoint("STAGE 1 OF 3 -- DATA LOADED AND UNIVERSE BUILT", produced,
+                      auto_approve=args.auto_approve):
+        return
+
     n_hold = STRATEGY["n_hold"]
     print(f"\nRunning cross-sectional backtest: top {n_hold} names by 12-1 momentum among "
           f"profitable names, {weighting}-weighted, {REBALANCE} rebalance, {SPREAD_BPS:.0f}bp cost, "
@@ -372,6 +384,10 @@ def main():
     common = monthly_strategy.index.intersection(monthly_bench.index)
     monthly_strategy, monthly_bench = monthly_strategy.loc[common], monthly_bench.loc[common]
 
+    if not checkpoint("STAGE 2 OF 3 -- BACKTEST EXECUTED, TEARSHEET COMPUTED", produced,
+                      auto_approve=args.auto_approve):
+        return
+
     xlsx_path = os.path.join(OUTPUT_DIR, "accord_stock_selection_se_return_analytics.xlsx")
     csv_path = os.path.join(OUTPUT_DIR, "accord_stock_selection_se_return_analytics.csv")
     write_se_return_analytics_workbook(xlsx_path, common, monthly_strategy, monthly_bench,
@@ -379,6 +395,7 @@ def main():
     write_se_return_analytics_csv(csv_path, common, monthly_strategy, monthly_bench,
                                   strategy_name=STRATEGY["name"], benchmark_name=BENCHMARK_DISPLAY_NAME)
     print(f"\nSE Return Analytics written to:\n  {xlsx_path}\n  {csv_path}")
+    produced += [xlsx_path, csv_path]
 
     trade_log_path = os.path.join(OUTPUT_DIR, "accord_stock_selection_trade_log.csv")
     pd.DataFrame({
@@ -388,6 +405,7 @@ def main():
         "cash_weight": result.cash_weight.reindex(live.index).values,
     }).to_csv(trade_log_path, index=False)
     print(f"Trade log written to: {trade_log_path}")
+    produced.append(trade_log_path)
 
     # THE ANSWER TO "which stocks did the AI actually pick": one row per
     # (rebalance date, held Accord Code, weight), read directly off the
@@ -400,15 +418,19 @@ def main():
     print(f"Holdings log written to: {holdings_path} "
           f"({holdings['date'].nunique()} rebalance dates, "
           f"{holdings.groupby('date').size().mean():.0f} names/rebalance on average)")
+    produced.append(holdings_path)
 
     print("\nWriting chart set (strategy vs. benchmark)...")
-    save_backtest_charts(
+    chart_paths = save_backtest_charts(
         {STRATEGY["name"]: live}, outdir=os.path.join(OUTPUT_DIR, "charts"),
         tag="accord_stock_selection",
         benchmark=bench_live, benchmark_name=BENCHMARK_DISPLAY_NAME,
         weights=result.weights.loc[live.index], weights_name=STRATEGY["name"],
         cash_weight=result.cash_weight.loc[live.index],
     )
+    produced += chart_paths
+
+    checkpoint("STAGE 3 OF 3 -- ALL OUTPUTS WRITTEN", produced, auto_approve=args.auto_approve)
 
 
 if __name__ == "__main__":

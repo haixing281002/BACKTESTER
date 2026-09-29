@@ -7,7 +7,7 @@ import pytest
 
 from universal_backtester.decile_analysis import (
     compute_decile_membership, run_decile_backtests, summarize_deciles,
-    write_decile_membership_log,
+    write_decile_membership_log, write_decile_summary_workbook,
 )
 
 
@@ -76,3 +76,43 @@ def test_decile_membership_log_names_every_stock_and_its_decile(tmp_path):
         assert len(day) == 30
         assert day["decile"].value_counts().eq(3).all()
     assert (log["name"] == log["accord_code"].map(name_lookup)).all()
+
+
+def test_decile_workbook_embeds_every_chart_as_its_own_sheet(tmp_path):
+    import openpyxl
+    summary = pd.DataFrame({"decile": [1, 2], "start": ["2020-01-01"] * 2, "end": ["2020-12-31"] * 2,
+                            "n_obs": [250, 250], "cagr": [0.1, 0.2], "vol": [0.15, 0.18],
+                            "sharpe": [0.5, 0.8], "max_dd": [-0.2, -0.15]})
+    # A minimal real PNG so openpyxl's Image loader has something to actually decode.
+    chart1 = tmp_path / "chart1.png"
+    chart2 = tmp_path / "chart2.png"
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    for p in (chart1, chart2):
+        fig, ax = plt.subplots()
+        ax.plot([1, 2, 3], [1, 2, 3])
+        fig.savefig(p)
+        plt.close(fig)
+
+    out = tmp_path / "decile_summary.xlsx"
+    write_decile_summary_workbook(str(out), summary, chart_paths=[str(chart1), str(chart2)])
+
+    wb = openpyxl.load_workbook(str(out))
+    assert wb.sheetnames[0] == "Decile Summary"
+    assert len(wb.sheetnames) == 3
+    for sheet in wb.sheetnames[1:]:
+        assert len(wb[sheet]._images) == 1
+
+
+def test_decile_workbook_notes_a_missing_chart_file_rather_than_silently_dropping_it(tmp_path):
+    import openpyxl
+    summary = pd.DataFrame({"decile": [1], "start": ["2020-01-01"], "end": ["2020-12-31"],
+                            "n_obs": [250], "cagr": [0.1], "vol": [0.15], "sharpe": [0.5],
+                            "max_dd": [-0.2]})
+    out = tmp_path / "decile_summary.xlsx"
+    write_decile_summary_workbook(str(out), summary, chart_paths=[str(tmp_path / "does_not_exist.png")])
+
+    wb = openpyxl.load_workbook(str(out))
+    missing_sheet = wb[wb.sheetnames[1]]
+    assert "not found" in missing_sheet["A1"].value.lower()

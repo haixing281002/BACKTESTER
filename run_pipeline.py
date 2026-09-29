@@ -129,6 +129,7 @@ def main(argv=None) -> int:
     R = Report()
     card = load_card(args.card)
     os.makedirs(args.outdir, exist_ok=True)
+    produced: List[str] = [args.card]   # absolute local paths, shown at every checkpoint below
 
     R.h(f"AI RESEARCH OPERATING SYSTEM  |  card: {card.paper.id}")
     R.p(f"  title  : {card.paper.title}")
@@ -186,7 +187,7 @@ def main(argv=None) -> int:
         R.p("")
         R.block(describe_shortfall(shortfall))
 
-    rc = _checkpoint(R, args, card, "GATE A")
+    rc = _checkpoint(R, args, card, "GATE A", produced)
     if rc is not None:
         return rc
 
@@ -230,7 +231,7 @@ def main(argv=None) -> int:
         _finish(R, args, card)
         return 0
 
-    rc = _checkpoint(R, args, card, "STEP 03  |  DATA FEASIBILITY")
+    rc = _checkpoint(R, args, card, "STEP 03  |  DATA FEASIBILITY", produced)
     if rc is not None:
         return rc
 
@@ -255,6 +256,7 @@ def main(argv=None) -> int:
                 {"series": r.resolved_to, "proxy_for": r.requirement, "rationale": r.reason})
     snap = sb.freeze()
     snapshot_manifest_path = snap.save(os.path.join(args.outdir, "snapshots"))
+    produced.append(snapshot_manifest_path)
 
     R.p(f"  snapshot_id   : {snap.snapshot_id}")
     R.p(f"  content_hash  : {snap.content_hash[:32]}")
@@ -273,7 +275,7 @@ def main(argv=None) -> int:
         for p_ in snap.proxies_used:
             R.p(f"    - {p_['series']} standing in for {p_['proxy_for']}")
 
-    rc = _checkpoint(R, args, card, "STEP 04  |  POINT-IN-TIME DATA + LINEAGE")
+    rc = _checkpoint(R, args, card, "STEP 04  |  POINT-IN-TIME DATA + LINEAGE", produced)
     if rc is not None:
         return rc
 
@@ -325,7 +327,7 @@ def main(argv=None) -> int:
     R.p("  PERFORMANCE (net of costs; 'sharpe' is the paper's geometric definition):")
     R.block("    " + render_table(tbl[cols]).replace("\n", "\n    "))
 
-    rc = _checkpoint(R, args, card, "STEP 05  |  BUILD + EXECUTE")
+    rc = _checkpoint(R, args, card, "STEP 05  |  BUILD + EXECUTE", produced)
     if rc is not None:
         return rc
 
@@ -493,7 +495,7 @@ def main(argv=None) -> int:
         R.p("  CASH-RATE PROXY SWEEP (the proxy is an assumption, so it gets swept):")
         R.block("    " + pd.DataFrame(rows).round(4).to_string(index=False).replace("\n", "\n    "))
 
-    rc = _checkpoint(R, args, card, "STEP 06  |  RESEARCH VALIDATION")
+    rc = _checkpoint(R, args, card, "STEP 06  |  RESEARCH VALIDATION", produced)
     if rc is not None:
         return rc
 
@@ -580,7 +582,7 @@ def main(argv=None) -> int:
     R.p(f"    notional per rebalance       : Rs{cap['notional_per_rebalance_inr_cr']:,.0f} cr")
     R.p(f"    days to execute a rebalance  : {cap['days_to_execute_rebalance']:.1f}")
 
-    rc = _checkpoint(R, args, card, "STEP 07  |  PORTFOLIO VALIDATION")
+    rc = _checkpoint(R, args, card, "STEP 07  |  PORTFOLIO VALIDATION", produced)
     if rc is not None:
         return rc
 
@@ -589,7 +591,7 @@ def main(argv=None) -> int:
     R.h("GATE B  |  INVESTMENT DECISION")
     R.block(gb.render())
 
-    rc = _checkpoint(R, args, card, "GATE B  |  INVESTMENT DECISION")
+    rc = _checkpoint(R, args, card, "GATE B  |  INVESTMENT DECISION", produced)
     if rc is not None:
         return rc
 
@@ -656,6 +658,7 @@ def main(argv=None) -> int:
             f"Factor fingerprint stored for similarity search ({len(fp.get('fingerprint', {}))} loadings).",
         ])
     library_entry_path = lib.write(entry)
+    produced.append(library_entry_path)
     R.p("")
     R.p(f"  library entry : {eid}")
     dups = lib.find_duplicate_experiment(card.fingerprint(), exclude=eid)
@@ -674,9 +677,11 @@ def main(argv=None) -> int:
         _charts(runset, rf, args.outdir, card.paper.id)
         chart_path = os.path.join(args.outdir, f"charts_{card.paper.id}.png")
         R.p(f"  charts written to {chart_path}")
+        produced.append(chart_path)
 
     metrics_path = os.path.join(args.outdir, f"metrics_{card.paper.id}.csv")
     tbl.to_csv(metrics_path)
+    produced.append(metrics_path)
 
     report_path = os.path.join(args.outdir, f"report_{card.paper.id}.txt")
     R.h("DOCUMENTS AND OUTPUTS PRODUCED THIS RUN")
@@ -815,7 +820,8 @@ def _finish(R: Report, args, card):
     print(f"\n[report saved to {path}]")
 
 
-def _checkpoint(R: Report, args, card, stage_name: str) -> Optional[int]:
+def _checkpoint(R: Report, args, card, stage_name: str,
+                produced: Optional[List[str]] = None) -> Optional[int]:
     """Show `stage_name` ALONE, now, and pause for a human's typed approval
     before the NEXT stage runs -- not bundled into one end-of-run dump where
     "approving" any one stage would be meaningless because everything after
@@ -823,12 +829,21 @@ def _checkpoint(R: Report, args, card, stage_name: str) -> Optional[int]:
     exit code the caller must return immediately, halting the run here with
     nothing past this stage computed.
 
+    `produced`: absolute local paths of everything written SO FAR this run
+    -- printed here, at every stage, not only in the final summary, so a
+    human approving stage N can actually see what stage N wrote before
+    saying yes to stage N+1.
+
     --auto-approve skips every pause deliberately (batch runs, CI); a
     non-interactive run (piped stdin, a subprocess with no tty) skips it
     too, but says so explicitly each time rather than silently blocking
     forever on input that will never come.
     """
     R.flush()
+    if produced:
+        print("\nOutputs produced so far this run:")
+        for p in produced:
+            print(f"  {os.path.abspath(p)}")
     if args.auto_approve:
         print(f"\n[--auto-approve: continuing past {stage_name} without a pause]")
         return None
