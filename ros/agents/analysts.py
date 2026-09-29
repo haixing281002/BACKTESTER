@@ -51,6 +51,27 @@ def _fenced(label: str, body: str) -> str:
             f"{body}\n</{label}>")
 
 
+def _precedent_block(precedent: Optional[List[Dict[str, Any]]]) -> Optional[Dict[str, Any]]:
+    """Renders StrategyLibrary.relevant_precedent()'s output as one extra
+    message block, or None if there is nothing to show. Framed explicitly
+    as context to weigh, not a rule: this is how an agent draws on what the
+    SAME stage caught on similar past work, without anything here silently
+    adjusting a threshold or making the call for it."""
+    if not precedent:
+        return None
+    lines = []
+    for p in precedent:
+        tag = f"{p.get('card_id', '?')} (outcome: {p.get('outcome', 'UNKNOWN')})"
+        for note in p.get("notes", []):
+            lines.append(f"- [{tag}] {note}")
+    if not lines:
+        return None
+    return {"type": "text", "text":
+            "PRECEDENT FROM PAST RUNS AT THIS SAME STAGE (context only -- weigh it "
+            "yourself; it is not a rule, and it does not decide anything for you):\n"
+            + "\n".join(lines)}
+
+
 # ---------------------------------------------------------------------------
 class TriageAgent(Agent):
     """Step 00. Cheap first pass over a stack of papers.
@@ -64,19 +85,22 @@ class TriageAgent(Agent):
     model = MODEL_TRIAGE
     max_tokens = 2000
 
-    def run(self, title: str, abstract: str) -> S.TriageVerdict:
-        return self._call(
-            system=shared_system(),
-            messages=[{"role": "user", "content": [
-                {"type": "text", "text": _fenced("paper_abstract", f"Title: {title}\n\n{abstract}")},
-                {"type": "text", "text":
-                    "Triage this for a LONG-ONLY INDIAN EQUITY fund benchmarked to NIFTY 500. "
-                    "We cannot short, cannot use derivatives, and hold no intraday data. "
-                    "A paper about another market can still be relevant if its MECHANISM "
-                    "transfers to a long-only equity setting -- judge the mechanism, not the "
-                    "market. Set relevant=false only when the mechanism itself cannot survive "
-                    "our constraints."},
-            ]}])
+    def run(self, title: str, abstract: str,
+            precedent: Optional[List[Dict[str, Any]]] = None) -> S.TriageVerdict:
+        content = [
+            {"type": "text", "text": _fenced("paper_abstract", f"Title: {title}\n\n{abstract}")},
+            {"type": "text", "text":
+                "Triage this for a LONG-ONLY INDIAN EQUITY fund benchmarked to NIFTY 500. "
+                "We cannot short, cannot use derivatives, and hold no intraday data. "
+                "A paper about another market can still be relevant if its MECHANISM "
+                "transfers to a long-only equity setting -- judge the mechanism, not the "
+                "market. Set relevant=false only when the mechanism itself cannot survive "
+                "our constraints."},
+        ]
+        block = _precedent_block(precedent)
+        if block:
+            content.append(block)
+        return self._call(system=shared_system(), messages=[{"role": "user", "content": content}])
 
 
 class PaperAnalystAgent(Agent):
@@ -134,40 +158,42 @@ class CardDrafterAgent(Agent):
     max_tokens = 32000
 
     def run(self, analysis: S.PaperAnalysis, *, mode: str, registry_names: List[str],
-            templates: List[str], primitives: List[str],
-            fund_context: str) -> S.CardProposal:
-        return self._call(
-            system=shared_system(),
-            messages=[{"role": "user", "content": [
-                {"type": "text", "text":
-                    "PAPER ANALYSIS (produced by the previous stage):\n"
-                    + analysis.model_dump_json(indent=2)},
-                {"type": "text", "text": f"FUND CONTEXT:\n{fund_context}"},
-                {"type": "text", "text":
-                    f"REGISTERED ALLOCATOR TEMPLATES (you may name ONLY these):\n{templates}\n\n"
-                    f"REGISTERED SIGNAL PRIMITIVES:\n{primitives}\n\n"
-                    f"SERIES THE FUND HOLDS:\n{registry_names}"},
-                {"type": "text", "text":
-                    f"Draft a Strategy Card in mode='{mode}'.\n\n"
-                    "Hard rules:\n"
-                    "- signal.template MUST be one of the registered templates. If none fits, "
-                    "say so in open_questions_for_human rather than inventing a name.\n"
-                    "- A replication card runs the paper's OWN data and must carry "
-                    "replication_targets pinned to ONE accounting basis (the headline one).\n"
-                    "- An adaptation card runs our data, must state transferred_mechanism, must "
-                    "enumerate broken_assumptions, and must carry NO replication targets: it is "
-                    "a different question and may never be scored against the paper's numbers.\n"
-                    "- Every ambiguity you log must carry a resolution. An unresolved ambiguity "
-                    "blocks the pipeline, so if you cannot resolve one, put it in "
-                    "open_questions_for_human instead of leaving it half-written.\n"
-                    "- n_configs_estimate must count what the PAPER tried, sweeps in appendices "
-                    "included. Understating it is how a strategy launders a lucky draw through "
-                    "the deflated Sharpe ratio.\n"
-                    "- Costs: our Indian factor-sleeve rotation is materially more expensive "
-                    "than a US ETF. Do not copy the paper's cost assumption.\n"
-                    "- lag_days: NSE index closes publish after the close, so a signal computed "
-                    "on date t cannot trade at t's close."},
-            ]}])
+            templates: List[str], primitives: List[str], fund_context: str,
+            precedent: Optional[List[Dict[str, Any]]] = None) -> S.CardProposal:
+        content = [
+            {"type": "text", "text":
+                "PAPER ANALYSIS (produced by the previous stage):\n"
+                + analysis.model_dump_json(indent=2)},
+            {"type": "text", "text": f"FUND CONTEXT:\n{fund_context}"},
+            {"type": "text", "text":
+                f"REGISTERED ALLOCATOR TEMPLATES (you may name ONLY these):\n{templates}\n\n"
+                f"REGISTERED SIGNAL PRIMITIVES:\n{primitives}\n\n"
+                f"SERIES THE FUND HOLDS:\n{registry_names}"},
+            {"type": "text", "text":
+                f"Draft a Strategy Card in mode='{mode}'.\n\n"
+                "Hard rules:\n"
+                "- signal.template MUST be one of the registered templates. If none fits, "
+                "say so in open_questions_for_human rather than inventing a name.\n"
+                "- A replication card runs the paper's OWN data and must carry "
+                "replication_targets pinned to ONE accounting basis (the headline one).\n"
+                "- An adaptation card runs our data, must state transferred_mechanism, must "
+                "enumerate broken_assumptions, and must carry NO replication targets: it is "
+                "a different question and may never be scored against the paper's numbers.\n"
+                "- Every ambiguity you log must carry a resolution. An unresolved ambiguity "
+                "blocks the pipeline, so if you cannot resolve one, put it in "
+                "open_questions_for_human instead of leaving it half-written.\n"
+                "- n_configs_estimate must count what the PAPER tried, sweeps in appendices "
+                "included. Understating it is how a strategy launders a lucky draw through "
+                "the deflated Sharpe ratio.\n"
+                "- Costs: our Indian factor-sleeve rotation is materially more expensive "
+                "than a US ETF. Do not copy the paper's cost assumption.\n"
+                "- lag_days: NSE index closes publish after the close, so a signal computed "
+                "on date t cannot trade at t's close."},
+        ]
+        block = _precedent_block(precedent)
+        if block:
+            content.append(block)
+        return self._call(system=shared_system(), messages=[{"role": "user", "content": content}])
 
 
 class AmbiguityCriticAgent(Agent):
@@ -181,31 +207,34 @@ class AmbiguityCriticAgent(Agent):
     schema = S.AmbiguityReport
     effort = "high"
 
-    def run(self, pdf_path: str, proposal: S.CardProposal) -> S.AmbiguityReport:
-        return self._call(
-            system=shared_system(),
-            messages=[{"role": "user", "content": [
-                pdf_document_block(pdf_path),
-                {"type": "text", "text":
-                    "A colleague drafted this Strategy Card from the paper above:\n\n"
-                    + proposal.card_yaml},
-                {"type": "text", "text":
-                    "Your job is to attack it. You are not drafting; you are finding what the "
-                    "drafter got wrong or waved through.\n\n"
-                    "Hunt specifically for:\n"
-                    "- a metric defined non-standardly in the paper but implemented as standard "
-                    "(Sharpe conventions are the classic case)\n"
-                    "- costs that exclude the strategy's principal activity\n"
-                    "- an estimator whose window is too short for its parameter count\n"
-                    "- a risk-free rate used simultaneously as numeraire and as an achievable yield\n"
-                    "- any card field stated with more precision than the paper supports\n"
-                    "- constraints the paper assumes that our long-only fully-invested mandate "
-                    "cannot satisfy\n\n"
-                    "List in missed_by_first_pass every field the draft treats as settled that "
-                    "is not. If the draft is genuinely sound on a point, do not manufacture a "
-                    "finding -- a critic that always finds something is as useless as one that "
-                    "never does."},
-            ]}])
+    def run(self, pdf_path: str, proposal: S.CardProposal,
+            precedent: Optional[List[Dict[str, Any]]] = None) -> S.AmbiguityReport:
+        content = [
+            pdf_document_block(pdf_path),
+            {"type": "text", "text":
+                "A colleague drafted this Strategy Card from the paper above:\n\n"
+                + proposal.card_yaml},
+            {"type": "text", "text":
+                "Your job is to attack it. You are not drafting; you are finding what the "
+                "drafter got wrong or waved through.\n\n"
+                "Hunt specifically for:\n"
+                "- a metric defined non-standardly in the paper but implemented as standard "
+                "(Sharpe conventions are the classic case)\n"
+                "- costs that exclude the strategy's principal activity\n"
+                "- an estimator whose window is too short for its parameter count\n"
+                "- a risk-free rate used simultaneously as numeraire and as an achievable yield\n"
+                "- any card field stated with more precision than the paper supports\n"
+                "- constraints the paper assumes that our long-only fully-invested mandate "
+                "cannot satisfy\n\n"
+                "List in missed_by_first_pass every field the draft treats as settled that "
+                "is not. If the draft is genuinely sound on a point, do not manufacture a "
+                "finding -- a critic that always finds something is as useless as one that "
+                "never does."},
+        ]
+        block = _precedent_block(precedent)
+        if block:
+            content.append(block)
+        return self._call(system=shared_system(), messages=[{"role": "user", "content": content}])
 
 
 class DataMapperAgent(Agent):
@@ -222,25 +251,27 @@ class DataMapperAgent(Agent):
     schema = S.FeasibilityMapping
     effort = "high"
 
-    def run(self, requirements: List[Dict[str, Any]],
-            registry: Dict[str, Any]) -> S.FeasibilityMapping:
-        return self._call(
-            system=shared_system(),
-            messages=[{"role": "user", "content": [
-                {"type": "text", "text":
-                    "WHAT THE PAPER NEEDS:\n" + json.dumps(requirements, indent=2)},
-                {"type": "text", "text":
-                    "WHAT THE FUND HOLDS (name, kind, coverage, point-in-time status, caveats):\n"
-                    + json.dumps(registry, indent=2, default=str)},
-                {"type": "text", "text":
-                    "For each requirement, decide exact / proxy / none.\n\n"
-                    "A proxy is only a proxy if it can carry the same economic role. A constant "
-                    "assumed rate is not a proxy for a policy rate that moves -- say so, and say "
-                    "what breaks. When you propose a proxy, proxy_risk must name the specific "
-                    "economic claim that changes, not a generic caution.\n\n"
-                    "Then give procurement_suggestions ordered by how much they unblock. Be "
-                    "concrete about the series, not the vendor."},
-            ]}])
+    def run(self, requirements: List[Dict[str, Any]], registry: Dict[str, Any],
+            precedent: Optional[List[Dict[str, Any]]] = None) -> S.FeasibilityMapping:
+        content = [
+            {"type": "text", "text":
+                "WHAT THE PAPER NEEDS:\n" + json.dumps(requirements, indent=2)},
+            {"type": "text", "text":
+                "WHAT THE FUND HOLDS (name, kind, coverage, point-in-time status, caveats):\n"
+                + json.dumps(registry, indent=2, default=str)},
+            {"type": "text", "text":
+                "For each requirement, decide exact / proxy / none.\n\n"
+                "A proxy is only a proxy if it can carry the same economic role. A constant "
+                "assumed rate is not a proxy for a policy rate that moves -- say so, and say "
+                "what breaks. When you propose a proxy, proxy_risk must name the specific "
+                "economic claim that changes, not a generic caution.\n\n"
+                "Then give procurement_suggestions ordered by how much they unblock. Be "
+                "concrete about the series, not the vendor."},
+        ]
+        block = _precedent_block(precedent)
+        if block:
+            content.append(block)
+        return self._call(system=shared_system(), messages=[{"role": "user", "content": content}])
 
 
 class TemplateMatcherAgent(Agent):
@@ -256,21 +287,24 @@ class TemplateMatcherAgent(Agent):
     effort = "high"
 
     def run(self, analysis: S.PaperAnalysis, templates: List[str],
-            template_docs: str, assets: List[str]) -> S.TemplateMatch:
-        return self._call(
-            system=shared_system(),
-            messages=[{"role": "user", "content": [
-                {"type": "text", "text": "MECHANISM TO IMPLEMENT:\n" + analysis.core_mechanism},
-                {"type": "text", "text": "FULL PAPER ANALYSIS:\n" + analysis.model_dump_json(indent=2)},
-                {"type": "text", "text": f"AVAILABLE TEMPLATES:\n{templates}\n\n{template_docs}"},
-                {"type": "text", "text": f"ASSETS IN OUR UNIVERSE:\n{assets}"},
-                {"type": "text", "text":
-                    "Pick the template whose MECHANISM matches, not the one whose name sounds "
-                    "closest. If none genuinely matches, return template=null and write "
-                    "missing_capability as a precise specification a human engineer could "
-                    "implement in about thirty lines: what the allocator receives, what it "
-                    "returns, and the constraints it must respect. Do not write the code."},
-            ]}])
+            template_docs: str, assets: List[str],
+            precedent: Optional[List[Dict[str, Any]]] = None) -> S.TemplateMatch:
+        content = [
+            {"type": "text", "text": "MECHANISM TO IMPLEMENT:\n" + analysis.core_mechanism},
+            {"type": "text", "text": "FULL PAPER ANALYSIS:\n" + analysis.model_dump_json(indent=2)},
+            {"type": "text", "text": f"AVAILABLE TEMPLATES:\n{templates}\n\n{template_docs}"},
+            {"type": "text", "text": f"ASSETS IN OUR UNIVERSE:\n{assets}"},
+            {"type": "text", "text":
+                "Pick the template whose MECHANISM matches, not the one whose name sounds "
+                "closest. If none genuinely matches, return template=null and write "
+                "missing_capability as a precise specification a human engineer could "
+                "implement in about thirty lines: what the allocator receives, what it "
+                "returns, and the constraints it must respect. Do not write the code."},
+        ]
+        block = _precedent_block(precedent)
+        if block:
+            content.append(block)
+        return self._call(system=shared_system(), messages=[{"role": "user", "content": content}])
 
 
 class ResultsCriticAgent(Agent):
@@ -288,28 +322,31 @@ class ResultsCriticAgent(Agent):
     schema = S.ResultsCritique
     effort = "high"
 
-    def run(self, diagnostics: Dict[str, Any], card_summary: str) -> S.ResultsCritique:
-        return self._call(
-            system=shared_system(),
-            messages=[{"role": "user", "content": [
-                {"type": "text", "text": "STRATEGY UNDER TEST:\n" + card_summary},
-                {"type": "text", "text":
-                    "DIAGNOSTICS (all computed deterministically -- do not recompute, interpret):\n"
-                    + json.dumps(diagnostics, indent=2, default=str)},
-                {"type": "text", "text":
-                    "Attack this result. You have no stake in it succeeding.\n\n"
-                    "Patterns that should raise severity to blocking:\n"
-                    "- Sharpe that IMPROVES with implementation lag -- a real timing signal "
-                    "decays; one that improves has no timing information at all\n"
-                    "- sub-period performance that rises monotonically -- regime, not skill\n"
-                    "- an edge that exists only versus the weakest benchmark\n"
-                    "- headline driven by one knob (check the target-vol sweep)\n"
-                    "- results that flip inside a proxy's plausible range\n"
-                    "- bootstrap intervals that comfortably contain zero\n\n"
-                    "For each finding give a concrete additional test that would settle it. "
-                    "If the result genuinely survives, say so -- a critic that always condemns "
-                    "is noise."},
-            ]}])
+    def run(self, diagnostics: Dict[str, Any], card_summary: str,
+            precedent: Optional[List[Dict[str, Any]]] = None) -> S.ResultsCritique:
+        content = [
+            {"type": "text", "text": "STRATEGY UNDER TEST:\n" + card_summary},
+            {"type": "text", "text":
+                "DIAGNOSTICS (all computed deterministically -- do not recompute, interpret):\n"
+                + json.dumps(diagnostics, indent=2, default=str)},
+            {"type": "text", "text":
+                "Attack this result. You have no stake in it succeeding.\n\n"
+                "Patterns that should raise severity to blocking:\n"
+                "- Sharpe that IMPROVES with implementation lag -- a real timing signal "
+                "decays; one that improves has no timing information at all\n"
+                "- sub-period performance that rises monotonically -- regime, not skill\n"
+                "- an edge that exists only versus the weakest benchmark\n"
+                "- headline driven by one knob (check the target-vol sweep)\n"
+                "- results that flip inside a proxy's plausible range\n"
+                "- bootstrap intervals that comfortably contain zero\n\n"
+                "For each finding give a concrete additional test that would settle it. "
+                "If the result genuinely survives, say so -- a critic that always condemns "
+                "is noise."},
+        ]
+        block = _precedent_block(precedent)
+        if block:
+            content.append(block)
+        return self._call(system=shared_system(), messages=[{"role": "user", "content": content}])
 
 
 class LibrarianAgent(Agent):

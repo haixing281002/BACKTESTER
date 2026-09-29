@@ -56,6 +56,14 @@ class LibraryEntry:
     lessons: List[str] = field(default_factory=list)
     reuse_notes: List[str] = field(default_factory=list)
     reviewer: str = ""
+    # Per-agent-role notes (e.g. "card_drafter", "ambiguity_critic",
+    # "data_mapper", "template_matcher", "results_critic", "triage"),
+    # separate from the flat `lessons` list so a FUTURE run of the SAME
+    # role can query precedent specific to its own job -- see
+    # StrategyLibrary.relevant_precedent(). Written by ros/agents/
+    # orchestrator.py (advisory, pre-Gate-B entries) and, where a stage
+    # produces one, by run_pipeline.py's governed Step 08 write.
+    stage_notes: Dict[str, List[str]] = field(default_factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
@@ -192,6 +200,39 @@ class StrategyLibrary:
             "cosine_threshold": thr,
             "matches": sorted(hits, key=lambda h: -h["cosine"])[:10],
         }
+
+    def relevant_precedent(self, role: str, factor_fingerprint: Optional[Dict[str, float]] = None,
+                           card_id_prefix: Optional[str] = None, k: int = 5,
+                           threshold: float = 0.75) -> List[Dict[str, Any]]:
+        """Past `stage_notes[role]` entries a `ros/agents` Agent of that same
+        role can be shown BEFORE it acts -- the read side of the memory loop.
+        This is how an agent "gets better with time" in this repo: not by
+        any weight changing, but by being handed what the same stage caught
+        on similar work before. It is always informational -- callers pass
+        it into a prompt as extra context, never as something that adjusts
+        a threshold or substitutes for a human decision.
+
+        Ranked by cosine similarity over `factor_fingerprint` when one is
+        given (a run past Step 05, with something to compare -- same
+        machinery as similar_by_fingerprint, just filtered to entries that
+        actually carry a note for this role). Most stages that would want
+        precedent run BEFORE a backtest exists (Stages 00-03, 05), so the
+        usual path has no fingerprint yet: falls back to the k most RECENT
+        entries carrying a note for this role, optionally narrowed to a
+        paper family via `card_id_prefix`."""
+        entries = [e for e in self.all() if (e.get("stage_notes") or {}).get(role)]
+        if card_id_prefix:
+            entries = [e for e in entries if str(e.get("card_id", "")).startswith(card_id_prefix)]
+        if factor_fingerprint:
+            hits = self.similar_by_fingerprint(factor_fingerprint, threshold=threshold)
+            order = {h["entry_id"]: h["cosine"] for h in hits}
+            entries = [e for e in entries if e.get("entry_id") in order]
+            entries.sort(key=lambda e: -order[e["entry_id"]])
+        else:
+            entries.sort(key=lambda e: e.get("created_utc", ""), reverse=True)
+        return [{"entry_id": e.get("entry_id"), "card_id": e.get("card_id"),
+                "outcome": e.get("outcome"), "notes": (e.get("stage_notes") or {}).get(role, [])}
+                for e in entries[:k]]
 
     def summary(self) -> List[Dict[str, Any]]:
         return [{"entry_id": e["entry_id"], "card": e.get("card_id"),

@@ -26,6 +26,7 @@ from __future__ import annotations
 import json
 import os
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from ros.agents import analysts as A
@@ -35,6 +36,7 @@ from ros.cards.schema import CardValidationError, StrategyCard, load_card
 from ros.data.firm_registry import build_firm_registry
 from ros.engine.primitives import list_primitives
 from ros.engine.templates import list_templates
+from ros.governance.library import LibraryEntry, StrategyLibrary, make_entry_id
 
 FUND_CONTEXT = """\
 Long-only Indian equity fund, NIFTY500 universe, benchmarked to NIFTY 500.
@@ -73,6 +75,8 @@ class AgenticResult:
     card_errors: List[str] = field(default_factory=list)
     human_review_queue: List[str] = field(default_factory=list)
     ledger: Optional[UsageLedger] = None
+    stage_notes: Dict[str, List[str]] = field(default_factory=dict)
+    library_entry_path: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
         out: Dict[str, Any] = {}
@@ -86,6 +90,8 @@ class AgenticResult:
             "card_errors": self.card_errors,
             "human_review_queue": self.human_review_queue,
             "llm_usage": self.ledger.to_dict() if self.ledger else None,
+            "stage_notes": self.stage_notes,
+            "library_entry_path": self.library_entry_path,
         })
         return out
 
@@ -94,18 +100,30 @@ class AgenticPipeline:
     """Runs the interpretation half of the pipeline. Computation stays elsewhere."""
 
     def __init__(self, transport: Optional[Transport] = None, mode: str = "auto",
-                 fixtures: Optional[Dict[str, Any]] = None):
+                 fixtures: Optional[Dict[str, Any]] = None,
+                 library: Optional[StrategyLibrary] = None):
         self.ledger = UsageLedger()
         self.transport = transport or build_transport(mode, fixtures)
         self.registry = build_firm_registry()
+        # The read/write ends of the "agents get better with time" loop:
+        # each stage below fetches relevant_precedent() for its own role
+        # before it acts, and run_interpretation() banks what THIS run
+        # found so the next paper's agents can draw on it. See
+        # ros/governance/library.py's own docstring on relevant_precedent
+        # for why this is informational-only, never decision-making.
+        self.library = library or StrategyLibrary()
 
     def _agent(self, cls):
         return cls(self.transport, self.ledger)
 
+    def _precedent(self, role: str, card_id_prefix: Optional[str] = None) -> List[Dict[str, Any]]:
+        return self.library.relevant_precedent(role, card_id_prefix=card_id_prefix)
+
     # ------------------------------------------------------------------
     def triage(self, title: str, abstract: str) -> S.TriageVerdict:
         """Step 00. Cheap screen so Opus only reads what survives."""
-        return self._agent(A.TriageAgent).run(title, abstract)
+        return self._agent(A.TriageAgent).run(
+            title, abstract, precedent=self._precedent("triage"))
 
     def analyse_paper(self, pdf_path: str) -> S.PaperAnalysis:
         """Step 01. Read the rendered document."""
@@ -118,24 +136,29 @@ class AgenticPipeline:
             registry_names=self.registry.names(),
             templates=list_templates(),
             primitives=list_primitives(),
-            fund_context=FUND_CONTEXT)
+            fund_context=FUND_CONTEXT,
+            precedent=self._precedent("card_drafter"))
 
     def critique_card(self, pdf_path: str, proposal: S.CardProposal) -> S.AmbiguityReport:
         """Step 02, adversarial second pass."""
-        return self._agent(A.AmbiguityCriticAgent).run(pdf_path, proposal)
+        return self._agent(A.AmbiguityCriticAgent).run(
+            pdf_path, proposal, precedent=self._precedent("ambiguity_critic"))
 
     def map_data(self, analysis: S.PaperAnalysis) -> S.FeasibilityMapping:
         """Step 03, advisory. The deterministic gate still decides."""
         return self._agent(A.DataMapperAgent).run(
             [r.model_dump() for r in analysis.data_requirements],
-            self.registry.to_dict())
+            self.registry.to_dict(),
+            precedent=self._precedent("data_mapper"))
 
     def match_template(self, analysis: S.PaperAnalysis, assets: List[str]) -> S.TemplateMatch:
         return self._agent(A.TemplateMatcherAgent).run(
-            analysis, list_templates(), TEMPLATE_DOCS, assets)
+            analysis, list_templates(), TEMPLATE_DOCS, assets,
+            precedent=self._precedent("template_matcher"))
 
     def critique_results(self, diagnostics: Dict[str, Any], card_summary: str) -> S.ResultsCritique:
-        return self._agent(A.ResultsCriticAgent).run(diagnostics, card_summary)
+        return self._agent(A.ResultsCriticAgent).run(
+            diagnostics, card_summary, precedent=self._precedent("results_critic"))
 
     def consult_library(self, question: str, summaries: List[Dict[str, Any]]) -> S.LibrarianAnswer:
         return self._agent(A.LibrarianAgent).run(question, summaries)
@@ -170,7 +193,81 @@ class AgenticPipeline:
             res.card_errors = [str(exc)]
 
         res.human_review_queue = self._build_review_queue(res)
+        res.stage_notes = self._extract_stage_notes(res)
+        if res.card_valid:
+            res.library_entry_path = self._bank_precedent(res)
         return res
+
+    # ------------------------------------------------------------------
+    @staticmethod
+    def _extract_stage_notes(res: AgenticResult) -> Dict[str, List[str]]:
+        """Deterministic extraction from the agents' own structured output --
+        no extra model call, no freeform summarisation. This is the "code
+        computes" half of the loop: the MODEL already produced findings as
+        Pydantic fields; turning the material ones into short precedent
+        strings is plain Python, same discipline as everywhere else in this
+        repo that a model's structured output feeds a report."""
+        notes: Dict[str, List[str]] = {}
+
+        if res.critique:
+            card_drafter_notes = (
+                [f"missed by first pass: {m}" for m in res.critique.missed_by_first_pass]
+                + [f"material finding on {f.field}: {f.issue}" for f in res.critique.findings
+                   if f.materiality == S.Materiality.high])
+            if card_drafter_notes:
+                notes["card_drafter"] = card_drafter_notes
+
+        if res.data_mapping:
+            proxy_notes = [f"{m.requirement} -> proxy ({m.matched_series}): {m.proxy_risk}"
+                           for m in res.data_mapping.matches
+                           if m.match_type == "proxy" and m.proxy_risk]
+            if proxy_notes:
+                notes["data_mapper"] = proxy_notes
+
+        if res.template_match:
+            if res.template_match.template is None:
+                notes["template_matcher"] = [
+                    f"no registered template fit: {res.template_match.missing_capability}"]
+            else:
+                notes["template_matcher"] = [
+                    f"matched '{res.template_match.template}': {res.template_match.reasoning}"]
+
+        if res.results_critique:
+            crit_notes = [f"{f.severity}: {f.observation} -- {f.why_suspicious}"
+                         for f in res.results_critique.findings
+                         if f.severity in ("blocking", "serious")]
+            if crit_notes:
+                notes["results_critic"] = crit_notes
+
+        if res.triage and not res.triage.relevant and res.triage.reject_reason:
+            notes["triage"] = [f"rejected: {res.triage.reject_reason}"]
+
+        return notes
+
+    def _bank_precedent(self, res: AgenticResult) -> Optional[str]:
+        """Writes a PRELIMINARY library entry (outcome="AGENTIC_DRAFT") so the
+        NEXT similar paper's agents get today's stage_notes as precedent --
+        even though this run stops at Gate A and has no governed Step 08
+        verdict yet. This is a SEPARATE, distinguishable entry from the real
+        one run_pipeline.py writes after Gate B; it never substitutes for
+        it, and outcome="AGENTIC_DRAFT" is how a reader (or
+        relevant_precedent's own caller) tells the two apart."""
+        if not res.stage_notes:
+            return None
+        try:
+            card = load_card(res.card_path)
+        except Exception:   # noqa: BLE001 -- an invalid card has nothing fingerprintable
+            return None
+        eid = make_entry_id(card.paper.id, card.fingerprint())
+        entry = LibraryEntry(
+            entry_id=eid, card_id=card.paper.id, mode=card.intent.mode,
+            created_utc=datetime.now(timezone.utc).isoformat(),
+            card_fingerprint=card.fingerprint(),
+            outcome="AGENTIC_DRAFT",
+            stage_notes=res.stage_notes,
+            reuse_notes=["Written by the agentic interpretation pass (Steps 01-03), "
+                        "before Gate A/B -- advisory precedent only, not a governed verdict."])
+        return self.library.write(entry)
 
     # ------------------------------------------------------------------
     @staticmethod
