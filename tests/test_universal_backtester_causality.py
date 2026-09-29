@@ -117,3 +117,26 @@ def test_engine_shifted_signal_passes_the_tripwire():
     rets = pd.DataFrame(rng.normal(0, 0.01, size=(300, 3)), index=idx, columns=["A", "B", "C"])
     honest_signal = rets.rolling(20).mean().shift(2)  # 1 (engine) + 1 (declared lag)
     assert_causal(honest_signal, rets, tol=0.35, horizons=(0, 1))  # must not raise
+
+
+def test_a_repeated_rebalance_at_an_unchanged_target_costs_nothing_extra():
+    """The three real direct backtest scripts (accord_stock_selection,
+    alquist, asness) all re-evaluate monthly or annually against a real,
+    changing universe -- but when the SAME single name is still the only
+    eligible choice at the next rebalance, no new trading should happen and
+    no new cost should be charged. Verified live once (a single-asset,
+    300-day synthetic run: 14 monthly rebalance dates fired, total cost
+    across the whole run was exactly one half-spread charge); pinned here so
+    a future change to CrossSectional's target_weights can't silently start
+    re-charging cost on a no-op rebalance."""
+    idx = pd.bdate_range("2020-01-01", periods=300)
+    price = pd.DataFrame({"A": 100 * (1.0005 ** np.arange(len(idx)))}, index=idx)
+    membership = pd.DataFrame({"A": True}, index=idx)
+    bt = Backtester(prices=price, assets=["A"], spread_bps=10.0, lag_days=1,
+                    allow_cash=True, membership=membership)
+    alloc = build_allocator("cross_sectional", ["A"], n_hold=1, weighting="equal", min_names=1)
+    res = bt.run(allocator=alloc, rebalance="monthly",
+                 alpha=pd.DataFrame({"A": 1.0}, index=idx), warmup=0)
+    assert len(res.rebalances) > 5, "the test needs several rebalance dates to actually fire"
+    assert res.costs.sum() == pytest.approx(res.costs.loc[res.rebalances[0]], abs=1e-12)
+    assert (res.costs.loc[res.rebalances[1:]] == 0.0).all()
