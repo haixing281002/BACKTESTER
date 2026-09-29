@@ -16,6 +16,7 @@ inputs produce the same buckets and the same backtest results every time.
 """
 from __future__ import annotations
 
+import os
 from typing import Dict, List, Optional
 
 import numpy as np
@@ -137,13 +138,19 @@ def write_decile_membership_log(
 
 
 def write_decile_summary_workbook(path: str, summary: pd.DataFrame,
-                                  benchmark_rows: Optional[pd.DataFrame] = None) -> None:
+                                  benchmark_rows: Optional[pd.DataFrame] = None,
+                                  chart_paths: Optional[List[str]] = None) -> None:
     """A plain, readable workbook version of the decile summary table --
-    the same numbers as the CSV, formatted as percentages, so this can sit
-    next to the SE Return Analytics workbook without needing Excel formulas
-    of its own (the underlying numbers are already fully computed)."""
+    the same numbers as the CSV, formatted as percentages -- PLUS every
+    decile chart embedded as its own sheet, so the whole decile deep-dive
+    (numbers and pictures both) lives in one file a person can open once,
+    rather than a CSV plus a folder of loose PNGs they have to match up
+    themselves. `chart_paths` is the list save_decile_charts() returns;
+    pass it straight through -- a missing/unreadable image is skipped
+    with a note on its sheet, never silently dropped without a trace."""
     import openpyxl
     from openpyxl.styles import Font
+    from openpyxl.drawing.image import Image as XLImage
 
     wb = openpyxl.Workbook()
     ws = wb.active
@@ -170,5 +177,15 @@ def write_decile_summary_workbook(path: str, summary: pd.DataFrame,
 
     for col in range(1, len(headers) + 1):
         ws.column_dimensions[openpyxl.utils.get_column_letter(col)].width = 12
+
+    for chart_path in (chart_paths or []):
+        sheet_name = os.path.splitext(os.path.basename(chart_path))[0]
+        sheet_name = sheet_name.replace("_", " ")[:31]  # Excel's own 31-char sheet-name limit
+        chart_ws = wb.create_sheet(title=sheet_name)
+        if os.path.exists(chart_path):
+            img = XLImage(chart_path)
+            chart_ws.add_image(img, "A1")
+        else:
+            chart_ws["A1"] = f"Chart file not found at write time: {chart_path}"
 
     wb.save(path)

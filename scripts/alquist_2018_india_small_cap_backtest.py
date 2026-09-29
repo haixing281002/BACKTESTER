@@ -36,6 +36,7 @@ workbook the fund actually cares about matching.
 """
 from __future__ import annotations
 
+import argparse
 import os
 import sys
 
@@ -63,6 +64,7 @@ from universal_backtester.decile_analysis import (
     write_decile_membership_log, write_decile_summary_workbook,
 )
 from universal_backtester.metrics import cagr as _cagr, ann_vol as _ann_vol, max_drawdown as _mdd
+from universal_backtester.checkpoint import checkpoint
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PRICE_PATH = os.path.join(REPO_ROOT, "data", "raw", "stocks", "price_data_till_03aug2026.xlsx")
@@ -158,6 +160,12 @@ def run_decile_leg(price_window, assets, eligible, mcap_daily, ascending, name, 
 
 
 def main():
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--auto-approve", action="store_true",
+                    help="Skip every interactive stage pause and run straight through.")
+    args = ap.parse_args()
+    produced: list = []   # absolute local paths, shown at every checkpoint below
+
     print("Card: alquist_2018_india_small_cap_tilt_adaptation")
     print(f"Backtest window (hardcoded, accord_data.BACKTEST_START/END): "
           f"{BACKTEST_START.date()} -> {BACKTEST_END.date()}")
@@ -214,6 +222,10 @@ def main():
         bench_closes[disp_name] = idx_df[col].reindex(price_window.index).ffill()
         print(f"  {disp_name}: loaded")
 
+    if not checkpoint("STAGE 1 OF 4 -- DATA LOADED, UNIVERSE + BENCHMARKS BUILT", produced,
+                      auto_approve=args.auto_approve):
+        return
+
     print(f"\nRunning SMALL (bottom {DECILE:.0%} by market cap, tradable)...")
     bt_small, alloc_small, alpha_small = run_decile_leg(
         price_window, assets, eligible, mcap_daily, ascending=True,
@@ -268,6 +280,7 @@ def main():
     summary_path = os.path.join(OUTPUT_DIR, "alquist_2018_india_small_cap_comparison.csv")
     summary.to_csv(summary_path, index=False)
     print(f"\nMulti-benchmark comparison written to: {summary_path}")
+    produced.append(summary_path)
 
     # THE ANSWER TO "which stocks are actually in SMALL and BIG": one row
     # per (rebalance date, held Accord Code, weight), read directly off
@@ -282,19 +295,24 @@ def main():
         print(f"{label} holdings log written to: {holdings_path} "
               f"({holdings['date'].nunique()} rebalance dates, "
               f"{holdings.groupby('date').size().mean():.0f} names/rebalance on average)")
+        produced.append(holdings_path)
 
     print("\nWriting chart set (SMALL vs BIG vs benchmarks)...")
     chart_series = {"SMALL (bottom decile, tradable)": live_small,
                     "BIG (top decile, reference only)": live_big}
     for disp_name, close in bench_closes.items():
         chart_series[disp_name] = close.reindex(live_small.index).dropna()
-    save_backtest_charts(
+    produced += save_backtest_charts(
         chart_series, outdir=os.path.join(OUTPUT_DIR, "charts"),
         tag="alquist_2018_india_small_cap",
         weights=result_small.weights.loc[live_small.index],
         weights_name="SMALL (bottom decile)",
         cash_weight=result_small.cash_weight.loc[live_small.index],
     )
+
+    if not checkpoint("STAGE 2 OF 4 -- SMALL/BIG BACKTESTS + CHARTS WRITTEN", produced,
+                      auto_approve=args.auto_approve):
+        return
 
     # ---------------- THE FULL NIFTY 500 DECILE DEEP-DIVE ----------------
     # SMALL/BIG above are decile 1 and decile 10 of this same split -- this
@@ -329,10 +347,7 @@ def main():
     pd.concat([decile_summary, bench_row], ignore_index=True, sort=False).to_csv(
         decile_summary_csv, index=False)
     print(f"Decile summary (CSV) written to: {decile_summary_csv}")
-
-    decile_summary_xlsx = os.path.join(OUTPUT_DIR, "alquist_2018_india_decile_summary.xlsx")
-    write_decile_summary_workbook(decile_summary_xlsx, decile_summary, benchmark_rows=bench_row)
-    print(f"Decile summary (workbook) written to: {decile_summary_xlsx}")
+    produced.append(decile_summary_csv)
 
     live_rebalances = result_small.rebalances[
         (result_small.rebalances >= BACKTEST_START) & (result_small.rebalances <= BACKTEST_END)]
@@ -342,12 +357,27 @@ def main():
     print(f"Decile membership (the universe, stock by stock) written to: {decile_membership_path} "
           f"({membership_log['accord_code'].nunique()} distinct names across "
           f"{membership_log['date'].nunique()} rebalance dates)")
+    produced.append(decile_membership_path)
 
-    save_decile_charts(
+    # Charts are generated BEFORE the workbook, so their PNGs can be embedded
+    # as sheets in the SAME decile Excel file -- one file with the numbers
+    # and the pictures together, not a spreadsheet plus a folder of loose PNGs.
+    decile_chart_paths = save_decile_charts(
         live_deciles, decile_summary, outdir=os.path.join(OUTPUT_DIR, "charts"),
         tag="alquist_2018_india_decile", benchmark=bench_primary_live,
         benchmark_name=PRIMARY_BENCHMARK, benchmark_cagr=bench_cagr, benchmark_sharpe=bench_sharpe,
     )
+
+    decile_summary_xlsx = os.path.join(OUTPUT_DIR, "alquist_2018_india_decile_summary.xlsx")
+    write_decile_summary_workbook(decile_summary_xlsx, decile_summary, benchmark_rows=bench_row,
+                                  chart_paths=decile_chart_paths)
+    print(f"Decile summary workbook (numbers + all {len(decile_chart_paths)} charts, "
+          f"one file) written to: {decile_summary_xlsx}")
+    produced.append(decile_summary_xlsx)
+
+    if not checkpoint("STAGE 3 OF 4 -- DECILE DEEP-DIVE (SUMMARY + CHARTS + MEMBERSHIP) COMPLETE",
+                      produced, auto_approve=args.auto_approve):
+        return
 
     boot = bootstrap_sharpe_ci(ret_small, block_size=20, n_resamples=1000, seed=0)
     print(f"\nSMALL Sharpe ratio, 90% block-bootstrap CI: [{boot.ci_low:.2f}, {boot.ci_high:.2f}] "
@@ -379,6 +409,9 @@ def main():
                                   strategy_name="India Small-Cap SMALL",
                                   benchmark_name=PRIMARY_BENCHMARK)
     print(f"\nSE Return Analytics (SMALL vs {PRIMARY_BENCHMARK}) written to:\n  {xlsx_path}\n  {csv_path}")
+    produced += [xlsx_path, csv_path]
+
+    checkpoint("STAGE 4 OF 4 -- ALL OUTPUTS WRITTEN", produced, auto_approve=args.auto_approve)
 
 
 if __name__ == "__main__":
