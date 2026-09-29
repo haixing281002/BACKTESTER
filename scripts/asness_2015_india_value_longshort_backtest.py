@@ -48,7 +48,10 @@ from universal_backtester.data import load_banner_workbook, write_holdings_log
 from universal_backtester.engine import Backtester, assert_causal, LookaheadError
 from universal_backtester.allocators import build_allocator
 from universal_backtester.tearsheet import compute_tearsheet, render_tearsheet
-from universal_backtester.validation import bootstrap_sharpe_ci, deflated_sharpe_from_returns
+from universal_backtester.validation import (
+    bootstrap_sharpe_ci, deflated_sharpe_from_returns, oos_stability_summary,
+    parameter_sensitivity_sweep, sensitivity_verdict, walk_forward_windows,
+)
 from universal_backtester.charting import save_backtest_charts, save_decile_charts
 from universal_backtester.metrics import cagr as _cagr, ann_vol as _ann_vol, max_drawdown as _mdd
 from universal_backtester.excel_tearsheet import (
@@ -390,6 +393,43 @@ def main():
           f"(point estimate {boot.point_estimate:.2f}, {boot.fraction_positive:.0%} of resamples positive)")
     dsr = deflated_sharpe_from_returns(ret_ls, n_trials=1, trial_sharpe_std=0.3)
     print(f"Deflated Sharpe Ratio (n_trials=1, per this card's own n_configs_tried convention): {dsr:.2f}")
+
+    print("\nOUT-OF-SAMPLE STABILITY (long-short book, anchored walk-forward windows -- deflated "
+          "Sharpe guards against picking the best of many trials, not against this: one fixed "
+          "construction whose edge might just be a historical artefact of part of the sample)...")
+    windows = walk_forward_windows(live_ls.index, n_folds=4, min_train_years=1.0)
+    oos = oos_stability_summary(live_ls, ret_ls, windows, min_obs=60)
+    print(oos.to_string(index=False) if not oos.empty else
+         "  not enough history in the reported window for walk-forward folds")
+
+    def _rerun_with_quantile(quantile):
+        bt = Backtester(prices=price_window, assets=assets, spread_bps=SPREAD_BPS,
+                        lag_days=LAG_DAYS, allow_cash=True, membership=eligible,
+                        allow_short=True, max_gross_exposure=1.0, short_borrow_bps=BORROW_BPS)
+        alloc = build_allocator("cross_sectional_long_short", assets, quantile=quantile,
+                                weighting="equal", long_weight=LONG_WEIGHT,
+                                short_weight=SHORT_WEIGHT, min_names=MIN_NAMES)
+        res = bt.run(allocator=alloc, rebalance=REBALANCE, alpha=composite,
+                     name=f"sensitivity_quantile_{quantile}", warmup=WARMUP_BUFFER_DAYS)
+        v = to_live(res.value)
+        r = v.pct_change(fill_method=None).fillna(0.0)
+        r.iloc[0] = 0.0
+        return v, r
+
+    quantile_grid = sorted(set([0.10, 0.20, 0.30, 0.40, QUANTILE]))
+    print(f"\nPARAMETER SENSITIVITY SWEEP (long/short quantile cut, chosen={QUANTILE}, "
+          f"grid={quantile_grid})...")
+    sweep = parameter_sensitivity_sweep(_rerun_with_quantile, "quantile", quantile_grid)
+    print(sweep.to_string(index=False))
+    verdict = sensitivity_verdict(sweep, QUANTILE, "quantile")
+    print(f"  {verdict}")
+
+    oos_path = os.path.join(OUTPUT_DIR, "asness_2015_india_value_longshort_oos_stability.csv")
+    oos.to_csv(oos_path, index=False)
+    produced.append(oos_path)
+    sensitivity_path = os.path.join(OUTPUT_DIR, "asness_2015_india_value_longshort_sensitivity_sweep.csv")
+    sweep.to_csv(sensitivity_path, index=False)
+    produced.append(sensitivity_path)
 
     print(f"\nFull tearsheet -- long-short book vs {PRIMARY_BENCHMARK}:")
     class _Wrapped:

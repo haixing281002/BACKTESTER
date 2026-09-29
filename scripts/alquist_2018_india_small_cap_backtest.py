@@ -57,7 +57,10 @@ from universal_backtester.tearsheet import compute_tearsheet
 from universal_backtester.excel_tearsheet import (
     write_se_return_analytics_workbook, write_se_return_analytics_csv,
 )
-from universal_backtester.validation import bootstrap_sharpe_ci, deflated_sharpe_from_returns
+from universal_backtester.validation import (
+    bootstrap_sharpe_ci, deflated_sharpe_from_returns, oos_stability_summary,
+    parameter_sensitivity_sweep, sensitivity_verdict, walk_forward_windows,
+)
 from universal_backtester.charting import save_backtest_charts, save_decile_charts
 from universal_backtester.decile_analysis import (
     compute_decile_membership, run_decile_backtests, summarize_deciles,
@@ -426,6 +429,41 @@ def main():
           f"(point estimate {boot.point_estimate:.2f}, {boot.fraction_positive:.0%} of resamples positive)")
     dsr = deflated_sharpe_from_returns(ret_small, n_trials=6, trial_sharpe_std=0.3)
     print(f"Deflated Sharpe Ratio (n_trials=6, per this card's own n_configs_tried note): {dsr:.2f}")
+
+    print("\nOUT-OF-SAMPLE STABILITY (SMALL leg, anchored walk-forward windows -- deflated "
+          "Sharpe guards against picking the best of many trials, not against this: one fixed "
+          "construction whose edge might just be a historical artefact of part of the sample)...")
+    windows = walk_forward_windows(live_small.index, n_folds=4, min_train_years=1.0)
+    oos = oos_stability_summary(live_small, ret_small, windows, min_obs=60)
+    print(oos.to_string(index=False) if not oos.empty else
+         "  not enough history in the reported window for walk-forward folds")
+
+    def _rerun_with_decile(decile):
+        bt = Backtester(prices=price_window, assets=assets, spread_bps=SPREAD_BPS,
+                        lag_days=LAG_DAYS, allow_cash=True, membership=eligible)
+        alloc = build_allocator("cross_sectional", assets, quantile=decile, weighting="equal",
+                                ascending=True, min_names=MIN_NAMES)
+        res = bt.run(allocator=alloc, rebalance=REBALANCE, alpha=mcap_daily,
+                     name=f"sensitivity_decile_{decile}", warmup=WARMUP_BUFFER_DAYS)
+        v = to_live(res.value)
+        r = v.pct_change(fill_method=None).fillna(0.0)
+        r.iloc[0] = 0.0
+        return v, r
+
+    decile_grid = sorted(set([0.05, 0.10, 0.15, 0.20, 0.30, DECILE]))
+    print(f"\nPARAMETER SENSITIVITY SWEEP (SMALL leg's decile cut, chosen={DECILE}, "
+          f"grid={decile_grid})...")
+    sweep = parameter_sensitivity_sweep(_rerun_with_decile, "decile", decile_grid)
+    print(sweep.to_string(index=False))
+    verdict = sensitivity_verdict(sweep, DECILE, "decile")
+    print(f"  {verdict}")
+
+    oos_path = os.path.join(OUTPUT_DIR, "alquist_2018_india_small_cap_oos_stability.csv")
+    oos.to_csv(oos_path, index=False)
+    produced.append(oos_path)
+    sensitivity_path = os.path.join(OUTPUT_DIR, "alquist_2018_india_small_cap_sensitivity_sweep.csv")
+    sweep.to_csv(sensitivity_path, index=False)
+    produced.append(sensitivity_path)
 
     print(f"\nFull SE Return Analytics tearsheet -- SMALL vs {PRIMARY_BENCHMARK}:")
     class _Wrapped:

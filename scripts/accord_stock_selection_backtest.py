@@ -91,7 +91,10 @@ from universal_backtester.tearsheet import compute_tearsheet, render_tearsheet
 from universal_backtester.excel_tearsheet import (
     write_se_return_analytics_workbook, write_se_return_analytics_csv,
 )
-from universal_backtester.validation import bootstrap_sharpe_ci, deflated_sharpe_from_returns
+from universal_backtester.validation import (
+    bootstrap_sharpe_ci, deflated_sharpe_from_returns, oos_stability_summary,
+    parameter_sensitivity_sweep, sensitivity_verdict, walk_forward_windows,
+)
 from universal_backtester.charting import save_backtest_charts
 from universal_backtester.checkpoint import checkpoint
 
@@ -424,6 +427,45 @@ def main():
     monthly_bench = (1 + bench_live.pct_change(fill_method=None).fillna(0.0)).resample("ME").prod() - 1
     common = monthly_strategy.index.intersection(monthly_bench.index)
     monthly_strategy, monthly_bench = monthly_strategy.loc[common], monthly_bench.loc[common]
+
+    print("\nOUT-OF-SAMPLE STABILITY (anchored walk-forward windows -- deflated Sharpe guards "
+          "against picking the best of many trials, not against this: one fixed strategy whose "
+          "edge might just be a historical artefact of part of the sample)...")
+    windows = walk_forward_windows(live.index, n_folds=4, min_train_years=1.0)
+    oos = oos_stability_summary(live, live_returns, windows, min_obs=60)
+    print(oos.to_string(index=False) if not oos.empty else
+         "  not enough history in the reported window for walk-forward folds")
+
+    def _rerun_with_lookback(lookback):
+        a = momentum_signal(price_window, lookback, STRATEGY["momentum_skip_days"])
+        b = Backtester(prices=price_window, assets=assets, spread_bps=SPREAD_BPS,
+                       lag_days=LAG_DAYS, allow_cash=True, membership=membership)
+        al = build_allocator("cross_sectional", assets, n_hold=n_hold, weighting=weighting,
+                             max_weight=(STRATEGY["max_weight"] if weighting == "mcap" else None),
+                             min_names=n_hold, ascending=False)
+        res = b.run(allocator=al, rebalance=REBALANCE, alpha=a, vols=weighting_frame,
+                    name=f"sensitivity_lookback_{lookback}",
+                    warmup=lookback + STRATEGY["momentum_skip_days"] + 5)
+        v = res.value.loc[(res.value.index >= BACKTEST_START) & (res.value.index <= BACKTEST_END)]
+        r = v.pct_change(fill_method=None).fillna(0.0)
+        r.iloc[0] = 0.0
+        return v, r
+
+    chosen_lookback = STRATEGY["momentum_lookback_days"]
+    lookback_grid = sorted(set([126, 189, 252, 315, chosen_lookback]))
+    print(f"\nPARAMETER SENSITIVITY SWEEP (momentum_lookback_days, chosen={chosen_lookback}, "
+          f"grid={lookback_grid})...")
+    sweep = parameter_sensitivity_sweep(_rerun_with_lookback, "momentum_lookback_days", lookback_grid)
+    print(sweep.to_string(index=False))
+    verdict = sensitivity_verdict(sweep, chosen_lookback, "momentum_lookback_days")
+    print(f"  {verdict}")
+
+    oos_path = os.path.join(OUTPUT_DIR, "accord_stock_selection_oos_stability.csv")
+    oos.to_csv(oos_path, index=False)
+    produced.append(oos_path)
+    sensitivity_path = os.path.join(OUTPUT_DIR, "accord_stock_selection_sensitivity_sweep.csv")
+    sweep.to_csv(sensitivity_path, index=False)
+    produced.append(sensitivity_path)
 
     if not checkpoint("STAGE 2 OF 3 -- BACKTEST EXECUTED, TEARSHEET COMPUTED", produced,
                       auto_approve=args.auto_approve):

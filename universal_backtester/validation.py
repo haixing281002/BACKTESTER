@@ -23,10 +23,12 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from typing import Optional
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 import numpy as np
 import pandas as pd
+
+from universal_backtester.metrics import cagr, ann_vol, max_drawdown, sharpe
 
 ANN = 252
 _EULER_GAMMA = 0.5772156649015329
@@ -193,3 +195,115 @@ def deflated_sharpe_from_returns(returns: pd.Series, n_trials: int = 1,
     return deflated_sharpe_ratio(sr, n_obs=len(r), n_trials=n_trials,
                                  trial_sharpe_std=trial_sharpe_std / math.sqrt(ann),
                                  skew=skew, kurtosis=kurt)
+
+
+# ---------------------------------------------------------------------------
+# Overfitting checks the deflated Sharpe ratio does NOT cover.
+#
+# Deflated Sharpe and the library's trial-budget tracking (StrategyLibrary.
+# trials_for_family / prior_trials) guard SELECTION overfitting: reporting
+# the best of many trials. They say nothing about IN-SAMPLE PARAMETER
+# overfitting -- a single strategy whose hyperparameters were implicitly
+# chosen by having already seen how the full-sample backtest turned out.
+# The two checks below are the ones that actually catch that:
+#
+#   - walk_forward_windows / oos_stability_summary: does the SAME, ALREADY-
+#     FIXED strategy keep working in later, anchored out-of-sample windows,
+#     or did its edge live in one historical stretch?
+#   - parameter_sensitivity_sweep: does performance form a RIDGE across
+#     nearby hyperparameter values, or a SPIKE at exactly the one chosen?
+#     A spike is the classic in-sample-fit signature -- a real mechanism
+#     degrades gracefully as a parameter moves off its optimum; a fitted
+#     coincidence does not.
+#
+# Neither proves a strategy is sound. Both make it possible to tell "this
+# looks good" apart from "this looks good only at the exact knob settings
+# someone had already seen the answer for."
+# ---------------------------------------------------------------------------
+def walk_forward_windows(index: pd.DatetimeIndex, n_folds: int = 4,
+                         min_train_years: float = 3.0) -> List[Tuple[pd.Timestamp, pd.Timestamp]]:
+    """Anchored (expanding-window) out-of-sample test windows.
+
+    Anchored, not rolling: a strategy re-fit on a short rolling window is a
+    different strategy from the one under test. This only carves up the
+    reporting window -- it does not touch the strategy's parameters, which
+    is exactly why it must be paired with parameter_sensitivity_sweep()
+    rather than trusted alone: it catches an edge that decayed over time,
+    not one that was fitted to the full sample in the first place.
+    """
+    start = index[0]
+    first_test = start + pd.DateOffset(years=min_train_years)
+    if first_test >= index[-1]:
+        return []
+    edges = pd.date_range(first_test, index[-1], periods=n_folds + 1)
+    return [(edges[i], edges[i + 1]) for i in range(n_folds)]
+
+
+def oos_stability_summary(value: pd.Series, returns: pd.Series,
+                          windows: Sequence[Tuple[pd.Timestamp, pd.Timestamp]],
+                          rf_daily: Optional[pd.Series] = None,
+                          min_obs: int = 60) -> pd.DataFrame:
+    """One row per anchored window: cagr / vol / sharpe / max_dd computed
+    ONLY on that slice. A strategy whose Sharpe is positive in the full
+    sample but negative in the last window or two is telling you its edge
+    is a historical artefact of the earlier period, not something live
+    today."""
+    rows = []
+    for lo, hi in windows:
+        v, r = value.loc[lo:hi], returns.loc[lo:hi]
+        if len(v) < min_obs:
+            continue
+        rows.append({"window": f"{lo.date()}..{hi.date()}", "n_obs": len(v),
+                     "cagr": cagr(v), "vol": ann_vol(r),
+                     "sharpe": sharpe(v, r, rf_daily), "max_dd": max_drawdown(v)})
+    return pd.DataFrame(rows)
+
+
+def parameter_sensitivity_sweep(run_one, param_name: str,
+                                grid: Sequence[Any]) -> pd.DataFrame:
+    """Reruns `run_one(value)` -> (value_series, returns_series) across a
+    hyperparameter grid and reports cagr/vol/sharpe/max_dd at each point.
+
+    `run_one` is the caller's own closure (it already knows the fixed
+    universe, membership, costs, everything except the one parameter being
+    swept) -- this function only owns running the grid and shaping the
+    table, never the backtest mechanics themselves, so it works unchanged
+    against either engine's BacktestResult shape.
+    """
+    rows = []
+    for val in grid:
+        v, r = run_one(val)
+        rows.append({param_name: val, "cagr": cagr(v), "vol": ann_vol(r),
+                     "sharpe": sharpe(v, r), "max_dd": max_drawdown(v)})
+    return pd.DataFrame(rows)
+
+
+def sensitivity_verdict(sweep: pd.DataFrame, chosen_value: Any, param_name: str,
+                        sharpe_drop_threshold: float = 0.5) -> str:
+    """Plain-English read of a parameter_sensitivity_sweep() table: does
+    Sharpe stay within `sharpe_drop_threshold` of the chosen value's Sharpe
+    across the WHOLE swept grid (a ridge -- the mechanism is robust to this
+    choice), or does it fall off a cliff away from the chosen value (a
+    spike -- the strongest signature of in-sample parameter fitting)?
+    This is a plain deterministic read of numbers already computed, not a
+    judgement call -- code reports the shape, a human or the results-critic
+    agent still decides what it means for the card."""
+    if sweep.empty or param_name not in sweep.columns:
+        return "sweep produced no rows -- cannot assess"
+    chosen_row = sweep.loc[sweep[param_name] == chosen_value]
+    if chosen_row.empty:
+        return f"chosen value {chosen_value} not in the swept grid -- cannot assess"
+    chosen_sharpe = float(chosen_row["sharpe"].iloc[0])
+    if not np.isfinite(chosen_sharpe):
+        return "chosen value's own Sharpe is not finite -- cannot assess"
+    others = sweep.loc[sweep[param_name] != chosen_value, "sharpe"].dropna()
+    if others.empty:
+        return "only one grid point -- not a sweep, cannot assess"
+    worst_drop = chosen_sharpe - others.min()
+    if worst_drop > sharpe_drop_threshold:
+        return (f"SPIKE: Sharpe falls by {worst_drop:.2f} moving off {param_name}="
+                f"{chosen_value} to the worst nearby value -- the classic signature "
+                f"of a parameter fitted to this exact sample, not a robust mechanism.")
+    return (f"RIDGE: Sharpe stays within {worst_drop:.2f} of the chosen "
+           f"{param_name}={chosen_value} across the whole swept grid -- performance "
+           f"is not narrowly dependent on this exact value.")
