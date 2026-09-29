@@ -113,6 +113,19 @@ def main(argv=None) -> int:
     for i, q in enumerate(res.human_review_queue, 1):
         print(f"  {i:>2}. {q}")
 
+    print(f"\nMEMORY  |  precedent consulted, notes banked for next time")
+    print("  Nothing here changed a threshold or a decision -- it is context an agent read "
+          "before acting, and a note the next similar paper's agents can read in turn.")
+    if res.stage_notes:
+        for role, notes in res.stage_notes.items():
+            print(f"  {role}: {len(notes)} note(s) banked")
+    else:
+        print("  no stage produced a note worth banking on this run")
+    if res.library_entry_path:
+        print(f"  preliminary library entry (outcome=AGENTIC_DRAFT): {res.library_entry_path}")
+        print("  NOTE: this is advisory, pre-Gate-A/B -- it is NOT the governed Step 08 verdict "
+              "run_pipeline.py writes after Gate B.")
+
     usage = res.ledger.totals()
     print(f"\nLLM USAGE")
     print(f"  calls {usage['n_calls']}   in {usage['input_tokens']:,}   "
