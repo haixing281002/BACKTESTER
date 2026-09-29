@@ -141,13 +141,15 @@ def test_long_only_caveats_reach_the_human(registry):
 # ---------------------------------------------------------------------------
 # A long-short paper cannot enter a long-only fund unexamined
 # ---------------------------------------------------------------------------
-def test_a_long_short_strategy_must_state_its_adaptation():
+def test_a_long_short_strategy_no_longer_requires_a_stated_adaptation():
+    # 2026-09-28: this fund can short, so is_long_short=True with both legs
+    # intact (long_only_adaptation="") is a normal, valid card now.
     st = StrategyReconstruction(
         signal_name="s", signal_definition="rank on B/M, long top decile, "
                                            "short bottom decile",
         is_long_short=True, long_only_adaptation="", engine_template="fixed_weight")
     errs = st.validate()
-    assert any("cannot short" in e for e in errs), errs
+    assert not any("cannot short" in e for e in errs), errs
 
 
 def test_a_stated_adaptation_passes():

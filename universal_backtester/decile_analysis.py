@@ -139,7 +139,10 @@ def write_decile_membership_log(
 
 def write_decile_summary_workbook(path: str, summary: pd.DataFrame,
                                   benchmark_rows: Optional[pd.DataFrame] = None,
-                                  chart_paths: Optional[List[str]] = None) -> None:
+                                  chart_paths: Optional[List[str]] = None,
+                                  decile_definition_note: str = "Decile 1 = smallest, decile 10 = "
+                                  "largest, by whatever this run ranked on (see the script that "
+                                  "produced this file for the exact signal).") -> None:
     """A plain, readable workbook version of the decile summary table --
     the same numbers as the CSV, formatted as percentages -- PLUS every
     decile chart embedded as its own sheet, so the whole decile deep-dive
@@ -147,9 +150,15 @@ def write_decile_summary_workbook(path: str, summary: pd.DataFrame,
     rather than a CSV plus a folder of loose PNGs they have to match up
     themselves. `chart_paths` is the list save_decile_charts() returns;
     pass it straight through -- a missing/unreadable image is skipped
-    with a note on its sheet, never silently dropped without a trace."""
+    with a note on its sheet, never silently dropped without a trace.
+
+    `decile_definition_note` is shown verbatim in the workbook's own header
+    row -- this function is shared by every decile-producing script (market
+    cap, composite value score, ...), so the direction of "decile 1" is
+    never assumed here; the caller states it, because only the caller
+    knows what it actually ranked on."""
     import openpyxl
-    from openpyxl.styles import Font
+    from openpyxl.styles import Font, Alignment
     from openpyxl.drawing.image import Image as XLImage
 
     wb = openpyxl.Workbook()
@@ -160,13 +169,21 @@ def write_decile_summary_workbook(path: str, summary: pd.DataFrame,
     if benchmark_rows is not None and not benchmark_rows.empty:
         combined = pd.concat([summary, benchmark_rows], ignore_index=True, sort=False)
 
+    ws.cell(row=1, column=1,
+            value=f"{decile_definition_note} cagr/vol/max_dd are fractions formatted as %; "
+                  f"sharpe is a plain ratio, not a percent.")
+    ws.cell(row=1, column=1).font = Font(italic=True, size=9)
+    ws.cell(row=1, column=1).alignment = Alignment(wrap_text=True)
+    ws.row_dimensions[1].height = 28
+    ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=8)
+
     headers = ["decile", "start", "end", "n_obs", "cagr", "vol", "sharpe", "max_dd"]
     for col, h in enumerate(headers, start=1):
-        cell = ws.cell(row=1, column=col, value=h)
+        cell = ws.cell(row=2, column=col, value=h)
         cell.font = Font(bold=True)
 
     pct_cols = {"cagr", "vol", "max_dd"}
-    for r, row in enumerate(combined.to_dict("records"), start=2):
+    for r, row in enumerate(combined.to_dict("records"), start=3):
         for c, h in enumerate(headers, start=1):
             val = row.get(h, "")
             cell = ws.cell(row=r, column=c, value=val)
@@ -177,6 +194,7 @@ def write_decile_summary_workbook(path: str, summary: pd.DataFrame,
 
     for col in range(1, len(headers) + 1):
         ws.column_dimensions[openpyxl.utils.get_column_letter(col)].width = 12
+    ws.freeze_panes = "A3"
 
     for chart_path in (chart_paths or []):
         sheet_name = os.path.splitext(os.path.basename(chart_path))[0]

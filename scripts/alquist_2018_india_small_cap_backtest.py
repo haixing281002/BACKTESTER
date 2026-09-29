@@ -369,8 +369,10 @@ def main():
     )
 
     decile_summary_xlsx = os.path.join(OUTPUT_DIR, "alquist_2018_india_decile_summary.xlsx")
-    write_decile_summary_workbook(decile_summary_xlsx, decile_summary, benchmark_rows=bench_row,
-                                  chart_paths=decile_chart_paths)
+    write_decile_summary_workbook(
+        decile_summary_xlsx, decile_summary, benchmark_rows=bench_row,
+        chart_paths=decile_chart_paths,
+        decile_definition_note="Decile 1 = smallest by market cap, decile 10 = largest.")
     print(f"Decile summary workbook (numbers + all {len(decile_chart_paths)} charts, "
           f"one file) written to: {decile_summary_xlsx}")
     produced.append(decile_summary_xlsx)
