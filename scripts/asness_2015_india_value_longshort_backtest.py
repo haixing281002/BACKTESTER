@@ -31,6 +31,7 @@ Recorded here, not silently taken.
 """
 from __future__ import annotations
 
+import argparse
 import os
 import sys
 
@@ -58,6 +59,7 @@ from universal_backtester.decile_analysis import (
     write_decile_membership_log, write_decile_summary_workbook,
 )
 from ros.validation.portfolio import factor_fingerprint
+from universal_backtester.checkpoint import checkpoint
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PRICE_PATH = os.path.join(REPO_ROOT, "data", "raw", "stocks", "price_data_till_03aug2026.xlsx")
@@ -128,6 +130,12 @@ def zscore_cross_section(frame: pd.DataFrame, mask: pd.DataFrame) -> pd.DataFram
 
 
 def main():
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--auto-approve", action="store_true",
+                    help="Skip every interactive stage pause and run straight through.")
+    args = ap.parse_args()
+    produced: list = []   # absolute local paths, shown at every checkpoint below
+
     print("Card: asness_2015_india_value_composite_longshort")
     print(f"Backtest window (hardcoded, accord_data.BACKTEST_START/END): "
           f"{BACKTEST_START.date()} -> {BACKTEST_END.date()}")
@@ -230,6 +238,10 @@ def main():
     def to_live(v):
         return v.loc[(v.index >= BACKTEST_START) & (v.index <= BACKTEST_END)]
 
+    if not checkpoint("STAGE 1 OF 5 -- DATA LOADED, UNIVERSE + VALUE SIGNAL BUILT", produced,
+                      auto_approve=args.auto_approve):
+        return
+
     print(f"\nRunning long-short book (CHEAP top {QUANTILE:.0%} long, "
           f"EXPENSIVE bottom {QUANTILE:.0%} short, {LONG_WEIGHT:.0%}/{SHORT_WEIGHT:.0%} notional)...")
     bt_ls = Backtester(prices=price_window, assets=assets, spread_bps=SPREAD_BPS,
@@ -286,6 +298,7 @@ def main():
     summary_path = os.path.join(OUTPUT_DIR, "asness_2015_india_value_longshort_comparison.csv")
     summary.to_csv(summary_path, index=False)
     print(f"\nMulti-benchmark comparison written to: {summary_path}")
+    produced.append(summary_path)
 
     name_lookup = (tradable.drop_duplicates("accord_code")
                           .set_index("accord_code")["company_name"].to_dict())
@@ -297,12 +310,13 @@ def main():
         print(f"{label} holdings log written to: {holdings_path} "
               f"({holdings['date'].nunique()} rebalance dates, "
               f"{holdings.groupby('date').size().mean():.0f} names/rebalance on average)")
+        produced.append(holdings_path)
 
     print("\nWriting chart set (long-short vs CHEAP-only vs benchmarks)...")
     chart_series = {"Long-short (CHEAP + EXPENSIVE)": live_ls, "CHEAP-only long leg": live_cheap}
     for disp_name, close in bench_closes.items():
         chart_series[disp_name] = close.reindex(live_ls.index).dropna()
-    save_backtest_charts(
+    produced += save_backtest_charts(
         chart_series, outdir=os.path.join(OUTPUT_DIR, "charts"),
         tag="asness_2015_india_value_longshort",
         weights=result_ls.weights.loc[live_ls.index],
@@ -317,7 +331,7 @@ def main():
     # inspectable rather than the long-short book being the only one with
     # its own dedicated views.
     print("Writing chart set (CHEAP-only leg vs NIFTY 500)...")
-    save_backtest_charts(
+    produced += save_backtest_charts(
         {"CHEAP-only long leg": live_cheap}, outdir=os.path.join(OUTPUT_DIR, "charts"),
         tag="asness_2015_india_value_cheap_only",
         benchmark=bench_closes[PRIMARY_BENCHMARK].reindex(live_cheap.index).dropna(),
@@ -326,6 +340,10 @@ def main():
         weights_name="CHEAP-only leg",
         cash_weight=result_cheap.cash_weight.loc[live_cheap.index],
     )
+
+    if not checkpoint("STAGE 2 OF 5 -- LONG-SHORT + CHEAP-ONLY BACKTESTS + CHARTS WRITTEN",
+                      produced, auto_approve=args.auto_approve):
+        return
 
     boot = bootstrap_sharpe_ci(ret_ls, block_size=20, n_resamples=1000, seed=0)
     print(f"\nLong-short Sharpe ratio, 90% block-bootstrap CI: [{boot.ci_low:.2f}, {boot.ci_high:.2f}] "
@@ -371,6 +389,7 @@ def main():
     sweep_path = os.path.join(OUTPUT_DIR, "asness_2015_india_value_longshort_borrow_sweep.csv")
     sweep_df.to_csv(sweep_path, index=False)
     print(f"Borrow-cost sweep written to: {sweep_path}")
+    produced.append(sweep_path)
     if (sweep_df["cagr"] > 0.06).any():
         print("  NOTE: sign of the vs-6% comparison flips somewhere in this sweep -- the earlier "
               "negative headline is at least partly a cost-assumption finding, not purely a "
@@ -402,6 +421,10 @@ def main():
             print("  |HAC t| < 2.0: alpha does NOT survive the factor-fingerprint check -- the "
                   "CHEAP-only leg's return is not distinguishable from a relabelled blend of "
                   "sleeves the fund already holds, at conventional significance.")
+
+    if not checkpoint("STAGE 3 OF 5 -- BORROW-COST SWEEP + FACTOR FINGERPRINT COMPLETE",
+                      produced, auto_approve=args.auto_approve):
+        return
 
     # ---------------- THE FULL COMPOSITE-VALUE DECILE DEEP-DIVE -----------
     # CHEAP/EXPENSIVE above are decile 10 and decile 1 of this same split --
@@ -444,12 +467,7 @@ def main():
     pd.concat([decile_summary, bench_row], ignore_index=True, sort=False).to_csv(
         decile_summary_csv, index=False)
     print(f"Decile summary (CSV) written to: {decile_summary_csv}")
-
-    decile_summary_xlsx = os.path.join(OUTPUT_DIR, "asness_2015_india_value_decile_summary.xlsx")
-    write_decile_summary_workbook(
-        decile_summary_xlsx, decile_summary, benchmark_rows=bench_row,
-        decile_definition_note="Decile 10 = cheapest by composite value score, decile 1 = most expensive.")
-    print(f"Decile summary (workbook) written to: {decile_summary_xlsx}")
+    produced.append(decile_summary_csv)
 
     live_rebalances = result_cheap.rebalances[
         (result_cheap.rebalances >= BACKTEST_START) & (result_cheap.rebalances <= BACKTEST_END)]
@@ -459,12 +477,26 @@ def main():
     print(f"Decile membership (the universe, stock by stock) written to: {decile_membership_path} "
           f"({membership_log['accord_code'].nunique()} distinct names across "
           f"{membership_log['date'].nunique()} rebalance dates)")
+    produced.append(decile_membership_path)
 
-    save_decile_charts(
+    decile_chart_paths = save_decile_charts(
         live_deciles, decile_summary, outdir=os.path.join(OUTPUT_DIR, "charts"),
         tag="asness_2015_india_value_decile", benchmark=bench_primary_live,
         benchmark_name=PRIMARY_BENCHMARK, benchmark_cagr=bench_cagr, benchmark_sharpe=bench_sharpe,
     )
+
+    decile_summary_xlsx = os.path.join(OUTPUT_DIR, "asness_2015_india_value_decile_summary.xlsx")
+    write_decile_summary_workbook(
+        decile_summary_xlsx, decile_summary, benchmark_rows=bench_row,
+        chart_paths=decile_chart_paths,
+        decile_definition_note="Decile 10 = cheapest by composite value score, decile 1 = most expensive.")
+    print(f"Decile summary workbook (numbers + all {len(decile_chart_paths)} charts, "
+          f"one file) written to: {decile_summary_xlsx}")
+    produced.append(decile_summary_xlsx)
+
+    if not checkpoint("STAGE 4 OF 5 -- COMPOSITE-VALUE DECILE DEEP-DIVE COMPLETE",
+                      produced, auto_approve=args.auto_approve):
+        return
 
     # ---------------- LIVE-FORMULA EXCEL RATIO WORKBOOK --------------------
     # The detailed .xlsx the repo's earlier version always produced --
@@ -492,6 +524,9 @@ def main():
                                       strategy_name=strat_name, benchmark_name=PRIMARY_BENCHMARK)
         print(f"  {label}: {xlsx_path}")
         print(f"  {label}: {csv_path}")
+        produced += [xlsx_path, csv_path]
+
+    checkpoint("STAGE 5 OF 5 -- ALL OUTPUTS WRITTEN", produced, auto_approve=args.auto_approve)
 
 
 if __name__ == "__main__":
