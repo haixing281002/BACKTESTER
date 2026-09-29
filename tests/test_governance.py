@@ -22,9 +22,12 @@ CARD = "examples/cards/devanathan_2026_india_factor_adaptation.yaml"
 
 
 def _run(*extra):
+    # These tests exercise Gate B decision-recording, not the interactive pauses
+    # in run_pipeline.py -- --auto-approve skips them deterministically
+    # regardless of whether the test runner's stdin happens to be a tty.
     return subprocess.run(
         [sys.executable, "run_pipeline.py", "--card", CARD,
-         "--n-boot", "120", "--no-charts", *extra],
+         "--n-boot", "120", "--no-charts", "--auto-approve", *extra],
         capture_output=True, text=True)
 
 

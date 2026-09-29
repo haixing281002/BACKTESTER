@@ -202,9 +202,11 @@ def test_levered_explicit_weights_are_refused():
     assert any("unlevered" in e for e in errs)
 
 
-def test_a_negative_explicit_weight_is_refused():
+def test_a_negative_explicit_weight_is_permitted_since_the_short_mandate_update():
+    # 2026-09-28: this fund can now hold short positions, so a negative
+    # explicit weight is no longer rejected by the schema.
     errs = _plan(explicit_weights={"A": 0.7, "B": -0.2}).validate()
-    assert any("cannot short" in e for e in errs)
+    assert not any("cannot short" in e for e in errs)
 
 
 def test_gate_a_blocks_when_the_run_is_not_specified():
