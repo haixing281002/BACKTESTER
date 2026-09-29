@@ -172,6 +172,7 @@ class Backtester:
         rf_horizon_days: int = 21,
         name: str = "strategy",
         warmup: int = 0,
+        verify_causal: bool = False,
     ) -> BacktestResult:
         """`regime`, if given, is a boolean Series (any index; reindexed to
         the price index) meaning "new buys allowed today" -- e.g. a
@@ -185,6 +186,25 @@ class Backtester:
         of "block new entries in a downtrend, don't force an exit because of
         it." A strategy that ignores `ctx.buys_allowed` (most do) is
         unaffected by passing this.
+
+        `verify_causal=True` (default False) runs the look-ahead tripwire
+        (assert_causal) on `alpha` and `vols`, AFTER the same causal shift
+        every other signal gets, against this run's own returns, and RAISES
+        LookaheadError if it fails -- a hard gate, not a report. Off by
+        default because assert_causal is a heuristic correlation smell
+        test, not a proof: a genuinely strong, correctly-lagged momentum
+        signal can legitimately correlate with the return it trades above
+        the default tol (this was caught live -- a 126-day momentum signal
+        in this repo's own causality test fixture trips it at 0.65 with no
+        leak present), so a hard raise here would abort real, correct runs
+        on strongly predictive signals. Where this repo wants the tripwire
+        run on every input without that false-positive risk aborting a
+        production run, the convention (see run_pipeline.py and the three
+        scripts/*_backtest.py scripts' own run_causality_checks()) is to
+        catch LookaheadError and print PASS/FAIL for a human to read, not
+        to raise -- consistent with this repo's rule that code reports,
+        humans decide. Pass `verify_causal=True` only when you specifically
+        want this call itself to hard-fail on a suspected leak.
         """
         idx = self.prices.index
         rebal = set(rebalance_dates(idx, rebalance))
@@ -192,6 +212,12 @@ class Backtester:
         alp = self._shift_causal(alpha)[self.assets] if alpha is not None else None
         vol_shift = self._shift_causal(vols[self.assets]) if vols is not None else None
         regime_shift = (self._shift_causal(regime.reindex(idx)) if regime is not None else None)
+
+        if verify_causal:
+            if alp is not None:
+                assert_causal(alp, self.returns, label="alpha")
+            if vol_shift is not None:
+                assert_causal(vol_shift, self.returns, label="vols")
 
         elig_arr = None
         if self.membership is not None:
