@@ -36,6 +36,24 @@ def test_decile_membership_splits_into_equal_count_buckets_by_rank():
     assert set(mcap.columns[masks[10].loc[d]]) == set(range(91, 101))
 
 
+def test_decile_membership_conserves_every_name_when_count_is_not_divisible_by_ten():
+    """47 names into 10 deciles can't split evenly -- every name must still
+    land in EXACTLY one decile (no name lost, none double-counted), and no
+    bucket may come out empty just because the count doesn't divide cleanly."""
+    _, mcap, eligible, assets = _fake_universe(n_assets=47, n_days=3)
+    masks = compute_decile_membership(mcap, eligible, n_deciles=10)
+    d = mcap.index[0]
+    sizes = {k: int(masks[k].loc[d].sum()) for k in range(1, 11)}
+    assert sum(sizes.values()) == 47
+    assert all(size > 0 for size in sizes.values())
+    seen = set()
+    for k in range(1, 11):
+        chosen = set(mcap.columns[masks[k].loc[d]])
+        assert not (chosen & seen), "a name appeared in more than one decile"
+        seen |= chosen
+    assert seen == set(assets)
+
+
 def test_decile_membership_excludes_ineligible_names_from_every_bucket():
     _, mcap, eligible, assets = _fake_universe(n_assets=20, n_days=3)
     eligible = eligible.copy()

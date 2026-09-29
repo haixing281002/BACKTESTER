@@ -36,6 +36,17 @@ def test_expected_max_sharpe_grows_with_trial_count():
     assert e1 < e10 < e100, "more trials should raise the 'skill-less best' benchmark"
 
 
+def test_expected_max_sharpe_stays_zero_with_no_trial_dispersion():
+    """trial_sharpe_std=0.0 means every trial has the SAME expected Sharpe --
+    no real variation to exploit by picking the best one. Trying more such
+    trials must never manufacture a higher benchmark: with zero dispersion,
+    E[max Sharpe] stays exactly 0.0 regardless of n_trials, not just at
+    n_trials=1 (the case test_expected_max_sharpe_grows_with_trial_count
+    checks) but at any n."""
+    for n in (1, 5, 50, 500, 5000):
+        assert expected_max_sharpe(n, trial_sharpe_std=0.0) == 0.0
+
+
 def test_deflated_sharpe_drops_when_trial_count_rises():
     """The same observed Sharpe should look LESS convincing the more trials
     it took to find it -- the entire point of the correction."""
@@ -43,6 +54,16 @@ def test_deflated_sharpe_drops_when_trial_count_rises():
     dsr_1_trial = deflated_sharpe_ratio(n_trials=1, trial_sharpe_std=0.0, **kwargs)
     dsr_50_trials = deflated_sharpe_ratio(n_trials=50, trial_sharpe_std=0.05, **kwargs)
     assert dsr_50_trials < dsr_1_trial
+
+
+def test_deflated_sharpe_sits_at_the_coin_flip_boundary_at_zero_observed_sharpe():
+    """A strategy with an observed Sharpe of exactly 0.0, tried exactly once
+    (n_trials=1, no benchmark to beat), sits at EXACTLY the 50% boundary --
+    the deflated Sharpe collapses to the ordinary z-test against a zero-mean
+    null in this case, and Phi(0) = 0.5 exactly. This is the anchor point
+    every other deflated-Sharpe number is measured relative to."""
+    p = deflated_sharpe_ratio(observed_sharpe=0.0, n_obs=1000, n_trials=1, trial_sharpe_std=0.0)
+    assert p == pytest.approx(0.5, abs=1e-9)
 
 
 def test_deflated_sharpe_is_a_probability():

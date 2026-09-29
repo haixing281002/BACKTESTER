@@ -57,6 +57,22 @@ def test_weights_sum_and_nonnegativity():
     assert np.allclose(res.cash_weight, 1 - gross, atol=1e-12)
 
 
+def test_a_repeated_rebalance_at_an_unchanged_target_costs_nothing_extra():
+    """A fixed-weight book re-evaluated every month for over a year still
+    only trades ONCE -- the initial entry from all-cash. Every subsequent
+    monthly rebalance date sees target == current weights already (fixed
+    weights don't drift relative to themselves the way a multi-asset mix
+    would), so it must cost exactly zero, not re-charge the spread on every
+    evaluation just because a rebalance date fired."""
+    px = _prices(n=300, k=1)
+    bt = Backtester(px, ["A0"], spread_bps=100.0, lag_days=1)
+    alloc = build_allocator("fixed_weight", ["A0"], weights={"A0": 1.0})
+    res = bt.run(alloc, rebalance="monthly", name="repeated", warmup=0)
+    assert len(res.rebalances) > 5, "the test needs several rebalance dates to actually fire"
+    assert res.costs.sum() == pytest.approx(res.costs.loc[res.rebalances[0]], abs=1e-12)
+    assert (res.costs.loc[res.rebalances[1:]] == 0.0).all()
+
+
 def test_trading_cost_is_charged_exactly_once_at_the_half_spread():
     """One rebalance from all-cash into a 60/40 mix trades 100% of the book;
     at a 100bp spread that must cost exactly 50bp of NAV."""
