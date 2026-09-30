@@ -1,0 +1,604 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pipeline Desk</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout concept: a fixed left "stage rail" showing who owns each of the
+   11 pipeline stages (LLM / Code / Human), a right-hand workspace that
+   switches between Overview, Cards, Library, Gates and Analyze panels.
+   Everything here reads real local files through server.py -- no sample
+   data, no client-side LLM calls, no sandboxed capability API. */
+:root{
+  --bg:#0c1117; --surface:#141b23; --surface-2:#1b2430; --border:#293341;
+  --fg:#e7edf3; --fg-dim:#8fa0b3; --fg-faint:#5b6b7d;
+  --accent:#2fb8c9; --accent-fg:#04262a;
+  --good:#4caf7d; --good-bg:#173026;
+  --warn:#d9a83f; --warn-bg:#332711;
+  --bad:#dd6a55; --bad-bg:#331a15;
+  --llm:#8b7cf6; --code:#4caf7d; --human:#d9a83f;
+  --sans:'IBM Plex Sans',system-ui,-apple-system,sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]){
+    --bg:#f4f6f8; --surface:#ffffff; --surface-2:#eef1f5; --border:#dbe1e8;
+    --fg:#151b22; --fg-dim:#4c5a68; --fg-faint:#8695a6;
+    --accent:#0f8fa3; --accent-fg:#ffffff;
+    --good:#1f8054; --good-bg:#e3f3ea;
+    --warn:#8a6410; --warn-bg:#faf0da;
+    --bad:#b7402c; --bad-bg:#fbe6e1;
+    --llm:#5a4bd6; --code:#1f8054; --human:#8a6410;
+    color-scheme: light;
+  }
+}
+:root[data-theme="light"]{
+  --bg:#f4f6f8; --surface:#ffffff; --surface-2:#eef1f5; --border:#dbe1e8;
+  --fg:#151b22; --fg-dim:#4c5a68; --fg-faint:#8695a6;
+  --accent:#0f8fa3; --accent-fg:#ffffff;
+  --good:#1f8054; --good-bg:#e3f3ea;
+  --warn:#8a6410; --warn-bg:#faf0da;
+  --bad:#b7402c; --bad-bg:#fbe6e1;
+  --llm:#5a4bd6; --code:#1f8054; --human:#8a6410;
+  color-scheme: light;
+}
+*{box-sizing:border-box;}
+body{background:var(--bg); color:var(--fg); font-family:var(--sans); margin:0;}
+h1,h2,h3{font-family:var(--sans); margin:0;}
+.mono{font-family:var(--mono); font-variant-numeric:tabular-nums;}
+.app{display:flex; min-height:100vh; max-width:1400px; margin:0 auto;}
+
+.rail{width:240px; flex:0 0 240px; border-right:1px solid var(--border); padding:20px 14px; position:sticky; top:0; align-self:flex-start; height:100vh; overflow-y:auto;}
+.brand{display:flex; align-items:baseline; gap:8px; padding:2px 6px 6px;}
+.brand-mark{width:10px; height:10px; border-radius:2px; background:var(--accent); flex:0 0 auto;}
+.brand-name{font-weight:700; font-size:15px;}
+.brand-sub{font-size:11px; color:var(--fg-faint); padding:0 6px 16px; line-height:1.5;}
+.repo-path{font-size:10px; color:var(--fg-faint); padding:0 6px 14px; font-family:var(--mono); word-break:break-all;}
+.stage-list{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:1px;}
+.stage{display:flex; align-items:center; gap:8px; padding:7px 8px; border-radius:6px; font-size:12.5px; color:var(--fg-dim);}
+.stage.gate{margin:6px 0; font-weight:600; color:var(--fg);}
+.stage .dot{width:6px; height:6px; border-radius:50%; flex:0 0 auto;}
+.stage .dot.llm{background:var(--llm);} .stage .dot.code{background:var(--code);} .stage .dot.human{background:var(--human);}
+.stage .num{font-family:var(--mono); color:var(--fg-faint); width:20px; flex:0 0 auto; font-size:11px;}
+.rail-legend{margin-top:18px; padding-top:14px; border-top:1px solid var(--border); display:flex; flex-direction:column; gap:6px;}
+.legend-row{display:flex; align-items:center; gap:7px; font-size:11px; color:var(--fg-faint);}
+.legend-row .dot{width:6px; height:6px; border-radius:50%;}
+.theme-toggle{margin-top:16px; width:100%; padding:7px 10px; border-radius:6px; border:1px solid var(--border); background:var(--surface); color:var(--fg-dim); font-family:var(--sans); font-size:11.5px; cursor:pointer;}
+.theme-toggle:hover{color:var(--fg); border-color:var(--fg-faint);}
+.conn-status{margin-top:10px; font-size:10.5px; padding:6px 8px; border-radius:6px; display:flex; align-items:center; gap:6px;}
+.conn-status .dot{width:6px; height:6px; border-radius:50%;}
+.conn-status.ok{color:var(--good); background:var(--good-bg);}
+.conn-status.ok .dot{background:var(--good);}
+.conn-status.bad{color:var(--bad); background:var(--bad-bg);}
+.conn-status.bad .dot{background:var(--bad);}
+
+.main{flex:1; min-width:0; padding:28px 32px 60px;}
+.topbar{display:flex; align-items:baseline; justify-content:space-between; gap:16px; flex-wrap:wrap; margin-bottom:22px;}
+.page-title{font-size:22px; font-weight:700;}
+.page-sub{font-size:12.5px; color:var(--fg-faint); margin-top:3px;}
+.tabs{display:flex; gap:4px; background:var(--surface); border:1px solid var(--border); border-radius:9px; padding:3px; flex-wrap:wrap;}
+.tab{appearance:none; border:none; background:transparent; color:var(--fg-dim); font-family:var(--sans); font-size:12.5px; font-weight:500; padding:7px 14px; border-radius:7px; cursor:pointer;}
+.tab.active{background:var(--accent); color:var(--accent-fg);}
+.panel{display:none;} .panel.active{display:block;}
+
+.kpis{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin-bottom:26px;}
+.kpi{background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:16px;}
+.kpi-label{font-size:11px; color:var(--fg-faint); text-transform:uppercase; letter-spacing:.5px;}
+.kpi-value{font-family:var(--mono); font-size:26px; font-weight:600; margin-top:6px;}
+.kpi-note{font-size:11px; color:var(--fg-dim); margin-top:4px;}
+.section-title{font-size:13px; font-weight:600; color:var(--fg-dim); text-transform:uppercase; letter-spacing:.5px; margin:0 0 10px;}
+.card-block{background:var(--surface); border:1px solid var(--border); border-radius:10px; overflow:hidden; margin-bottom:22px;}
+.feed{display:flex; flex-direction:column;}
+.feed-row{display:flex; gap:12px; padding:11px 16px; border-bottom:1px solid var(--border); font-size:12.5px; align-items:baseline;}
+.feed-row:last-child{border-bottom:none;}
+.feed-time{font-family:var(--mono); color:var(--fg-faint); flex:0 0 148px; font-size:11px;}
+.feed-what{color:var(--fg-dim); flex:1; min-width:0;} .feed-what b{color:var(--fg); font-weight:600;}
+.pill{display:inline-flex; align-items:center; gap:5px; padding:2px 9px; border-radius:99px; font-size:11px; font-weight:600; font-family:var(--mono); white-space:nowrap;}
+.pill.good{background:var(--good-bg); color:var(--good);} .pill.warn{background:var(--warn-bg); color:var(--warn);}
+.pill.bad{background:var(--bad-bg); color:var(--bad);} .pill.neutral{background:var(--surface-2); color:var(--fg-dim);}
+.card-list{display:flex; flex-direction:column; gap:10px;}
+.card-row{background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:16px 18px; cursor:pointer; transition:border-color .12s ease;}
+.card-row:hover{border-color:var(--accent);}
+.card-row-top{display:flex; justify-content:space-between; gap:12px; align-items:flex-start;}
+.card-title{font-weight:600; font-size:14.5px; line-height:1.35;}
+.card-id{font-family:var(--mono); font-size:11px; color:var(--fg-faint); margin-top:3px;}
+.card-meta{display:flex; gap:16px; margin-top:12px; flex-wrap:wrap;}
+.meta-item{font-size:11.5px; color:var(--fg-dim);} .meta-item b{font-family:var(--mono); color:var(--fg); font-weight:600;}
+.drawer-backdrop{display:none; position:fixed; inset:0; background:rgba(4,7,10,.55); z-index:20;}
+.drawer-backdrop.open{display:block;}
+.drawer{position:fixed; top:0; right:0; height:100%; width:min(480px,92vw); background:var(--surface); border-left:1px solid var(--border); z-index:21; transform:translateX(100%); transition:transform .2s ease; overflow-y:auto; padding:22px 22px 40px;}
+.drawer.open{transform:translateX(0);}
+.drawer-close{position:absolute; top:18px; right:18px; width:28px; height:28px; border-radius:7px; border:1px solid var(--border); background:var(--surface-2); color:var(--fg-dim); cursor:pointer; font-size:14px;}
+.fact-group{margin-bottom:18px;}
+.fact-group-name{font-size:10.5px; font-weight:700; letter-spacing:1px; color:var(--accent); margin-bottom:8px;}
+.fact{display:flex; flex-direction:column; gap:2px; padding:8px 0; border-bottom:1px solid var(--border);}
+.fact:last-child{border-bottom:none;}
+.fact-label{font-size:11px; color:var(--fg-faint);}
+.fact-value{font-size:13px; color:var(--fg); font-weight:500;}
+.fact-detail{font-size:11.5px; color:var(--fg-dim); margin-top:1px; line-height:1.4;}
+.flag{display:inline-block; font-size:9.5px; font-weight:700; letter-spacing:.5px; padding:1px 6px; border-radius:4px; margin-left:6px; vertical-align:1px;}
+.flag.BLOCK{background:var(--bad-bg); color:var(--bad);} .flag.DECIDE{background:var(--warn-bg); color:var(--warn);} .flag.GUESS{background:var(--surface-2); color:var(--fg-dim);}
+.decision-line{font-family:var(--mono); font-size:13px; font-weight:600; background:var(--surface-2); border:1px dashed var(--fg-faint); border-radius:8px; padding:10px 12px; margin:14px 0; color:var(--fg);}
+table{width:100%; border-collapse:collapse; font-size:12.5px;}
+th{text-align:left; font-size:10.5px; text-transform:uppercase; letter-spacing:.4px; color:var(--fg-faint); padding:10px 14px; border-bottom:1px solid var(--border); font-weight:600; white-space:nowrap;}
+td{padding:11px 14px; border-bottom:1px solid var(--border); color:var(--fg-dim); vertical-align:top;}
+tr:last-child td{border-bottom:none;}
+td.num, th.num{font-family:var(--mono); text-align:right; white-space:nowrap;}
+td.id-cell{color:var(--fg); font-weight:500;}
+.table-wrap{overflow-x:auto;} .small-note{font-size:11.5px; color:var(--fg-faint); padding:12px 16px;}
+tr.clickable{cursor:pointer;} tr.clickable:hover td{background:var(--surface-2);}
+.gate-row{display:flex; gap:14px; padding:16px 18px; border-bottom:1px solid var(--border);} .gate-row:last-child{border-bottom:none;}
+.gate-body h4{margin:0 0 4px; font-size:13.5px; font-weight:600;}
+.gate-body .sub{font-size:11.5px; color:var(--fg-faint); margin-bottom:8px;}
+
+.dropzone{border:1.5px dashed var(--border); border-radius:12px; background:var(--surface); padding:26px 20px; text-align:center; cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; min-height:150px;}
+.dropzone.drag{border-color:var(--accent); background:var(--surface-2);}
+.dropzone-icon{width:34px; height:34px; border-radius:9px; background:var(--surface-2); display:flex; align-items:center; justify-content:center; color:var(--accent); font-size:16px;}
+.dropzone-title{font-size:13px; font-weight:600;}
+.dropzone-sub{font-size:11.5px; color:var(--fg-faint); max-width:340px; line-height:1.5;}
+.file-chip{display:inline-flex; align-items:center; gap:8px; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:6px 10px; font-size:12px; margin-top:10px;}
+.file-chip button{border:none; background:transparent; color:var(--fg-faint); cursor:pointer; font-size:13px;}
+.analyze-grid{display:grid; grid-template-columns:1.1fr 1fr; gap:16px;}
+.analyze-form{display:flex; flex-direction:column; gap:10px;}
+.analyze-form label{font-size:11px; color:var(--fg-faint); text-transform:uppercase; letter-spacing:.4px;}
+.analyze-form select, .analyze-form textarea{width:100%; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:10px 12px; color:var(--fg); font-family:var(--sans); font-size:13px;}
+.analyze-form textarea{min-height:110px; resize:vertical; line-height:1.5;}
+.analyze-form select:focus, .analyze-form textarea:focus{outline:none; border-color:var(--accent);}
+.analyze-btn{appearance:none; border:none; background:var(--accent); color:var(--accent-fg); font-family:var(--sans); font-weight:600; font-size:13px; padding:11px 18px; border-radius:9px; cursor:pointer; align-self:flex-start;}
+.analyze-btn:disabled{opacity:.45; cursor:not-allowed;}
+.analyze-status{font-size:12px; color:var(--fg-dim); display:flex; align-items:center; gap:8px;}
+.spinner{width:13px; height:13px; border-radius:50%; border:2px solid var(--border); border-top-color:var(--accent); animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.analyze-error{font-size:12px; color:var(--bad); background:var(--bad-bg); border-radius:8px; padding:9px 12px; white-space:pre-wrap;}
+.report{margin-top:26px; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:24px;}
+.report-title{font-size:18px; font-weight:700; margin-bottom:4px;}
+.report-sub{font-size:12.5px; color:var(--fg-faint); margin-bottom:18px;}
+.report-section{margin-bottom:20px;}
+.report-section h4{font-size:11px; text-transform:uppercase; letter-spacing:.5px; color:var(--fg-faint); margin:0 0 10px;}
+.finding{display:flex; gap:8px; font-size:12.5px; line-height:1.5; color:var(--fg-dim); padding:8px 0; border-bottom:1px solid var(--border);}
+.finding:last-child{border-bottom:none;}
+.finding b{color:var(--fg);}
+.qlist{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px;}
+.qlist li{font-size:12.5px; color:var(--fg-dim); line-height:1.5; padding-left:16px; position:relative;}
+.qlist li:before{content:"\2192"; position:absolute; left:0; color:var(--accent);}
+
+@media (max-width: 820px){
+  .app{flex-direction:column;}
+  .rail{width:100%; flex:0 0 auto; height:auto; position:static; border-right:none; border-bottom:1px solid var(--border);}
+  .stage-list, .rail-legend{display:none;}
+  .main{padding:20px 16px 48px;}
+  .kpis{grid-template-columns:repeat(2,minmax(0,1fr));}
+  .analyze-grid{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <aside class="rail">
+    <div class="brand"><span class="brand-mark"></span><span class="brand-name">Pipeline Desk</span></div>
+    <div class="brand-sub">Long-only Indian equity research pipeline &mdash; local, reading your real repo files.</div>
+    <div class="repo-path" id="repoPath">connecting&hellip;</div>
+    <ul class="stage-list" id="stageList"></ul>
+    <div class="rail-legend">
+      <div class="legend-row"><span class="dot" style="background:var(--llm)"></span>LLM interprets</div>
+      <div class="legend-row"><span class="dot" style="background:var(--code)"></span>Code computes</div>
+      <div class="legend-row"><span class="dot" style="background:var(--human)"></span>Human decides</div>
+    </div>
+    <div class="conn-status" id="connStatus"><span class="dot"></span><span id="connText">checking server&hellip;</span></div>
+    <button class="theme-toggle" id="themeToggle">Toggle theme</button>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <div class="page-title" id="pageTitle">Overview</div>
+        <div class="page-sub" id="pageSub"></div>
+      </div>
+      <div class="tabs" id="tabs">
+        <button class="tab" data-tab="overview">Overview</button>
+        <button class="tab" data-tab="cards">Strategy Cards</button>
+        <button class="tab" data-tab="library">Library</button>
+        <button class="tab" data-tab="gates">Gate Queue</button>
+        <button class="tab" data-tab="analyze">Analyze a Paper</button>
+      </div>
+    </div>
+
+    <section class="panel" id="panel-overview">
+      <div class="kpis" id="kpiRow"></div>
+      <div class="section-title">Recent library activity</div>
+      <div class="card-block"><div class="feed" id="activityFeed"></div></div>
+      <div class="section-title">Trial budget by paper family</div>
+      <div class="card-block">
+        <div class="table-wrap"><table>
+          <thead><tr><th>Family</th><th class="num">Distinct configs tried</th><th>Feeds</th></tr></thead>
+          <tbody id="trialBudgetBody"></tbody>
+        </table></div>
+        <div class="small-note" id="trialBudgetEmpty">Distinct card fingerprints per family &mdash; this count is what the deflated Sharpe ratio's n_trials reads.</div>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-cards"><div class="card-list" id="cardList"></div></section>
+
+    <section class="panel" id="panel-library">
+      <div class="card-block">
+        <div class="table-wrap"><table>
+          <thead><tr><th>Entry</th><th>Outcome</th><th class="num">CAGR</th><th class="num">Sharpe</th><th class="num">Max DD</th><th class="num">Deflated Sharpe</th><th class="num">Max corr&nbsp;to&nbsp;book</th></tr></thead>
+          <tbody id="libraryBody"></tbody>
+        </table></div>
+        <div class="small-note" id="libraryEmpty">No library entries yet -- run a card through run_pipeline.py to write one.</div>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-gates">
+      <div class="section-title">Gate A &mdash; every drafted card</div>
+      <div class="card-block" id="gateAList"></div>
+    </section>
+
+    <section class="panel" id="panel-analyze">
+      <div class="analyze-grid">
+        <div>
+          <div class="dropzone" id="dropzone">
+            <div class="dropzone-icon">&#8593;</div>
+            <div class="dropzone-title" id="dropzoneTitle">Drop a paper (PDF) here</div>
+            <div class="dropzone-sub">Runs the REAL Stage 01-03 agentic pipeline (ros.agents.orchestrator.AgenticPipeline, same code as run_agentic.py) against this file. Needs ANTHROPIC_API_KEY set on the server -- nothing here is simulated.</div>
+            <input type="file" id="fileInput" accept="application/pdf" hidden>
+          </div>
+          <div id="fileChipHolder"></div>
+        </div>
+        <div class="analyze-form">
+          <label for="modeSelect">Card mode</label>
+          <select id="modeSelect">
+            <option value="adaptation">adaptation</option>
+            <option value="replication">replication</option>
+          </select>
+          <label for="notesInput">Notes</label>
+          <textarea id="notesInput" placeholder="Anything worth flagging before this runs."></textarea>
+          <div style="display:flex; align-items:center; gap:12px;">
+            <button class="analyze-btn" id="analyzeBtn" disabled>Run agentic analysis</button>
+            <div class="analyze-status" id="analyzeStatus" hidden></div>
+          </div>
+          <div class="analyze-error" id="analyzeError" hidden></div>
+        </div>
+      </div>
+      <div class="report" id="report" hidden></div>
+    </section>
+  </main>
+</div>
+
+<div class="drawer-backdrop" id="drawerBackdrop">
+  <div class="drawer" id="drawer">
+    <button class="drawer-close" id="drawerClose">&times;</button>
+    <div id="drawerContent"></div>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+var STAGES = [
+  {n:"00", label:"Triage", owner:"llm"},
+  {n:"01", label:"Ingest (universe + strategy)", owner:"llm"},
+  {n:"02", label:"Strategy Card", owner:"llm"},
+  {n:"02c", label:"Universe translation check", owner:"code"},
+  {n:"", label:"GATE A", owner:"human", gate:true},
+  {n:"03", label:"Data feasibility", owner:"code"},
+  {n:"04", label:"Point-in-time data", owner:"code"},
+  {n:"05", label:"Build + execute", owner:"code"},
+  {n:"06", label:"Research validation", owner:"code"},
+  {n:"07", label:"Portfolio validation", owner:"code"},
+  {n:"", label:"GATE B", owner:"human", gate:true},
+  {n:"08", label:"Strategy library", owner:"code"}
+];
+
+var CARDS = [], LIBRARY = [];
+
+function escapeHtml(s){
+  return String(s==null?"":s).replace(/[&<>"']/g, function(c){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+  });
+}
+function pct(x){ return x==null || isNaN(x) ? "&mdash;" : (x*100).toFixed(2) + "%"; }
+function pctTight(x){ return x==null || isNaN(x) ? "&mdash;" : (x*100).toFixed(4) + "%"; }
+function num2(x){ return x==null || isNaN(x) ? "&mdash;" : Number(x).toFixed(2); }
+
+function renderStages(){
+  var ul = document.getElementById("stageList");
+  STAGES.forEach(function(s){
+    var li = document.createElement("li");
+    li.className = "stage" + (s.gate ? " gate" : "");
+    li.innerHTML = '<span class="num">' + (s.n || "&middot;") + '</span><span class="dot ' + s.owner + '"></span><span>' + s.label + '</span>';
+    ul.appendChild(li);
+  });
+}
+
+/* ---------------- data loading ---------------- */
+async function loadAll(){
+  try{
+    var health = await (await fetch("/api/health")).json();
+    document.getElementById("repoPath").textContent = health.repo_root;
+    setConn(true, health.anthropic_key_present ? "server connected · API key set" : "server connected · no API key (Analyze disabled)");
+  }catch(e){
+    setConn(false, "cannot reach server.py -- is it running?");
+  }
+  try{ CARDS = await (await fetch("/api/cards")).json(); }catch(e){ CARDS = []; }
+  try{ LIBRARY = await (await fetch("/api/library")).json(); }catch(e){ LIBRARY = []; }
+  renderKPIs(); renderActivity(); renderTrialBudget(); renderCards(); renderLibrary(); renderGates();
+}
+function setConn(ok, text){
+  var el = document.getElementById("connStatus");
+  el.className = "conn-status " + (ok ? "ok" : "bad");
+  document.getElementById("connText").textContent = text;
+}
+
+function statusPillForCard(card){
+  if(!card.valid) return '<span class="pill bad">INVALID</span>';
+  var decide = (card.facts||[]).find(function(f){ return f.group==="DECIDE"; });
+  if(decide && /reject/i.test(decide.value)) return '<span class="pill bad">REJECTED</span>';
+  if(decide && /approve|promote/i.test(decide.value)) return '<span class="pill good">PROMOTED</span>';
+  return '<span class="pill warn">PENDING</span>';
+}
+
+function renderKPIs(){
+  var invalid = CARDS.filter(function(c){ return !c.valid; }).length;
+  var row = document.getElementById("kpiRow");
+  row.innerHTML = "";
+  [
+    {label:"Cards in cards/", value:CARDS.length, note: CARDS.length ? (invalid ? invalid + " not yet validating" : "all validate") : "none yet"},
+    {label:"Library entries", value:LIBRARY.length, note:"outputs/library/*.json"},
+    {label:"Rejected", value:LIBRARY.filter(function(e){return e.outcome==="REJECTED";}).length, note:"a named human ruled"},
+    {label:"Promoted", value:LIBRARY.filter(function(e){return e.outcome==="PROMOTED";}).length, note:"cleared Gate B"}
+  ].forEach(function(t){
+    var d = document.createElement("div"); d.className = "kpi";
+    d.innerHTML = '<div class="kpi-label">'+t.label+'</div><div class="kpi-value">'+t.value+'</div><div class="kpi-note">'+t.note+'</div>';
+    row.appendChild(d);
+  });
+}
+
+function renderActivity(){
+  var feed = document.getElementById("activityFeed");
+  feed.innerHTML = "";
+  if(!LIBRARY.length){ feed.innerHTML = '<div class="small-note">No library entries yet.</div>'; return; }
+  LIBRARY.slice(0,25).forEach(function(e){
+    var div = document.createElement("div"); div.className = "feed-row";
+    div.innerHTML = '<span class="feed-time mono">'+escapeHtml(e.created_utc||"")+'</span>'+
+      '<span class="feed-what"><b>'+escapeHtml(e.card_id||e.entry_id)+'</b> &mdash; outcome '+escapeHtml(e.outcome)+'</span>';
+    feed.appendChild(div);
+  });
+}
+
+function renderTrialBudget(){
+  var body = document.getElementById("trialBudgetBody");
+  var byFamily = {};
+  LIBRARY.forEach(function(e){
+    var fam = String(e.card_id||"").split("__")[0];
+    if(!fam) return;
+    byFamily[fam] = byFamily[fam] || new Set();
+    byFamily[fam].add(e.card_fingerprint);
+  });
+  var families = Object.keys(byFamily);
+  document.getElementById("trialBudgetEmpty").style.display = families.length ? "none" : "block";
+  body.innerHTML = families.map(function(f){
+    return '<tr><td class="id-cell">'+escapeHtml(f)+'</td><td class="num">'+byFamily[f].size+'</td><td>deflated Sharpe n_trials</td></tr>';
+  }).join("");
+}
+
+function renderCards(){
+  var list = document.getElementById("cardList");
+  if(!CARDS.length){
+    list.innerHTML = '<div class="small-note">No cards in cards/ yet. Draft one via the Analyze tab, or run the pipeline\'s own /draft-card step.</div>';
+    return;
+  }
+  list.innerHTML = "";
+  CARDS.forEach(function(c){
+    var row = document.createElement("div"); row.className = "card-row";
+    var facts = c.facts || [];
+    var mech = facts.find(function(f){ return f.group==="SIGNAL"; });
+    row.innerHTML =
+      '<div class="card-row-top"><div><div class="card-title">'+escapeHtml(c.title)+'</div><div class="card-id mono">'+escapeHtml(c.id)+'</div></div>'+statusPillForCard(c)+'</div>'+
+      '<div class="card-meta"><div class="meta-item">Mode <b>'+escapeHtml(c.mode)+'</b></div>'+
+      (mech ? '<div class="meta-item">Template <b>'+escapeHtml(mech.value)+'</b></div>' : '') +
+      '<div class="meta-item">'+escapeHtml(c.path)+'</div></div>';
+    row.addEventListener("click", function(){ openCardDrawer(c); });
+    list.appendChild(row);
+  });
+}
+
+function openCardDrawer(card){
+  var content = document.getElementById("drawerContent");
+  var html = '<h2 style="font-size:17px;margin-bottom:2px;">'+escapeHtml(card.title)+'</h2>'+
+             '<div class="card-id mono" style="margin-bottom:18px;">'+escapeHtml(card.id)+'</div>';
+  var groups = {}, order = [];
+  (card.facts||[]).forEach(function(f){
+    if(!groups[f.group]){ groups[f.group]=[]; order.push(f.group); }
+    groups[f.group].push(f);
+  });
+  order.forEach(function(g){
+    html += '<div class="fact-group"><div class="fact-group-name">'+escapeHtml(g)+'</div>';
+    groups[g].forEach(function(f){
+      var flag = f.flag ? '<span class="flag '+f.flag+'">'+f.flag+'</span>' : '';
+      if(g==="DECIDE"){
+        html += '<div class="decision-line">'+escapeHtml(f.label)+': '+escapeHtml(f.value)+flag+'</div>';
+      } else {
+        html += '<div class="fact"><div class="fact-label">'+escapeHtml(f.label)+'</div>'+
+                '<div class="fact-value">'+escapeHtml(f.value)+flag+'</div>'+
+                (f.detail ? '<div class="fact-detail">'+escapeHtml(f.detail)+'</div>' : '')+'</div>';
+      }
+    });
+    html += '</div>';
+  });
+  content.innerHTML = html;
+  document.getElementById("drawerBackdrop").classList.add("open");
+  document.getElementById("drawer").classList.add("open");
+}
+function closeDrawer(){
+  document.getElementById("drawerBackdrop").classList.remove("open");
+  document.getElementById("drawer").classList.remove("open");
+}
+
+function renderLibrary(){
+  var body = document.getElementById("libraryBody");
+  document.getElementById("libraryEmpty").style.display = LIBRARY.length ? "none" : "block";
+  body.innerHTML = LIBRARY.map(function(e){
+    var m = e.headline_metrics || {};
+    var outcomeClass = e.outcome==="REJECTED" ? "bad" : (e.outcome==="PROMOTED" ? "good" : "warn");
+    return '<tr><td class="id-cell">'+escapeHtml(e.card_id||e.entry_id)+'<div class="mono" style="font-size:10.5px;color:var(--fg-faint);margin-top:2px;">'+escapeHtml(e.created_utc||"")+'</div></td>'+
+      '<td><span class="pill '+outcomeClass+'">'+escapeHtml(e.outcome)+'</span></td>'+
+      '<td class="num">'+pct(m.cagr)+'</td><td class="num">'+num2(m.sharpe)+'</td><td class="num">'+pct(m.max_dd)+'</td>'+
+      '<td class="num">'+pctTight(m.deflated_sharpe_prob)+'</td><td class="num">'+num2(m.max_corr_to_book)+'</td></tr>';
+  }).join("");
+}
+
+function renderGates(){
+  var list = document.getElementById("gateAList");
+  if(!CARDS.length){ list.innerHTML = '<div class="small-note">No cards to review.</div>'; return; }
+  list.innerHTML = "";
+  CARDS.forEach(function(c){
+    var decide = (c.facts||[]).find(function(f){ return f.group==="DECIDE"; });
+    var div = document.createElement("div"); div.className = "gate-row";
+    div.innerHTML = '<div>'+statusPillForCard(c)+'</div><div class="gate-body"><h4>'+escapeHtml(c.title)+'</h4>'+
+      '<div class="sub mono">'+escapeHtml(c.id)+'</div>'+
+      '<div class="decision-line">'+(decide ? escapeHtml(decide.label)+': '+escapeHtml(decide.value) : (c.valid ? "The card, displayed. decision: PENDING until a named human rules." : "Card does not validate -- fix before Gate A."))+'</div></div>';
+    list.appendChild(div);
+  });
+}
+
+/* ---------------- analyze: real upload -> real agentic run ---------------- */
+var pickedFile = null;
+function initAnalyze(){
+  var dropzone = document.getElementById("dropzone");
+  var fileInput = document.getElementById("fileInput");
+  var btn = document.getElementById("analyzeBtn");
+
+  function setFile(f){
+    pickedFile = f;
+    btn.disabled = !f;
+    var holder = document.getElementById("fileChipHolder");
+    if(!f){ holder.innerHTML = ""; document.getElementById("dropzoneTitle").textContent = "Drop a paper (PDF) here"; return; }
+    document.getElementById("dropzoneTitle").textContent = "Attached";
+    holder.innerHTML = "";
+    var chip = document.createElement("div"); chip.className = "file-chip";
+    chip.innerHTML = '<span>'+escapeHtml(f.name)+' &middot; '+(f.size/1024).toFixed(0)+' KB</span>';
+    var rm = document.createElement("button"); rm.textContent = "×";
+    rm.addEventListener("click", function(){ setFile(null); fileInput.value = ""; });
+    chip.appendChild(rm);
+    holder.appendChild(chip);
+  }
+
+  ["dragenter","dragover"].forEach(function(evt){ dropzone.addEventListener(evt, function(e){ e.preventDefault(); dropzone.classList.add("drag"); }); });
+  ["dragleave","drop"].forEach(function(evt){ dropzone.addEventListener(evt, function(e){ e.preventDefault(); dropzone.classList.remove("drag"); }); });
+  dropzone.addEventListener("drop", function(e){ var f = e.dataTransfer.files && e.dataTransfer.files[0]; if(f) setFile(f); });
+  dropzone.addEventListener("click", function(){ fileInput.click(); });
+  fileInput.addEventListener("change", function(){ setFile(fileInput.files[0]); });
+
+  btn.addEventListener("click", runAnalysis);
+}
+
+async function runAnalysis(){
+  var statusEl = document.getElementById("analyzeStatus"), errorEl = document.getElementById("analyzeError"), btn = document.getElementById("analyzeBtn");
+  errorEl.hidden = true; statusEl.hidden = false;
+  statusEl.innerHTML = '<span class="spinner"></span> Running the real Stage 01-03 pipeline &mdash; this calls the Anthropic API and can take a minute or two&hellip;';
+  btn.disabled = true;
+
+  var form = new FormData();
+  form.append("file", pickedFile);
+  form.append("mode", document.getElementById("modeSelect").value);
+  form.append("notes", document.getElementById("notesInput").value);
+
+  try{
+    var res = await fetch("/api/analyze", {method:"POST", body:form});
+    var data = await res.json();
+    statusEl.hidden = true; btn.disabled = false;
+    if(!res.ok){ errorEl.hidden = false; errorEl.textContent = data.detail || "analysis failed"; return; }
+    renderAnalyzeReport(data);
+    await loadAll();
+  }catch(e){
+    statusEl.hidden = true; btn.disabled = false;
+    errorEl.hidden = false; errorEl.textContent = "Request failed: " + e.message;
+  }
+}
+
+function renderAnalyzeReport(r){
+  var el = document.getElementById("report");
+  el.hidden = false;
+  var a = r.analysis || {}, p = r.proposal || {}, c = r.critique || {}, dm = r.data_mapping || {}, tm = r.template_match || {};
+
+  var html = '<div class="report-title">'+escapeHtml(a.title||"Untitled")+'</div>'+
+             '<div class="report-sub">'+escapeHtml(a.core_mechanism||"")+'</div>';
+
+  html += '<div class="report-section"><h4>Card draft</h4>'+
+    '<div class="finding"><b>Template chosen:</b>&nbsp;'+escapeHtml(tm.template||"none -- see missing_capability")+'</div>'+
+    '<div class="finding"><b>Card validates:</b>&nbsp;'+(r.card_valid ? "yes" : "NO -- "+escapeHtml((r.card_errors||[]).join("; ")))+'</div>'+
+    '<div class="finding"><b>Card written to:</b>&nbsp;'+escapeHtml(r.card_path||"")+'</div></div>';
+
+  var materialFindings = (c.findings||[]).filter(function(f){ return f.materiality==="high"; });
+  html += '<div class="report-section"><h4>Critic findings (material)</h4>' +
+    (materialFindings.length
+      ? materialFindings.map(function(f){ return '<div class="finding"><b>'+escapeHtml(f.field)+':</b> '+escapeHtml(f.issue)+'<br><span style="color:var(--fg-faint)">'+escapeHtml(f.why_it_matters)+'</span></div>'; }).join("")
+      : '<div class="finding">none flagged as high-materiality</div>') + '</div>';
+
+  var proxies = (dm.matches||[]).filter(function(m){ return m.match_type==="proxy"; });
+  if(proxies.length){
+    html += '<div class="report-section"><h4>Data proxies proposed</h4>' +
+      proxies.map(function(m){ return '<div class="finding"><b>'+escapeHtml(m.requirement)+' → '+escapeHtml(m.matched_series)+':</b> '+escapeHtml(m.proxy_risk)+'</div>'; }).join("") + '</div>';
+  }
+
+  if((r.human_review_queue||[]).length){
+    html += '<div class="report-section"><h4>Human review queue ('+r.human_review_queue.length+')</h4><ul class="qlist">' +
+      r.human_review_queue.map(function(q){ return '<li>'+escapeHtml(q)+'</li>'; }).join("") + '</ul></div>';
+  }
+
+  el.innerHTML = html;
+  el.scrollIntoView({behavior:"smooth", block:"start"});
+}
+
+/* ---------------- tabs + boot ---------------- */
+function setTab(name){
+  document.querySelectorAll(".tab").forEach(function(t){ t.classList.toggle("active", t.dataset.tab===name); });
+  document.querySelectorAll(".panel").forEach(function(p){ p.classList.toggle("active", p.id==="panel-"+name); });
+  var titles = {
+    overview:["Overview","Every card and library entry this repo actually has, right now."],
+    cards:["Strategy Cards","Read live from cards/*.yaml."],
+    library:["Strategy Library","Read live from outputs/library/*.json."],
+    gates:["Gate Queue","Every card, its DECIDE fact if one exists."],
+    analyze:["Analyze a Paper","Drop a PDF -- runs the real Stage 01-03 agentic pipeline."]
+  };
+  document.getElementById("pageTitle").textContent = titles[name][0];
+  document.getElementById("pageSub").textContent = titles[name][1];
+  try{ localStorage.setItem("pipelineDeskTab", name); }catch(e){}
+}
+
+function boot(){
+  renderStages();
+  initAnalyze();
+  document.querySelectorAll(".tab").forEach(function(t){ t.addEventListener("click", function(){ setTab(t.dataset.tab); }); });
+  document.getElementById("drawerClose").addEventListener("click", closeDrawer);
+  document.getElementById("drawerBackdrop").addEventListener("click", function(e){ if(e.target.id==="drawerBackdrop") closeDrawer(); });
+
+  var startTab = "overview";
+  try{ var saved = localStorage.getItem("pipelineDeskTab"); if(saved) startTab = saved; }catch(e){}
+  setTab(startTab);
+
+  var toggle = document.getElementById("themeToggle");
+  function applyTheme(t){ if(t) document.documentElement.setAttribute("data-theme", t); else document.documentElement.removeAttribute("data-theme"); }
+  var savedTheme = null;
+  try{ savedTheme = localStorage.getItem("pipelineDeskTheme"); }catch(e){}
+  applyTheme(savedTheme);
+  toggle.addEventListener("click", function(){
+    var cur = document.documentElement.getAttribute("data-theme");
+    var next = cur === "dark" ? "light" : (cur === "light" ? null : "dark");
+    applyTheme(next);
+    try{ localStorage.setItem("pipelineDeskTheme", next || ""); }catch(e){}
+  });
+
+  loadAll();
+}
+
+if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot); else boot();
+</script>
+</body>
+</html>
