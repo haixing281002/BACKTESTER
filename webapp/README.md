@@ -32,17 +32,28 @@ you'd rather serve the page separately (point `fetch()` calls at
   silently falling back to the bundled replay fixture if the key isn't
   set -- a canned "devanathan" result for a paper you actually dropped
   would be a worse failure than a clear error.
-- **Not built here**: triggering Step 05-08 (the actual backtest) from
-  the dashboard. That still means running `run_pipeline.py` or one of
-  `scripts/*_backtest.py` from a terminal, same as always. Once you do,
-  its outputs land in `outputs/` and the dashboard's static file mount
-  (`/outputs/...`) can serve them -- wiring that into the UI (real
-  tearsheets, real equity curves) is the natural next step.
+- **Run Backtests tab** -- triggers the real CLI as a subprocess on this
+  machine: `python run_pipeline.py --card <card> --auto-approve` for an
+  index-sleeve (ros/engine) card, or one of the three individual-stock
+  scripts (`accord_stock_selection_backtest.py`,
+  `alquist_2018_india_small_cap_backtest.py`,
+  `asness_2015_india_value_longshort_backtest.py`) for a card built on
+  the Accord stock-level data. Pick the target that actually matches the
+  card's mechanism -- `run_pipeline.py` cannot run an individual-stock
+  selection card (see CLAUDE.md's "new-paper-backtest" note on why), so
+  pointing it at the wrong one will run, but on the wrong universe. The
+  log streams live; `--auto-approve` is the one, deliberate cost of
+  triggering a multi-stage checkpointed script from a button instead of a
+  terminal -- it skips every per-stage pause, but NEVER supplies a Gate B
+  decision (`--decision`/`--decided-by`/`--rationale` are never passed
+  here): a real run still stops at `decision: PENDING`, and a named human
+  re-runs it from a terminal with those flags to actually rule on it.
 
 ## Files
 
-- `server.py` -- FastAPI backend, three real endpoints (`/api/cards`,
-  `/api/library`, `/api/analyze`) plus static file serving.
+- `server.py` -- FastAPI backend: `/api/cards`, `/api/library`,
+  `/api/analyze`, `/api/run-targets` + `/api/runs` (start/list/poll a
+  real backtest subprocess), plus static file serving.
 - `static/index.html` -- the dashboard itself. Self-contained, no build
   step, no external JS framework.
 - `requirements.txt` -- the extra web-serving deps (`fastapi`, `uvicorn`,

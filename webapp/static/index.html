@@ -205,6 +205,7 @@ tr.clickable{cursor:pointer;} tr.clickable:hover td{background:var(--surface-2);
         <button class="tab" data-tab="library">Library</button>
         <button class="tab" data-tab="gates">Gate Queue</button>
         <button class="tab" data-tab="analyze">Analyze a Paper</button>
+        <button class="tab" data-tab="runs">Run Backtests</button>
       </div>
     </div>
 
@@ -266,6 +267,41 @@ tr.clickable{cursor:pointer;} tr.clickable:hover td{background:var(--surface-2);
         </div>
       </div>
       <div class="report" id="report" hidden></div>
+    </section>
+
+    <section class="panel" id="panel-runs">
+      <div class="analyze-grid">
+        <div class="analyze-form">
+          <label for="runTargetSelect">What to run</label>
+          <select id="runTargetSelect"></select>
+          <div id="runCardPickerWrap" hidden>
+            <label for="runCardSelect" style="margin-top:8px;display:block;">Card (for run_pipeline.py)</label>
+            <select id="runCardSelect"></select>
+          </div>
+          <div class="dropzone-sub" id="runTargetNote" style="text-align:left;padding:0;"></div>
+          <div style="display:flex; align-items:center; gap:12px;">
+            <button class="analyze-btn" id="runStartBtn">Start run</button>
+            <div class="analyze-status" id="runStatus" hidden></div>
+          </div>
+          <div class="analyze-error" id="runError" hidden></div>
+        </div>
+        <div>
+          <div class="dropzone-sub" style="text-align:left;">This calls the real CLI (e.g. <code class="mono">python run_pipeline.py --card ... --auto-approve</code>) as a subprocess on this machine, exactly as if you'd typed it in a terminal. --auto-approve means it runs straight through every stage checkpoint without pausing -- that's the deliberate cost of triggering it from a button instead of a terminal. It NEVER supplies a Gate B decision: a real run still stops at "decision: PENDING" and a named human has to re-run with --decision themselves.</div>
+        </div>
+      </div>
+
+      <div class="section-title" style="margin-top:22px;">Runs</div>
+      <div class="card-block">
+        <div class="table-wrap"><table>
+          <thead><tr><th>Started</th><th>Target</th><th>Status</th></tr></thead>
+          <tbody id="runsBody"></tbody>
+        </table></div>
+        <div class="small-note" id="runsEmpty">No runs yet.</div>
+      </div>
+      <div class="card-block" id="runLogWrap" hidden>
+        <div class="small-note" style="padding-bottom:0;">Log &mdash; <span id="runLogTitle" class="mono"></span></div>
+        <pre id="runLog" style="margin:0; padding:14px 16px; font-family:var(--mono); font-size:11.5px; line-height:1.5; color:var(--fg-dim); white-space:pre-wrap; max-height:420px; overflow-y:auto;"></pre>
+      </div>
     </section>
   </main>
 </div>
@@ -556,6 +592,96 @@ function renderAnalyzeReport(r){
   el.scrollIntoView({behavior:"smooth", block:"start"});
 }
 
+/* ---------------- run backtests: real subprocess, real CLI ---------------- */
+var RUN_TARGETS = [];
+var pollingRunId = null, pollTimer = null;
+
+async function initRuns(){
+  try{ RUN_TARGETS = await (await fetch("/api/run-targets")).json(); }catch(e){ RUN_TARGETS = []; }
+  var sel = document.getElementById("runTargetSelect");
+  sel.innerHTML = RUN_TARGETS.map(function(t){ return '<option value="'+t.target+'">'+escapeHtml(t.label)+'</option>'; }).join("");
+  sel.addEventListener("change", updateRunTargetUI);
+  updateRunTargetUI();
+
+  var cardSel = document.getElementById("runCardSelect");
+  cardSel.innerHTML = CARDS.map(function(c){ return '<option value="'+escapeHtml(c.path)+'">'+escapeHtml(c.title)+' ('+escapeHtml(c.id)+')</option>'; }).join("");
+
+  document.getElementById("runStartBtn").addEventListener("click", startRun);
+  refreshRunsList();
+}
+
+function updateRunTargetUI(){
+  var sel = document.getElementById("runTargetSelect");
+  var spec = RUN_TARGETS.find(function(t){ return t.target === sel.value; });
+  document.getElementById("runCardPickerWrap").hidden = !(spec && spec.needs_card);
+  document.getElementById("runTargetNote").textContent = spec ? ("target: " + spec.target) : "";
+}
+
+async function startRun(){
+  var errorEl = document.getElementById("runError"), statusEl = document.getElementById("runStatus");
+  errorEl.hidden = true;
+  var target = document.getElementById("runTargetSelect").value;
+  var spec = RUN_TARGETS.find(function(t){ return t.target === target; });
+  var body = {target: target};
+  if(spec && spec.needs_card){
+    var cardPath = document.getElementById("runCardSelect").value;
+    if(!cardPath){ errorEl.hidden = false; errorEl.textContent = "No card selected."; return; }
+    body.card_path = cardPath;
+  }
+  statusEl.hidden = false;
+  statusEl.innerHTML = '<span class="spinner"></span> Starting&hellip;';
+  try{
+    var res = await fetch("/api/runs", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(body)});
+    var data = await res.json();
+    statusEl.hidden = true;
+    if(!res.ok){ errorEl.hidden = false; errorEl.textContent = data.detail || "failed to start"; return; }
+    refreshRunsList();
+    watchRun(data.run_id);
+  }catch(e){
+    statusEl.hidden = true; errorEl.hidden = false; errorEl.textContent = "Request failed: " + e.message;
+  }
+}
+
+async function refreshRunsList(){
+  var runs = [];
+  try{ runs = await (await fetch("/api/runs")).json(); }catch(e){}
+  var body = document.getElementById("runsBody");
+  document.getElementById("runsEmpty").style.display = runs.length ? "none" : "block";
+  body.innerHTML = runs.map(function(r){
+    var cls = r.status === "running" ? "warn" : (r.status === "done" ? "good" : "bad");
+    var when = new Date(r.started_at*1000).toLocaleString();
+    return '<tr class="clickable" data-run="'+r.run_id+'"><td>'+escapeHtml(when)+'</td><td class="id-cell">'+escapeHtml(r.target)+'</td>'+
+      '<td><span class="pill '+cls+'">'+escapeHtml(r.status.toUpperCase())+'</span></td></tr>';
+  }).join("");
+  body.querySelectorAll("tr[data-run]").forEach(function(tr){
+    tr.addEventListener("click", function(){ watchRun(tr.dataset.run); });
+  });
+}
+
+function watchRun(runId){
+  pollingRunId = runId;
+  document.getElementById("runLogWrap").hidden = false;
+  if(pollTimer) clearInterval(pollTimer);
+  pollOnce();
+  pollTimer = setInterval(pollOnce, 2000);
+}
+
+async function pollOnce(){
+  if(!pollingRunId) return;
+  var r;
+  try{ r = await (await fetch("/api/runs/"+pollingRunId)).json(); }catch(e){ return; }
+  document.getElementById("runLogTitle").textContent = r.target + " · " + r.status + (r.returncode!=null ? " (exit "+r.returncode+")" : "");
+  var pre = document.getElementById("runLog");
+  var wasAtBottom = pre.scrollTop + pre.clientHeight >= pre.scrollHeight - 20;
+  pre.textContent = r.log || "";
+  if(wasAtBottom) pre.scrollTop = pre.scrollHeight;
+  if(r.status !== "running"){
+    clearInterval(pollTimer); pollTimer = null;
+    refreshRunsList();
+    if(r.status === "done") loadAll();
+  }
+}
+
 /* ---------------- tabs + boot ---------------- */
 function setTab(name){
   document.querySelectorAll(".tab").forEach(function(t){ t.classList.toggle("active", t.dataset.tab===name); });
@@ -565,7 +691,8 @@ function setTab(name){
     cards:["Strategy Cards","Read live from cards/*.yaml."],
     library:["Strategy Library","Read live from outputs/library/*.json."],
     gates:["Gate Queue","Every card, its DECIDE fact if one exists."],
-    analyze:["Analyze a Paper","Drop a PDF -- runs the real Stage 01-03 agentic pipeline."]
+    analyze:["Analyze a Paper","Drop a PDF -- runs the real Stage 01-03 agentic pipeline."],
+    runs:["Run Backtests","Triggers the real CLI as a subprocess on this machine."]
   };
   document.getElementById("pageTitle").textContent = titles[name][0];
   document.getElementById("pageSub").textContent = titles[name][1];
@@ -595,7 +722,7 @@ function boot(){
     try{ localStorage.setItem("pipelineDeskTheme", next || ""); }catch(e){}
   });
 
-  loadAll();
+  loadAll().then(initRuns);
 }
 
 if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot); else boot();
