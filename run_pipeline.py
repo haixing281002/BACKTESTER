@@ -674,7 +674,8 @@ def main(argv=None) -> int:
 
     chart_path = None
     if not args.no_charts:
-        _charts(runset, rf, args.outdir, card.paper.id)
+        _charts(runset, rf, args.outdir, card.paper.id,
+               benchmark_name=card.universe.benchmark or "NIFTY 500")
         chart_path = os.path.join(args.outdir, f"charts_{card.paper.id}.png")
         R.p(f"  charts written to {chart_path}")
         produced.append(chart_path)
@@ -775,40 +776,49 @@ def _lessons(card, research, port, tbl, primary, lad) -> List[str]:
     return out
 
 
-def _charts(runset, rf, outdir, tag):
+def _charts(runset, rf, outdir, tag, benchmark_name="NIFTY 500"):
+    """The headline picture: the extracted strategy, its mandate-adjusted
+    variant if the card has one, and the fund's actual benchmark -- not
+    every comparator the run also computed. `runset.benchmarks` (the
+    card's `benchmark_templates`: alternative constructions like "Inverse
+    vol" or "Vol-target overlay") and any secondary index beyond the
+    card's own `universe.benchmark` still score the Gate B "beats every
+    free alternative" criterion printed earlier in this report -- they
+    just don't belong in the chart a committee glances at. Two panels,
+    not four: cumulative return and drawdown are the two questions that
+    actually matter here ("did it make money" and "how bad did it get"),
+    and this repo's other scripts have the fuller chart set when wanted."""
     try:
         import matplotlib
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt
     except ImportError:
         return
-    res = runset.all_results()
-    fig, ax = plt.subplots(2, 2, figsize=(16, 10))
+
+    keep_names = {runset.primary.name}
+    if runset.mandate is not None:
+        keep_names.add(runset.mandate.name)
+    res = [r for r in runset.all_results() if r.name in keep_names]
+    bench = next((r for r in runset.all_results() if r.name == benchmark_name), None)
+    if bench is not None and bench.name not in keep_names:
+        res.append(bench)
+
+    fig, ax = plt.subplots(1, 2, figsize=(13, 5.5))
     for r in res:
-        ax[0, 0].plot(r.value.index, r.value.values, lw=1.2, label=r.name[:36])
-    ax[0, 0].set_yscale("log"); ax[0, 0].set_title("Cumulative return (log)")
-    ax[0, 0].legend(fontsize=6, loc="upper left"); ax[0, 0].grid(alpha=.3)
+        style = dict(lw=2.0, color="black", ls="--") if r is bench else dict(lw=1.4)
+        ax[0].plot(r.value.index, r.value.values, label=r.name[:44], **style)
+    ax[0].set_yscale("log"); ax[0].set_title("Cumulative return (log)")
+    ax[0].legend(fontsize=8, loc="upper left"); ax[0].grid(alpha=.3)
 
     for r in res:
         dd = r.value / r.value.cummax() - 1
-        ax[0, 1].plot(dd.index, dd.values, lw=1.0, label=r.name[:36])
-    ax[0, 1].set_title("Drawdown"); ax[0, 1].grid(alpha=.3); ax[0, 1].legend(fontsize=6)
+        style = dict(lw=2.0, color="black", ls="--") if r is bench else dict(lw=1.2)
+        ax[1].plot(dd.index, dd.values, label=r.name[:44], **style)
+    ax[1].set_title("Drawdown"); ax[1].grid(alpha=.3); ax[1].legend(fontsize=8, loc="lower left")
 
-    p = runset.primary
-    w = p.weights.copy(); w["CASH"] = p.cash_weight
-    ax[1, 0].stackplot(w.index, *[w[c].values for c in w.columns],
-                       labels=[c[:24] for c in w.columns])
-    ax[1, 0].set_title(f"Weights: {p.name[:44]}"); ax[1, 0].legend(fontsize=6, loc="lower left")
-    ax[1, 0].set_ylim(0, 1)
-
-    for r in res:
-        cy = r.returns.groupby(r.returns.index.year).std() * np.sqrt(252)
-        ax[1, 1].plot(cy.index, cy.values, marker="o", ms=3, lw=1, label=r.name[:36])
-    ax[1, 1].set_title("Realised calendar-year volatility"); ax[1, 1].grid(alpha=.3)
-    ax[1, 1].legend(fontsize=6)
-
+    fig.suptitle(tag, fontsize=10, y=1.02)
     fig.tight_layout()
-    fig.savefig(os.path.join(outdir, f"charts_{tag}.png"), dpi=110)
+    fig.savefig(os.path.join(outdir, f"charts_{tag}.png"), dpi=110, bbox_inches="tight")
     plt.close(fig)
 
 
