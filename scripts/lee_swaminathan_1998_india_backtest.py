@@ -374,6 +374,11 @@ def main():
     out_json = os.path.join(OUT, f"{SLUG}_results.json")
     json.dump(res_json, open(out_json, "w", encoding="utf-8"), indent=1, default=str)
     print(f"\nResults written to {OUT} ({SLUG}_*). Gate B is a human decision and is NOT assigned by this script.")
+    print("\nGATE B: decision PENDING. This is the one stop in the chain. To record a decision, a named human runs:")
+    print('  python run_pipeline.py --card cards/lee_swaminathan_1998_price_momentum_trading_volume.yaml '
+          '--decision <APPROVE|OBSERVE|FIX|REJECT> --decided-by "<name>" --rationale "<why>"')
+    print("Next: python scripts/lee_swaminathan_1998_build_workbook.py, then "
+          "python scripts/xlsx_recalc_excel.py outputs/lee_swaminathan_1998_results.xlsx (Excel) or the skill's recalc.py (LibreOffice).")
 
 
 if __name__ == "__main__":

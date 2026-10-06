@@ -494,6 +494,8 @@ def write_se_return_analytics_workbook(
     # (or blank) until the user manually presses F9.
     wb.calculation = CalcProperties(fullCalcOnLoad=True)
 
+    from universal_backtester.xlsx_style import apply_house_style
+    apply_house_style(wb)       # Arial, blue inputs, green cross-sheet links (xlsx skill rules)
     wb.save(path)
 
 

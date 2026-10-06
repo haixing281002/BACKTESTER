@@ -547,9 +547,11 @@ appendix file and sheet, not in the headline. Do not plot six lines; nobody can 
 **Every Excel file follows the xlsx skill:** Arial throughout; blue text for hardcoded inputs, black for formulas, yellow fill for key
 assumptions; formulas rather than pasted results (the Summary of a results workbook is formulas over a Returns sheet); every hardcoded
 number and assumption documented next to it with its source; percentages stored as fractions; zero formula errors after
-`recalc.py` (it needs LibreOffice; where that is not installed, say so and verify the formulas independently).
-`scripts/lee_swaminathan_1998_build_workbook.py` is the worked example. `universal_backtester/excel_tearsheet.py` predates this rule
-and has not been brought into line.
+`recalc.py` (it needs LibreOffice; on a Windows machine with desktop Excel, `python scripts/xlsx_recalc_excel.py <file>` does the
+same job through Excel COM and needs `pip install pywin32`). Colour code and styles live in `universal_backtester/xlsx_style.py`:
+blue = hardcoded, black = formula, green = cross-sheet formula, yellow = key assumption, green/red fills for pass/fail and sign.
+Use defined names so formulas read `=(CAGR-Hurdle)/Vol`. Put a colour key on the Summary sheet.
+`scripts/lee_swaminathan_1998_build_workbook.py` is the worked example; `excel_tearsheet.py` applies `apply_house_style()` on save.
 
 ## Data
 
