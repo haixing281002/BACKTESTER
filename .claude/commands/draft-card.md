@@ -64,7 +64,10 @@ example. **Read it for shape; never copy and edit it.** A card carries a
 paper's sha256 and its own ambiguities, and `cards/` ships empty for that
 reason.
 
-Write `cards/<slug>_<mode>.yaml`. Hard rules:
+Write `cards/<slug>.yaml` — same single file as `quick` mode, now filled out
+in full. There is still only ever ONE card (CLAUDE.md's "One card. Always."):
+never a second file for a long-short paper, never a second file because the
+paper is long-only. Hard rules:
 
 - `signal.template` must name one of the **registered** templates
   (`python -c "from ros.engine.templates import list_templates; print(list_templates())"`).
@@ -74,16 +77,18 @@ Write `cards/<slug>_<mode>.yaml`. Hard rules:
 - An **adaptation** card runs our data, must state `transferred_mechanism`, must
   enumerate `broken_assumptions`, and carries **no** replication targets. It is a
   different question and may never be scored against the paper's numbers.
-- **The India long-short credibility card** (`<slug>_india_longshort.yaml`, drafted
-  alongside `<slug>_adaptation.yaml` whenever `is_long_short: true` — see
-  CLAUDE.md's "One card and one backtest, or two") is still `mode: adaptation`
-  in schema terms, but its `signal.template` must NOT name a `ros.engine.templates`
+- **A long-short mechanism** (`strategy.is_long_short: true`) keeps both legs on
+  this same card. Its `signal.template` must NOT name a `ros.engine.templates`
   entry — those are long-only by construction and cannot express a short leg.
   Name it `universal_backtester:cross_sectional_long_short` (or whichever
   `universal_backtester` allocator applies) instead: this is a deliberate,
   visible signal that the card runs through `universal_backtester`'s
   `allow_short=True` path, not `run_pipeline.py`, and a human reading the card
-  should never mistake it for something `ros/engine` could execute.
+  should never mistake it for something `ros/engine` could execute. Leave
+  `long_only_adaptation` blank — both legs are live, there is nothing to state.
+  Fill it only if a NAMED, specific constraint (not "the fund used to be
+  long-only") forces a leg to be dropped; that fact still lives on this one
+  card, never a second file.
 - Every ambiguity carries a resolution. An unresolved one blocks Gate A, so if you
   cannot resolve it, it belongs in the human queue instead of half-written.
 - `n_configs_tried` counts what the **paper** tried, appendix sweeps included.
@@ -91,15 +96,28 @@ Write `cards/<slug>_<mode>.yaml`. Hard rules:
 - Costs: 30bp round trip. Do not copy the paper's assumption.
 - `lag_days` >= 1. NSE closes publish after the close.
 - Set `mandate_allow_cash: false` — this fund is fully invested. If the mechanism
-  needs cash, run both variants and say the mandate one governs.
+  needs cash, say so in `open_questions` rather than drafting a second card.
+- Write `strategy.signal_definition`/`formation_rule`/`weighting_rule` and
+  `intent.rationale` as **plain English a non-specialist can follow** — these
+  feed `card.plain_summary()`, which is now the FIRST thing Gate A shows,
+  before any fact table (see CLAUDE.md). "Buy cheap stocks" is not acceptable
+  there any more than it is in `signal_definition` itself; write the sentence
+  a PM would need to understand what is actually happening before they read
+  one more line.
 
 Validate before you claim anything:
 
 ```bash
-python -c "from ros.cards.schema import load_card; c=load_card('cards/<slug>_<mode>.yaml'); print('valid', c.fingerprint())"
-python -m ros.interpretation record --stage 02_card --output cards/<slug>_<mode>.yaml \
+python -c "from ros.cards.schema import load_card; c=load_card('cards/<slug>.yaml'); print('valid', c.fingerprint()); print(c.plain_summary())"
+python -m ros.interpretation record --stage 02_card --output cards/<slug>.yaml \
     --operator "<name>" --input "$1"
 ```
+
+Read the printed `plain_summary()` as if you were the reviewer seeing this
+card for the first time. If it doesn't tell you, in one read, what gets
+bought, on what signal, how often, and why it should work — fix the
+underlying fields and reprint it. This is what "well explained at Gate A" now
+means in practice.
 
 Then run `/critique-card` on it. Do not skip that — you are invested in your own
 card being coherent.

@@ -594,7 +594,10 @@ def gate_a_document(card, result, translation_check=None, feasibility=None,
 
     L = ["  " + "=" * W,
          f"  STRATEGY CARD   {card.paper.id}",
-         "  " + "=" * W]
+         "  " + "=" * W,
+         "",
+         card.plain_summary(),
+         ""]
     if blocking:
         L += ["", "  BLOCKED. Nothing runs until these are fixed."]
         for c in blocking:

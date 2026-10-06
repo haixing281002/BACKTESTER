@@ -334,38 +334,45 @@ weights. A future migration of `ros/engine` itself to support shorting
 natively is possible but has not been done; until then, `universal_backtester`
 is the correct and only path for a genuinely long-short investable card.
 
-## One card, decided by what the paper's construction actually needs
+## One card. Always. The paper's own construction, translated to India.
 
-A paper's own construction decides what the card looks like. There is no
-default of "always adapt to long-only"; the rule below is checked at Stage 01,
-every time.
+**Changed 2026-10-06.** Every paper gets **exactly one** strategy card,
+`cards/<slug>.yaml`, no suffix, no second file. This replaces the earlier
+full-construction/adaptation pair entirely — that split is gone, not just
+deprioritized.
 
-**If the paper is long-only by construction**, or if a long-short paper's
-mechanism transfers cleanly to this fund's actual mandate and risk limits,
-draft **one** card matching that construction and take it straight to
-backtest. There is nothing to strip out, so there is nothing to compare
-against — a single card, a single result.
+The card tests the strategy **exactly as the paper constructs it** — the same
+signal, the same long-only-or-long-short shape, the same weighting logic —
+with only the India translation applied: the universe, the instruments, and
+the data it runs on. None of the following changes which card gets drafted:
 
-**Only draft a second, adaptation card when a leg genuinely cannot be run** —
-not because the fund is long-only (it no longer is), but for a real,
-named constraint: an instrument India does not allow shorting on, a risk
-limit this specific short exceeds, a borrow that is not available at the
-needed size. In that case:
+- **Whether the paper is already about India or not.** An NSE/BSE paper needs
+  no universe translation (`universe_translation` says so and moves on, per
+  "Adapt to India by default" below) and still gets the same one card. A US,
+  global, or any other paper gets the translation worked out at Stage 01 and
+  still gets the same one card. The amount of translation work differs; the
+  number of cards never does.
+- **Whether the mechanism is long-only or long-short.** The fund can hold
+  both (mandate updated 2026-09-28). A long-short paper's card keeps both
+  legs — `is_long_short: true`, executed through `universal_backtester`'s
+  `allow_short=True` path (see `universal_backtester/engine.py`), **never**
+  through `ros/engine`, which is long-only by construction and would silently
+  clip or misread negative weights. A long-only paper's card runs through
+  `ros/engine` as always. Either way: one card, construction intact.
 
-1. **The full-construction card** — the paper's own mechanism, both legs
-   intact where the fund's actual constraints allow it, translated for the
-   Indian universe (using the individual-stock data now available — see
-   below). Runs through `universal_backtester`'s `allow_short=True` path.
-   This is the investable card whenever nothing blocks it.
-2. **The adaptation card** — only drafted when something specific and named
-   forces a leg to be dropped or altered; states exactly what changed and why
-   in `long_only_adaptation` (kept as the field name for continuity, even
-   though the constraint driving it is no longer "this fund cannot short" in
-   general).
+**There is no card that strips a leg to fit the fund.** The fund is not
+long-only-constrained anymore, so "adapt by dropping the short leg" is not a
+reason that exists. If something genuinely specific and narrow blocks a leg —
+a named instrument India does not allow shorting on, a borrow that does not
+exist at the size needed — that is a fact about THIS run, stated in
+`india_notes` or `open_questions` on the SAME card (with `ask_of` and
+`what_i_assumed`), not a second YAML file representing a different, weaker
+test. A human reading the one card sees the paper's real construction AND the
+one thing stopping it from running exactly that way, in the same place.
 
-Name them so the pairing is obvious in a directory listing when both exist —
-`<slug>_longshort.yaml` and `<slug>_adaptation.yaml` — and cross-reference
-each in the other's `intent.rationale`.
+`long_only_adaptation` stays on the schema for the rare case a leg really is
+dropped, filled on the single card itself — it does not spawn a second card
+and is blank whenever both legs run as the paper describes.
 
 ## Adapt to India by default — unless the paper is already there
 
@@ -380,11 +387,28 @@ not only ones already about this market.
 
 ## Individual-stock data changes what Stage 02 has to decide
 
-`data/raw/stocks/` (gitignored — see its own README for why and for the
-loader that reads it, `universal_backtester.data.load_stock_universe`) holds
-individual-stock price history when it's been supplied locally. This is a
-different kind of input than the index-level workbooks the fund already
-holds, and it changes what the Strategy Card has to do at Stage 02:
+**The default individual-stock source is now NSE bhavcopy (changed
+2026-10-06), not the Accord Fintech panel.** `ros/data/nse_bhavcopy_ingest.py`
+turns a local `download_history.py` pull (NSE's own public archive) into
+`ros/data/master.py`'s master-universe CSV — ISIN-linked, corporate-action-
+neutralised, point-in-time top-N membership, no look-ahead — declared the
+normal way in `data/raw/MANIFEST.yaml`'s `master:` block. `load_master()`
+reads it into the same wide price/membership/ADV panels any stock-level
+mechanism needs. `ros/data/firm_registry.py`'s `build_firm_registry()` no
+longer registers the Accord capabilities by default for this reason
+(`include_accord=True` brings them back).
+
+`data/raw/stocks/` (the Accord Fintech panel; gitignored — see its own
+README) and its loaders in `universal_backtester/accord_data.py` are **kept,
+not deleted, and not used by the pipeline by default.** They remain available
+by explicit choice — a reconciliation against bhavcopy
+(`scripts/reconcile_accord_vs_nse.py`), or a future decision to use Accord
+again — but a new card's Stage 02/05 work should reach for the bhavcopy
+master file first.
+
+Whichever source backs it, individual-stock data is a different kind of input
+than the index-level workbook the fund has always held, and it changes what
+the Strategy Card has to do at Stage 02:
 
 - **The indexes are now benchmarks and regime references only** — NIFTY 500 and
   the factor sleeves are what a result is measured against and what a regime

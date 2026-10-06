@@ -131,7 +131,15 @@ def test_the_document_shows_every_fact(card, doc):
 # field five times.
 # ---------------------------------------------------------------------------
 def test_nothing_is_rendered_twice(card, doc):
-    body = flat(doc)
+    # The one sanctioned exception: `plain_summary()` is a deliberate,
+    # once-at-the-top plain-English synopsis (added 2026-10-06, see
+    # CLAUDE.md) built from the same strategy fields the SIGNAL group
+    # states structurally below it -- a different reader need (what is
+    # happening, in prose) from the itemised group (each field, with its
+    # page/flag). That is intentional restatement, not the accidental
+    # renderer-drift this test exists to catch, so it is excluded from the
+    # scan rather than counted as a repeat.
+    body = flat(doc.replace(card.plain_summary(), ""))
     repeated = {}
     for f in card.facts():
         probe = flat(f.value)[:70]
@@ -376,6 +384,25 @@ def test_the_card_alone_still_displays(card):
     # is checking for.
     assert "not the real series" not in out
     assert "not knowable as-was on past dates" not in out
+
+
+def test_plain_summary_leads_the_document(card, doc):
+    """A reviewer should hit 'what is this testing' before any fact table."""
+    assert "WHAT THIS STRATEGY ACTUALLY DOES" in doc
+    assert doc.index("WHAT THIS STRATEGY ACTUALLY DOES") < doc.index("STRATEGY CARD   ") \
+        or doc.index("WHAT THIS STRATEGY ACTUALLY DOES") < doc.index("-" * 10)
+    summary = card.plain_summary()
+    assert flat(card.strategy.signal_definition)[:50] in flat(summary)
+    assert flat(card.intent.rationale)[:50] in flat(summary)
+
+
+def test_plain_summary_says_so_when_strategy_is_unset():
+    bare = StrategyCard(
+        paper=Paper(id="x", title="t"), intent=Intent(mode="adaptation"),
+        universe=Universe(), signal=Signal(), portfolio=PortfolioSpec(),
+        costs=CostSpec())
+    out = bare.plain_summary()
+    assert "NOT STATED" in out
 
 
 def test_nothing_is_decided(doc, sheet):

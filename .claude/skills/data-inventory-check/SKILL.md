@@ -26,7 +26,17 @@ os.path.exists(path)  # first, always
 ```
 Then load it with the real loader (never `pd.read_excel` ad hoc — this
 repo's loaders already handle the quirks: mixed sheet schemas, empty
-trailing sheets, alternating coverage). For the Accord dataset:
+trailing sheets, alternating coverage). For the default stock-level source
+(NSE bhavcopy, via `ros/data/nse_bhavcopy_ingest.py` into a
+`ros/data/master.py` master CSV):
+```python
+from ros.data.master import load_master
+mu = load_master(master_csv_path)
+print(mu.diagnosis.render())
+```
+For the Accord dataset (kept, not deleted, but no longer the pipeline's
+default — see CLAUDE.md's "Individual-stock data changes what Stage 02 has
+to decide"):
 ```python
 from universal_backtester.accord_data import diagnose_accord_dataset
 print(diagnose_accord_dataset(price_path, universe_path).to_string())
