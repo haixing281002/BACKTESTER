@@ -90,3 +90,37 @@ def check_results(run_dir):
     if big:
         raise ContractError(f"{big} daily returns exceed 50%: are they percentages instead of fractions?")
     return _defaults(r, RESULTS_OPTIONAL), df
+
+
+def load_optional(run_dir, dates):
+    """holdings.csv, trades.csv, comparators.csv: optional, checked, and returned as (frames, warnings)."""
+    out, warn = {}, []
+    p = os.path.join(run_dir, "holdings.csv")
+    if os.path.exists(p):
+        h = pd.read_csv(p)
+        need = {"date", "symbol", "weight"}
+        if need - set(h.columns):
+            warn.append(f"holdings.csv needs columns {sorted(need)}; has {list(h.columns)}")
+        else:
+            h["weight"] = pd.to_numeric(h["weight"], errors="coerce")
+            if h["weight"].abs().max() > 5:
+                warn.append("holdings.csv weights look like percentages; expected fractions of capital")
+            out["holdings"] = h.dropna(subset=["weight"])
+    p = os.path.join(run_dir, "trades.csv")
+    if os.path.exists(p):
+        t = pd.read_csv(p)
+        need = {"date", "symbol", "action", "weight_before", "weight_after"}
+        if need - set(t.columns):
+            warn.append(f"trades.csv needs columns {sorted(need)}; has {list(t.columns)}")
+        else:
+            out["trades"] = t
+    p = os.path.join(run_dir, "comparators.csv")
+    if os.path.exists(p):
+        c = pd.read_csv(p, parse_dates=["date"])
+        if "date" not in c.columns or len(c.columns) < 2:
+            warn.append("comparators.csv needs a date column and one column per comparator")
+        elif (c.drop(columns="date").abs() > 0.5).any().any():
+            warn.append("comparators.csv has daily returns above 50%: percentages instead of fractions?")
+        else:
+            out["comparators"] = c[c["date"].isin(set(dates))].reset_index(drop=True)
+    return out, warn

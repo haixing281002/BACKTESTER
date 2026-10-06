@@ -145,8 +145,18 @@ ol.steps{margin:6px 0 0;padding-left:22px} ol.steps li{margin:4px 0}
 .gap .e{grid-column:2;font-size:12.5px;color:var(--muted)}
 .pn{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .pn ul{list-style:none;padding:0;margin:0}
-.pn li{padding:8px 10px 8px 34px;position:relative;border-bottom:1px solid var(--line)}
-.pn li:last-child{border-bottom:0}
+.pn li{padding:9px 12px 9px 34px;position:relative;border-radius:6px;margin-bottom:6px}
+.pn .pos li{background:#edf7f0;border-left:4px solid var(--green)}
+.pn .neg li{background:#fcefed;border-left:4px solid var(--red)}
+.pn .flag li{background:#fff6e0;border-left:4px solid var(--amber)}
+.pn .flag li::before{content:"!";position:absolute;left:13px;color:#8a5a00;font-weight:800}
+.review{border:2px solid var(--navy);border-radius:10px;padding:16px 18px;background:linear-gradient(180deg,#f3f7fb,#fff)}
+.review .verdict{font-size:15px;line-height:1.6}
+td.ADV{background:#fff3d6;color:#8a5a00;font-weight:700;text-align:center}
+.restart{background:#fff3d6;color:#6b4500;border-bottom:1px solid #f0d58c;padding:9px 20px;font-size:13px}
+.chartsub{font-size:12px;color:var(--muted);margin:-6px 0 6px}
+.key{display:inline-flex;align-items:center;gap:6px;margin-right:14px}
+.key i{display:inline-block;width:18px;height:3px;border-radius:2px}
 .pn .pos li::before{content:"▲";position:absolute;left:10px;color:var(--green)}
 .pn .neg li::before{content:"▼";position:absolute;left:10px;color:var(--red)}
 .pn h3{margin-top:0}
@@ -164,6 +174,7 @@ details{margin-top:6px} summary{cursor:pointer;color:var(--navy);font-weight:600
   </div>
   <div class="chips" id="chips"></div>
 </header>
+<div class="restart hide" id="restart"><b>Lightyear has been updated.</b> This window is still running the old version. When no run is working, close the black Lightyear window and double-click <b>Start Lightyear</b> on your Desktop, then refresh this page.</div>
 <div class="wrap">
   <aside>
     <button class="primary" style="width:100%" onclick="showNew()">+ New paper</button>
@@ -242,6 +253,8 @@ function stageName(id){ const all = [...(H?.stages?.A||[]), ...(H?.stages?.B||[]
 
 async function boot(){
   H = await api("/api/health");
+  showRestart();
+  setInterval(async () => { try{ H = await api("/api/health"); showRestart() }catch(e){} }, 15000);
   $("#ver").textContent = "v"+H.version;
   $("#chips").innerHTML = `<span class="chip ${H.claude?'ok':'bad'}">Claude Code ${H.claude?'found':'missing'}</span>
     <span class="chip ${H.libreoffice?'ok':'bad'}">LibreOffice ${H.libreoffice?'ready':'missing'}</span>
@@ -251,6 +264,8 @@ async function boot(){
   const want = location.hash.slice(1) || LS.get("ly_run","");
   if(want) openRun(want).catch(showNew); else showNew();
 }
+
+function showRestart(){ $("#restart").classList.toggle("hide", !H?.restart_needed) }
 
 async function refreshRuns(){
   const runs = await api("/api/runs");
@@ -295,7 +310,7 @@ async function openRun(id){
 }
 
 function renderShell(){
-  GA_SIG = RES_SIG = GB_SIG = F_SIG = P_SIG = null; FACT_I = 0; clearInterval(FACT_T); FACT_T = null;
+  GA_SIG = RES_SIG = GB_SIG = F_SIG = P_SIG = null; POS_RUN = null; CH = null; FACT_I = 0; clearInterval(FACT_T); FACT_T = null;
   $("#main").innerHTML = `
     <div class="card">
       <div class="row" style="justify-content:space-between">
@@ -307,7 +322,7 @@ function renderShell(){
     </div>
     <div class="tabs" id="tabs"></div>
     <div id="panes">
-      <div data-p="progress"></div><div data-p="gatea"></div><div data-p="results"></div><div data-p="gateb"></div><div data-p="files"></div>
+      <div data-p="progress"></div><div data-p="gatea"></div><div data-p="results"></div><div data-p="positions"></div><div data-p="gateb"></div><div data-p="files"></div>
       <div data-p="log"><div class="card"><div class="row" style="justify-content:space-between;margin-bottom:8px"><h2 style="margin:0">Technical log</h2>
         <label class="row small" style="margin:0;color:var(--muted)"><input type="checkbox" id="follow" checked style="width:auto"> follow</label></div>
         <p class="small muted" style="margin-top:0">Everything Claude Code did, step by step. Also saved as run.log in the run folder (see Files).</p>
@@ -323,13 +338,14 @@ function defaultTab(st){
 function tabsFor(st){
   const t = [["progress","Progress"]];
   if(st.phase_a) t.push(["gatea","Gate A"+(st.status==="gate_a"?' <span class="badge">your call</span>':"")]);
-  if(st.results){ t.push(["results","Results"]); t.push(["gateb","Gate B"+(st.status==="gate_b"?' <span class="badge">decide</span>':"")]) }
+  if(st.results){ t.push(["results","Results"]); if(st.has_holdings) t.push(["positions","Positions & trades"]);
+    t.push(["gateb","Gate B"+(st.status==="gate_b"?' <span class="badge">decide</span>':"")]) }
   t.push(["files","Files"]); t.push(["log","Technical log"]);
   if(!TAB || !t.find(x=>x[0]===TAB)) TAB = defaultTab(st);
   $("#tabs").innerHTML = t.map(([k,l]) => `<button class="tab ${k===TAB?'on':''} ${k==='log'?'tech':''}" onclick="setTab('${k}',true)">${l}</button>`).join("");
   document.querySelectorAll("#panes > div").forEach(d => d.classList.toggle("hide", d.dataset.p !== TAB));
 }
-function setTab(k, byUser){ TAB = k; if(byUser) USER_TAB = true; tabsFor(ST); if(k==="results") drawCharts(true) }
+function setTab(k, byUser){ TAB = k; if(byUser) USER_TAB = true; tabsFor(ST); if(k==="results") drawCharts(true); if(k==="positions") renderPositions(true) }
 
 async function tick(){
   if(!CUR) return;
@@ -353,7 +369,7 @@ async function tick(){
   tabsFor(st);
   renderProgress(st);
   if(st.phase_a) renderGateA(st);
-  if(st.results){ renderResults(st); renderGateB(st) }
+  if(st.results){ renderResults(st); renderGateB(st); if(TAB==="positions") renderPositions(false) }
   renderFiles(st);
   await pullLog();
 }
@@ -506,80 +522,164 @@ async function reviseA(){
 }
 
 /* ---------------- Results */
+let REV_SIG = null;
 function renderResults(st){
-  const sig = st.id + st.status + (st.workbook||"");
-  if(RES_SIG === sig) return; RES_SIG = sig; CHARTED = null;
-  const r = st.results, rc = st.recalc || {};
-  const rcText = rc.status ? `${rc.status==="success"?"✓":"!"} recalculated in LibreOffice · ${rc.total_formulas} formulas · ${rc.total_errors} errors` : (rc.error?`recalc: ${esc(rc.error).slice(0,160)}`:"");
-  $('[data-p="results"]').innerHTML = `
-    <div class="card"><div class="row" style="justify-content:space-between"><h2 style="margin:0">${esc(r.strategy_name)} vs ${esc(r.benchmark_name)}</h2>
-      <div class="row">${st.workbook?`<a href="/api/runs/${st.id}/workbook"><button class="primary">⬇ Download Excel</button></a>`:""}<span class="small muted">${rcText}</span></div></div>
-      <p class="muted" style="margin:8px 0 14px">${esc(r.headline)}</p>
-      <div class="kpis" id="kpis"></div><div class="small muted">Sharpe against a flat 6% cash hurdle. Every number here is computed from the run's daily returns, with the same definitions as the workbook.</div></div>
-    <div class="card"><h2>Positives and negatives</h2>
-      <div class="pn"><div class="pos"><h3 style="color:var(--green)">What works</h3><ul id="pos"></ul></div>
-        <div class="neg"><h3 style="color:var(--red)">What doesn't</h3><ul id="neg"></ul></div></div>
-      <p class="small muted" style="margin:10px 0 0"><span class="src" style="margin:0">measured</span> = calculated directly from the daily returns. <span class="src" style="margin:0">from the tests</span> = from the run's validation (bootstrap, walk-forward, costs, factors).</p></div>
-    <div class="grid2">
-      <div class="card"><h2>Growth of 100</h2><div class="chart" id="c_growth"></div></div>
-      <div class="card"><h2>Drawdown from peak</h2><div class="chart" id="c_dd"></div></div>
-      <div class="card"><h2>Rolling 3-month volatility (annualised)</h2><div class="chart" id="c_vol"></div></div>
-      <div class="card"><h2>Calendar-year return</h2><div class="chart" id="c_cal"></div></div>
-    </div>
-    <div class="card"><h2>Strategy monthly returns</h2><div class="chart" id="c_heat" style="height:300px"></div></div>
-    <div class="card hide" id="sleevecard"><h2 id="sleevetitle">Sleeve</h2><div class="chart" id="c_sleeve"></div></div>
-    <div class="card"><h2>Validation</h2><table class="t"><tr><th>Measure</th><th>Value</th><th>Source</th></tr>
-      ${(r.validation||[]).map(v=>`<tr><td>${esc(v.label)}</td><td>${typeof v.value==="number"?(v.format==="pct"?pct(v.value,2):v.format==="int"?Math.round(v.value):num(v.value)):esc(v.value)}</td><td class="small muted">${esc(v.source)}</td></tr>`).join("")}</table>
-      ${(r.notes||[]).length?`<h3>Caveats</h3><ul>${r.notes.map(n=>`<li>${esc(n)}</li>`).join("")}</ul>`:""}</div>`;
-  if(TAB==="results") drawCharts(true);
+  const sig = st.id + st.status + (st.workbook||"") + (st.recalc?.total_formulas||"");
+  if(RES_SIG !== sig){
+    RES_SIG = sig; CHARTED = null; REV_SIG = null;
+    const r = st.results, rc = st.recalc || {}, sn = r.strategy_name, bn = r.benchmark_name;
+    const rcText = rc.status ? `${rc.status==="success"?"✓":"!"} recalculated in LibreOffice · ${rc.total_formulas} formulas · ${rc.total_errors} errors` : (rc.error?`recalc: ${esc(rc.error).slice(0,160)}`:"");
+    const key = `<span class="key"><i style="background:#1f4e79"></i>Strategy: ${esc(sn)} (after costs)</span><span class="key"><i style="background:#d98324"></i>Benchmark: ${esc(bn)} (price index)</span>`;
+    $('[data-p="results"]').innerHTML = `
+      <div class="card"><div class="row" style="justify-content:space-between"><h2 style="margin:0">Strategy vs benchmark</h2>
+        <div class="row">${st.workbook?`<a href="/api/runs/${st.id}/workbook"><button class="primary">⬇ Download Excel</button></a>`:""}
+          <button onclick="act('rebuild')" title="Rebuild charts and the workbook from this run's files">Rebuild</button><span class="small muted">${rcText}</span></div></div>
+        <p style="margin:8px 0 4px">${key}</p>
+        <p class="muted" style="margin:6px 0 14px">${esc(r.headline)}</p>
+        <div class="kpis" id="kpis"></div><div class="small muted">Big number = the strategy. Orange line = NIFTY 500 over exactly the same days. Sharpe against a flat 6% cash rate.</div></div>
+      <div id="reviewcard"></div>
+      <div class="card"><h2>Positives and negatives</h2>
+        <div class="pn"><div class="pos"><h3 style="color:var(--green)">▲ What works</h3><ul id="pos"></ul></div>
+          <div class="neg"><h3 style="color:var(--red)">▼ What doesn't</h3><ul id="neg"></ul></div></div>
+        <p class="small muted" style="margin:10px 0 0"><span class="src" style="margin:0">measured</span> = calculated by Lightyear from the daily returns · <span class="src" style="margin:0">from the tests</span> = the run's own validation · <span class="src" style="margin:0">analyst read</span> = Claude's review of everything</p></div>
+      <div class="grid2">
+        <div class="card"><h2>Growth of 100: strategy vs ${esc(bn)}</h2><div class="chartsub">What 100 invested at the start would be worth on each day. Above the orange line = ahead of the benchmark.</div><div class="chart" id="c_growth"></div></div>
+        <div class="card"><h2>Drawdown: fall from the previous high</h2><div class="chartsub">0% = at a new high. The deeper the dip, the bigger the loss an investor sat through.</div><div class="chart" id="c_dd"></div></div>
+        <div class="card"><h2>Rolling 3-month volatility (annualised)</h2><div class="chartsub">How bumpy each strategy was over the previous 63 trading days. Higher = riskier.</div><div class="chart" id="c_vol"></div></div>
+        <div class="card"><h2>Calendar-year return</h2><div class="chartsub">Each year's return, strategy beside benchmark. The first and last years are part-years.</div><div class="chart" id="c_cal"></div></div>
+      </div>
+      <div class="card"><h2>Strategy monthly returns</h2><div class="chartsub">Green = a gaining month, red = a losing month, for the strategy only.</div><div class="chart" id="c_heat" style="height:300px"></div></div>
+      <div class="card hide" id="sleevecard"><h2 id="sleevetitle">Sleeve</h2><div class="chartsub" id="sleevesub"></div><div class="chart" id="c_sleeve"></div></div>
+      <div class="card hide" id="cmpcard"><h2>Appendix: the simpler alternatives it had to beat</h2>
+        <div class="chartsub">Growth of 100 for the strategy and each comparator over the same days. Click a name in the legend to hide or show it.</div>
+        <div class="chart" id="c_cmp" style="height:380px"></div><table class="t" id="cmptab" style="margin-top:10px"></table></div>
+      <div class="card"><h2>Validation</h2><table class="t"><tr><th>Measure</th><th>Value</th><th>Source</th></tr>
+        ${(r.validation||[]).map(v=>`<tr><td>${esc(v.label)}</td><td>${typeof v.value==="number"?(v.format==="pct"?pct(v.value,2):v.format==="int"?Math.round(v.value):num(v.value)):esc(v.value)}</td><td class="small muted">${esc(v.source)}</td></tr>`).join("")}</table>
+        ${(r.notes||[]).length?`<h3>Caveats</h3><ul>${r.notes.map(n=>`<li>${esc(n)}</li>`).join("")}</ul>`:""}</div>`;
+    if(TAB==="results") drawCharts(true);
+  }
+  renderReview(st);
+}
+
+function renderReview(st){
+  const rv = st.review, rs = st.review_status, sig = rs + JSON.stringify(rv||{}).length;
+  if(REV_SIG === sig || !$("#reviewcard")) return; REV_SIG = sig;
+  let h = "";
+  if(rv){
+    const tc = {high:"ok", medium:"warn", low:"bad"}[rv.trust] || "warn";
+    h = `<div class="card review"><div class="row" style="justify-content:space-between"><h2 style="margin:0">Analyst's read <span class="small muted">(Claude, after reading every result. An opinion, not a decision.)</span></h2>
+        <span class="row"><span class="tag ${tc}">trust in this result: ${esc(rv.trust||"?")}</span><button onclick="act('review')">Review again</button></span></div>
+      <p class="verdict">${esc(rv.verdict)}</p>${rv.trust_why?`<p class="small muted" style="margin-top:-4px">${esc(rv.trust_why)}</p>`:""}
+      ${(rv.red_flags||[]).length?`<div class="pn" style="grid-template-columns:1fr"><div class="flag"><h3 style="color:#8a5a00">Red flags in the test itself</h3><ul>${rv.red_flags.map(x=>`<li>${esc(x)}</li>`).join("")}</ul></div></div>`:""}
+      ${(rv.what_would_change_it||[]).length?`<h3>What could change the answer</h3><ul>${rv.what_would_change_it.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`:""}</div>`;
+  } else if(rs==="running"){
+    h = `<div class="card review"><div class="now"><div class="spin"></div><div><b>Claude is reviewing the results.</b><div class="small muted">Its plain-English read, with strengths, weaknesses and red flags, appears here in a few minutes. Everything below is already final.</div></div></div></div>`;
+  } else if(["gate_b","decided"].includes(st.status)){
+    h = `<div class="card review row" style="justify-content:space-between"><span>${rs==="failed"?"The analyst review did not finish.":"No analyst review yet for this run."}</span><button class="primary" onclick="act('review')">Ask Claude to review these results</button></div>`;
+  }
+  $("#reviewcard").innerHTML = h;
+  if(CHARTED === CUR) fillPN();
+}
+
+let CH = null;
+function fillPN(){
+  if(!CH || !$("#pos")) return;
+  const r = ST.results, rv = ST.review || {}, ob = CH.observations || {positives:[], negatives:[]};
+  const li = (t, src) => `<li>${esc(t)}<span class="src">${src}</span></li>`;
+  $("#pos").innerHTML = ob.positives.map(t=>li(t,"measured")).join("") + (r.strengths||[]).map(t=>li(t,"from the tests")).join("")
+    + (rv.strengths||[]).map(t=>li(t,"analyst read")).join("") || `<li>None found.</li>`;
+  $("#neg").innerHTML = ob.negatives.map(t=>li(t,"measured")).join("") + (r.weaknesses||[]).map(t=>li(t,"from the tests")).join("")
+    + (rv.weaknesses||[]).map(t=>li(t,"analyst read")).join("") || `<li>None found.</li>`;
 }
 
 async function drawCharts(force){
   if(!ST?.results || (CHARTED===CUR && !force)) return;
   if(!$("#c_growth")) return;
   let c; try{ c = await api(`/api/runs/${CUR}/charts`) }catch(e){ return }
-  CHARTED = CUR;
-  const r = ST.results, ob = c.observations || {positives:[], negatives:[]};
-  const li = (t, src) => `<li>${esc(t)}<span class="src">${src}</span></li>`;
-  $("#pos").innerHTML = ob.positives.map(t=>li(t,"measured")).join("") + (r.strengths||[]).map(t=>li(t,"from the tests")).join("") || `<li class="muted">None found.</li>`;
-  $("#neg").innerHTML = ob.negatives.map(t=>li(t,"measured")).join("") + (r.weaknesses||[]).map(t=>li(t,"from the tests")).join("") || `<li class="muted">None found.</li>`;
-  const m = c.metrics, K = [["CAGR","cagr",pct],["Volatility","vol",pct],["Sharpe vs 6%","sharpe",num],["Max drawdown","max_dd",pct],["Final value of 100","final",v=>num(v,1)]];
+  CHARTED = CUR; CH = c;
+  fillPN();
+  const m = c.metrics, K = [["CAGR (a year)","cagr",pct],["Volatility (a year)","vol",pct],["Sharpe vs 6% cash","sharpe",num],["Worst fall from peak","max_dd",pct],["100 became","final",v=>num(v,1)]];
   $("#kpis").innerHTML = K.map(([l,k,f]) => `<div class="kpi"><div class="l">${l}</div><div class="v">${f(m.strategy[k])}</div><div class="b">${esc(c.names.benchmark)}: ${f(m.benchmark[k])}</div></div>`).join("");
   if(!window.Plotly){ document.querySelectorAll(".chart").forEach(el => el.innerHTML = `<p class="muted small">Chart library did not load.</p>`); return }
   const col = {strategy:"#1f4e79", benchmark:"#d98324", sleeve:"#6a994e"};
+  const label = k => k==="strategy" ? "Strategy: "+c.names.strategy : k==="benchmark" ? "Benchmark: "+c.names.benchmark : "Sleeve: "+c.names.sleeve;
   const main = ["strategy","benchmark"].filter(k => c.growth[k]);
   const lay = (yfmt, ytitle) => ({margin:{l:56,r:16,t:8,b:36}, font:{family:"Segoe UI, Arial", size:12}, hovermode:"x unified",
-      legend:{orientation:"h", y:-0.18}, yaxis:{tickformat:yfmt, title:ytitle, gridcolor:"#eef1f4", zerolinecolor:"#c9d1da"},
+      legend:{orientation:"h", y:-0.2}, yaxis:{tickformat:yfmt, title:ytitle, gridcolor:"#eef1f4", zerolinecolor:"#c9d1da"},
       xaxis:{gridcolor:"#f3f5f7"}, paper_bgcolor:"#fff", plot_bgcolor:"#fff"});
   const cfg = {displaylogo:false, responsive:true, modeBarButtonsToRemove:["lasso2d","select2d"]};
-  const line = (k, series, extra={}) => ({x:c.dates, y:series[k], name:c.names[k], type:"scatter", mode:"lines", line:{color:col[k], width:k==="strategy"?2.2:1.6}, ...extra});
-  Plotly.newPlot("c_growth", main.map(k=>line(k,c.growth)), {...lay(",.0f","Value")}, cfg);
-  Plotly.newPlot("c_dd", main.map(k=>line(k,c.drawdown,{fill:k==="strategy"?"tozeroy":"none", fillcolor:"rgba(31,78,121,.12)"})), {...lay(".0%","Drawdown")}, cfg);
-  Plotly.newPlot("c_vol", main.map(k=>line(k,c.rolling_vol)), {...lay(".0%","Volatility")}, cfg);
-  Plotly.newPlot("c_cal", main.map(k=>({x:c.calendar.years, y:c.calendar[k], name:c.names[k], type:"bar", marker:{color:col[k]},
-      text:c.calendar[k].map(v=>pct(v)), textposition:"outside", cliponaxis:false, hovertemplate:"%{x}: %{y:.1%}<extra>"+c.names[k]+"</extra>"})),
+  const line = (k, series, extra={}) => ({x:c.dates, y:series[k], name:label(k), type:"scatter", mode:"lines", line:{color:col[k], width:k==="strategy"?2.2:1.6}, ...extra});
+  Plotly.newPlot("c_growth", main.map(k=>line(k,c.growth,{hovertemplate:"%{y:.1f}"})), {...lay(",.0f","Value of 100")}, cfg);
+  Plotly.newPlot("c_dd", main.map(k=>line(k,c.drawdown,{fill:k==="strategy"?"tozeroy":"none", fillcolor:"rgba(31,78,121,.12)", hovertemplate:"%{y:.1%}"})), {...lay(".0%","Below previous high")}, cfg);
+  Plotly.newPlot("c_vol", main.map(k=>line(k,c.rolling_vol,{hovertemplate:"%{y:.1%}"})), {...lay(".0%","Volatility")}, cfg);
+  Plotly.newPlot("c_cal", main.map(k=>({x:c.calendar.years, y:c.calendar[k], name:label(k), type:"bar", marker:{color:col[k]},
+      text:c.calendar[k].map(v=>pct(v)), textposition:"outside", cliponaxis:false, hovertemplate:"%{x}: %{y:.1%}<extra>"+label(k)+"</extra>"})),
       {...lay(".0%","Return"), margin:{l:56,r:16,t:26,b:40}, barmode:"group", hovermode:"closest"}, cfg);
   const z = c.monthly.z, mx = Math.max(0.01, ...z.flat().filter(v=>v!=null).map(Math.abs));
   Plotly.newPlot("c_heat", [{z, x:c.monthly.months, y:c.monthly.years, type:"heatmap", zmin:-mx, zmax:mx, colorscale:[[0,"#b3261e"],[0.5,"#ffffff"],[1,"#2e7d4f"]],
       text:z.map(r=>r.map(v=>v==null?"":(v*100).toFixed(1)+"%")), texttemplate:"%{text}", hovertemplate:"%{y} %{x}: %{z:.2%}<extra></extra>", colorbar:{tickformat:".0%"}}],
       {...lay("",""), hovermode:"closest", yaxis:{type:"category", autorange:"reversed"}}, cfg);
-  if(c.growth.sleeve){ $("#sleevecard").classList.remove("hide"); $("#sleevetitle").textContent = c.names.sleeve+" (sleeve) vs NIFTY 500";
-    Plotly.newPlot("c_sleeve", ["sleeve","benchmark"].map(k=>line(k,c.growth)), {...lay(",.0f","Value")}, cfg) }
+  if(c.growth.sleeve){ $("#sleevecard").classList.remove("hide"); $("#sleevetitle").textContent = `Sleeve: ${c.names.sleeve} vs ${c.names.benchmark}`;
+    $("#sleevesub").textContent = `Growth of 100 for the sleeve the strategy is built on, against the benchmark.`;
+    Plotly.newPlot("c_sleeve", ["sleeve","benchmark"].map(k=>line(k,c.growth)), {...lay(",.0f","Value of 100")}, cfg) }
+  if(c.comparators && c.comparators.names.length){
+    $("#cmpcard").classList.remove("hide");
+    const pal = ["#6a994e","#8e5ea2","#3c8dbc","#c0504d","#7f7f7f","#b8860b"];
+    const tr = [line("strategy", c.growth)].concat(c.comparators.names.map((nm,k)=>({x:c.dates, y:c.comparators.growth[nm], name:nm, type:"scatter", mode:"lines", line:{color:pal[k%pal.length], width:1.4, dash:"dot"}})));
+    Plotly.newPlot("c_cmp", tr, {...lay(",.0f","Value of 100")}, cfg);
+    const cm = c.comparators.metrics;
+    $("#cmptab").innerHTML = `<tr><th>Series</th><th>CAGR</th><th>Volatility</th><th>Sharpe vs 6%</th><th>Worst fall</th><th>vs strategy CAGR</th></tr>
+      <tr><td><b>Strategy: ${esc(c.names.strategy)}</b></td><td>${pct(m.strategy.cagr)}</td><td>${pct(m.strategy.vol)}</td><td>${num(m.strategy.sharpe)}</td><td>${pct(m.strategy.max_dd)}</td><td>–</td></tr>
+      ${c.comparators.names.map(nm=>{const x=cm[nm], d=x.cagr-m.strategy.cagr; return `<tr><td>${esc(nm)}</td><td>${pct(x.cagr)}</td><td>${pct(x.vol)}</td><td>${num(x.sharpe)}</td><td>${pct(x.max_dd)}</td><td style="color:${d>0?'var(--red)':'var(--green)'}">${d>0?"beat the strategy by ":"behind by "}${pct(Math.abs(d))}</td></tr>`}).join("")}`;
+  }
+}
+
+/* ---------------- Positions */
+let POS = null, POS_RUN = null;
+async function renderPositions(force){
+  if(!ST?.has_holdings) return;
+  if(POS_RUN === CUR && !force) return;
+  try{ POS = await api(`/api/runs/${CUR}/positions`) }catch(e){ return }
+  POS_RUN = CUR;
+  const by = {};
+  POS.holdings.forEach(h => (by[h.date] = by[h.date] || []).push(h));
+  const dates = Object.keys(by).sort();
+  const summ = dates.map(d => { const hs = by[d], L = hs.filter(h=>h.weight>0), S = hs.filter(h=>h.weight<0);
+    const gl = L.reduce((a,h)=>a+h.weight,0), gs = -S.reduce((a,h)=>a+h.weight,0), mx = Math.max(...hs.map(h=>Math.abs(h.weight)));
+    return {d, nl:L.length, ns:S.length, gl, gs, mx} });
+  const wcell = w => `<span style="color:${w<0?'var(--red)':'var(--green)'}">${pct(w,1)}</span>`;
+  $('[data-p="positions"]').innerHTML = `
+    <div class="card"><h2>What the strategy held at each rebalance</h2>
+      <p class="small muted" style="margin-top:0">Target weights as a share of capital. Amber = fewer than 5 names on a side; red = one stock above 25% of capital (the result then rests on very few companies).</p>
+      <table class="t"><tr><th>Rebalance</th><th>Names long</th><th>Names short</th><th>Gross long</th><th>Gross short</th><th>Net</th><th>Largest position</th></tr>
+      ${summ.map(s=>`<tr><td>${esc(s.d)}</td><td class="${s.nl<5?'ADV':''}">${s.nl}</td><td class="${s.ns<5&&s.ns>0?'ADV':''}">${s.ns}</td><td>${pct(s.gl)}</td><td>${pct(s.gs)}</td><td>${pct(s.gl-s.gs)}</td><td class="${s.mx>0.25?'FAIL':''}">${pct(s.mx)}</td></tr>`).join("")}</table></div>
+    <div class="card"><h2>Holdings</h2>
+      ${dates.map(d=>`<details><summary>${esc(d)}: ${by[d].length} positions</summary><table class="t" style="margin:8px 0 12px"><tr><th>Symbol</th><th>Leg</th><th>Weight</th></tr>
+        ${by[d].sort((a,b)=>b.weight-a.weight).map(h=>`<tr><td>${esc(h.symbol)}</td><td>${esc(h.leg)}</td><td>${wcell(h.weight)}</td></tr>`).join("")}</table></details>`).join("")}</div>
+    <div class="card"><h2>Trades (${POS.trades.length})</h2>
+      <p class="small muted" style="margin-top:0">${POS.trades_derived?"Derived from the change in target weights between rebalances.":"As written by the run."} BUY / SELL = open / close a long; SHORT / COVER = open / close a short; ADD / TRIM = resize.</p>
+      <div style="max-height:520px;overflow:auto"><table class="t"><tr><th>Date</th><th>Symbol</th><th>Action</th><th>Weight before</th><th>Weight after</th><th>Change</th></tr>
+      ${POS.trades.map(t=>`<tr><td>${esc(t.date)}</td><td>${esc(t.symbol)}</td><td><b>${esc(t.action)}</b></td><td>${wcell(t.weight_before)}</td><td>${wcell(t.weight_after)}</td><td>${wcell(t.weight_after-t.weight_before)}</td></tr>`).join("")}</table></div></div>`;
 }
 
 /* ---------------- Gate B */
 function renderGateB(st){
   const sig = st.status + st.id; if(GB_SIG === sig) return; GB_SIG = sig;
-  const r = st.results, crit = r.gate_b.criteria || [], at = st.status==="gate_b";
-  const res = c => c.passed ? "PASS" : (c.blocking===false ? "NA" : "FAIL");
+  const r = st.results, rows = r.gate_rows || [], at = st.status==="gate_b";
+  const cls = x => ({"PASS":"PASS","FAIL":"FAIL","FAIL (advisory)":"ADV","not computed":"NA"})[x] || "NA";
+  const fv = (g, v) => v==null ? "–" : (/%/.test(String(g.threshold_raw)+String(g.value_raw)) ? pct(v,0) : num(v));
+  const nb = rows.filter(g=>g.blocking), np = nb.filter(g=>g.result==="PASS").length;
   $('[data-p="gateb"]').innerHTML = `
     <div class="card"><h2>Gate B: investment decision</h2>
-      <div class="facts"><div>Evidence supports</div><div><b>${esc(r.evidence_supports)}</b></div>
+      <div class="facts"><div>Blocking criteria passed</div><div><b>${np} of ${nb.length}</b></div>
+        <div>Evidence supports</div><div><b>${esc(r.evidence_supports)}</b></div>
         <div>Decisive criterion</div><div>${esc(r.decisive_criterion||"–")}</div>
         <div>Decision</div><div><b>${st.decision?esc(st.decision.decision):"PENDING"}</b></div></div>
-      <h3>Criteria (computed by gate_b())</h3>
-      <table class="t"><tr><th>Criterion</th><th style="width:110px">Result</th><th>Value</th><th>Threshold</th></tr>
-        ${crit.map(c=>{const x=res(c);return `<tr><td>${esc(c.name)}</td><td class="${x}">${x==="NA"?"not computed":x}</td><td>${esc(c.value)}</td><td>${esc(c.threshold)}</td></tr>`}).join("")}</table></div>
+      <h3>Criteria (measured by gate_b(), thresholds are the fund's policy)</h3>
+      <table class="t"><tr><th>Criterion</th><th style="width:130px">Result</th><th>Measured</th><th>Needs</th><th>Counts?</th></tr>
+        ${rows.map(g=>`<tr><td>${esc(g.name)}${g.evidence?`<div class="small muted">${esc(g.evidence)}</div>`:""}</td><td class="${cls(g.result)}">${esc(g.result)}</td>
+          <td>${g.value==null?esc(g.value_raw):fv(g,g.value)}</td><td>${g.op?`${g.abs?"|value| ":""}${esc(g.op)} ${fv(g,g.threshold)}`:esc(g.threshold_raw)}</td><td class="small">${g.blocking?"blocking":"advisory"}</td></tr>`).join("")}</table>
+      <p class="small muted">Blocking criteria must all pass for the evidence to support promotion. Advisory ones are reported but do not block. "Not computed" means there was nothing to compare against in this run.</p></div>
     ${at?`<div class="card"><h2>Record the decision</h2>
       <p class="small muted">This is the one stop in the chain. No model votes. The record is written to the run folder and to outputs/lightyear/decisions.jsonl.</p>
       <div class="decide">${["APPROVE","OBSERVE","FIX","REJECT"].map(d=>`<button class="d-${d} ${DEC===d?'on':''}" onclick="pickDec('${d}')">${d}</button>`).join("")}</div>
@@ -611,7 +711,10 @@ function renderFiles(st){
 
 async function act(what){
   if(what==="cancel" && !confirm("Cancel the running phase? Claude Code is stopped; files written so far stay.")) return;
-  try{ await api(`/api/runs/${CUR}/${what}`, {method:"POST"}); H = await api("/api/health"); USER_TAB=false; TAB="progress"; tick(); refreshRuns() }catch(e){ alert(e.message) }
+  try{ await api(`/api/runs/${CUR}/${what}`, {method:"POST"}); H = await api("/api/health");
+    if(what==="resume"){ USER_TAB=false; TAB="progress" }
+    if(what==="rebuild"){ RES_SIG = null; CHARTED = null; POS_RUN = null }
+    tick(); refreshRuns() }catch(e){ alert(e.message) }
 }
 window.addEventListener("resize", () => { if(window.Plotly) document.querySelectorAll(".chart .js-plotly-plot").forEach(p => Plotly.Plots.resize(p)) });
 boot();
