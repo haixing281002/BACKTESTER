@@ -1,0 +1,681 @@
+card_version: "1.0"
+
+paper:
+  id: chen_2013_price_momentum_quality_blend_adaptation
+  title: "India adaptation: NIFTY500 price-momentum + quality sleeve blend (from Chen, Chen, Hsin & Lee 2013)"
+  authors: [Hong-Yi Chen, Sheng-Syan Chen, Chin-Wen Hsin, Cheng-Few Lee]
+  date: "2013-07-01"
+  source_file: docs/papers/chen_chen_hsin_lee_2013_revenue_earnings_price_momentum.pdf
+  source_sha256: "d3adc029568c3f7b"
+
+intent:
+  mode: adaptation
+  parent_card: chen_2013_revenue_earnings_price_momentum_replication
+  rationale: >
+    The paper's literal construction -- stock-level quintile sorts on revenue
+    surprises (SURGE), earnings surprises (SUE) and prior returns, combined
+    long-short -- is NOT convertible for this fund (see the parent card): no
+    firm-level Indian revenue/earnings/announcement-date panel is held, for
+    any market. But the paper's CENTRAL claim -- that combining an
+    independent fundamentals-based signal with a price-based signal produces
+    more robust returns than either alone, because each carries some
+    unpriced information the other does not (Tables 5, 6 and 8) -- is a
+    testable IDEA even without the exact instruments. This card operationalises
+    it with the two closest off-the-shelf NSE factor sleeves the fund already
+    holds: NIFTY500 MOMENTUM 50 (price-based) and NIFTY500 QUALITY 50
+    (fundamentals-based), blended long-only, against NIFTY 500 and the
+    off-the-shelf NIFTY500 MULTIFACTOR MQVLV 50 index.
+  transferred_mechanism: >
+    A fixed 50/50, monthly-rebalanced blend of NIFTY500 MOMENTUM 50 and
+    NIFTY500 QUALITY 50, long-only, benchmarked against NIFTY 500 and against
+    each sleeve held alone -- testing whether the BLEND dominates either
+    single sleeve on a risk-adjusted basis, the sleeve-level analogue of the
+    paper's stock-level dominance result (Table 5/6: no single criterion
+    subsumes another) and of its combined-momentum result (Table 8: combining
+    criteria beats any one alone).
+  broken_assumptions:
+    - >
+      SIGNAL SUBSTITUTED, NOT ADAPTED: NIFTY500 QUALITY 50 is a LEVEL-based
+      quality score (profitability, leverage, earnings variability),
+      reconstituted semi-annually. It is not a SURGE or SUE-style SURPRISE
+      measure with drift, and it is not built from the same construction as
+      either paper signal. It is used here only as the closest available
+      "fundamentals, not price" sleeve -- a proxy for the ROLE earnings/revenue
+      information plays in the paper, not for the measures themselves.
+    - >
+      NO STOCK-LEVEL COMBINATION: the paper's edge comes from intersecting
+      THREE per-stock quintile ranks (Table 8: R5xE5xP5 beats any two-way
+      combination). This card blends two pre-built INDEX sleeves, each
+      already diversified across ~50-500 names with its own turnover and
+      reconstitution rule; there is no stock-level intersection here at all,
+      and no revenue-surprise leg of any kind.
+    - >
+      TWO SIGNALS, NOT THREE: the paper's revenue-surprise leg (SURGE) has no
+      analogue on this card. Whatever this blend finds says nothing about
+      revenue momentum specifically, which the paper documents as real but
+      the smallest and shortest-lived of the three (Table 4 Panel A, Table 10).
+    - >
+      MEASURED SLEEVE CORRELATION IS HIGH: on this fund's own 2005-2026 data,
+      NIFTY500 MOMENTUM 50 and NIFTY500 QUALITY 50 correlate 0.88 and the
+      50/50 blend's realised vol (19.7%) is barely below either sleeve's own
+      (22.4% and 18.2%) -- a materially smaller diversification benefit than
+      the paper's near-independent stock-level signals (Table 2: SURGE/SUE/
+      prior-return pairwise correlations of just 0.15-0.32).
+    - >
+      DIFFERENT MARKET AND ERA: source evidence is US equities, 1974-2009;
+      this card runs Indian equities, 2005-2026.
+    - >
+      RETURN BASIS: NSE factor-sleeve indices are price-return; dividends are
+      missing from every series.
+    - >
+      POINT-IN-TIME: both sleeves are backfilled to a 2005 base with
+      methodology fixed years later.
+
+universe:
+  description: >
+    Two NSE factor sleeves: NIFTY500 MOMENTUM 50 (price-based) and NIFTY500
+    QUALITY 50 (fundamentals-based). Not a stock-level cross-section -- the
+    mechanism blends two pre-built streams, it never ranks individual names.
+  asset_class: equity
+  geography: IN
+  assets:
+    - NIFTY500 MOMENTUM 50
+    - NIFTY500 QUALITY 50
+  benchmark: NIFTY 500
+  cash_asset: CASH_PROXY_CONSTANT_6PCT
+
+universe_translation:
+  source_universe: >
+    NYSE + AMEX + Nasdaq common stocks, independently quintile-sorted each
+    month on SURGE, SUE and prior six-month return; ~1,600 firms per quarter
+    on average (223,831 firm-quarters over ~140 quarters, Table 1 Panel A).
+  source_breadth: 1600
+  source_selection_rule: >
+    Independent quintile breakpoints on three measures, recomputed monthly --
+    a cross-sectional stock sort, not a fixed asset list.
+  target_universe: "NSE factor sleeves (NIFTY500 MOMENTUM 50 + NIFTY500 QUALITY 50)"
+  grade: loose
+  resolution: sleeve_proxy
+  rationale: >
+    A three-way, stock-level quintile intersection has no exact Indian
+    analogue at this fund's data depth (no firm-level revenue/earnings/
+    announcement-date panel). The best available proxy is two pre-built NSE
+    factor sleeves standing in for the paper's PRICE leg (momentum) and its
+    FUNDAMENTALS legs taken together (quality, as the closest held substitute
+    for "not price"). `ros.data.universes.propose_universes` was run with
+    needs_cross_section=false, min_names=2, cap_segment='all',
+    must_be_in_mandate=true and ranked "NSE factor sleeves" highest (score
+    50.0) among 24 catalogued Indian universes, ahead of a full NIFTY 500
+    stock-level cross-section (score 40.0) -- because this mechanism blends
+    a handful of pre-built streams, it does not rank individual names.
+  transfer_risks:
+    - >
+      Measured directly on this fund's data: NIFTY500 MOMENTUM 50 and
+      NIFTY500 QUALITY 50 correlate 0.88 over 2005-04 to 2026-09 -- far higher
+      than the paper's own 0.15-0.32 pairwise correlations among SURGE, SUE
+      and prior returns (Table 2). Two index sleeves standing in for
+      "independent information sources" carry much less independent signal
+      than the paper's own three measures did.
+    - >
+      QUALITY 50 is not a surprise measure. The paper's edge is specifically
+      about market UNDERREACTION to a SURPRISE (drift after new information);
+      a level-based quality score has no analogous "surprise" event to drift
+      from, so even a positive result here would be evidence for a different
+      mechanism than the paper documents, not a confirmation of it.
+  mechanism_needs:
+    needs_cross_section: false
+    min_names: 2
+    cap_segment: all
+    sector: null
+    min_history_years: 15.0
+    must_be_in_mandate: true
+    notes: >
+      Needs 2 pre-built factor-sleeve return streams (a price-momentum sleeve
+      and a fundamentals/quality sleeve standing in for the paper's combined
+      earnings+revenue+price momentum construction), not a stock-level sort.
+  alternatives_considered:
+    - "NIFTY500 VALUE 50 in place of QUALITY 50, as the fundamentals leg"
+    - "NIFTY ALPHA 50 alone (already a multi-signal composite)"
+    - "A true stock-level quintile sort on NIFTY 500 constituents"
+  why_not_alternatives: >
+    VALUE captures a different anomaly (mispriced level, not surprise-driven
+    drift) and is further from the paper's earnings/revenue legs than QUALITY.
+    NIFTY ALPHA 50 already blends several signals internally, which would
+    test "does a pre-built composite beat NIFTY 500" -- a different, less
+    informative question than "does combining two DISTINCT held signals
+    dominate either alone", which is this paper's actual claim. A true
+    stock-level sort needs constituent-level PIT prices and a fundamentals
+    panel the fund does not hold (see data_requests); it is the right
+    long-run answer and is requested below, not run today.
+  required_instruments:
+    - NIFTY500 MOMENTUM 50
+    - NIFTY500 QUALITY 50
+    - NIFTY 500
+  evidence_page: 24
+
+strategy:
+  signal_name: momentum_quality_sleeve_blend
+  signal_definition: >
+    Hold a fixed 50/50 mix of NIFTY500 MOMENTUM 50 and NIFTY500 QUALITY 50,
+    rebalanced back to 50/50 every month-end. No ranking, no timing signal --
+    the test is whether the STATIC combination of two distinct factor sleeves
+    dominates either sleeve held alone, the sleeve-level analogue of the
+    paper's Table 5/6/8 dominance and combination results. This is a
+    MODEL-DESIGNED trading rule inspired by the paper's central claim, not a
+    rule the paper itself proposes -- the paper never blends index sleeves.
+  inputs_required:
+    - "daily close of NIFTY500 MOMENTUM 50"
+    - "daily close of NIFTY500 QUALITY 50"
+    - "daily close of NIFTY 500 (benchmark, and buy-and-hold reference)"
+  cross_sectional: false
+  formation_rule: >
+    No selection step. Both sleeves are always candidates at a fixed 50/50
+    relative weight; the only action each month is rebalancing back to 50/50
+    after drift.
+  weighting_rule: "fixed 50% / 50%, long-only, unlevered"
+  holding_period: one month
+  rebalance_frequency: monthly
+  is_long_short: false
+  long_only_adaptation: ""
+  constraints:
+    - "long-only: w >= 0"
+    - "unlevered: sum(w) = 1"
+    - "fixed relative weights: 50% momentum sleeve, 50% quality sleeve"
+  engine_template: fixed_weight
+  template_gap: ""
+  confidence: medium
+  evidence_pages: [5, 24, 28]
+
+signal:
+  name: momentum_quality_sleeve_blend
+  template: fixed_weight
+  lag_days: 1
+  description: >
+    lag_days is 1, not 0: NSE index closes publish after the close, so a
+    signal computed on date t cannot be traded at t's own close. No lookback
+    window is needed -- fixed_weight has no covariance or alpha estimate to
+    form; it simply targets 50/50 every rebalance.
+  params:
+    weights:
+      NIFTY500 MOMENTUM 50: 0.5
+      NIFTY500 QUALITY 50: 0.5
+
+portfolio:
+  rebalance: monthly
+  long_only: true
+  max_gross: 1.0
+  allow_cash: false
+  mandate_allow_cash: false
+  start: "2005-04-01"
+  end: "2026-09-18"
+
+costs:
+  spread_bps: 30.0
+  cost_model: half_spread
+
+data_requirements:
+  - {name: "NIFTY500 MOMENTUM 50", kind: price, frequency: daily, start: "2005-04-01", mandatory: true, purpose: "price-momentum sleeve"}
+  - {name: "NIFTY500 QUALITY 50", kind: price, frequency: daily, start: "2005-04-01", mandatory: true, purpose: "fundamentals/quality sleeve"}
+  - {name: "NIFTY 500", kind: price, frequency: daily, start: "2005-04-01", mandatory: true, purpose: "fund benchmark and do-nothing comparator"}
+  - {name: "NIFTY500 MULTIFACTOR MQVLV 50", kind: price, frequency: daily, mandatory: true, purpose: "off-the-shelf, zero-turnover combined-factor comparator"}
+  - {name: india_cash_rate, kind: risk_free_rate, frequency: daily, mandatory: true, purpose: "Sharpe numeraire"}
+
+ambiguities:
+  - field: universe.mapping
+    headline: "Testing a stock-level 3-signal dominance result on 2 index sleeves -- adaptation, not replication"
+    issue: >
+      Table 5/6/8 are stock-level, three-signal results with pairwise
+      correlations of 0.15-0.32. Mapping the CLAIM (not the construction) onto
+      two 0.88-correlated NSE factor sleeves is a judgement call.
+    resolution: >
+      Proceed as an explicit ADAPTATION of the paper's dominance/combination
+      IDEA, never scored against the paper's own quintile-return figures or
+      its SURGE/SUE constructions. See intent.broken_assumptions.
+    confidence: medium
+    material: true
+    evidence_page: 24
+
+  - field: universe.assets
+    headline: "QUALITY 50 stands in for BOTH fundamental legs (revenue + earnings); it is not a surprise measure"
+    issue: >
+      The paper's fundamentals side is two DISTINCT surprise measures (SURGE,
+      SUE). This card has one LEVEL-based quality sleeve for both, and no
+      revenue-surprise analogue of any kind.
+    resolution: >
+      State plainly that a positive result here evidences "a price sleeve
+      plus a quality sleeve blend well", not "revenue and earnings surprises
+      matter" -- the paper's specific claim about revenue momentum is
+      untested by this card.
+    confidence: high
+    material: true
+
+  - field: costs.spread_bps
+    headline: "30bp round trip; not comparable to the paper's stock-level trading costs"
+    issue: >
+      The paper does not report a cost assumption for its momentum legs in
+      the body; the source universe's stock-level costs are materially
+      different from index-sleeve rebalancing costs.
+    resolution: >
+      Use this fund's standard 30bp round-trip assumption for Indian
+      factor-sleeve rotation. Not copied from, or comparable to, the source.
+    confidence: medium
+    material: true
+
+  - field: universe.cash_asset
+    headline: "No Indian rate series: cash accrues a flat 6%, swept 4-8%. LOW confidence."
+    issue: "No Indian risk-free series in the snapshot."
+    resolution: >
+      Declared constant 6% proxy, recorded as a proxy, swept 4%-8%. This card
+      is fully invested (mandate_allow_cash: false, allow_cash: false), so the
+      cash rate only affects the Sharpe numeraire, not any holding period.
+    confidence: low
+    material: false
+
+  - field: data.pit_status
+    headline: "Backfilled sleeve history accepted for mechanism testing only; caps the ladder at ROBUST"
+    issue: >
+      NIFTY500 MOMENTUM 50 and QUALITY 50 history is backfilled to a 2005
+      base with methodology fixed years later than much of that history.
+    resolution: >
+      Accept for mechanism testing only. Caps the ladder at ROBUST: no live
+      claim may rest on backfilled sleeve history.
+    confidence: high
+    material: true
+
+replication_targets: []
+
+benchmark_templates:
+  - {name: "Momentum sleeve alone", template: fixed_weight, params: {weights: {"NIFTY500 MOMENTUM 50": 1.0, "NIFTY500 QUALITY 50": 0.0}}, rebalance: monthly}
+  - {name: "Quality sleeve alone", template: fixed_weight, params: {weights: {"NIFTY500 MOMENTUM 50": 0.0, "NIFTY500 QUALITY 50": 1.0}}, rebalance: monthly}
+  - {name: "Risk-balanced blend (equal risk contribution)", template: equal_risk_contribution, params: {}}
+
+data_plan:
+  ideal:
+    - field: "Daily closing levels for a price-momentum sleeve and a fundamentals/quality sleeve, common history"
+      granularity: daily
+      history_from: "2005-04-01"
+      why: >
+        The blend needs one return stream per sleeve; daily so the monthly
+        rebalance can be computed and costed precisely.
+      why_granularity: >
+        Daily, and no finer. The rebalance is monthly and there is no
+        estimation window (fixed_weight needs no covariance or alpha), so
+        weekly would lose rebalance-date precision for no benefit and
+        intraday would price an execution decision this strategy does not make.
+      why_history: >
+        2005-04-01 is the earliest date both sleeves exist together in the
+        fund's registry. The window includes 2008, 2013, 2018 and 2020 --
+        every major Indian equity stress episode since the sleeves began.
+      adjustments: "price-return; dividends not reinvested"
+      minimum_viable: true
+    - field: "Firm-level quarterly revenue and EPS with earnings-announcement dates, for NIFTY 500 constituents"
+      granularity: quarterly
+      history_from: "2005-04-01"
+      why: >
+        This is what would let the paper's ACTUAL SURGE/SUE construction run
+        on Indian stocks, rather than substituting a level-based quality
+        sleeve for the entire fundamentals side.
+      why_granularity: "quarterly, matching the paper's own construction"
+      why_history: "as far back as reliable Indian quarterly disclosure exists"
+      adjustments: "as-reported (not restated), with the exact public announcement date"
+      minimum_viable: false
+    - field: "NIFTY 500 constituent-level PIT prices and membership, daily"
+      granularity: daily
+      history_from: "2005-04-01"
+      why: >
+        Needed to form the paper's stock-level quintile sorts at all, on
+        price, on revenue surprise and on earnings surprise, rather than
+        substituting two pre-built index sleeves.
+      why_granularity: "daily, to match monthly re-formation with a clean prior-return window"
+      why_history: "same window as the sleeves, for comparability"
+      adjustments: "ISIN-keyed, corporate-action adjusted"
+      minimum_viable: false
+  rejected_alternatives:
+    - option: "Attempt the paper's literal three-way stock-level sort with Indian constituents"
+      why_not: >
+        Needs a firm-level revenue/EPS/announcement-date panel the fund does
+        not hold for any market -- not a data problem this card can proxy
+        around; it is requested above, not run today.
+    - option: "NIFTY500 VALUE 50 as the fundamentals leg instead of QUALITY 50"
+      why_not: >
+        Value captures a mispriced LEVEL, not a surprise-driven drift; it is
+        further from the paper's earnings/revenue surprise construction than
+        quality is, and would test yet a different mechanism.
+    - option: "The price-return sleeve series already held, unchanged"
+      why_not: >
+        It is what this card actually runs on. Dividends are missing from
+        every series, understating absolute returns throughout.
+    - option: "Monthly sleeve closes instead of daily"
+      why_not: >
+        fixed_weight needs no estimation window, but monthly closes would
+        blur the exact rebalance date and the cost calculation. Daily costs
+        nothing extra here and is more precise.
+  granularity_verdict: >
+    DAILY. No estimation window is needed (fixed_weight), but daily closes
+    give an exact rebalance date and cost basis for no extra cost.
+  optimality_argument: >
+    Two daily NSE factor-sleeve series spanning a common 2005-2026 history is
+    the smallest dataset that can ask whether the paper's dominance/
+    combination CLAIM -- that independent price and fundamentals signals
+    combine to dominate either alone -- shows up, even crudely proxied by two
+    held index sleeves, in the one form a long-only Indian equity book could
+    trade today. It is not the paper's own dataset (firm-level fundamentals
+    with announcement dates) and cannot support a genuine replication of
+    Table 5/6/8; it is the cheapest honest way to test the ADJACENT,
+    sleeve-level hypothesis the same tables suggest.
+  what_would_change_the_answer: >
+    A firm-level Indian fundamentals panel with announcement dates would let
+    the test use an actual SURGE/SUE-style surprise measure instead of a
+    level-based quality score, and could move the verdict either way --
+    particularly given the paper's own finding that surprise-driven drift and
+    level-based quality are economically different mechanisms. Constituent-
+    level PIT prices would let the blend be replaced by an actual stock-level
+    three-way sort, materially raising power given the 0.88 sleeve correlation
+    this card's own numbers show. A real Indian rate series would sharpen the
+    Sharpe numeraire but is unlikely to flip the headline verdict, since this
+    card is fully invested throughout (mandate_allow_cash: false).
+
+selection:
+  rule: >
+    No stock-level selection. NIFTY500 MOMENTUM 50 and NIFTY500 QUALITY 50 are
+    the fixed candidate set at every rebalance; the strategy only restores the
+    50/50 weight, it never adds, drops or re-picks a sleeve.
+  explicit_securities:
+    - NIFTY500 MOMENTUM 50
+    - NIFTY500 QUALITY 50
+  verified_against: firm_registry
+  as_of: "2026-09-18"
+  why_these: >
+    The two NSE factor sleeves closest in ROLE to the paper's price leg
+    (momentum) and fundamentals legs (quality, standing in for earnings and
+    revenue surprises taken together), for which the fund holds a full common
+    daily history back to 2005-04-01, confirmed against
+    ros/data/firm_registry.py.
+
+backtest_plan:
+  sample_start: "2005-04-01"
+  sample_end: "2026-09-18"
+  why_this_window: >
+    2005-04-01 is the earliest date NIFTY500 MOMENTUM 50, NIFTY500 QUALITY 50
+    and NIFTY 500 all have a common price history, measured directly on the
+    held workbook; 2026-09-18 is the last common close in the same file. The
+    window includes 2008 (GFC), 2013 (taper tantrum), 2018 (IL&FS) and 2020
+    (COVID).
+  warmup_days: 5
+  why_warmup: >
+    fixed_weight needs no estimation window; a short 5-day buffer only
+    guards against the very first rows of the snapshot being used before any
+    return can be computed. Every benchmark uses the same warmup and
+    align_runs() truncates every run to a common start so no run gets a head
+    start.
+  rebalance_rule: >
+    Last TRADING day of each calendar month present in the data. Signals are
+    shifted by 1 + lag_days (=2) before use.
+  weights_rule: "fixed 50% NIFTY500 MOMENTUM 50 / 50% NIFTY500 QUALITY 50, restored every rebalance"
+  explicit_weights:
+    NIFTY500 MOMENTUM 50: 0.5
+    NIFTY500 QUALITY 50: 0.5
+  benchmarks:
+    - name: "NIFTY 500"
+      why_this: >
+        The fund's mandate benchmark and the do-nothing alternative.
+    - name: "NIFTY500 MULTIFACTOR MQVLV 50"
+      why_this: >
+        The real alternative to building this: an off-the-shelf combined-
+        factor index (momentum + quality + value + low-vol) with its own
+        professionally-designed weighting, at zero incremental effort. If a
+        hand-built 50/50 momentum-quality blend does not beat it, the honest
+        recommendation is to buy the index.
+    - name: "Momentum sleeve alone"
+      why_this: >
+        Isolates whether BLENDING adds anything over the price-momentum leg
+        by itself -- the sleeve-level analogue of the paper's dominance test.
+    - name: "Quality sleeve alone"
+      why_this: >
+        Isolates whether blending adds anything over the fundamentals leg by
+        itself, completing the dominance comparison.
+    - name: "Risk-balanced blend (equal risk contribution)"
+      why_this: >
+        Given the sleeves' different volatilities (22.4% vs 18.2%, measured),
+        a naive 50/50 NOTIONAL blend is not a 50/50 RISK blend. This isolates
+        whether risk-balancing (rather than notional-balancing) the same two
+        sleeves changes the answer.
+  must_beat:
+    - "Both single sleeves (Momentum alone, Quality alone), on the paired stationary bootstrap, at 5% -- or blending buys nothing"
+    - "NIFTY 500, on the paired stationary bootstrap, at 5%"
+    - "NIFTY500 MULTIFACTOR MQVLV 50, after 30bp round-trip costs -- or the honest recommendation is to buy the index"
+  success_looks_like: >
+    The 50/50 blend beats BOTH single sleeves and NIFTY 500 on geometric
+    Sharpe with a paired stationary bootstrap p <= 0.05; it is competitive
+    with or beats NIFTY500 MULTIFACTOR MQVLV 50 after 30bp costs; deflated
+    Sharpe P(skill) >= 0.95 at the honest trial count; and the ranking is
+    stable across the risk-balanced-blend comparator and the 4-8% cash-rate
+    sweep.
+  failure_looks_like: >
+    Any of: statistically indistinguishable from the better of the two single
+    sleeves, so blending buys nothing beyond picking the stronger sleeve;
+    loses to NIFTY500 MULTIFACTOR MQVLV 50, so the honest answer is to buy the
+    index; the 0.88 measured sleeve correlation leaves too little independent
+    variation for blending to help at all; or the risk-balanced variant
+    materially outperforms the notional 50/50, which would mean the
+    notional-weight choice, not the blending idea, was doing the work.
+  known_failure_modes:
+    - >
+      HIGH SLEEVE CORRELATION: 0.88 measured pairwise, versus the paper's own
+      0.15-0.32 among SURGE/SUE/prior returns. There may simply be too little
+      independent information between two broad NSE factor indices for
+      blending to replicate a dominance result built on much more
+      independent stock-level signals.
+    - >
+      QUALITY IS NOT A SURPRISE MEASURE: even a positive blending result here
+      would not confirm the paper's specific underreaction-to-surprise
+      mechanism, since QUALITY 50 has no "surprise" event to drift from.
+    - >
+      MOMENTUM 50's higher volatility (22.4%) could dominate a NOTIONAL 50/50
+      blend's risk profile, in which case the blend behaves like a
+      lightly-diluted momentum sleeve rather than a genuine combination --
+      the risk-balanced-blend benchmark is designed to catch exactly this.
+    - >
+      NO REVENUE-MOMENTUM ANALOGUE: this card is silent on the paper's own
+      finding that revenue surprises carry information beyond earnings
+      surprises and price -- nothing here tests that claim at all.
+
+data_requests:
+  - item: "Firm-level Indian quarterly revenue and EPS with earnings-announcement dates, for NIFTY 500 constituents"
+    why: >
+      This is the only way to construct an actual SURGE/SUE-style surprise
+      measure for Indian stocks, rather than substituting a level-based
+      quality sleeve for the entire fundamentals side of the paper.
+    unlocks: >
+      A genuine stock-level three-way combined momentum test -- the actual
+      paper construction, adapted to India rather than proxied by two index
+      sleeves.
+    without_it: >
+      This card tests only whether two BROAD, 0.88-correlated factor sleeves
+      blend well, which is a materially weaker and different question than
+      the paper's own stock-level dominance result.
+    priority: high
+    headline: "Firm-level Indian fundamentals with announcement dates, the only route to a true SURGE/SUE test"
+    format_hint: "long CSV: ISIN, fiscal_period_end, announcement_date, revenue, eps"
+    satisfies: ["Firm-level quarterly revenue and EPS with earnings-announcement dates, for NIFTY 500 constituents"]
+
+  - item: "NIFTY 500 constituent-level PIT prices and membership, daily"
+    why: >
+      Needed to move from a two-sleeve blend to an actual stock-level
+      quintile sort on price, on revenue surprise and on earnings surprise.
+    unlocks: >
+      A materially higher-power test than the current sleeve blend, and the
+      only way to test the paper's REVENUE-momentum claim specifically, which
+      this card does not touch at all.
+    without_it: >
+      The test stays at the sleeve level, where the 0.88 measured correlation
+      between the two available sleeves limits how much independent
+      information blending can possibly find.
+    priority: high
+    headline: "Constituent-level prices, the only route to a true stock-level three-way sort"
+    format_hint: "long CSV: date, ISIN, close, free_float_mcap, index_membership_flag"
+    satisfies: ["NIFTY 500 constituent-level PIT prices and membership, daily"]
+
+  - item: "An Indian overnight or 91-day T-bill rate series, daily, 2005 onward"
+    why: "Every Sharpe here is measured against a flat 6% constant numeraire."
+    unlocks: "A defensible Sharpe, though this card is fully invested throughout so the effect is limited to the numeraire."
+    without_it: "Declared constant 6% proxy, swept 4-8%."
+    priority: nice_to_have
+    headline: "A real Indian short rate, to replace the flat 6% Sharpe numeraire"
+    format_hint: "two columns: date, annualised_rate (decimal)"
+    satisfies: []
+
+open_questions:
+  - question: >
+      Is a 50/50 NOTIONAL blend the right test, or should the two sleeves be
+      risk-balanced (equal risk contribution) given their different
+      volatilities (22.4% vs 18.2%)?
+    why_it_matters: >
+      A notional 50/50 blend is implicitly overweight the higher-vol
+      momentum sleeve's RISK contribution, which could make the blend behave
+      like diluted momentum rather than a genuine combination.
+    what_i_assumed: >
+      Notional 50/50 as the primary test, since that is the most literal
+      sleeve-level analogue of "combine two signals equally"; the
+      risk-balanced variant is run as a named benchmark, not swept further.
+    headline: "Should the blend be notional 50/50 or risk-balanced, given the vol gap?"
+    ask_of: researcher
+    blocks_run: false
+
+  - question: >
+      Is QUALITY 50 the right fundamentals-leg proxy, or would VALUE 50 or a
+      custom blend of QUALITY+VALUE better represent "earnings and revenue
+      information" as a category?
+    why_it_matters: >
+      The choice materially affects what a positive or negative result can be
+      read to mean; a different fundamentals sleeve could give a different
+      answer without the paper's underlying claim having been tested any
+      more or less faithfully.
+    what_i_assumed: >
+      QUALITY 50, because profitability and earnings variability are closer
+      in spirit to the paper's earnings-surprise construction than a pure
+      value (cheapness) signal is.
+    headline: "Is QUALITY 50 the right fundamentals proxy, versus VALUE 50 or a blend?"
+    ask_of: researcher
+    blocks_run: false
+
+  - question: >
+      Is n_configs_tried = 1 honest, given the sleeve pair (momentum+quality)
+      and the notional-vs-risk-balanced weighting were both design choices
+      made after looking at what the fund holds and their measured
+      correlation/vol?
+    why_it_matters: >
+      The deflated Sharpe rests entirely on this number, and choosing the
+      sleeve pair after seeing their correlation is a soft form of the search
+      the paper itself is careful to flag when discussing its own robustness
+      checks.
+    what_i_assumed: >
+      1, counting only this card's own configuration; likely understated once
+      the informal sleeve-pair and weighting choices are folded in.
+    headline: "Is n_configs_tried=1 honest, given the sleeve pair was chosen after seeing the data?"
+    ask_of: researcher
+    blocks_run: false
+
+n_configs_tried: 1
+
+notes: >
+  The promotion question is NOT "is the Sharpe good". It is whether blending
+  two already-held factor sleeves beats, after 30bp costs, the three things
+  the fund can already do for free: hold NIFTY 500, buy the NIFTY500
+  MULTIFACTOR MQVLV 50 index, or hold either sleeve alone. All are run as
+  benchmarks. Given the 0.88 measured sleeve correlation, a result showing
+  blending adds little would say more about the LIMITED independence between
+  two broad NSE factor indices than about whether Chen et al.'s dominance
+  claim is wrong.
+
+convertibility:
+  verdict: convertible_with_data
+  confidence: medium
+  headline: "Runs today on held sleeves, but 0.88 correlation is far below the paper's own 0.15-0.32"
+  what_must_be_true:
+    - >
+      NIFTY500 MOMENTUM 50 and NIFTY500 QUALITY 50 must carry enough
+      INDEPENDENT information for blending to matter. Measured directly:
+      0.88 pairwise correlation, versus the paper's own stock-level 0.15-0.32
+      among SURGE, SUE and prior returns. If there is little room here,
+      blending will do little regardless of whether the paper's underlying
+      claim is true.
+    - >
+      A quality (level) sleeve must carry some of the same information a
+      surprise (drift) measure would, for a positive blending result to say
+      anything about the paper's underreaction-to-surprise mechanism at all.
+    - >
+      The blend must survive 30bp round-trip costs on monthly rebalancing
+      between two already-liquid, already-diversified sleeves -- the
+      cheapest possible version of this test to implement.
+    - >
+      It must beat the three things the fund can already do for nothing:
+      hold NIFTY 500, buy NIFTY500 MULTIFACTOR MQVLV 50, or hold either
+      sleeve alone.
+  weakest_link: >
+    The first one. The paper's whole dominance result rests on three
+    signals that barely correlate with each other; two NSE factor sleeves
+    correlating at 0.88 may simply not have enough independent variation
+    for blending to demonstrate anything, which would make a null result
+    about the PROXY's power rather than about the paper's claim.
+  decisive_evidence: >
+    In order of what they would settle: (1) NIFTY 500 constituent-level PIT
+    prices, to move from a 2-sleeve blend to an actual stock-level sort. (2)
+    Firm-level Indian fundamentals with announcement dates, to build a true
+    SURGE/SUE-style surprise measure instead of a level-based quality proxy.
+    (3) An Indian short-rate series, which sharpens the Sharpe numeraire but
+    is unlikely to flip this card's verdict on its own since the book is
+    fully invested throughout.
+  if_it_fails: >
+    A null here is still informative: it would show that this fund's TWO
+    most independent-seeming held factor sleeves are, in fact, too correlated
+    (0.88) to demonstrate a real diversification-of-information benefit --
+    a reusable finding for any future "combine our factor sleeves" proposal,
+    not just this paper.
+  capacity_note: >
+    Favourable by construction: both legs are already-liquid, broad NSE
+    factor indices with low incremental turnover from a 50/50 rebalance, but
+    every number here is computed on index series that charge no market
+    impact, so an AUM ceiling from this run is an argument, not a measurement.
+
+india_notes:
+  - category: validity
+    item: >
+      NIFTY500 QUALITY 50's scoring methodology (profitability, leverage and
+      earnings-variability weights) has been revised since the sleeve's
+      backfilled base date, and reconstitution is semi-annual rather than
+      event-driven.
+    why: >
+      A methodology splice inside the backfilled history can look like a
+      genuine change in the sleeve's behaviour when it is a rule change, and
+      the semi-annual reconstitution means the sleeve reacts to fundamentals
+      far more slowly than the paper's own monthly-refreshed SUE/SURGE would.
+    triggered_by: >
+      QUALITY 50 stands in for the paper's earnings/revenue-surprise legs,
+      which are refreshed at every formation month in the source paper
+    addresses: ["Daily closing levels for a price-momentum sleeve and a fundamentals/quality sleeve, common history"]
+  - category: execution
+    item: >
+      The tradable wrapper for this blend is two ETFs/index funds (or a
+      swap), not the indices themselves; factor-sleeve ETF liquidity and
+      tracking error in India vary sleeve to sleeve.
+    why: >
+      The backtest trades index LEVELS; a real book trades INSTRUMENTS with
+      tracking error and rebalance impact the index series does not charge.
+    triggered_by: "the strategy holds two distinct sleeves, each with its own tracking vehicle"
+    addresses: ["Daily closing levels for a price-momentum sleeve and a fundamentals/quality sleeve, common history"]
+  - category: data
+    item: >
+      No Indian earnings-announcement-date database of the kind Compustat
+      provides (exact public disclosure timestamp, not just fiscal period
+      end) is broadly available off-the-shelf the way it is in the US.
+    why: >
+      Even with revenue/EPS data in hand, the paper's construction depends
+      specifically on restricting SURGE/SUE to information known "within
+      three months before formation" (p.8) -- without a reliable
+      announcement-date field, any Indian SURGE/SUE built later would risk
+      look-ahead bias baked in from the start.
+    triggered_by: >
+      the paper's signal construction is date-sensitive by design (eq. 1,
+      eq. 2, and the 3-month announcement window)
+    addresses: ["Firm-level quarterly revenue and EPS with earnings-announcement dates, for NIFTY 500 constituents"]

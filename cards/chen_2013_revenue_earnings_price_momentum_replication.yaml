@@ -1,0 +1,262 @@
+card_version: "1.0"
+
+paper:
+  id: chen_2013_revenue_earnings_price_momentum_replication
+  title: "Does Revenue Momentum Drive or Ride Earnings or Price Momentum?"
+  authors: [Hong-Yi Chen, Sheng-Syan Chen, Chin-Wen Hsin, Cheng-Few Lee]
+  date: "2013-07-01"
+  source_file: docs/papers/chen_chen_hsin_lee_2013_revenue_earnings_price_momentum.pdf
+  source_sha256: "d3adc029568c3f7b"
+
+intent:
+  mode: replication
+  rationale: >
+    Reproduce the paper's own headline finding on its own data before asking
+    whether any of it is usable here: a three-way combined momentum strategy
+    (buy stocks with the most positive revenue surprises, earnings surprises,
+    and prior six-month returns; sell stocks with the most negative of all
+    three) yields a monthly return as high as 1.44% (independent sorts,
+    Table 8 Panel A), and each of the three information sources -- revenue
+    surprises (SURGE), earnings surprises (SUE), and prior returns -- survives
+    pairwise dominance tests (Table 5) and a joint regression (Table 6),
+    meaning none is redundant given the other two. This card is expected to,
+    and does, fail fast at Step 03: the fund holds NSE index-level series only
+    and no firm-level revenue, earnings-announcement or price history for
+    Indian constituents. That is the correct and cheap outcome, not a bug in
+    the card.
+
+universe:
+  description: >
+    NYSE, AMEX and Nasdaq common stocks (SHRCD 10, 11), excluding regulated
+    industries (SIC 4000-4999) and financials (SIC 6000-6999), price >= $5 on
+    the formation date, with at least 8 consecutive quarterly earnings
+    announcements and 6 consecutive monthly returns before formation and 12
+    consecutive monthly returns after -- exactly as the paper constructs it.
+  asset_class: equity
+  geography: US
+  assets:
+    - US_COMMON_STOCK_UNIVERSE_NYSE_AMEX_NASDAQ
+  benchmark: null
+  cash_asset: null
+
+universe_translation:
+  source_universe: >
+    NYSE + AMEX + Nasdaq common stocks meeting the screens above, 1974-2009;
+    223,831 firm-quarters, median firm market cap $235mm (Table 1 Panel A).
+    Sorted independently into quintiles (for the two-way and three-way
+    combined strategies) or deciles (for the univariate strategies) on SURGE,
+    SUE and prior six-month returns each month.
+  source_breadth: 1600
+  source_selection_rule: >
+    Independent quintile/decile breakpoints on SURGE, SUE and prior six-month
+    return, recomputed every formation month; not a fixed list.
+  target_universe: ""
+  grade: none
+  resolution: infeasible
+  rationale: >
+    This is the REPLICATION card and it deliberately stays on the paper's own
+    stock universe rather than reaching for an Indian analogue -- that
+    translation, where it exists at all, belongs on the separate adaptation
+    card. The fund's data registry holds NSE broad-market and factor INDEX
+    levels only: no individual-stock prices, no membership history, no
+    quarterly revenue or EPS series, and no earnings-announcement dates, for
+    any market. Step 03 is expected to and does fail fast on that gap.
+  transfer_risks:
+    - >
+      No translation is attempted here on purpose. This card exists to test
+      the paper's own claim against the paper's own kind of data, and to
+      exercise the fail-fast path honestly rather than skip straight to an
+      adaptation.
+    - >
+      Even with a full Indian constituent panel, SURGE and SUE both need
+      firm-level quarterly revenue and EPS WITH the date each was actually
+      announced (to respect the "earnings announced within three months
+      before formation" rule, p.8) -- a materially harder data ask than price
+      history alone, and one this fund has never sourced for any market.
+  required_instruments:
+    - US_COMMON_STOCK_UNIVERSE_NYSE_AMEX_NASDAQ
+    - COMPUSTAT_QUARTERLY_REVENUE_EPS
+    - COMPUSTAT_EARNINGS_ANNOUNCEMENT_DATES
+    - CRSP_MONTHLY_RETURNS_SHRCD_EXCD
+    - FAMA_FRENCH_FACTORS_MONTHLY
+  evidence_page: 8
+
+strategy:
+  signal_name: three_way_combined_momentum
+  signal_definition: >
+    At each month-end formation date: compute SURGE (eq. 1) and SUE (eq. 2),
+    each a seasonally-adjusted, drift-corrected quarterly surprise standardised
+    by its own trailing volatility (Appendix, eq. A.1-A.6), using the most
+    recent earnings announcement made within 3 months of formation; compute
+    prior six-month raw return. Sort stocks independently into quintiles on
+    each of the three measures. Form the three-way combined portfolio: long
+    stocks in the top quintile of ALL THREE measures (R5xE5xP5), short stocks
+    in the bottom quintile of all three (R1xE1xP1). Hold for K months
+    (K = 3, 6, 9, 12; headline K = 6, Table 8), not rebalanced during the
+    holding period, so the realised return series is an overlapping average
+    of K staggered sub-portfolios (paper's PMN/WML construction, p.8-9).
+  inputs_required:
+    - "quarterly revenue and EPS per share from continuing operations, by firm, with the exact earnings-announcement date"
+    - "monthly common-stock returns and prices, NYSE/AMEX/Nasdaq"
+    - "share code and exchange code, to apply the CRSP screens"
+    - "SIC code, to exclude regulated industries and financials"
+    - "Fama-French market, SMB and HML factors, monthly, for risk adjustment"
+  cross_sectional: true
+  formation_rule: >
+    Independent quintile sort on SURGE, on SUE and on prior six-month return,
+    every month; the three-way combined portfolio is the intersection of the
+    top (bottom) quintile on all three.
+  weighting_rule: >
+    Equal-weighted within the long and short legs (implied by the paper's
+    decile/quintile portfolio construction, consistent with Jegadeesh and
+    Titman 1993).
+  holding_period: "K months, K in {3,6,9,12}; headline K = 6"
+  rebalance_frequency: monthly
+  is_long_short: true
+  long_only_adaptation: >
+    Not attempted on this card. Table 4 shows the paper's WINNER-only
+    (R5xE5xP5, long leg) raw returns are themselves large and significant --
+    unlike a pure options-mispricing paper, dropping the short leg here does
+    not reverse the sign of the result, only its magnitude (the short leg adds
+    the LOSER-quintile spread on top of an already-positive long leg). That
+    makes a long-only version of THIS paper materially more faithful than is
+    typical, and it is exactly what the separate adaptation card explores --
+    but only insofar as a sleeve-level proxy for price momentum can stand in
+    for the paper's stock-level combined signal, since no Indian firm-level
+    revenue/earnings/price panel is held. This card tests the paper's
+    literal, long-short, stock-level construction and does not adapt it.
+  constraints:
+    - "requires shorting individual common stocks -- outside this fund's mandate"
+    - "requires firm-level quarterly revenue, EPS and announcement dates for a broad market -- not held for any market"
+  engine_template: cross_sectional
+  template_gap: ""
+  confidence: high
+  evidence_pages: [8, 9, 24]
+
+signal:
+  name: three_way_combined_momentum
+  template: cross_sectional
+  lookback_days: 126
+  lag_days: 0
+  description: >
+    Placeholder only -- never invoked. Step 03 is expected to fail fast on
+    missing firm-level fundamental and price data before any allocator is
+    built for this card. `cross_sectional` is named because it is the
+    registered template whose SHAPE matches the paper's construction (rank,
+    hold top slice) most closely, not because this card can supply it inputs.
+  params: {}
+
+portfolio:
+  rebalance: monthly
+  long_only: false
+  max_gross: 1.0
+  allow_cash: true
+  start: "1974-01-01"
+  end: "2009-12-31"
+
+costs:
+  spread_bps: 0.0
+  cost_model: half_spread
+
+data_requirements:
+  - {name: US_COMMON_STOCK_UNIVERSE_NYSE_AMEX_NASDAQ, kind: price, frequency: monthly, start: "1974-01-01", mandatory: true, purpose: "the cross-section to be ranked", evidence_page: 8}
+  - {name: COMPUSTAT_QUARTERLY_REVENUE_EPS, kind: fundamental, frequency: quarterly, start: "1974-01-01", mandatory: true, purpose: "SURGE and SUE construction (eq. 1, eq. 2)", evidence_page: 7}
+  - {name: COMPUSTAT_EARNINGS_ANNOUNCEMENT_DATES, kind: publication_date, frequency: quarterly, start: "1974-01-01", mandatory: true, purpose: "restrict SURGE/SUE to information known within 3 months of formation", evidence_page: 8}
+  - {name: CRSP_MONTHLY_RETURNS_SHRCD_EXCD, kind: price, frequency: monthly, start: "1974-01-01", mandatory: true, purpose: "prior-return sort and holding-period returns", evidence_page: 8}
+  - {name: FAMA_FRENCH_FACTORS_MONTHLY, kind: factor_return, frequency: monthly, start: "1974-01-01", mandatory: true, purpose: "CAPM and FF-3 risk-adjusted returns (Table 4)", evidence_page: 12}
+
+ambiguities:
+  - field: strategy.is_long_short
+    headline: "Long leg alone is already large and positive, unlike a pure short-vol paper"
+    issue: >
+      Table 4 Panel C shows the winner-only raw return is 1.71-1.83% per
+      month, well above zero; the short (loser) leg adds the spread on top of
+      an already-positive long leg rather than being the entire source of
+      profit.
+    resolution: >
+      Record the strategy as long-short per the paper's own construction and
+      do not quietly rescale a long-only figure from it on this card. The
+      long-only question is explored properly, with its own data
+      substitutions named, on the separate adaptation card.
+    confidence: high
+    material: true
+    evidence_page: 40
+
+  - field: data_requirements
+    headline: "No firm-level fundamentals or stock prices held for any market; Step 03 fails fast"
+    issue: >
+      This fund's data registry (ros/data/firm_registry.py) holds NSE
+      broad-market and factor INDEX levels only. No constituent-level price
+      series, no quarterly revenue/EPS, no earnings-announcement date field,
+      exists in the registry or via a declared proxy, for the US or for India.
+    resolution: >
+      Let Step 03 fail fast rather than inventing a stock-level panel. A
+      SURGE/SUE proxy built from index-level data would not be a proxy for
+      the paper's signal at all -- it would be measuring something else
+      entirely and calling it the same name.
+    confidence: high
+    material: true
+
+replication_targets:
+  - {portfolio: "Three-way combined momentum (R5xE5xP5 - R1xE1xP1), independent sorts, K=6", metric: mean_monthly_return_pct, value: 1.44, absolute_tolerance: 0.30, evidence_page: 24}
+  - {portfolio: "Price momentum (winner - loser), K=6", metric: mean_monthly_return_pct, value: 0.93, absolute_tolerance: 0.20, evidence_page: 12}
+  - {portfolio: "Earnings momentum (PMN), K=6", metric: mean_monthly_return_pct, value: 0.71, absolute_tolerance: 0.15, evidence_page: 12}
+  - {portfolio: "Revenue momentum (PMN), K=6", metric: mean_monthly_return_pct, value: 0.61, absolute_tolerance: 0.15, evidence_page: 28}
+
+benchmark_templates: []
+
+# 4 univariate holding periods x 3 measures + 3 two-way combos + 1 three-way
+# combo + dependent-sort variants (Table 9) + quintile-vs-decile robustness
+# (footnote 8) -- understating this would launder a lucky draw through the
+# deflated Sharpe, even though this card never reaches the point of testing it.
+n_configs_tried: 24
+
+convertibility:
+  verdict: not_convertible
+  confidence: high
+  headline: "No US or Indian firm-level fundamentals panel is held; this construction cannot run"
+  what_must_be_true:
+    - >
+      The fund would need firm-level quarterly revenue, EPS and the EXACT
+      earnings-announcement date, for a broad market -- it holds NSE index
+      levels only, for any market.
+    - >
+      A stock-level cross-section of a few thousand names is needed to form
+      meaningful quintiles three ways at once; the fund's data has zero
+      constituent-level breadth today.
+    - >
+      Even with the data, the fund cannot short individual common stocks, and
+      here (unlike a pure volatility-premium paper) the short leg is a real,
+      separable contributor -- so a faithful replication is not something this
+      mandate could hold even if the data existed.
+  weakest_link: >
+    The first one. Sourcing a Compustat-equivalent Indian fundamentals panel
+    with announcement dates is a multi-quarter data project, not a
+    procurement line item, and no card-level substitution closes that gap
+    honestly.
+  decisive_evidence: >
+    None would change this verdict today. If the fund later licenses Indian
+    firm-level fundamentals with announcement dates (e.g. a Capitaline/Ace
+    Equity-style feed) AND a constituent-level PIT price/membership panel,
+    this card becomes a genuine replication-on-a-new-market question, which is
+    a separate, much larger proposal than this one.
+  if_it_fails: >
+    A clean not_convertible here is the useful output: it stops the fund
+    re-deriving "we don't have stock-level fundamentals" every time a
+    cross-sectional accounting-anomaly paper arrives, and it correctly
+    separates "is the paper's finding real" (its own dominance tests and
+    Fama-French-adjusted returns say yes) from "can this fund test it" (not
+    without a fundamentals data project). The adaptation card is where the one
+    piece that is testable today -- price momentum, via an already-held sleeve
+    -- gets a real run.
+  capacity_note: >
+    Not applicable -- the mechanism cannot be constructed at all with data
+    currently held.
+
+notes: >
+  Expected to FAIL FAST at Step 03: the fund holds no firm-level fundamental,
+  announcement-date or stock-price data for any market, and cannot short
+  individual names. See
+  chen_2013_price_momentum_quality_blend_adaptation.yaml for the part of this
+  paper that IS testable, long-only, in India today with data already on the
+  shelf.

@@ -1,0 +1,789 @@
+card_version: '1.0'
+paper:
+  id: boehmer_2009_short_interest_longshort
+  title: 'India adaptation: low-short-interest long-short on NIFTY 500 stocks (from Boehmer, Huszar & Jordan 2009,
+    ''The good news in short interest'')'
+  authors:
+  - Ekkehart Boehmer
+  - Zsuzsa R. Huszar
+  - Bradford D. Jordan
+  date: '2009-04-23'
+  source_file: docs/papers/boehmer_huszar_jordan_2009_good_news_short_interest.pdf
+  source_sha256: 22205b85f0d95b44
+intent:
+  mode: adaptation
+  parent_card: ''
+  rationale: 'The paper''s headline portfolio is long the lowest short-interest stocks and short the highest (SIR
+    1% minus SIR 99%, Table 1). This is the full-construction card: both legs kept, translated to the NIFTY 500
+    using stock-level data held locally, and run through universal_backtester with allow_short=True. A paired long-only
+    card, boehmer_2009_short_interest_adaptation.yaml, exists because the short leg is the one leg with a named
+    India constraint: it is the MOST shorted stocks by construction, which are exactly the names hardest to borrow,
+    and India has no naked shorting. Neither card can run until a stock-level short interest series for India exists,
+    so both carry a blocking data request.
+
+    '
+  transferred_mechanism: 'Each month, rank the point-in-time NIFTY 500 names that trade heavily (turnover in the
+    top half) on last month''s short interest ratio (short position divided by shares outstanding), with every zero-short-interest
+    name placed first. Hold the lowest-SIR quartile long and the highest-SIR quartile short, equal weighted within
+    each leg, gross neutral, rebalanced monthly. The mechanism that is meant to transfer is the paper''s reading
+    of absent short selling as a signal of no private bad news, which only holds where shorting is feasible.
+
+    '
+  broken_assumptions:
+  - 'THE SIGNAL DOES NOT EXIST IN HELD DATA. The paper uses exchange-published monthly short interest for every
+    NYSE, AMEX and NASDAQ stock. No stock-level short position series for India is held. Every other broken assumption
+    below is secondary to this one.
+
+    '
+  - 'UNVERIFIED (drafter''s market knowledge, confirm at Gate A): SHORT CONSTRAINTS BIND IN INDIA, WHICH REVERSES
+    THE PAPER''S READING. The paper interprets low short interest as short sellers choosing to avoid a stock (section
+    2, page 7), which is only true where shorting is easy and cheap. India has no naked short selling and borrowing
+    is concentrated in F&O-eligible names, so for most NIFTY 500 stocks a near-zero short position reflects inability
+    to short. The paper''s own background says a constraint-driven zero should predict underperformance, the opposite
+    of its finding. The low-SIR leg may therefore mix two opposite populations.
+
+    '
+  - 'UNVERIFIED (drafter''s market knowledge, confirm at Gate A): THE SHORT LEG IS THE LEAST BORROWABLE BY CONSTRUCTION.
+    It holds the stocks with the highest existing short interest, which are the ones where borrow is scarce or expensive
+    and recalls are likely. The paper charges no borrow cost.
+
+    '
+  - 'THE PAPER''S LOW-SIR NAMES HAVE NO COUNTERPART IN NIFTY 500. Low-SIR stocks have a median market cap of about
+    $29M and median price of $5.30 (Table 4, page 36). The paper shows the effect is absent in the largest size
+    quartile (Table 5, page 38). NIFTY 500 holds nothing that small, so the test is weaker than the paper''s by
+    design.
+
+    '
+  - 'THE LOW-SHORT-INTEREST LEG IS A DIFFERENT SIZE. The paper''s 1% portfolio holds 232 stocks on average (about
+    5% of 4,400) because all zero-SIR names go in first, against 45 in the 99% leg (page 14). This card uses quartiles
+    on each side (Table 5 convention, page 17), so both legs are the same size.
+
+    '
+  - 'FACTOR-ADJUSTED ALPHA CANNOT BE REPRODUCED AS PRINTED. The paper''s headline is a Fama-French-Carhart four-factor
+    alpha using US factors. No Indian RMRF, SMB, HML or MOM series is held, and book-to-market is not in the local
+    fundamentals (only PE and EV/EBIT).
+
+    '
+  - 'EQUAL WEIGHTING HEAVILY FAVOURS THE EFFECT. Equal-weighted long alpha is about 1.4% a month against 0.5% value
+    weighted (Table 1, page 31). This card is equal weighted to match the paper''s headline, and states that it
+    is the more flattering of the two.
+
+    '
+  - 'NO COSTS IN THE PAPER. It reports no transaction costs, turnover or capacity. This card charges 30bp round
+    trip plus a borrow cost, and is likely still optimistic for monthly rebalancing into the lower half of NIFTY
+    500.
+
+    '
+  - 'SAMPLE LENGTH AND ERA. 1988-2005 for the paper against about 13 years of Indian data, ending 2026-03 where
+    point-in-time membership stops.
+
+    '
+universe:
+  description: 'Point-in-time NIFTY 500 constituents (Monthly_uni_new.xlsx, top 500 by market rank, restricted to
+    Accord-priced names), further restricted each month to names with a known short interest figure and turnover
+    in the top half of that month''s eligible names. Ranked on short interest ratio; both quartiles traded.
+
+    '
+  asset_class: equity
+  geography: IN
+  assets:
+  - ACCORD_STOCK_LEVEL_PRICE_MCAP
+  benchmark: NIFTY 500
+  cash_asset: CASH_PROXY_CONSTANT_6PCT
+universe_translation:
+  source_universe: CRSP all US common stocks
+  source_breadth: 4400
+  source_selection_rule: 'CRSP share codes 10 and 11 on NYSE, AMEX and NASDAQ; listed at least one year; non-missing
+    return, volume, shares outstanding and price; when-issued excluded; delisting returns kept. No size, price or
+    liquidity floor in the baseline.
+
+    '
+  target_universe: NIFTY 500 constituents
+  grade: loose
+  resolution: needs_data
+  rationale: 'The mechanism is a cross-sectional percentile sort needing a few hundred names, and the paper shows
+    the effect lives in small and mid-small, high-turnover stocks (Table 5). NIFTY 500 is the largest in-mandate
+    universe held at stock level. NIFTY Smallcap 250 ranked first (55 against 53) and is kept as a sub-segment cut,
+    because a smallcap-only universe removes the size contrast the paper''s own evidence rests on. Grade is loose
+    because the paper''s most extreme low-SIR names are far smaller than anything in NIFTY 500.
+
+    '
+  transfer_risks:
+  - No stock-level short interest series for India is held; the signal itself is missing.
+  - Zero or low short positions in India mostly reflect inability to short, not short sellers' view, which reverses
+    the paper's interpretation for those names.
+  - The paper's low-SIR median market cap is about $29M; NIFTY 500 has no stocks that small.
+  - Turnover and size conditioning needs about 250 names after the high-turnover filter; the universe is at that
+    floor.
+  - India factor returns are not held, so the four-factor alpha is replaced by the fund's own factor fingerprint.
+  mechanism_needs:
+    needs_cross_section: true
+    min_names: 250
+    cap_segment: small
+    sector: null
+    min_history_years: 10.0
+    must_be_in_mandate: false
+    notes: 'A quartile sort with about 25 names per decile-sized bucket needs 250 eligible names after the turnover
+      filter. The paper''s strongest results are in small and mid-small stocks, so the segment test matters more
+      than the headline one.
+
+      '
+  alternatives_considered:
+  - NIFTY Smallcap 250 constituents (ranked first, in mandate)
+  - NIFTY Total Market constituents (out of mandate)
+  - NIFTY Microcap 250 constituents (out of mandate)
+  - NIFTY MidSmallcap 400 constituents
+  why_not_alternatives: 'Smallcap 250 is kept as a sub-segment cut instead of the governing universe because the
+    paper''s own evidence is a size-by-turnover interaction. Total Market and Microcap 250 are outside the mandate
+    and the monthly universe file covers only the top 500 in most months. MidSmallcap 400 is adjacent but adds nothing
+    the NIFTY 500 plus Smallcap 250 pair does not already cover.
+
+    '
+  required_instruments:
+  - ACCORD_STOCK_LEVEL_PRICE_MCAP
+  - monthly stock-level short position series for India (NOT HELD)
+  - NIFTY 500
+  evidence_page: 8
+strategy:
+  signal_name: neg_short_interest_ratio
+  signal_definition: "SIR(i, t-1) = short position in stock i as of the most recent short interest report published\
+    \ before the rebalance date, divided by shares outstanding. The score handed to the allocator is -SIR, so the\
+    \ lowest SIR scores highest. Each month-end rebalance: universe_t = point-in-time NIFTY 500 names priced in\
+    \ Accord. eligible_t = universe_t names with a short interest figure known on or before the rebalance date AND\
+    \ trailing-month turnover (defined below) in the top half of universe_t. Tie and zero handling follows the paper\
+    \ (page 17, page 11): every zero-SIR eligible name is in the low group first. If zero-SIR names are 25% or less\
+    \ of eligible_t, the low group is filled up from the lowest positive SIR to the quartile, and every name tied\
+    \ at the boundary is included, so leg size can vary. If zero-SIR names are more than 25% of eligible_t, the\
+    \ low group is ALL of them and the high group is the top third of the positive-SIR names, as the paper splits\
+    \ the remainder into three equal groups. There is no tie-break by turnover. If either leg has fewer than 20\
+    \ names the month is carried forward and flagged. The share of eligible names at zero is reported every month.\
+    \ Missing short interest means ineligible, never zero. Long = the low group and short = the high group, as defined\
+    \ above, equal weighted within each leg.\n Turnover is measured over the trailing calendar month ending on the\
+    \ rebalance date (shares traded in that month divided by shares outstanding, shares taken as market cap over\
+    \ price) and shifted by lag_days, never over the holding month."
+  inputs_required:
+  - monthly stock-level short position with report and publication dates (NOT HELD)
+  - daily close, volume and market cap, Accord-priced Indian equities (~1,314 names)
+  - monthly point-in-time market-rank universe (Monthly_uni_new.xlsx)
+  - NIFTY 500 daily close (benchmark)
+  - factor sleeves NIFTY500 VALUE 50, NIFTY500 MOMENTUM 50 and others for the factor fingerprint
+  cross_sectional: true
+  formation_rule: 'Tie-inclusive quartile cut on -SIR among eligible names each month, with the paper''s zero rule:
+    all zero-SIR names are the low group when they exceed 25% of eligible, and the high group is then the top third
+    of the positive-SIR names. Table 5 (page 17) uses SIR quartiles inside size and turnover cells; this card uses
+    one cut inside the high-turnover half.'
+  weighting_rule: 'Equal weighted within each leg, 50% long and 50% short notional, gross 1.0, unlevered, matching
+    the paper''s equal-weighted headline.
+
+    '
+  holding_period: one month, until the next rebalance
+  rebalance_frequency: monthly
+  is_long_short: true
+  long_only_adaptation: ''
+  constraints:
+  - gross exposure |long| + |short| <= 1.0, dollar neutral 0.5 / 0.5
+  - eligibility needs point-in-time NIFTY 500 membership, a known short interest figure and top-half turnover
+  - 30bp round trip on both legs plus a borrow cost on short notional
+  - short interest is used only after its publication date; lag_days >= 1
+  - the short leg must be restricted to names that can actually be shorted once a borrowability list exists
+  - legs are tie-inclusive and variable in size; a month with either leg under 20 names is carried forward and flagged
+  - a month with fewer than 250 eligible names is skipped, never traded; months traded and months skipped are reported
+  engine_template: NEEDS_NEW_TEMPLATE
+  template_gap: 'Spec for a human to implement: a tie-inclusive variant of universal_backtester CrossSectionalLongShort.
+    Inputs: alpha (= -SIR) and eligible per month. Outputs: weights. Rule: if zero-SIR names are 25% or less of
+    eligible, hold the lowest quartile by count extended to include every name tied at the boundary; if more than
+    25%, hold all zero-SIR names long and the top third of positive-SIR names short. Equal weight within each leg.
+    Carry weights forward if eligible names are under 250 or a leg is under 20. Objective: reproduce the paper''s
+    zero-first grouping instead of an arbitrary tie-break by array order, which the existing allocators use. Nearest
+    registered allocator is named in signal.template.'
+  confidence: medium
+  evidence_pages:
+  - 2
+  - 8
+  - 9
+  - 10
+  - 11
+  - 14
+  - 18
+signal:
+  name: neg_short_interest_ratio
+  template: universal_backtester:cross_sectional_long_short
+  lookback_days: 30
+  lag_days: 1
+  description: "lag_days is the repo floor; the real gate is the publication date of each short position report,\
+    \ which the paper never states. The allocator ranks the highest score long, so the signal supplies the negative\
+    \ of SIR and the lowest SIR is held long. lookback_days (30) is the reporting cadence, not a return window.\
+    \ Runs through universal_backtester.engine.Backtester with allow_short=True and build_allocator(\"cross_sectional_long_short\"\
+    ), never through ros/engine. A new script mirroring scripts/alquist_2018_india_small_cap_backtest.py is needed\
+    \ for Step 05 and has not been written. The allocator's min_names counts total eligible names across both legs,\
+    \ and it carries weights forward unchanged below that floor.\n TIE HANDLING: the registered allocator breaks\
+    \ boundary ties by array order, which would make the legs arbitrary when many names are at zero; see strategy.template_gap."
+  params:
+    quantile: 0.25
+    weighting: equal
+    long_weight: 0.5
+    short_weight: 0.5
+    min_names: 250
+    turnover_filter: top half of the universe by trailing-month turnover
+portfolio:
+  rebalance: monthly
+  long_only: false
+  max_gross: 1.0
+  allow_cash: false
+  mandate_allow_cash: false
+  start: '2013-03-31'
+  end: '2026-03-31'
+costs:
+  spread_bps: 30.0
+  cost_model: half_spread
+  borrow_bps: 300.0
+data_requirements:
+- name: STOCK_SHORT_INTEREST_MONTHLY_IN
+  kind: fundamental
+  frequency: monthly
+  start: '2013-03-31'
+  mandatory: true
+  purpose: the sorting signal itself; without it there is no test of this paper
+- name: ACCORD_STOCK_LEVEL_PRICE_MCAP
+  kind: price
+  frequency: daily
+  start: '2013-03-31'
+  mandatory: true
+  purpose: stock-level pricing, volume and market cap for both legs and the turnover filter
+- name: Monthly_uni_new.xlsx point-in-time universe
+  kind: membership
+  frequency: monthly
+  start: '2013-03-31'
+  mandatory: true
+  purpose: point-in-time NIFTY 500 universe; membership ends March 2026
+- name: NIFTY 500
+  kind: price
+  frequency: daily
+  start: '2013-03-31'
+  mandatory: true
+  purpose: fund benchmark and do-nothing comparator
+- name: NIFTY500 VALUE 50
+  kind: price
+  frequency: daily
+  start: '2013-03-31'
+  mandatory: true
+  purpose: factor fingerprint, since the paper's value and size loadings are material
+- name: NIFTY500 MOMENTUM 50
+  kind: price
+  frequency: daily
+  start: '2013-03-31'
+  mandatory: true
+  purpose: factor fingerprint, since the paper's portfolios load negatively on momentum
+- name: india_cash_rate
+  kind: risk_free_rate
+  frequency: daily
+  mandatory: true
+  purpose: Sharpe numeraire
+- name: India Fama-French-Carhart factor returns, monthly
+  kind: factor_return
+  frequency: monthly
+  mandatory: false
+  purpose: the paper's own headline alpha; fallback is the fund's factor fingerprint
+- name: borrowability and borrow cost per stock
+  kind: membership
+  frequency: monthly
+  mandatory: false
+  purpose: restrict the short leg to names that can be shorted and price the real borrow cost
+ambiguities:
+- field: strategy.signal_definition
+  headline: Short interest report date vs tradable date is unstated in the paper; look-ahead risk
+  issue: 'The paper forms portfolios at the start of month t from the previous month''s short interest report (page
+    9) but never says which date the report is struck on or when it becomes public.
+
+    '
+  resolution: 'Use each report only from its own publication date plus lag_days of 1, and require the data request
+    to include a publication timestamp. No row without one is eligible.
+
+    '
+  confidence: low
+  material: true
+  evidence_page: 9
+- field: strategy.signal_definition
+  headline: Zero-SIR names go first, all of them, as in the paper; no turnover tie-break
+  issue: "The paper's lightly shorted portfolios take every zero short interest stock before adding others to reach\
+    \ the percentile, so the 1% portfolio averages 232 stocks against 45 in the 99% portfolio (pages 11, 14).\n\
+    \ In India zero readings are probably a large majority, so the tie rule decides leg membership far more than\
+    \ in the paper."
+  resolution: 'Tie and zero handling follows the paper (page 17, page 11): every zero-SIR eligible name is in the
+    low group first. If zero-SIR names are 25% or less of eligible_t, the low group is filled up from the lowest
+    positive SIR to the quartile, and every name tied at the boundary is included, so leg size can vary. If zero-SIR
+    names are more than 25% of eligible_t, the low group is ALL of them and the high group is the top third of the
+    positive-SIR names, as the paper splits the remainder into three equal groups. There is no tie-break by turnover.
+    If either leg has fewer than 20 names the month is carried forward and flagged. The share of eligible names
+    at zero is reported every month.'
+  confidence: medium
+  material: true
+  evidence_page: 11
+- field: strategy.signal_definition
+  headline: Two turnover definitions in the paper; trailing-month shares traded chosen
+  issue: 'The text on page 8 defines turnover as average daily volume over shares outstanding; the Table 4 caption
+    (page 36) says monthly shares traded over shares outstanding. Table 4 values fit the monthly definition.
+
+    '
+  resolution: Use monthly shares traded divided by shares outstanding (market cap over price, not free float). Turnover
+    is measured over the trailing calendar month ending on the rebalance date (shares traded in that month divided
+    by shares outstanding, shares taken as market cap over price) and shifted by lag_days, never over the holding
+    month.
+  confidence: medium
+  material: true
+  evidence_page: 36
+- field: universe.description
+  headline: Top-half turnover filter replaces the paper's size-then-turnover quartile grid
+  issue: 'The paper sorts 4x4x4 (size, turnover, SIR) giving 64 cells. With about 500 names that gives roughly 8
+    names per cell, which is unusable.
+
+    '
+  resolution: 'Keep the paper''s central finding that the effect sits in high-turnover stocks, by restricting to
+    the top half by turnover, and sort on SIR only. Size conditioning is dropped and reported as a limitation. A
+    smallcap cut is kept as a sensitivity.
+
+    '
+  confidence: medium
+  material: true
+  evidence_page: 18
+- field: strategy.weighting_rule
+  headline: Equal weighting chosen; paper's value-weighted effect is about a third as large
+  issue: 'Table 1 reports both weightings and the long-leg alpha drops from about 1.4% to 0.5% a month with value
+    weighting (page 31). The paper calls neither clearly superior (page 10).
+
+    '
+  resolution: 'Equal weight, matching the paper''s headline, and state in every report that it is the more flattering
+    basis. A value-weighted run is not part of this card.
+
+    '
+  confidence: medium
+  material: true
+  evidence_page: 10
+- field: costs.spread_bps
+  headline: Paper reports no costs or turnover; direction of cost error is unknown
+  issue: No costs, turnover or capacity appear in the paper. Short interest is persistent (77% of low-SIR stocks
+    move at most one decile a month, page 24), but those low deciles are economically almost identical (footnote
+    7), so realised turnover is unknown.
+  resolution: Charge the fund's 30bp floor on both legs plus 300bp a year of borrow on short notional, measure realised
+    monthly turnover per leg, report the break-even cost and sweep 30 to 90bp and borrow 100 to 600bp.
+  confidence: low
+  material: true
+- field: data.pit_status
+  headline: Point-in-time membership ends March 2026; sample ends there
+  issue: 'The monthly universe file has no usable rows after March 2026 although prices run to July 2026.
+
+    '
+  resolution: End the sample at 2026-03-31 rather than ranking on stale membership.
+  confidence: high
+  material: false
+- field: data_plan.ideal (delisting returns)
+  headline: Delisted names and final returns in the held price panel are unchecked
+  issue: The paper keeps delisted stocks and uses CRSP delisting returns because short interest is exceptionally
+    high in delisting stocks (page 8). Whether the 1,314-security Accord panel contains delisted or suspended names,
+    and what their final return is, has not been checked.
+  resolution: Before Step 04 run the master-universe survivorship check; require delisted names to be present and
+    set a stated final-return convention (last traded price, or zero after suspension). If the panel is survivor-only,
+    report that the short leg is understated and the long leg flattered.
+  confidence: medium
+  material: true
+  evidence_page: 8
+- field: intent.broken_assumptions
+  headline: India short-selling facts below are the drafter's own, unsourced
+  issue: Claims that India has no naked shorting, that borrowing concentrates in F&O names, and that a near-zero
+    short position mostly means inability to short are stated without a source.
+  resolution: Treated as UNVERIFIED market-structure claims; the data owner or PM confirms them at Gate A and a
+    source is added.
+  confidence: low
+  material: true
+replication_targets: []
+benchmark_templates:
+- name: Equal-weight eligible universe (no short interest sort)
+  template: equal_weight
+  params: {}
+  rebalance: monthly
+- name: Inverse-vol eligible universe (no short interest sort)
+  template: inverse_vol
+  params: {}
+  rebalance: monthly
+data_plan:
+  ideal:
+  - field: Stock-level short position (shares sold short) for every NIFTY 500 stock, with report date and publication
+      date
+    granularity: monthly
+    history_from: '2012-01-02'
+    why: 'This is the signal. The paper sorts on a monthly snapshot of short interest divided by shares outstanding
+      (page 4).
+
+      '
+    why_granularity: 'Monthly, matching the paper. Daily would let the signal be refreshed faster than the paper
+      tests and change the question; quarterly would drop most of the variation the persistence result relies on
+      (Figure 3, page 45).
+
+      '
+    why_history: 'As far back as the Accord price panel (2012) so that the sample is as long as the price data allows.
+      Short samples are the card''s second weakest link.
+
+      '
+    adjustments: 'Needs shares outstanding at the report date (not free float), the report date and the publication
+      date as separate fields, and corporate-action adjustment for splits and bonus issues on the position count.
+
+      '
+    minimum_viable: true
+  - field: Daily price, volume and market cap for the NIFTY 500 universe
+    granularity: daily
+    history_from: '2012-01-02'
+    why: Returns, the turnover filter and the market-cap link to shares outstanding.
+    why_granularity: 'Daily gives monthly turnover by summation. Monthly bars alone could not form the turnover
+      filter; intraday data answers a question the paper does not ask.
+
+      '
+    why_history: 2012-01-02 is the start of the Accord panel; the backtest window starts 2013-03-31.
+    adjustments: price and market cap as supplied by Accord Fintech; market cap is total, not free float; delisted
+      and suspended names must be present with a stated final-return convention (see ambiguities)
+    minimum_viable: true
+  - field: Point-in-time NIFTY 500 membership, monthly
+    granularity: monthly
+    history_from: '2012-01-02'
+    why: Avoids survivorship bias; the paper includes delisted stocks.
+    why_granularity: monthly, matching the source file's snapshots
+    why_history: same window as the price panel
+    adjustments: market rank field, forward filled between monthly snapshots; usable only to March 2026
+    minimum_viable: true
+  - field: Per-stock borrowability and borrow cost, monthly
+    granularity: monthly
+    history_from: '2013-03-31'
+    why: The short leg holds the most shorted names, so whether it can be run at all depends on this.
+    why_granularity: monthly, to match the rebalance
+    why_history: same window as the price panel
+    adjustments: 'per stock and date: is_borrowable and borrow_cost_bps'
+    minimum_viable: false
+  - field: India Fama-French-Carhart monthly factor returns
+    granularity: monthly
+    history_from: '2012-01-02'
+    why: The paper's headline metric is the four-factor alpha.
+    why_granularity: monthly, as in the paper's regression
+    why_history: same window as the price panel
+    adjustments: state size breakpoints and whether built on NSE or all-India stocks
+    minimum_viable: false
+  rejected_alternatives:
+  - option: Use F&O open interest or delivery percentage as a stand-in for short interest
+    why_not: 'Both are different quantities. Open interest mixes long and short positions and exists only for F&O
+      names, and delivery percentage measures something else. A proxy would test a different paper under the same
+      title.
+
+      '
+  - option: Run the turnover and size sort without any short interest signal
+    why_not: That tests the size and liquidity effects the paper explicitly controls for, not short interest.
+  - option: Quarterly short position snapshots
+    why_not: Too coarse; the paper's alphas are monthly and persist about six months (Figure 3), so a quarter blurs
+      the formation date.
+  - option: Run on the sleeves the fund already holds
+    why_not: No index sleeve has a short interest series; a cross-sectional mechanism needs stocks.
+  granularity_verdict: 'Monthly short interest and daily prices, because the paper forms portfolios monthly and
+    the turnover filter needs daily volume.
+
+    '
+  optimality_argument: 'The smallest dataset that tests the paper''s actual mechanism is a monthly stock-level short
+    position series joined to the held daily price panel and point-in-time membership. Every other addition either
+    tests a different mechanism (open interest, delivery percentage), cannot form the estimator (quarterly), or
+    prices a decision the strategy does not make (intraday).
+
+    '
+  what_would_change_the_answer: 'The short interest series decides everything: without it there is no test. Borrowability
+    data could change what the short leg may claim, and factor returns only change how alpha is labelled.
+
+    '
+selection:
+  rule: 'Monthly: universe = point-in-time NIFTY 500 names priced in Accord. eligible = universe names with a short
+    interest figure published on or before the rebalance date and turnover in the top half. Rank on the negative
+    of SIR with zero-SIR names first. LONG = lowest-SIR quartile, equal weighted. SHORT = highest-SIR quartile,
+    equal weighted. No explicit securities are named.
+
+    '
+  explicit_securities: []
+  verified_against: master_universe
+  as_of: '2026-03-31'
+  why_these: 'The rule is the whole decision. The allocator re-derives both legs each month from the held price
+    panel and the short interest series once supplied. Every held name should be written to a holdings log by write_holdings_log().
+
+    '
+backtest_plan:
+  sample_start: '2013-03-31'
+  sample_end: '2026-03-31'
+  why_this_window: 'The fund convention start matches accord_data.BACKTEST_START. The end is March 2026, where point-in-time
+    membership stops, instead of the price end in July 2026. Truncating earlier would lose the 2020 crash and recovery,
+    which is the main stress test for a strategy that holds the most shorted stocks.
+
+    '
+  warmup_days: 60
+  why_warmup: 'Two months, so the first rebalance has a known short interest report and a full month of turnover.
+
+    '
+  rebalance_rule: Last trading day of each month, using reports published before that day; signals shifted by 1
+    + lag_days.
+  weights_rule: Equal weight within each leg, 50% long and 50% short, gross <= 1.0.
+  explicit_weights: {}
+  benchmarks:
+  - name: NIFTY 500
+    why_this: The fund benchmark and the do-nothing option.
+  - name: Low-SIR leg only (same universe, same rule)
+    why_this: Isolates what the short leg adds. The paper's long-leg and short-leg shares differ by weighting, so
+      the split must be measured here.
+  - name: Equal-weight eligible universe, top-half turnover
+    why_this: Strips the short interest sort and keeps the turnover and universe choices, so any edge is attributable
+      to short interest and not to liquidity.
+  - name: NIFTY500 VALUE 50
+    why_this: The paper's low-SIR portfolios look like small value stocks (page 11); this is the off-the-shelf product
+      that would capture that tilt.
+  - name: Cash-plus (flat 6% proxy swept 4-8%)
+    why_this: A beta-near-negative-0.4 spread should be judged against cash and on alpha, not against a long-only
+      index it will lose to in a rising market.
+  must_beat:
+  - the equal-weight top-half-turnover universe, or the short interest sort adds nothing beyond liquidity
+  - the low-SIR long leg alone, or the short leg is adding cost without adding return
+  - the NIFTY Smallcap 250 sub-cut, reported separately and pre-declared as the decisive test of the segment link
+  - 'zero on factor-adjusted alpha: the book''s alpha after a regression on NIFTY 500 and the fund''s factor sleeves
+    must be positive at 5%, with realised beta reported'
+  success_looks_like: 'Primary: positive alpha at 5% after regressing the long-short return on NIFTY 500 and the
+    fund''s factor sleeves (VALUE 50, MOMENTUM 50), with realised beta reported, because the paper''s own metric
+    is factor alpha. The book also beats the low-SIR leg alone after borrow and short-side costs, beats the equal-weight
+    turnover-filtered universe, survives a borrow sweep from 100 to 600bp, and the Smallcap 250 sub-cut agrees in
+    sign. Geometric Sharpe against NIFTY 500 is reported but is not the test, since the book has net negative market
+    beta.'
+  failure_looks_like: "Any of: the low-SIR leg does not beat the high-turnover equal-weight universe, which would\
+    \ mean the result is liquidity and not short interest; the short leg costs more than it earns; alpha disappears\
+    \ against the factor fingerprint; the verdict flips inside the borrow sweep; or the low-SIR names turn out to\
+    \ be the least shortable stocks, which would read as a short constraint proxy and not short seller information.\n\
+    \ Also a failure: positive alpha only in the NIFTY 500 cut and not in the Smallcap 250 sub-cut, or alpha that\
+    \ comes entirely from a short-beta tilt."
+  known_failure_modes:
+  - 'SHORT CONSTRAINT MASQUERADING AS GOOD NEWS: if low measured short positions in India mostly mark stocks that
+    cannot be shorted, the long leg holds a population the paper would predict to underperform.
+
+    '
+  - 'MICRO-CAP ARTEFACT: the paper''s alpha sits in tiny, low-priced stocks. A null on NIFTY 500 would not disprove
+    the paper, only its large-cap case.
+
+    '
+  - 'BORROW COST AND RECALL: the short leg is the most shorted quartile, where borrow is scarce; a flat 300bp is
+    probably light.
+
+    '
+  - 'SHORT HISTORY: about 12 years and 150 monthly observations, against 211 months in the paper.
+
+    '
+  - 'SURVIVORSHIP: a price panel without delisted or suspended names flatters the low-SIR small names and misstates
+    the most-shorted leg, where delisting losses concentrate.'
+data_requests:
+- item: Monthly stock-level short position series for India (SLB outstanding or exchange short-sale disclosures),
+    with report date, publication date and shares outstanding
+  why: 'This is the signal. The weakest link in the chain is whether short interest is observable in India at all,
+    and this series is what decides it.
+
+    '
+  unlocks: The only direct test of the paper's mechanism in Indian stocks.
+  without_it: "No test of this paper is possible. The only alternative is a proxy such as F&O open interest, which\
+    \ covers about 200 stocks and measures a different thing, and any result on it must not be reported as a replication\
+    \ or as evidence on short interest. The card stays at Gate A as a data request.\n Ask first for coverage by\
+    \ size band: a series covering only large or F&O names cannot test the segment where the paper finds an effect.\
+    \ DOWNGRADED FROM BLOCKING 2026-10-06 by the operator's decision (Harshil Pahuja): nothing is to be marked blocking\
+    \ before Gate A. The limitation is accepted and reported, not dropped: without this series this card cannot\
+    \ be run as specified, and the liquidity baseline card (boehmer_2009_liquidity_baseline_adaptation.yaml) is\
+    \ the only thing that runs on held data."
+  priority: high
+  headline: No Indian stock-level short interest series is held (accepted limitation, high)
+  format_hint: accord_code, report_date, publication_date, short_position_shares, shares_outstanding, plus coverage
+    by size band
+  satisfies:
+  - monthly stock-level short position with report and publication dates (NOT HELD)
+- item: Per-stock borrowability and borrow cost, monthly
+  why: 'The short leg holds the most shorted stocks, the hardest to borrow, so whether it can be run is a data question
+    as well as a cost question.
+
+    '
+  unlocks: A short leg restricted to shortable names, priced at real borrow cost.
+  without_it: 'Flat 300bp a year on all short notional, swept 100 to 600bp. Short-leg results are an upper bound,
+    not an implementable number.
+
+    '
+  priority: high
+  headline: 'Borrowability and borrow cost: short leg is the hardest to borrow and is priced flat'
+  format_hint: accord_code, month, is_borrowable, borrow_cost_bps
+  satisfies:
+  - borrowability and borrow cost per stock
+- item: India Fama-French-Carhart monthly factor returns
+  why: The paper's headline metric is the four-factor alpha, and its portfolios load on size, value and negative
+    momentum.
+  unlocks: A like-for-like alpha.
+  without_it: Factor fingerprint against NIFTY500 VALUE 50 and MOMENTUM 50; alpha cannot be compared to the paper's
+    numbers.
+  priority: nice_to_have
+  headline: India four-factor series, to label alpha like the paper (non-decisive)
+  format_hint: month, rmrf, smb, hml, mom, rf
+  satisfies:
+  - monthly Fama-French-Carhart factor returns and risk-free rate
+open_questions:
+- question: 'Is any Indian stock-level short position series obtainable, and for how many stocks and what years?
+
+    '
+  why_it_matters: If not, both cards end at the data request and no test is possible.
+  what_i_assumed: That some series exists for at least F&O stocks; coverage is unverified. Not blocking, by the
+    operator's decision of 2026-10-06; if no series exists, this card is not run and the baseline card stands alone.
+  headline: Does any Indian stock-level short interest series exist, and how far does it reach?
+  ask_of: data_owner
+  blocks_run: false
+- question: 'If coverage is F&O stocks only, should the test run on that subset even though it excludes the small,
+    low-priced names where the paper''s effect lives?
+
+    '
+  why_it_matters: It is the only subset where shorting is easy, so it is the only one where the paper's interpretation
+    can apply, but it is also the large-cap half where the paper finds nothing.
+  what_i_assumed: Run it as the primary test, labelled a large-cap test. It is expected to fall below the 250 name
+    floor and be skipped in many months; the floor is not lowered to make it run, and months traded against skipped
+    are reported.
+  headline: If only F&O stocks have data, run there knowing the paper finds no effect in large caps?
+  ask_of: pm
+  blocks_run: false
+- question: 'Is n_configs_tried honest at 18?
+
+    '
+  why_it_matters: The deflated Sharpe depends on it.
+  what_i_assumed: '18, the number of Table 1 portfolio and long-short variants (6 percentile portfolios x 2 weightings
+    plus 3 long-short pairs x 2). Roughly 250 further subgroup cells in Tables 2-6 are not counted, so 18 is a floor.
+
+    '
+  headline: n_configs_tried = 18 is a floor; ~250 subgroup cells in the paper are not counted
+  ask_of: researcher
+  blocks_run: false
+- question: 'Are the India short-selling facts used here correct: no naked shorting, borrowing concentrated in F&O
+    names, and low short positions mostly reflecting inability to short?'
+  why_it_matters: They carry the weakest-link argument and, on the long-only card, the reason the short leg is dropped.
+  what_i_assumed: That they are broadly right, as unsourced market knowledge, and that a source is added if they
+    are confirmed.
+  headline: Confirm the India short-selling facts the cards rely on; they are unsourced
+  ask_of: data_owner
+  blocks_run: false
+n_configs_tried: 18
+notes: "The promotion question is whether a hand-built short interest sort beats what the fund can do for free (hold\
+  \ NIFTY 500), and whether it beats a plain high-turnover equal-weight universe, since the paper itself shows liquidity\
+  \ and size drive part of the pattern. Paired with boehmer_2009_short_interest_adaptation.yaml, which drops the\
+  \ short leg. Step 05 needs a new script using CrossSectionalLongShort. Short interest data is not held, so Step\
+  \ 03 is expected to stop at feasibility.\n 2026-10-06: the operator decided that nothing is marked blocking before\
+  \ Gate A; the data request and the series question were downgraded accordingly. The mandatory data requirement\
+  \ stays mandatory, because the signal needs it."
+convertibility:
+  verdict: convertible_with_data
+  confidence: low
+  headline: Cannot run until an Indian short interest series exists; if one does, signal meaning is doubtful
+  what_must_be_true:
+  - 'The low short interest effect exists in the source market and is not an artefact: partly, since equal weighting
+    gives 1.4% a month, value weighting 0.5%, and NYSE-AMEX alone is not significant.'
+  - A usable short interest series exists for Indian stocks.
+  - Low measured short interest in India reflects short sellers' view and not an inability to short.
+  - 'An effect survives in NIFTY 500 names: the paper finds none in its largest size quartile (Table 5) and holds
+    stocks far smaller than anything in this universe.'
+  - The edge survives 30bp round trip at monthly turnover plus real borrow cost on the most shorted names.
+  - The short leg adds more than it costs relative to the low-SIR leg alone.
+  - The book is implementable at the fund's size in names that are not micro caps.
+  weakest_link: 'Two links of similar weakness, kept apart. (a) The segment link: the paper''s own Table 5 shows
+    no significant low-minus-high alpha in the largest size quartile (Panel C large size: 0.0% to 0.6%, none significant),
+    and NIFTY 500 holds nothing like the $29M median low-SIR stock (Table 4). Even with perfect data a large-cap
+    null is the likelier outcome, and unlike data it cannot be bought. (b) The meaning link: in India a low reading
+    may mark stocks that cannot be shorted, which the paper''s own background (page 7) predicts should underperform.
+    The data link (whether a series exists) is a precondition for both, not the weakest link itself.'
+  decisive_evidence: 'In order: (1) a monthly stock-level short position series with publication dates and coverage
+    by size band; (2) the NIFTY Smallcap 250 sub-cut, pre-declared as the decisive test of the segment link and
+    reported next to the NIFTY 500 result; (3) per-stock borrowability, to test whether low-SIR names are the unshortable
+    ones. Ask the data owner for coverage by size band before buying a series that covers only large names.'
+  if_it_fails: 'A null on NIFTY 500 with data would say only that short interest carries no information in the large-cap
+    half of India, which the paper also finds in the US largest quartile. A failure because low-SIR names are the
+    unshortable ones would be the more useful finding: short interest is a constraint proxy in India, not an opinion
+    measure.
+
+    '
+  capacity_note: 'Unknown and probably small on both legs. The paper''s alpha sits in small, low priced, high turnover
+    stocks, and a monthly rebalance into the lower half of NIFTY 500 is capacity limited by traded value. The short
+    leg adds borrow depth and margin as separate limits, neither measured here.
+
+    '
+india_notes:
+- category: data
+  item: 'No exchange publishes a US-style monthly stock-level short interest figure for all Indian stocks. Candidates
+    are securities lending and borrowing outstanding and exchange short-sale disclosures. Whether either gives a
+    monthly, stock-level, history-long series is unverified here.
+
+    '
+  why: 'The strategy ranks on this field. The same name (short interest) may measure a very different thing in India,
+    and a series that covers only F&O stocks excludes the segment where the paper''s effect is strongest.
+
+    '
+  triggered_by: the paper sorts every stock on monthly exchange-reported short interest (page 8)
+  addresses:
+  - monthly stock-level short position with report and publication dates (NOT HELD)
+  evidence_page: 8
+- category: validity
+  item: 'In India a near-zero short position often means the stock cannot be shorted, not that short sellers chose
+    to stay away.
+
+    '
+  why: 'UNVERIFIED (drafter''s market knowledge, confirm at Gate A): The paper''s reading of low short interest
+    as good news rests on shorting being feasible. Where it is not, its own background (page 7) predicts underperformance,
+    so the low-SIR leg can hold two opposite populations.
+
+    '
+  triggered_by: the interpretation in section 2 that absence of short selling signals no private bad news
+  addresses:
+  - monthly stock-level short position with report and publication dates (NOT HELD)
+  evidence_page: 7
+- category: execution
+  item: 'The short leg is the highest short interest quartile. These are the stocks where borrowing is scarcest
+    and recalls are most likely, and India permits no naked shorting.
+
+    '
+  why: 'UNVERIFIED (drafter''s market knowledge, confirm at Gate A): A flat borrow cost understates the cost of
+    exactly the names this sort selects.
+
+    '
+  triggered_by: the long-short portfolio SIR 1% minus SIR 99% (Table 1)
+  addresses:
+  - the short leg must be restricted to names that can actually be shorted once a borrowability list exists
+  evidence_page: 31
+- category: timing
+  item: 'The publication date of each short position report must gate its use, and the paper never states it.
+
+    '
+  why: 'Using the report date instead of the publication date is a look-ahead that flatters a monthly rebalance.
+
+    '
+  triggered_by: portfolios formed from the previous month's report without a stated date (page 9)
+  addresses:
+  - short interest is used only after its publication date; lag_days >= 1
+  evidence_page: 9
+- category: cost
+  item: 'Monthly rebalancing into the lower half of NIFTY 500 by size is costlier than the 30bp floor, and the paper
+    reports no costs.
+
+    '
+  why: 'The effect is concentrated in high turnover, smaller stocks, where impact and circuit limits bite and where
+    30bp is optimistic.
+
+    '
+  triggered_by: the Table 5 finding that alpha is concentrated in small, high turnover cells (page 38)
+  addresses:
+  - daily close, volume and market cap, Accord-priced Indian equities (~1,314 names)
+  evidence_page: 38
+- category: validity
+  item: 'Point-in-time NIFTY 500 membership is available only to March 2026 and is reconstructed from a market-rank
+    file, not from official constituent lists.
+
+    '
+  why: 'The sort is cross-sectional and monthly, so membership errors change which names can enter either leg. A
+    rank-based proxy mixes in names that were never index members and drops ones that were, in the small-cap half
+    where the effect lives.
+
+    '
+  triggered_by: the strategy ranks within a changing universe every month and the paper includes delisted stocks
+    (page 8)
+  addresses:
+  - monthly point-in-time market-rank universe (Monthly_uni_new.xlsx)
+  evidence_page: 8
