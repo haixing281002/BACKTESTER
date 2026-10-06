@@ -20,12 +20,20 @@ import uuid
 from . import charts, contract, prompts, workbook
 from .paths import LEDGER, REPO, RUNS, find_claude, rel, run_dir
 
-ALLOWED_TOOLS = ["Read", "Write", "Edit", "Glob", "Grep", "TodoWrite",
+ALLOWED_TOOLS = ["Read", "Write", "Edit", "Glob", "Grep", "TodoWrite", "Skill",
                  "Bash(python:*)", "Bash(python3:*)", "Bash(py:*)", "Bash(ls:*)", "Bash(mkdir:*)",
                  "Bash(cat:*)", "Bash(head:*)", "Bash(tail:*)", "Bash(wc:*)", "Bash(echo:*)"]
 DISALLOWED_TOOLS = ["Bash(git:*)", "Bash(rm:*)", "Bash(curl:*)", "Bash(pip:*)", "WebFetch", "WebSearch"]
 STAGE_RE = re.compile(r"LIGHTYEAR-STAGE:\s*([0-9A-Za-z]+)")
+# looser signals, used only to move the tracker forward by at most two stages:
+BANNER_RE = re.compile(r"\bSTAGE\s+0?([0-7])\b")                        # script banners: "STAGE 05 -- BUILD"
+LEAD_RE = re.compile(r"^\W{0,4}(?:Stage|Step)\s+0?([0-7])\b", re.M)    # a message that opens "Stage 5 ..."
 RUNNING = ("phase_a", "phase_b", "building", "revising")
+IDS_A = [s for s, _ in prompts.STAGES_A]
+IDS_B = [s for s, _ in prompts.STAGES_B]
+ORDER = IDS_A + IDS_B
+# minutes per stage before Lightyear has timed any real runs; replaced by medians of past runs as they finish
+DEFAULT_MIN = {"00": 3, "01": 3, "02": 5, "03m": 2, "GA": 3, "03": 4, "04": 6, "05": 15, "06": 8, "07": 5, "GB": 4}
 
 _lock = threading.RLock()
 _procs = {}            # run_id -> Popen
@@ -62,9 +70,14 @@ def update(rid, **kw):
 
 
 def log(rid, kind, msg, **extra):
+    t = now()
     with _lock:
         with open(os.path.join(run_dir(rid), "log.jsonl"), "a", encoding="utf-8") as f:
-            f.write(json.dumps({"t": now(), "kind": kind, "msg": msg, **extra}, default=str) + "\n")
+            f.write(json.dumps({"t": t, "kind": kind, "msg": msg, **extra}, default=str) + "\n")
+        # the same log, human-readable, refreshed with every event of every run
+        text = msg if kind != "tool_out" else msg[-600:]
+        with open(os.path.join(run_dir(rid), "run.log"), "a", encoding="utf-8") as f:
+            f.write(f"{t[11:]} [{kind:<10}] " + str(text).replace("\n", "\n" + " " * 22) + "\n")
 
 
 def read_log(rid, after=0):
@@ -133,31 +146,121 @@ def _summarise_tool(name, inp):
     return f"{name} {json.dumps(inp)[:200]}"
 
 
-def _mark_stage(rid, sid):
+def _mark_stage(rid, sid, phase_ids, loose=False):
+    """Move the tracker forward to `sid`. Never backwards; a loose signal moves at most two stages."""
     with _lock:
         st = load(rid)
-        if sid not in st["stages"]:
+        if sid not in phase_ids:
             return
-        order = [s for s, _ in prompts.STAGES_A + prompts.STAGES_B]
-        for s in order[:order.index(sid)]:
-            if st["stages"][s] == "running":
+        cur = st.get("current_stage")
+        ci = phase_ids.index(cur) if cur in phase_ids else -1
+        ni = phase_ids.index(sid)
+        if ni <= ci or (loose and ni - ci > 2):
+            return
+        t = now()
+        times = st.setdefault("stage_times", {})
+        for s in phase_ids[:ni]:
+            if st["stages"].get(s) != "done":
                 st["stages"][s] = "done"
+                times.setdefault(s, {}).setdefault("start", t)
+                times[s]["end"] = t
         st["stages"][sid] = "running"
+        times[sid] = {"start": t}
         st["current_stage"] = sid
         save(st)
     log(rid, "stage", f"Stage {sid} started", stage=sid)
 
 
+def _detect(rid, text, phase_ids, source):
+    for m in STAGE_RE.finditer(text or ""):
+        _mark_stage(rid, m.group(1), phase_ids)
+    rx = BANNER_RE if source == "tool" else LEAD_RE
+    for m in rx.finditer(text or ""):
+        d = m.group(1)
+        sid = "0" + d
+        if sid in phase_ids:
+            _mark_stage(rid, sid, phase_ids, loose=True)
+
+
 def _finish_stages(rid, ids):
     with _lock:
         st = load(rid)
+        t = now()
+        times = st.setdefault("stage_times", {})
         for s in ids:
             if st["stages"].get(s) in ("running", "pending"):
                 st["stages"][s] = "done"
+                times.setdefault(s, {}).setdefault("start", t)
+                times[s]["end"] = t
         save(st)
 
 
-def run_claude(rid, prompt, label):
+# ------------------------------------------------------------------ ETA
+_est_cache = {"t": 0, "v": None}
+
+
+def stage_estimates():
+    """Median minutes per stage over every finished stage of every past run, falling back to DEFAULT_MIN."""
+    if _est_cache["v"] is not None and time.time() - _est_cache["t"] < 60:
+        return _est_cache["v"]
+    samples = {s: [] for s in ORDER}
+    if os.path.isdir(RUNS):
+        for rid in os.listdir(RUNS):
+            p = os.path.join(RUNS, rid, "state.json")
+            if not os.path.exists(p):
+                continue
+            try:
+                times = json.load(open(p, encoding="utf-8")).get("stage_times", {})
+            except Exception:
+                continue
+            for s, tt in times.items():
+                if s in samples and tt.get("start") and tt.get("end"):
+                    m = (dt.datetime.fromisoformat(tt["end"]) - dt.datetime.fromisoformat(tt["start"])).total_seconds() / 60
+                    if 0.1 <= m <= 240:
+                        samples[s].append(m)
+    est = {}
+    for s in ORDER:
+        xs = sorted(samples[s])
+        est[s] = xs[len(xs) // 2] if xs else DEFAULT_MIN[s]
+    _est_cache.update(t=time.time(), v=(est, {s: len(samples[s]) for s in ORDER}))
+    return _est_cache["v"]
+
+
+def eta(st):
+    """Minutes left until the next gate, and elapsed time in the current stage."""
+    status = st.get("status")
+    if status == "building":
+        return {"phase": "Building charts and workbook", "minutes_left": 1, "phase_total": 1, "until": "Gate B",
+                "stage_elapsed": None, "learned_from": 0}
+    if status not in ("phase_a", "phase_b", "revising"):
+        return None
+    ids = IDS_B if status == "phase_b" else IDS_A
+    est, n = stage_estimates()
+    cur = st.get("current_stage") if st.get("current_stage") in ids else None
+    elapsed = 0.0
+    if cur and (st.get("stage_times", {}).get(cur) or {}).get("start"):
+        elapsed = (dt.datetime.now() - dt.datetime.fromisoformat(st["stage_times"][cur]["start"])).total_seconds() / 60
+    ci = ids.index(cur) if cur else -1
+    left = sum(est[s] for s in ids[ci + 1:])
+    if cur:
+        left += max(0.5, est[cur] - elapsed)
+    return {"phase": "Stages 00 to Gate A" if ids is IDS_A else "Stages 03 to Gate B", "until": "Gate A" if ids is IDS_A else "Gate B",
+            "minutes_left": round(left, 1), "phase_total": round(sum(est[s] for s in ids), 1),
+            "stage_elapsed": round(elapsed, 1), "stage_estimate": round(est[cur], 1) if cur else None,
+            "learned_from": sum(n[s] for s in ids)}
+
+
+def _set_activity(rid, txt):
+    """The latest plain-English line from Claude, shown on the page as 'what is happening now'."""
+    lines = [l.strip(" *#>-") for l in txt.splitlines() if l.strip() and not STAGE_RE.search(l)]
+    if not lines:
+        return
+    msg = " ".join(lines)
+    msg = re.sub(r"`([^`]*)`", r"\1", msg)
+    update(rid, activity=(msg[:277] + "...") if len(msg) > 280 else msg, activity_at=now())
+
+
+def run_claude(rid, prompt, label, phase_ids):
     """Run one headless Claude Code session to completion, streaming its events into the run log.
     Returns (ok, result_text)."""
     claude = find_claude()
@@ -193,22 +296,20 @@ def run_claude(rid, prompt, label):
             for block in ev.get("message", {}).get("content", []):
                 if block.get("type") == "text" and block.get("text", "").strip():
                     txt = block["text"]
-                    for m in STAGE_RE.finditer(txt):
-                        _mark_stage(rid, m.group(1))
+                    _detect(rid, txt, phase_ids, "text")
+                    _set_activity(rid, txt)
                     log(rid, "text", txt)
                 elif block.get("type") == "tool_use":
                     inp = block.get("input", {}) or {}
                     if block.get("name") == "Bash":
-                        for m in STAGE_RE.finditer(str(inp.get("command", ""))):
-                            _mark_stage(rid, m.group(1))
+                        _detect(rid, str(inp.get("command", "")), phase_ids, "cmd")
                     log(rid, "tool", _summarise_tool(block.get("name", "?"), inp))
         elif t == "user":
             for block in ev.get("message", {}).get("content", []) if isinstance(ev.get("message", {}).get("content"), list) else []:
                 if block.get("type") == "tool_result":
                     c = block.get("content")
                     text = c if isinstance(c, str) else " ".join(x.get("text", "") for x in (c or []) if isinstance(x, dict))
-                    for m in STAGE_RE.finditer(text or ""):
-                        _mark_stage(rid, m.group(1))
+                    _detect(rid, text, phase_ids, "tool")
                     if block.get("is_error"):
                         log(rid, "tool_error", (text or "")[:1500])
                     elif text:
@@ -267,22 +368,28 @@ def _after_phase_a(rid, ok, label):
 
 
 def phase_a(rid):
-    ok, _ = run_claude(rid, _fmt(prompts.PHASE_A, rid), "Stages 00-02 + Gate A")
+    ok, _ = run_claude(rid, _fmt(prompts.PHASE_A, rid), "Stages 00-02 + Gate A", IDS_A)
     _after_phase_a(rid, ok, "Phase A")
 
 
 def revise_a(rid, notes):
-    st = update(rid, status="revising")
+    st = update(rid, status="revising", current_stage="03m", activity="Revising the card with your notes.")
+    with _lock:
+        s = load(rid)
+        s["stages"]["GA"] = "pending"
+        save(s)
     ok, _ = run_claude(rid, _fmt(prompts.REVISE_A, rid, card=st["phase_a"]["card_path"], notes=notes),
-                       "Card revision + Gate A")
+                       "Card revision + Gate A", IDS_A)
     _after_phase_a(rid, ok, "Revision")
 
 
 def phase_b(rid):
     st = load(rid)
+    if st.get("current_stage") not in IDS_B:
+        update(rid, current_stage=None, activity="Starting the backtest stages.")
     ok, _ = run_claude(rid, _fmt(prompts.PHASE_B, rid, card=st["phase_a"]["card_path"],
                                  approver=st["approval"]["by"], notes=st["approval"].get("notes") or ""),
-                       "Stages 03-07 + Gate B")
+                       "Stages 03-07 + Gate B", IDS_B)
     if load(rid)["status"] == "cancelled":
         return
     build_outputs(rid)
@@ -290,7 +397,7 @@ def phase_b(rid):
 
 def build_outputs(rid):
     """Deterministic: validate the hand-off, build charts.json and the workbook, recalc with LibreOffice."""
-    update(rid, status="building")
+    update(rid, status="building", activity="Checking the results, drawing the charts and building the Excel workbook.")
     rd = run_dir(rid)
     try:
         res, df = contract.check_results(rd)
