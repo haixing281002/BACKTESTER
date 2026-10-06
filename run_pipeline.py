@@ -107,17 +107,25 @@ def main(argv=None) -> int:
                     help="tradable ADV of the sleeve basket, INR crore")
     ap.add_argument("--n-boot", type=int, default=2000)
     ap.add_argument("--no-charts", action="store_true")
-    # Every stage is a human checkpoint (CLAUDE.md: "the decision is PENDING
-    # until a named human records it"). Run interactively (a real terminal)
-    # and the pipeline pauses after EACH stage -- Gate A, Steps 03-07, Gate
-    # B -- showing that stage alone before it spends any time on the next
-    # one. --auto-approve skips every pause deliberately (batch runs across
-    # many cards, CI); running non-interactively (piped stdin, a subprocess
-    # with no tty) skips them too, but says so at each one, rather than
-    # silently blocking on input that will never come.
+    # Changed 2026-10-06: the DEFAULT is now to run straight through, Gate A
+    # to Gate B, with no pause at any stage (CLAUDE.md's 4th non-negotiable).
+    # This is unrelated to the actual decision gate below ("PENDING until a
+    # named human records it" via --decision/--decided-by) -- that mechanism
+    # is untouched by this flag either way, it only ever fires on an explicit
+    # --decision. Pass --interactive to restore the old behavior: pause after
+    # EACH stage -- Gate A, Steps 03-07, the pre-decision Gate B display --
+    # showing that stage alone and waiting for typed approval before the
+    # next one. Running non-interactively (piped stdin, a subprocess with no
+    # tty) skips pauses even with --interactive, but says so at each one
+    # rather than silently blocking on input that will never come.
+    ap.add_argument("--interactive", action="store_true",
+                    help="Pause for typed approval after every stage (Gate A "
+                    "through Gate B), instead of the 2026-10-06 default of "
+                    "running straight through without stopping.")
     ap.add_argument("--auto-approve", action="store_true",
-                    help="Skip every interactive stage pause and run straight "
-                    "through to Gate B, e.g. for batch runs across many cards.")
+                    help="No-op since 2026-10-06 (running straight through is "
+                    "now the default); accepted so old scripts/commands that "
+                    "still pass it do not break.")
     # Gate B is a human decision. These flags are how a named person records it;
     # without them the run ends at PENDING and the library says so.
     ap.add_argument("--decision", choices=["APPROVE", "OBSERVE", "FIX", "REJECT"],
@@ -841,27 +849,27 @@ def _checkpoint(R: Report, args, card, stage_name: str,
 
     `produced`: absolute local paths of everything written SO FAR this run
     -- printed here, at every stage, not only in the final summary, so a
-    human approving stage N can actually see what stage N wrote before
-    saying yes to stage N+1.
+    human reading along (or looking back later) can see what stage N wrote.
 
-    --auto-approve skips every pause deliberately (batch runs, CI); a
-    non-interactive run (piped stdin, a subprocess with no tty) skips it
-    too, but says so explicitly each time rather than silently blocking
-    forever on input that will never come.
+    Changed 2026-10-06: the default is to continue without pausing, printing
+    `produced` as it goes. Pass --interactive to get the old pause-and-ask
+    behavior back; a non-interactive run (piped stdin, a subprocess with no
+    tty) never pauses regardless, but says so explicitly rather than silently
+    blocking forever on input that will never come.
     """
     R.flush()
     if produced:
         print("\nOutputs produced so far this run:")
         for p in produced:
             print(f"  {os.path.abspath(p)}")
-    if args.auto_approve:
-        print(f"\n[--auto-approve: continuing past {stage_name} without a pause]")
+    if not args.interactive:
+        print(f"\n[continuing past {stage_name} -- pass --interactive to pause "
+              f"here for typed approval instead]")
         return None
     if not sys.stdin.isatty():
         print(f"\n[no interactive terminal detected (stdin is not a TTY) -- "
-              f"continuing past {stage_name} automatically. Run this in a real "
-              f"terminal, or pass --auto-approve explicitly, for this to be a "
-              f"deliberate choice rather than an accident of how this was run.]")
+              f"continuing past {stage_name} automatically despite --interactive. "
+              f"Run this in a real terminal for a pause to actually be possible.]")
         return None
     answer = input(f"\n{stage_name} is displayed above. Type 'approve' to continue "
                    f"to the next stage, anything else to halt here: ").strip().lower()

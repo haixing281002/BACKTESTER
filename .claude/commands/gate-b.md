@@ -7,6 +7,12 @@ argument-hint: "<report.txt>"
 
 **No model votes here.** You assemble the briefing; a named PM or IC rules.
 
+**This is the ONE stop in the chain (changed 2026-10-06).** Everything from
+Stage 00 through Stage 07 now runs without pausing for a human — see
+`/paper`'s "ONE human checkpoint, at Gate B." Nothing about that autonomy
+reaches here: `decision: PENDING` until a named human actually records one,
+exactly as always.
+
 From `$1`, write `outputs/interpretation/<slug>__gate_b_brief.md`, at most one
 page:
 
