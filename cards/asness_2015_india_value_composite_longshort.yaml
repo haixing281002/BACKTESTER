@@ -1,0 +1,978 @@
+card_version: "1.0"
+
+paper:
+  id: asness_2015_india_value_composite_longshort
+  title: "India adaptation: composite-value long-short tilt on individual Indian stocks (from Asness, Frazzini, Israel & Moskowitz 2015, 'Fact, Fiction, and Value Investing')"
+  authors: [Clifford Asness, Andrea Frazzini, Ronen Israel, Tobias Moskowitz]
+  date: "2015-06-01"
+  source_file: docs/papers/asness_frazzini_israel_moskowitz_2015_fact_fiction_value.pdf
+  source_sha256: "19eb65c2a62e7aaf"
+
+intent:
+  mode: adaptation
+  parent_card: ""
+  rationale: >
+    REVISED 2026-09-28: the fund's mandate now permits short positions (see
+    CLAUDE.md, "One card, decided by what the paper's construction actually
+    needs"). The paper's headline mechanism -- rank stocks by a composite of
+    value measures, long the cheapest, short the most expensive -- is a
+    long-short factor (HML), and there is no longer a blanket reason to strip
+    the short leg out. This replaces the earlier long-only adaptation card
+    (asness_2015_india_value_composite_adaptation.yaml, superseded) as the
+    single card for this paper: both legs intact, translated to India using
+    real individual-stock data (Accord Fintech, already held locally), run
+    through universal_backtester's allow_short=True path. What replaces the
+    OLD "must this fund short" question is a NEW one: is a short leg actually
+    IMPLEMENTABLE in the Indian market at all, given India's stock lending
+    and borrowing (SLB) framework does not support naked shorting and only
+    covers a subset of names -- see broken_assumptions and the new
+    india_notes entry on this.
+  transferred_mechanism: >
+    Annually, within the verified point-in-time top-500 Indian universe
+    (Monthly_uni_new.xlsx, restricted to Accord-priced names): compute an
+    equal-weighted composite cheapness z-score from two value ratios (E/P,
+    the inverse of Adjusted PE; and EBIT/EV, the inverse of EV/EBIT), each
+    using the most recent fiscal year whose real result-publication date
+    precedes the rebalance date. Rank the eligible set; hold the cheapest 30%
+    long (CHEAP) and the most expensive 30% short (EXPENSIVE) -- REVERTED
+    2026-09-28 to match the paper's own top/bottom-30% breakpoint exactly
+    (Exhibit 3 caption), after a prior revision had tightened this to a 10%
+    decile cut. Both legs equal-weighted within their leg, gross-neutral by
+    default (50% long notional, 50% short notional), matching the paper's
+    equal-weighted HML-style construction with both legs genuinely traded.
+  broken_assumptions:
+    - >
+      SHORT AVAILABILITY IN INDIA IS NOT UNIVERSAL: unlike the US (where any
+      liquid name can generally be shorted), India does not allow naked short
+      selling -- a short position must be covered through the SEBI-regulated
+      Securities Lending and Borrowing (SLB) mechanism, and SLB liquidity is
+      concentrated in F&O-eligible, highly liquid large/mid-cap names, not
+      the full top-500 universe. The EXPENSIVE leg's actually-implementable
+      universe is very likely NARROWER than the CHEAP leg's -- some
+      cheap-but-borrowable-cap-segment overlap is not guaranteed. This card
+      currently ranks and shorts across the SAME eligible universe as the
+      long leg with no SLB-availability filter, because no local SLB
+      eligibility list has been joined yet (see data_requests). This is now
+      the load-bearing transfer risk this card carries, replacing the old
+      "this fund cannot short at all" constraint with a narrower, more
+      specific one: "this fund can only short what SLB actually lets it
+      borrow, at a real and possibly punitive cost."
+    - >
+      NARROWER COMPOSITE THAN THE PAPER'S OWN "BEST MEASURED BY A COMPOSITE"
+      CLAIM: the paper's composite uses 4-5 measures (book-to-market,
+      earnings-to-price, cash-flow-to-price, dividend yield, 5-year reversal)
+      chosen partly because they are imperfectly correlated with each other
+      (Exhibit 3: correlations to BE/ME range 0.5-0.9). The two measures
+      available locally (Adjusted PE, EV/EBIT) are both earnings-multiples
+      and likely far more correlated with each other than the paper's own
+      composite legs are -- so the noise-reduction benefit the paper
+      documents for a composite (Exhibit 3-4) is only weakly present here.
+    - >
+      NO BOOK-TO-MARKET OR DIVIDEND YIELD: neither is present in the locally
+      held Accord valuation file. The paper's single most-studied measure
+      (BE/ME, used throughout Fama-French's own HML) cannot be reproduced at
+      all with data currently on this machine.
+    - >
+      SHORT HISTORY: ~13 years of usable Accord data (2013-2026) vs. the
+      paper's 88 years (1926-2014). None of the paper's sub-period
+      out-of-sample tests, its decade-by-decade robustness table (Exhibit 4),
+      or its large-vs-small-cap 4-period split (Exhibit 5) has a length-matched
+      Indian analogue.
+    - >
+      TOTAL MARKET CAP, NOT FREE FLOAT: Indian promoter holdings inflate
+      total market cap vs. investable float -- same caveat every other
+      Accord-based card in this repo carries, relevant here because the
+      eligible universe (top-500 by market rank) uses total cap.
+    - >
+      ANNUAL, FISCAL-YEAR-ANCHORED REBALANCE, NOT THE PAPER'S JUNE CALENDAR:
+      the paper rebalances every June, book and price both 6 months old
+      at formation (Fama-French convention). This card rebalances annually
+      too, but anchored to India's March fiscal year-end and the REAL
+      per-security result-publication date (median lag 58 days) rather than
+      importing the US calendar or a guessed lag.
+    - >
+      EQUAL-WEIGHTED WITHIN EACH LEG, MATCHING THE PAPER: unlike the size-tilt
+      card's deviation from Fama-French's value-weighted SMB, this construction
+      matches the paper's own equal-weighted HML-style portfolios directly.
+    - >
+      SHORT BORROW COST IS A FLAT ASSUMPTION, NOT NAMED PER SECURITY: the
+      engine (universal_backtester, allow_short=True) charges a single
+      short_borrow_bps rate uniformly across every shorted name. Real SLB
+      borrow costs vary widely by security -- easy-to-borrow large caps cost
+      little, hard-to-borrow or high-short-interest names can cost
+      materially more, or simply have no lender at any price. A flat rate
+      is optimistic in the direction that flatters this card's short leg.
+    - >
+      TERCILE (30%) CUT, MATCHING THE PAPER EXACTLY. The paper's own
+      construction (Exhibit 3 caption, and throughout) sorts into top 30% /
+      bottom 30%. This card briefly used a tighter 10% decile cut (fund
+      decision 2026-09-28), then REVERTED to the paper's own 30% on
+      2026-09-28 specifically to re-run the mechanism on the paper's own
+      assumptions rather than a fund-chosen variant, before comparing. A
+      supplementary full 10-decile breakdown (not just this card's traded
+      top/bottom tercile) is still produced by Step 05
+      (scripts/asness_2015_india_value_longshort_backtest.py) so the
+      shape of the value effect across the whole score range remains
+      visible, independent of which specific cut is traded.
+
+universe:
+  description: >
+    A verified, point-in-time top-500-by-market-rank Indian equity universe
+    (Monthly_uni_new.xlsx via get_top_n_universe), restricted to Accord-priced
+    names, further restricted at each rebalance to names with a known,
+    publication-date-valid Adjusted PE AND EV/EBIT. Ranked into value terciles
+    at each annual rebalance; both terciles traded. Not a single named index.
+  asset_class: equity
+  geography: IN
+  assets:
+    - ACCORD_STOCK_LEVEL_PRICE_MCAP
+  benchmark: NIFTY 500
+  cash_asset: CASH_PROXY_CONSTANT_6PCT
+
+universe_translation:
+  source_universe: >
+    All NYSE/AMEX/NASDAQ ordinary common stocks in Ken French's data library
+    (CRSP-based, NYSE breakpoints), split into small-cap and large-cap halves
+    at the NYSE median; the PAPER itself uses top/bottom 30% by value measure
+    within each half (Exhibit 3 caption). This card matches that cut exactly
+    (reverted 2026-09-28 from a briefly-used 10% decile variant -- see
+    broken_assumptions).
+  source_breadth: null
+  source_selection_rule: >
+    Whole-CRSP-universe sort each period into top-30%/bottom-30% by value
+    measure (or an equal-weighted composite of several) IN THE PAPER,
+    breakpoints computed on NYSE stocks only and applied to the full
+    NYSE/AMEX/NASDAQ universe -- not a fixed headcount anywhere in the paper.
+    This card matches that 30% convention exactly; see strategy.formation_rule.
+  target_universe: "Top-500 point-in-time Indian equities (Monthly_uni_new.xlsx), Accord-priced, with known value ratios"
+  grade: close
+  resolution: direct
+  rationale: >
+    Not a sleeve proxy: the mechanism itself (rank individual stocks by a
+    composite value measure, hold the cheapest slice long and the most
+    expensive slice short) is reproduced directly on individual Indian
+    stocks, using real fundamentals data, within a verified point-in-time
+    universe. What differs from the paper is breadth of VALUE MEASURES (2
+    earnings multiples vs. the paper's 4-5 measure composite spanning book,
+    earnings, cash flow and dividends), sample length (~13 years vs. 88), and
+    -- new since the mandate update -- whether the SHORT leg's universe
+    should really be the same top-500 set as the long leg's, given SLB
+    coverage is narrower (see broken_assumptions).
+  transfer_risks:
+    - >
+      The two available value measures (Adjusted PE, EV/EBIT) are both
+      earnings-multiples and are likely to be substantially more correlated
+      with each other than the paper's own 4-5 measure composite is internally
+      -- so this composite is closer to "one measure read twice" than to the
+      paper's own diversified composite. Measure the actual correlation
+      between the two z-scored legs before trusting the composite as
+      genuinely diversified.
+    - >
+      Consolidated vs. standalone basis (Accord's CONS_FR_1 field) is chosen
+      once (consolidated preferred, standalone fallback) rather than argued
+      per-sector; Indian conglomerates with large unconsolidated subsidiaries
+      could rank very differently on each basis.
+    - >
+      Indian promoter holdings inflate total market cap relative to free
+      float, interacting with the eligible-universe restriction (top-500 by
+      total market rank) in the same direction the size-tilt card already
+      flags.
+    - >
+      SLB coverage is not modelled: this card currently assumes every name in
+      the eligible universe can be shorted at the flat borrow rate. It very
+      likely cannot -- see broken_assumptions and india_notes.
+  mechanism_needs:
+    needs_cross_section: true
+    min_names: 150
+    cap_segment: all
+    sector: null
+    min_history_years: 10.0
+    must_be_in_mandate: true
+    notes: >
+      A genuine stock-level cross-sectional value sort, matching the paper's
+      own construction in kind, with both legs live. Needs real breadth to
+      form a meaningful tercile with populated buckets as names drop in and
+      out of eligibility -- only a constituent-level panel, not an index
+      sleeve, can supply this.
+  alternatives_considered:
+    - "NIFTY500 VALUE 50 / NIFTY200 VALUE 30 index sleeves (already held, index-level only, long-only by construction)"
+    - "NIFTY Total Market constituents (broader, out-of-mandate)"
+  why_not_alternatives: >
+    Holding the existing NIFTY500 VALUE 50 sleeve tests a different,
+    long-only-by-construction question. This fund already holds NIFTY500
+    VALUE 50 and NIFTY200 VALUE 30 as off-the-shelf long-only comparators,
+    run alongside this card's own long-short selection as benchmarks. NIFTY
+    Total Market would add breadth but sits outside the fund's NIFTY 500
+    mandate and was not needed: 500 names already comfortably supports a 30%
+    tercile sort on both legs.
+  required_instruments:
+    - ACCORD_STOCK_LEVEL_PRICE_MCAP
+    - NIFTY 500
+    - NIFTY500 VALUE 50
+    - NIFTY200 VALUE 30
+  evidence_page: 21
+
+strategy:
+  signal_name: india_composite_value_longshort
+  signal_definition: >
+    At each annual rebalance (India fiscal-year-anchored): universe_t =
+    top-500 by market rank as of the last known Monthly_uni_new.xlsx
+    snapshot, restricted to Accord-priced names. For each name, take the most
+    recent fiscal year whose known_date (real result-publication date via
+    w_publishing_date_data.xlsx, falling back to fiscal_year_end +
+    DEFAULT_REPORTING_LAG_DAYS only where no real date exists) is on or
+    before the rebalance date; prefer the consolidated basis, fall back to
+    standalone. eligible_t = universe_t names with both Adjusted PE and
+    EV/EBIT available on that basis. Compute E/P = 1/Adjusted_PE and EBIT/EV
+    = 1/(EV/EBIT); cross-sectionally z-score each within eligible_t; average
+    the two z-scores (equal-weighted) into one composite cheapness score.
+    Rank eligible_t by the composite (descending = cheapest first). CHEAP_t =
+    top 30% by count, held LONG, equal-weighted within the leg. EXPENSIVE_t =
+    bottom 30% by count, held SHORT, equal-weighted within the leg. Both legs
+    scaled so gross notional is 50% long / 50% short by default
+    (long_weight=short_weight=0.5, dollar-neutral) -- matching the paper's
+    own equal-weighted HML-style long-short construction, both legs live.
+  inputs_required:
+    - "daily close, Accord-priced Indian equities (~1,314 names)"
+    - "trailing fiscal-year Adjusted PE and EV/EBIT, per-security, publication-date-lagged (Accord valuation_ratios_all_till_2025.xlsx)"
+    - "real per-security result-publication date (Accord w_publishing_date_data.xlsx)"
+    - "monthly point-in-time market-rank universe (Monthly_uni_new.xlsx)"
+    - "NIFTY 500 daily close (benchmark, buy-and-hold reference)"
+    - "NIFTY500 VALUE 50 / NIFTY200 VALUE 30 daily close (off-the-shelf, long-only comparators)"
+    - "SLB-eligible security list, ideally with per-security borrow cost (NOT yet held locally -- see data_requests)"
+  cross_sectional: true
+  formation_rule: >
+    Quantile cut at 30% by composite value z-score among that rebalance's
+    eligible names (not a fixed name count), applied symmetrically to both
+    the long (cheapest 30%) and short (most expensive 30%) legs -- matches
+    the paper's own top/bottom-30% NYSE-breakpoint convention exactly
+    (reverted 2026-09-28, see broken_assumptions), applied here directly to
+    the Indian eligible universe (there is no NYSE-equivalent sub-exchange
+    split to preserve).
+  weighting_rule: >
+    Equal-weighted within each leg; legs scaled to 50% long notional / 50%
+    short notional by default (dollar-neutral), matching the paper's own
+    equal-weighted HML-style construction. Gross exposure capped at 1.0 (long
+    + |short| = 1.0), unlevered.
+  holding_period: "~1 year (held until the next annual rebalance)"
+  rebalance_frequency: annual
+  is_long_short: true
+  long_only_adaptation: ""
+  constraints:
+    - "gross exposure: |long| + |short| <= 1.0 (unlevered)"
+    - "dollar-neutral by default: long notional == short notional (0.5 / 0.5)"
+    - "eligibility requires top-500 point-in-time universe membership AND both value ratios known as of the rebalance date"
+    - "30bp round-trip transaction cost on both legs (fund standing assumption, not the paper's zero-cost assumption)"
+    - "a flat short_borrow_bps annualised cost is charged on all short notional -- see broken_assumptions on why this is optimistic"
+    - "lag_days >= 1 from India's non-negotiable point-in-time rule, satisfied here via the real result-publication date"
+  engine_template: "universal_backtester:cross_sectional_long_short"
+  template_gap: ""
+  confidence: medium
+  evidence_pages: [7, 11, 12, 18, 19, 21, 22, 23]
+
+signal:
+  name: india_composite_value_longshort
+  template: "universal_backtester:cross_sectional_long_short"
+  lookback_days: 365
+  lag_days: 1
+  description: >
+    lag_days is 1, matching this repo's non-negotiable floor -- and is a
+    floor, not the real lag: the real gate is known_date (the security-level
+    real result-publication date), which is typically 30-100+ days after
+    fiscal year end, always respected before a value ratio enters the
+    ranking. lookback_days (365) is stated as the fundamentals-refresh
+    window, not a return-based or covariance window.
+    EXECUTION: this card runs through
+    universal_backtester.engine.Backtester(..., allow_short=True) with
+    universal_backtester.allocators.build_allocator(
+    "cross_sectional_long_short", ...), NOT through ros/runner.py or
+    ros/engine (both stay long-only by construction and have not been
+    rebuilt to support negative weights -- see CLAUDE.md). A new script
+    mirroring scripts/alquist_2018_india_small_cap_backtest.py but using
+    CrossSectionalLongShort and ranking on the composite value z-score is
+    needed for Step 05; it has not yet been written as of this card's
+    drafting.
+    MIN_NAMES FALLBACK: CrossSectionalLongShort's own min_names parameter
+    counts TOTAL eligible names across BOTH legs (per its docstring in
+    universal_backtester/allocators.py), unlike the long-only card's
+    per-leg floor. If eligible_t < min_names at any annual rebalance, the
+    allocator itself returns ctx.current_weights.copy() (carry forward
+    unchanged) rather than trading -- this is the allocator's own built-in
+    behavior, not a custom addition, and needed no further specification
+    here.
+  params:
+    quantile: 0.30
+    weighting: equal
+    long_weight: 0.5
+    short_weight: 0.5
+    # 60, TOTAL across both legs (CrossSectionalLongShort's own convention,
+    # not per-leg). At the paper's own 30% cut (reverted 2026-09-28, see
+    # broken_assumptions), n_ok=60 gives k = min(round(0.30*60)=18, 30) =
+    # 18 per leg, 36 held total once the floor binds. Not swept.
+    min_names: 60
+    value_measures: ["adjusted_pe_inverse", "ev_ebit_inverse"]
+    basis_preference: ["consolidated", "standalone"]
+
+portfolio:
+  rebalance: annual
+  long_only: false
+  max_gross: 1.0
+  allow_cash: true
+  mandate_allow_cash: false
+  start: "2013-03-31"
+  end: "2026-08-31"
+
+costs:
+  spread_bps: 30.0
+  cost_model: half_spread
+  borrow_bps: 100.0
+  # 100bp/yr flat assumption -- a rough, unverified placeholder for Indian
+  # SLB cost on an average name in this universe. See broken_assumptions:
+  # real per-security SLB cost varies widely and is not held locally.
+
+data_requirements:
+  - {name: ACCORD_STOCK_LEVEL_PRICE_MCAP, kind: price, frequency: daily, start: "2013-03-31", mandatory: true, purpose: "stock-level pricing over the eligible universe, both legs"}
+  - {name: "Accord valuation ratios (Adjusted PE, EV/EBIT)", kind: fundamental, frequency: annual, start: "2013-03-31", mandatory: true, purpose: "the two legs of the composite value z-score"}
+  - {name: "Accord publication dates (w_publishing_date_data.xlsx)", kind: fundamental, frequency: annual, start: "2013-03-31", mandatory: true, purpose: "point-in-time gate so no ratio is used before it was actually knowable"}
+  - {name: "Monthly_uni_new.xlsx point-in-time universe", kind: membership, frequency: monthly, start: "2013-03-31", mandatory: true, purpose: "verified top-500 point-in-time universe restriction"}
+  - {name: "NIFTY 500", kind: price, frequency: daily, start: "2013-03-31", mandatory: true, purpose: "fund benchmark and do-nothing comparator"}
+  - {name: "NIFTY500 VALUE 50", kind: price, frequency: daily, start: "2013-03-31", mandatory: true, purpose: "off-the-shelf value-index comparator -- the real alternative to building this"}
+  - {name: "NIFTY200 VALUE 30", kind: price, frequency: daily, start: "2013-03-31", mandatory: true, purpose: "second off-the-shelf value comparator, narrower universe"}
+  - {name: "NIFTY500 MOMENTUM 50", kind: price, frequency: daily, start: "2013-03-31", mandatory: true, purpose: "factor-fingerprint check and incremental-IR test, per the paper's own value+momentum finding"}
+  - {name: india_cash_rate, kind: risk_free_rate, frequency: daily, mandatory: true, purpose: "Sharpe numeraire"}
+  - {name: "SLB-eligible security list, ideally with per-security borrow cost", kind: membership, frequency: daily, mandatory: false, purpose: "restrict the SHORT leg to names actually borrowable in India, and price the real cost of doing so, instead of a flat assumed rate across the whole eligible universe -- DOWNGRADED TO NON-BLOCKING 2026-09-28: user decision to proceed on data already available rather than wait; the flat-rate, unfiltered short universe is accepted as a known limitation, not a run-stopper"}
+  - {name: "Accord profitability ratios (ROA/ROE/ROCE)", kind: fundamental, frequency: annual, mandatory: false, purpose: "non-blocking extension: test the paper's value+profitability combination (Exhibit 1)"}
+
+ambiguities:
+  - field: strategy.signal_definition
+    headline: "Short leg trades across the same universe as the long leg, with no SLB-availability filter"
+    issue: >
+      India's SLB mechanism does not cover the full top-500 universe -- it
+      concentrates in F&O-eligible, liquid names. This card currently ranks
+      and shorts the bottom 30% of the SAME eligible set the long leg uses,
+      with no check that those specific names are actually borrowable.
+    resolution: >
+      Proceed with the unfiltered universe as the base case, but flag this as
+      the single most consequential open item (see open_questions and the
+      convertibility chain) rather than silently assuming full borrowability.
+      A follow-up revision, once an SLB-eligible list is available (see
+      data_requests), should re-run with the short leg restricted to that
+      list and compare.
+    confidence: high
+    material: true
+    evidence_page: null
+
+  - field: costs.short_borrow_bps
+    headline: "Flat 100bp/yr borrow cost is an unverified placeholder, not a sourced number"
+    issue: >
+      Real Indian SLB borrow costs vary by security and by how much demand
+      there is to short a given name -- easy-to-borrow large caps cost very
+      little, harder names cost much more or may have no lender. A single
+      flat rate averages this away in a direction that could flatter or
+      understate the short leg's true cost depending on which names actually
+      land in the EXPENSIVE tercile.
+    resolution: >
+      Use 100bp/yr as a round, clearly-labelled placeholder pending real SLB
+      cost data (data_requests). Report the strategy's sensitivity to this
+      assumption (e.g. at 50bp and 200bp) before treating any result as
+      robust to it.
+    confidence: low
+    material: true
+    evidence_page: null
+
+  - field: strategy.signal_definition
+    headline: "Composite is 2 earnings-multiples, not the paper's 4-5 measure book/earnings/cashflow/dividend mix"
+    issue: >
+      The paper's central "best measured by a composite" claim (Exhibit 3-4)
+      rests on the composite legs being imperfectly correlated (0.5-0.9 to
+      BE/ME). Adjusted PE and EV/EBIT, both earnings-based, are likely far
+      more correlated with each other, so averaging them may not reduce noise
+      the way the paper's composite does.
+    resolution: >
+      Proceed with the 2-measure composite as the best achievable version
+      with data currently on this machine, but measure and report the actual
+      correlation between the two z-scored legs at Step 03/05 rather than
+      assuming it is low. Flagged as a data_request below for the fields that
+      would fix this properly (book value, dividend per share).
+    confidence: high
+    material: true
+    evidence_page: 18
+
+  - field: strategy.signal_definition
+    headline: "Consolidated basis preferred over standalone; not argued per-sector"
+    issue: >
+      Accord's valuation file carries both consolidated (C) and standalone
+      (S) figures for many names. Indian conglomerates with large
+      unconsolidated subsidiaries or JVs can show materially different PE/
+      EV-EBIT on each basis.
+    resolution: >
+      Prefer consolidated, fall back to standalone only where consolidated is
+      absent. Not swept in this card's base run.
+    confidence: medium
+    material: false
+    evidence_page: 18
+
+  - field: portfolio.rebalance
+    headline: "Annual, fiscal-year-anchored rebalance replaces the paper's US June calendar"
+    issue: >
+      The paper rebalances every June with a 6-month book/price lag from the
+      prior December (a US calendar convention with no India analogue).
+    resolution: >
+      Rebalance annually, anchored to the REAL per-security
+      result-publication date (median lag 58 days after fiscal year end)
+      rather than importing the US June date or a guessed lag.
+    confidence: high
+    material: true
+
+  - field: costs.spread_bps
+    headline: "30bp round trip on both legs vs. the paper's explicit zero-cost, no-tax assumption (footnote 17)"
+    issue: >
+      Footnote 17 states plainly the paper's returns are "before trading
+      costs and do not include taxes or other practical costs." Charging both
+      legs, plus the new short_borrow_bps, is a materially more expensive
+      book than the paper models.
+    resolution: >
+      Use the fund's standard 30bp round-trip floor on both legs, plus the
+      short borrow cost. Annual rebalancing keeps turnover-driven costs low
+      relative to the size-tilt card's monthly rebalance, but the borrow
+      cost accrues continuously, not just at rebalance.
+    confidence: high
+    material: true
+
+  - field: data.pit_status
+    headline: "Accord fundamentals accepted as PIT via known_date; real result dates cover most but not all rows"
+    issue: >
+      w_publishing_date_data.xlsx supplies a real result date for most
+      (accord_code, fiscal_year, basis) rows, but not all -- unmatched rows
+      fall back to a 75-day assumed lag (DEFAULT_REPORTING_LAG_DAYS).
+    resolution: >
+      Accept known_date as point-in-time-correct where a real, plausible
+      result date exists; where it does not, the assumed 75-day lag is used.
+      known_date_source is available per row for auditing.
+    confidence: medium
+    material: true
+
+replication_targets: []
+
+benchmark_templates:
+  - {name: "Equal-weight eligible universe (no value tilt)", template: equal_weight, params: {}, rebalance: annual}
+  - {name: "Inverse-vol eligible universe (no value tilt)", template: inverse_vol, params: {}, rebalance: annual}
+
+data_plan:
+  ideal:
+    - field: "Daily price and market cap for a broad, liquid Indian equity universe"
+      granularity: daily
+      history_from: "2012-01-02"
+      why: >
+        The mechanism needs a genuine stock-level cross-section to rank by
+        value at all, for both legs.
+      why_granularity: >
+        Daily, and no finer. Pricing feeds the return series between annual
+        rebalances; nothing intraday is needed since the signal itself is
+        formed on fundamentals, not on intraday price action.
+      why_history: >
+        2012-01-02 is the start of the Accord panel; the fund's hardcoded
+        backtest window (accord_data.BACKTEST_START) begins 2013-03-31.
+      adjustments: "price and market cap as supplied by Accord Fintech; dividend-adjustment status not independently confirmed"
+      minimum_viable: true
+    - field: "SLB-eligible security list, ideally with per-security borrow cost, point-in-time"
+      granularity: daily
+      history_from: "2013-03-31"
+      why: >
+        This is now the single highest-value addition to this card. Without
+        it, the short leg is priced as if every eligible name were freely
+        borrowable at a flat rate, which is very likely false for a material
+        share of the eligible universe, especially outside the most liquid
+        large/mid caps.
+      why_granularity: "daily -- SLB availability and cost both move day to day"
+      why_history: "same window as the price panel, so the short leg's implementable universe can be reconstructed at every historical rebalance too"
+      adjustments: "per-security, per-date: is_borrowable (bool), borrow_cost_bps (if available)"
+      minimum_viable: false
+    - field: "SEBI VaR-based margin requirement (or a reasonable proxy by liquidity/volatility bucket) for maintaining a short position"
+      granularity: daily
+      history_from: "2013-03-31"
+      why: >
+        Distinguishes "can this name be borrowed" (SLB availability, the
+        prior field) from "how much capital does holding the short actually
+        consume" (margin) -- strategy.constraints currently treats notional
+        exposure and capital as the same thing, which India's margin
+        framework does not support.
+      why_granularity: "daily -- margin requirements move with volatility"
+      why_history: "same window as the price panel"
+      adjustments: "per-security or per liquidity/volatility bucket: typical upfront margin %"
+      minimum_viable: false
+    - field: "Book value per share and dividends per share, per security, per fiscal year, point-in-time"
+      granularity: quarterly
+      history_from: "2012-01-02"
+      why: >
+        Lets the composite actually test the paper's own central claim that
+        a genuinely diversified composite (including book-to-market) beats
+        a composite of correlated earnings multiples.
+      why_granularity: "annual, matching Indian fiscal reporting"
+      why_history: "as far back as reliable point-in-time publication dates exist"
+      adjustments: "as-reported, joined to a real result-publication date"
+      minimum_viable: false
+    - field: "Verified point-in-time index membership (top-500 by market rank), monthly"
+      granularity: monthly
+      history_from: "2012-01-02"
+      why: "Already supplied (Monthly_uni_new.xlsx)."
+      why_granularity: "monthly matches the source file's own snapshot frequency"
+      why_history: "same window as the price panel"
+      adjustments: "market_rank field, forward-filled between monthly snapshots"
+      minimum_viable: true
+    - field: "Firm-level profitability (ROE/ROA/ROCE), point-in-time via real publication dates"
+      granularity: quarterly
+      history_from: "2012-01-02"
+      why: >
+        Lets this card test the paper's secondary claim that combining value
+        with profitability meaningfully improves the result (Exhibit 1).
+      why_granularity: "annual, matching Indian disclosure frequency"
+      why_history: "same window as the valuation ratios"
+      adjustments: "as-reported, with the real public announcement date"
+      minimum_viable: false
+    - field: "An Indian overnight or 91-day T-bill rate series, daily"
+      granularity: daily
+      history_from: "2012-01-02"
+      why: "Every Sharpe ratio this card computes is measured against a numeraire; right now that numeraire is a flat 6% constant proxy."
+      why_granularity: "daily"
+      why_history: "same window as the price panel"
+      adjustments: "annualised decimal; state the day-count convention"
+      minimum_viable: false
+  rejected_alternatives:
+    - option: "Hold NIFTY500 VALUE 50 / NIFTY200 VALUE 30 as the value product directly, no stock-level sort"
+      why_not: >
+        Tests a different, easier, long-only-by-construction question. Both
+        indices are run as comparators; this card's own composite sort with
+        both legs live is the actual mechanism test.
+    - option: "Single-measure sort (Adjusted PE alone), no composite"
+      why_not: >
+        Would directly contradict the paper's own central "Fact: value is
+        best measured by a composite" finding.
+    - option: "Restrict the short leg to a hand-picked list of 'obviously liquid' large caps"
+      why_not: >
+        Would silently substitute a guessed borrowability rule for a real
+        SLB eligibility list, producing an unverifiable, possibly biased
+        short universe. Better to run unfiltered with the limitation flagged
+        than to invent a filter with no data behind it.
+    - option: "Monthly rather than annual rebalance"
+      why_not: >
+        Fundamentals (PE, EV/EBIT) only change with each new fiscal year's
+        results; a monthly rebalance would just add turnover and borrow-cost
+        exposure without changing the composite score most months.
+  granularity_verdict: >
+    Price data DAILY (for return computation and borrow-cost accrual between
+    rebalances); fundamentals ANNUAL (matching Indian disclosure frequency).
+  optimality_argument: >
+    Real per-security daily price plus the two locally available fundamental
+    value ratios, restricted to a verified top-500 point-in-time universe, is
+    the smallest dataset that can test the paper's actual mechanism with both
+    legs live on this fund's own data today. It is not optimal against
+    either the paper's own composite breadth OR against what a genuinely
+    implementable Indian short leg needs (an SLB-eligible list) -- both
+    named above and in data_requests.
+  what_would_change_the_answer: >
+    An SLB-eligible security list would most directly change the answer: it
+    could shrink the tradable short universe materially and would let this
+    card report a REAL implementable short leg rather than an idealized one.
+    Book value and dividend data would let the composite test the paper's
+    diversification claim properly. Neither is available in this run.
+
+selection:
+  rule: >
+    Annually, at each India-fiscal-year-anchored rebalance: universe = top-500
+    by market rank as of the last known Monthly_uni_new.xlsx snapshot,
+    restricted to Accord-priced names. eligible = universe AND both Adjusted
+    PE and EV/EBIT are known as of the rebalance date, preferring
+    consolidated over standalone basis. Compute E/P and EBIT/EV, z-score each
+    within eligible, average into one composite score. CHEAP = top 30% by
+    count, held LONG, equal-weighted. EXPENSIVE = bottom 30% by count, held
+    SHORT, equal-weighted. Both legs currently drawn from the SAME eligible
+    set with no SLB-availability filter (see ambiguities).
+  explicit_securities: []
+  verified_against: firm_registry
+  as_of: "2026-07-31"
+  why_these: >
+    Not a named list -- the rule above is the model's entire decision. Step
+    05 (not yet written -- a new script mirroring
+    scripts/alquist_2018_india_small_cap_backtest.py, using
+    universal_backtester.allocators.CrossSectionalLongShort with
+    allow_short=True on the engine) hands this rule to the allocator, which
+    re-derives the eligible set and both terciles fresh at every annual
+    rebalance from ACCORD_STOCK_LEVEL_PRICE_MCAP joined against
+    valuation_ratios_all_till_2025.xlsx and w_publishing_date_data.xlsx,
+    confirmed against ros/data/firm_registry.py. Every held name, in either
+    leg, on any date should be written out by write_holdings_log() the same
+    way the size-tilt card's script does, to a dedicated holdings CSV.
+
+backtest_plan:
+  sample_start: "2013-03-31"
+  sample_end: "2026-08-31"
+  why_this_window: >
+    HARDCODED (fund convention, matching accord_data.BACKTEST_START/
+    BACKTEST_END and every other script built on this dataset).
+  warmup_days: 365
+  why_warmup: >
+    One full fiscal year plus the publication lag, so the first rebalance's
+    composite is built from a real, knowable fiscal year's results.
+  rebalance_rule: >
+    Once per fiscal year, at the first trading day on or after each
+    security's own known_date for its most recent completed fiscal year.
+    Signals are shifted by 1 + lag_days before use.
+  weights_rule: >
+    Equal weight within each leg; CHEAP tercile long, EXPENSIVE tercile
+    short, scaled to 50%/50% gross notional by default, gross <= 1.0.
+  explicit_weights: {}
+  benchmarks:
+    - name: "NIFTY 500"
+      why_this: "The fund's mandate benchmark and the do-nothing alternative."
+    - name: "NIFTY500 VALUE 50"
+      why_this: >
+        An off-the-shelf, long-only-by-construction value index. If this
+        hand-built long-short tilt does not clear it by a wide margin (it
+        should, carrying real short-side risk and cost that the index does
+        not), the honest recommendation is to buy the index instead.
+    - name: "NIFTY200 VALUE 30"
+      why_this: "A second off-the-shelf value comparator on a narrower universe."
+    - name: "CHEAP-only leg (long side alone, same universe and rule)"
+      why_this: >
+        Isolates how much of the long-short result comes from the long side
+        alone -- the closest analogue to the superseded long-only adaptation
+        card, kept as a comparator so the short leg's marginal contribution
+        is visible and quantified rather than assumed.
+    - name: "NIFTY500 MOMENTUM 50"
+      why_this: >
+        The paper's own remedy for large-cap value's standalone weakness is
+        pairing it with momentum (Exhibit 6).
+  must_beat:
+    - "NIFTY 500, on the paired stationary bootstrap, at 5%"
+    - "NIFTY500 VALUE 50, after 30bp round-trip costs and borrow cost on the short leg -- or the honest recommendation is to buy the index"
+    - "the CHEAP-only long leg, or the short leg is adding cost without adding return"
+  success_looks_like: >
+    The long-short book beats NIFTY 500 and NIFTY500 VALUE 50 on geometric
+    Sharpe with a paired stationary bootstrap p <= 0.05; beats the CHEAP-only
+    leg after borrow and short-side trading costs (i.e. the short leg earns
+    its keep); deflated Sharpe P(skill) >= 0.95 at the honest trial count;
+    alpha survives a factor-fingerprint check against VALUE 50/VALUE 30/
+    MOMENTUM 50; and the result is not overly sensitive to the placeholder
+    short_borrow_bps assumption (50bp-200bp sweep).
+  failure_looks_like: >
+    Any of: statistically tied with or worse than NIFTY500 VALUE 50; the
+    short leg subtracts more in cost (spread + borrow) than it adds in
+    return, so a long-only version would have been better; alpha vanishes
+    against the factor fingerprint; the E/P and EBIT/EV composite legs
+    correlate above ~0.9; or the verdict flips materially across the
+    short_borrow_bps sensitivity sweep -- which would mean the result is an
+    artefact of an unverified cost assumption, not a real edge.
+  known_failure_modes:
+    - >
+      SLB UNAVAILABILITY: if a material share of the EXPENSIVE leg's names
+      turn out not to be actually borrowable in practice, the real
+      implementable version of this strategy is a materially different,
+      probably smaller and more concentrated, short book than the one
+      backtested here.
+    - >
+      BORROW COST UNDERSTATED: the flat 100bp/yr placeholder could be far
+      below the real cost of shorting the specific names that land in the
+      EXPENSIVE tercile, especially if the sort has any tendency to select
+      small, high-short-interest, or distressed names.
+    - >
+      COMPOSITE IN NAME ONLY: if E/P and EBIT/EV z-scores are highly
+      correlated, this card tests essentially one value measure.
+    - >
+      SHORT HISTORY: ~13 years, likely fewer than 13 real annual rebalances
+      -- not enough to distinguish a real premium from a lucky draw with
+      confidence comparable to the paper's 88-year sample.
+
+data_requests:
+  - item: "SLB-eligible security list, ideally with per-security borrow cost, point-in-time"
+    why: >
+      This is now the single most important open item on this card. India's
+      SLB mechanism does not cover the full top-500 universe, and this card
+      currently shorts across that whole eligible set with no availability
+      filter and a flat, unverified borrow-cost assumption.
+    unlocks: >
+      A genuinely implementable short leg: restrict EXPENSIVE to names
+      actually borrowable at each rebalance, and price the short leg at real
+      per-security cost instead of a flat placeholder.
+    without_it: >
+      The short leg is backtested on an idealized universe that may not be
+      fully tradable in practice, at a cost assumption (100bp/yr flat) that
+      is a round-number placeholder, not a sourced figure. Every result
+      involving the short leg should be read as an upper bound on what is
+      actually implementable, not a delivered number. DOWNGRADED FROM
+      BLOCKING 2026-09-28: explicit user decision to run on data already
+      available rather than wait on this. The run proceeds with the
+      unfiltered universe and flat borrow rate; this limitation is accepted
+      and reported, not silently dropped.
+    priority: high
+    headline: "SLB-eligible list and real borrow cost -- accepted as a known limitation, not blocking"
+    format_hint: "per security, per date: accord_code, is_borrowable, borrow_cost_bps"
+    satisfies: ["SLB-eligible security list, ideally with per-security borrow cost, point-in-time"]
+
+  - item: "SEBI VaR-based margin requirement (or a reasonable proxy by liquidity/volatility bucket) for maintaining a short position"
+    why: >
+      Stage 02b critique: SLB availability answers "can this name be
+      borrowed at all", not "how much capital does holding the short
+      actually consume". strategy.constraints currently states gross
+      exposure <= 1.0 (50% long / 50% short) as if notional and capital
+      were the same thing; India's upfront margin framework for short
+      positions means they are not.
+    unlocks: >
+      A capital-accurate capacity figure -- either confirming 50%/50% is
+      achievable at this fund's actual capital base, or showing the real
+      achievable short notional is smaller once margin is priced in.
+    without_it: >
+      The 50% short notional in this card's base case is a target, not a
+      confirmed achievable allocation. capacity_note reports this as an
+      open unknown rather than a measurement.
+    priority: high
+    headline: "Real margin requirement for Indian shorts -- notional exposure is not capital consumed"
+    format_hint: "per security or per liquidity/volatility bucket: typical upfront margin %"
+    satisfies: ["SEBI VaR-based margin requirement (or a reasonable proxy by liquidity/volatility bucket) for maintaining a short position"]
+
+  - item: "Book value per share and dividends per share, per security, per fiscal year, point-in-time"
+    why: >
+      This is the way to test the paper's actual central claim that a
+      genuinely diversified composite of value measures beats a single
+      measure or a composite of correlated ones.
+    unlocks: >
+      A real book-to-market leg and a dividend-yield leg to average against
+      the earnings multiples already available.
+    without_it: >
+      This card tests a 2-measure, both-earnings-based composite. A weak or
+      null result should NOT be read as "value does not work in India."
+    priority: high
+    headline: "Book value and dividends per share -- the only route to a genuinely diversified composite"
+    format_hint: "per security, per fiscal year, point-in-time: accord_code, fiscal_year_end, basis, book_value_per_share, dividend_per_share"
+    satisfies: ["Book value per share and dividends per share, per security, per fiscal year, point-in-time"]
+
+  - item: "Join Indian profitability data (already present locally) into a value+profitability combination test"
+    why: >
+      The paper's own Exhibit 1 shows combining value with profitability
+      lifts the Sharpe from 0.46 to 0.58, a material and directly testable
+      secondary claim.
+    unlocks: "A test of the paper's stronger, secondary claim, using data the fund already holds."
+    without_it: "Only the pure-value composite is tested here."
+    priority: nice_to_have
+    headline: "Join profitability data (already local) to test the paper's value+profitability claim"
+    format_hint: "raw data already available per data/raw/stocks/README.md -- needs code, not new data"
+    satisfies: ["Firm-level profitability (ROE/ROA/ROCE), point-in-time via real publication dates"]
+
+  - item: "An Indian overnight or 91-day T-bill rate series, daily, 2012 onward"
+    why: "Every Sharpe here is measured against a flat 6% constant numeraire."
+    unlocks: "A defensible Sharpe numeraire."
+    without_it: "Declared constant 6% proxy, swept 4-8%."
+    priority: nice_to_have
+    headline: "A real Indian short rate, to replace the flat 6% Sharpe numeraire"
+    format_hint: "two columns: date, annualised_rate (decimal)"
+    satisfies: ["An Indian overnight or 91-day T-bill rate series, daily"]
+
+open_questions:
+  - question: >
+      Given the SLB-availability gap, should this card's BASE CASE run be the
+      idealized (unfiltered) short universe, or should it wait for an
+      SLB-eligible list before reporting any headline number at all?
+    why_it_matters: >
+      Reporting a result on an idealized short universe risks it being read
+      as more implementable than it is. But waiting entirely means this
+      paper's long-short credibility question goes unanswered indefinitely.
+    what_i_assumed: >
+      Run the idealized version now as a clearly-labelled upper bound,
+      report the CHEAP-only leg alongside it as the conservative floor, and
+      treat the SLB data request as blocking for any number reported PAST
+      this card's own research stage (i.e. before Gate B).
+    headline: "Should this run at all before an SLB-eligible list exists, or only report an upper bound?"
+    ask_of: pm
+    blocks_run: false
+
+  - question: >
+      Is the 2-measure (Adjusted PE, EV/EBIT) composite diversified enough to
+      honestly call itself a "composite" in the paper's sense?
+    why_it_matters: >
+      The paper's own central claim is that a composite beats any single
+      measure BECAUSE the legs are imperfectly correlated.
+    what_i_assumed: >
+      Proceeding with the 2-measure composite as the best achievable version
+      today, with the actual leg correlation to be measured and reported at
+      Step 03/05.
+    headline: "Is a 2-earnings-multiple composite genuinely diversified, or effectively one measure?"
+    ask_of: researcher
+    blocks_run: false
+
+  - question: >
+      Is n_configs_tried = 1 honest here, given the paper's own extensive
+      appendix of alternative value measures, combination weights and
+      sub-period splits?
+    why_it_matters: >
+      The deflated Sharpe rests entirely on this number.
+    what_i_assumed: >
+      1, counting only this card's own single configuration (see notes for
+      the stated convention).
+    headline: "Is n_configs_tried = 1 honest, given the paper's own broad appendix of value-measure variants?"
+    ask_of: researcher
+    blocks_run: false
+
+n_configs_tried: 1
+
+notes: >
+  CONVENTION: n_configs_tried=1 counts only configurations actually RUN by
+  this pipeline (this one card), not the paper's own extensive exhibit-level
+  search across variants. That broader search shaped which single
+  construction this card commits to and is a real source of researcher
+  degrees of freedom the deflated Sharpe at Step 06 does not currently see --
+  recorded here explicitly.
+
+  SUPERSEDES asness_2015_india_value_composite_adaptation.yaml (the earlier
+  long-only version, drafted before the fund's mandate update on 2026-09-28
+  permitted short positions). That card is left in place for the historical
+  record but should not be run past Gate A again -- this long-short card is
+  now the single card for this paper.
+
+  The promotion question is NOT "is the Sharpe good". It is whether a
+  hand-built, individual-stock composite-value long-short tilt beats, after
+  realistic costs on BOTH legs (including an unverified short-borrow
+  placeholder), the things the fund can already do for free: hold NIFTY 500,
+  or buy the off-the-shelf NIFTY500 VALUE 50 index -- and whether the short
+  leg earns its keep over the CHEAP-only long leg alone. Step 05 execution
+  (a new script using CrossSectionalLongShort) has not yet been written as
+  of this card's drafting.
+
+convertibility:
+  verdict: convertible_with_data
+  confidence: low
+  headline: "Runnable once an SLB-eligible list exists; short leg is currently idealized, not verified"
+  what_must_be_true:
+    - >
+      Eligible (top-500-universe, priced, both value ratios known) Indian
+      names must carry enough genuine independent cheapness variation for a
+      30% tercile sort to mean anything on both legs.
+    - >
+      The 2-measure composite (Adjusted PE, EV/EBIT) must actually behave
+      like a composite -- the two z-scored legs must not be so highly
+      correlated that this is a single-measure sort in disguise.
+    - >
+      The short leg must actually be implementable: the names the sort wants
+      to short must be borrowable via India's SLB mechanism, at a cost that
+      does not erase the leg's contribution. This is the weakest link (see
+      below) -- it is a real, structural market-access question, not a data
+      gap that a spreadsheet can quietly fix.
+    - >
+      The combined long-short book must survive 30bp round-trip costs on
+      both legs plus a real (not flat-assumed) short borrow cost.
+    - >
+      A positive result must survive a factor-fingerprint check against
+      already-held sleeves (NIFTY500 VALUE 50, NIFTY200 VALUE 30, NIFTY500
+      MOMENTUM 50).
+    - >
+      The short leg must add more than it costs: it must beat the CHEAP-only
+      long leg alone, net of the extra cost and risk of shorting, or the
+      honest conclusion is that the long-only version was the better product
+      all along even after the mandate update.
+  weakest_link: >
+    The third one: whether the short leg is actually implementable in India
+    at all. This is a NEW weakest link introduced by the mandate change
+    itself -- removing the "cannot short" constraint did not remove India's
+    own market-structure constraint on shorting (SLB-only, no naked shorts,
+    uneven borrow availability and cost). Unlike the old long-only card's
+    weakest link (a fixable data-composition question), this one is a real
+    market-access question this card cannot yet answer because the needed
+    data (an SLB-eligible list) has not been acquired. Until it is, every
+    number this card produces for the short leg is an idealized upper bound,
+    not a delivered result.
+  decisive_evidence: >
+    In descending order of what they would settle: (1) an SLB-eligible
+    security list with real borrow cost -- without this, nothing about the
+    short leg's actual investability can be confirmed either way. (2) The
+    realised correlation between the E/P and EBIT/EV z-scored legs. (3) Book
+    value per share and dividends per share, for a genuinely diversified
+    composite. (4) Joining the already-local profitability data.
+  if_it_fails: >
+    If the SLB list shows most of the EXPENSIVE tercile is unborrowable or
+    prohibitively expensive to borrow, that is a specific, reusable finding:
+    "the paper's own value-spread mechanism cannot be run long-short at
+    meaningful scale in the current Indian mid/small-cap universe, whatever
+    its US evidence says" -- which would argue for reverting to something
+    like the superseded long-only card, not for abandoning the value
+    mechanism itself.
+  capacity_note: >
+    Unknown and likely UNFAVOURABLE on the short side specifically, for TWO
+    independent reasons (Stage 02b critique distinguishes them, where the
+    first draft named only one): (1) shortable LIQUIDITY -- whether a name
+    can be borrowed at all, which SLB coverage directly limits; and (2)
+    shortable CAPITAL -- even once a name is borrowable, SEBI's VaR-based
+    margin requirement (plus whatever collateral the SLB lender itself wants)
+    ties up capital beyond the position's own notional, so the "50% short
+    notional, gross <= 1.0" framing in strategy.constraints may understate
+    the capital this sleeve actually consumes. No traded-value/ADV, SLB
+    depth, or margin-requirement data has been joined into this card yet;
+    both gaps are captured in data_requests below.
+
+india_notes:
+  - category: execution
+    item: >
+      India does not permit naked short selling; a short position must be
+      covered through the SEBI-regulated Securities Lending and Borrowing
+      (SLB) framework, and SLB liquidity concentrates in F&O-eligible,
+      highly liquid names -- not the full top-500 universe this card's short
+      leg currently draws from unfiltered.
+    why: >
+      This is the single most consequential India-specific fact this
+      mandate change surfaces. A card that keeps "both legs intact" per the
+      paper's construction is only genuinely both-legs-intact if the short
+      leg is actually executable -- and in India, unlike the paper's US
+      market, that is not guaranteed just because a name is priced and in
+      the eligible universe.
+    triggered_by: "the strategy now holds a real, traded short leg (is_long_short: true with an empty long_only_adaptation)"
+    addresses: ["SLB-eligible security list, ideally with per-security borrow cost, point-in-time", "SLB-eligible security list, ideally with per-security borrow cost (NOT yet held locally -- see data_requests)"]
+    evidence_page: null
+  - category: cost
+    item: >
+      short_borrow_bps (100bp/yr) is a flat, unverified placeholder applied
+      uniformly to every shorted name, when real SLB borrow cost varies
+      widely by security and by contemporaneous short demand.
+    why: >
+      A flat rate is not conservative by construction -- it could understate
+      the true cost of shorting whichever specific names the value sort
+      happens to select, especially if the composite tends to select small,
+      distressed, or high-short-interest names into the EXPENSIVE tercile.
+    triggered_by: "the engine (universal_backtester, allow_short=True) charges a single flat short_borrow_bps for the whole book"
+    addresses: ["SLB-eligible security list, ideally with per-security borrow cost, point-in-time", "SLB-eligible security list, ideally with per-security borrow cost (NOT yet held locally -- see data_requests)"]
+    evidence_page: null
+  - category: data
+    item: >
+      Accord's valuation and profitability files carry both consolidated and
+      standalone bases per security per year, and this card's basis
+      preference (consolidated, falling back to standalone) is a choice made
+      once rather than argued per-firm-structure.
+    why: >
+      Indian conglomerates with large unconsolidated subsidiaries or JVs can
+      show materially different PE/EV-EBIT ratios on each basis, which could
+      change a name's tercile assignment -- for either leg.
+    triggered_by: "the strategy's entire signal is built from two per-security fundamental ratios that exist on two different accounting bases"
+    addresses: ["Book value per share and dividends per share, per security, per fiscal year, point-in-time", "trailing fiscal-year Adjusted PE and EV/EBIT, per-security, publication-date-lagged (Accord valuation_ratios_all_till_2025.xlsx)"]
+    evidence_page: 18
+  - category: timing
+    item: >
+      known_date is a real per-security result-publication date where
+      available (median lag 58 days), but falls back to a flat 75-day
+      assumption for unmatched rows, with no flag carried into the ranking
+      distinguishing real from assumed dates within one rebalance.
+    why: >
+      A rebalance mixing real-dated and assumption-dated names is not
+      uniformly point-in-time even though every field passes lag_days>=1.
+    triggered_by: "the composite is computed and ranked across all eligible names simultaneously, from a mix of known_date sources"
+    addresses: ["daily price and market cap for a broad, liquid Indian equity universe", "real per-security result-publication date (Accord w_publishing_date_data.xlsx)"]
+    evidence_page: 21
+  - category: validity
+    item: >
+      The eligible universe shrinks twice: first to the top-500 point-in-time
+      names, then again to names with BOTH value ratios known as of the
+      rebalance date -- and, once an SLB list exists, a THIRD time for the
+      short leg specifically. The size of these shrinkages has not yet been
+      measured for this card.
+    why: >
+      If fundamentals coverage or SLB availability is sparse in any year,
+      the effective universe for one or both terciles could be materially
+      smaller than 500 names.
+    triggered_by: "the sort requires BOTH value ratios known, and the short leg will additionally require SLB eligibility once that data exists"
+    addresses: ["Verified point-in-time index membership (top-500 by market rank), monthly", "monthly point-in-time market-rank universe (Monthly_uni_new.xlsx)"]

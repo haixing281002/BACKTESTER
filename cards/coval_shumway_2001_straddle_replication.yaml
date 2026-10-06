@@ -1,0 +1,321 @@
+card_version: "1.0"
+
+paper:
+  id: coval_shumway_2001_straddle_replication
+  title: "Expected Option Returns"
+  authors: [Joshua D. Coval, Tyler Shumway]
+  date: "2000-06-01"
+  source_file: docs/papers/coval_shumway_2001_expected_option_returns.pdf
+  source_sha256: "0b624a4badbdd36f"
+
+intent:
+  mode: replication
+  rationale: >
+    Reproduce the paper's own headline finding -- that zero-beta, at-the-money
+    index straddles earn large, statistically significant NEGATIVE average
+    returns (about -3% per week on the S&P 500, Table III) -- on the paper's own
+    kind of instrument, before asking whether any of it is usable by this fund.
+    Replication and India-investability are different questions and must never
+    share a verdict. This card is expected to, and does, fail fast at Step 03:
+    the fund holds no listed index-option data of any kind. That is the correct
+    and cheap outcome, not a bug in the card.
+
+universe:
+  description: >
+    A single underlying index (S&P 500 / S&P 100) and its own listed options,
+    exactly as the paper studies them. Not a cross-section of securities: the
+    paper ranks strike buckets on ONE index, it does not sort stocks.
+  asset_class: index_options
+  geography: US
+  assets:
+    - SPX_INDEX_LEVEL
+    - SPX_ATM_CALL_1M_MID
+    - SPX_ATM_PUT_1M_MID
+  benchmark: null
+  cash_asset: null
+
+universe_translation:
+  source_universe: >
+    S&P 500 index (SPX) options, CBOE, Jan 1990 - Oct 1995 (305 weeks); and
+    S&P 100 index (OEX) options, CBOE, Jan 1986 - Oct 1995 (2,519 days), used as
+    an independent daily-frequency check that also spans the Oct 1987 crash.
+  source_breadth: 1
+  source_selection_rule: >
+    Not a stock sort. Options are grouped into five strike buckets relative to
+    the index level (X-s in five-point increments) at each roll date; "the
+    universe" is a single index's own listed option chain, not a set of
+    securities to choose among.
+  target_universe: ""
+  grade: none
+  resolution: infeasible
+  rationale: >
+    This is the REPLICATION card and it deliberately stays in the paper's own
+    instrument class (listed index options) rather than reaching for an Indian
+    analogue. There is no honest Indian stand-in for "sell a zero-beta S&P
+    index straddle": the fund holds cash NIFTY-family index levels only, no
+    option chain of any kind, on any index, at any maturity. Step 03 is
+    expected to and does fail fast on that gap. Proving the data gate stops
+    work before any code is written IS the point of running this card.
+  transfer_risks:
+    - >
+      No translation is attempted here on purpose. Nothing on this card may
+      inform an Indian allocation decision; it exists to test the paper's own
+      claim against the paper's own kind of data, and to exercise the
+      fail-fast path honestly rather than skip straight to an adaptation.
+    - >
+      Even with a listed Nifty/BankNifty option chain, the PROFITABLE side of
+      this paper's finding is SHORT the straddle (selling volatility). A
+      long-only cash-equity fund's mandate does not merely lack the data for
+      this trade -- it structurally cannot hold the position that earns the
+      premium, only the one that pays it away.
+  required_instruments:
+    - SPX_INDEX_LEVEL
+    - SPX_ATM_CALL_1M_MID
+    - SPX_ATM_PUT_1M_MID
+    - OEX_INDEX_LEVEL
+    - OEX_ATM_CALL_1D_MID
+    - OEX_ATM_PUT_1D_MID
+  evidence_page: 8
+
+strategy:
+  signal_name: zero_beta_index_straddle
+  signal_definition: >
+    At each roll date, form a straddle from the call and put of a given strike
+    bucket (five buckets, X-s in [-15,-10]..[5,10]) and the same maturity
+    (roughly 20-50 days to expiry). Weight the legs theta in calls and
+    (1-theta) in puts, theta = -beta_p / (beta_c - beta_p) (eq. 14), where
+    beta_c is the Black-Scholes call beta (eq. 11, using the CBOE VIX as
+    implied vol and the realised dividend yield) and beta_p is recovered from
+    put-call parity (eq. 17): beta_c = (P/C) beta_p + (s/C) beta_s. The
+    resulting position (eq. 18) has a market beta of zero by construction.
+    Re-formed weekly for SPX, daily for OEX. Table III reports its average
+    return is reliably NEGATIVE (about -3.15% per week ATM SPX, -0.48% to
+    -0.50% per day ATM OEX) -- i.e. this is a position an investor is paid to
+    hold SHORT, not one that earns a premium held long.
+  inputs_required:
+    - "S&P 500 / S&P 100 index level at each roll date"
+    - "1-month (SPX) / current-month (OEX) at-the-money and near-the-money call bid-ask midpoints, by strike bucket"
+    - "matching put bid-ask midpoints, same strike and maturity"
+    - "CBOE VIX (or equivalent Black-Scholes implied volatility) for the beta calculation"
+    - "short-term risk-free rate and realised dividend yield, for beta and put-call parity"
+  cross_sectional: false
+  formation_rule: >
+    No security selection. The call and put at a fixed strike bucket relative
+    to spot are the only two candidate instruments at each roll date; theta is
+    computed, never chosen.
+  weighting_rule: >
+    theta in the call, (1-theta) in the put, theta = -beta_p/(beta_c-beta_p).
+    The paper's own numbers say this combination should be SOLD, not bought:
+    a long position in it is a documented, statistically significant LOSS.
+  holding_period: "one week (SPX) / one day (OEX)"
+  rebalance_frequency: "weekly (SPX) / daily (OEX)"
+  is_long_short: true
+  long_only_adaptation: >
+    None exists, and this card does not attempt one. There is no long-only
+    equivalent to being short a straddle: a long-only investor can buy this
+    exact position (buying the straddle) and the paper's own Table III says
+    that loses ~3% per week on average -- that is not an adaptation of the
+    edge, it is the mirror image that forfeits it entirely. Dropping the short
+    leg here does not shrink the paper's result, it deletes all of it. A
+    SEPARATE adaptation card (coval_shumway_2001_size_volatility_adaptation)
+    tests an unrelated, genuinely long-only-compatible hypothesis suggested by
+    a different part of this same paper (the size-decile volatility-factor
+    loadings in Table VIII / Section III.F), and is where any usable finding
+    from this paper for this fund actually lives.
+  constraints:
+    - "requires selling (shorting) listed index options -- structurally outside a long-only cash-equity mandate"
+    - "requires a liquid, listed index-options market with reliable bid-ask quotes -- not part of this fund's holdings or data"
+  engine_template: NEEDS_NEW_TEMPLATE
+  template_gap: >
+    A 'zero_beta_straddle' allocator: given daily/weekly call and put mid
+    prices at a fixed moneyness bucket plus a risk-free rate and dividend
+    yield, compute the Black-Scholes call beta (eq. 11), recover the put beta
+    via put-call parity (eq. 17), form the zero-beta weight theta (eq. 14),
+    and go SHORT the combination each roll. Not proposed for the registry: it
+    would require the engine to support short positions and options
+    instruments, neither of which any other card in this fund's mandate needs,
+    and building it would not change the mandate conflict above.
+  confidence: high
+  evidence_pages: [6, 7, 8, 13, 14]
+
+signal:
+  name: zero_beta_index_straddle
+  template: NEEDS_NEW_TEMPLATE
+  lag_days: 0
+  description: >
+    Placeholder only -- never invoked. Step 03 is expected to fail fast on
+    missing options data before any allocator is built for this card.
+  params: {}
+
+portfolio:
+  rebalance: weekly
+  long_only: false
+  max_gross: 1.0
+  allow_cash: true
+  start: "1990-01-01"
+  end: "1995-10-31"
+
+costs:
+  spread_bps: 0.0
+  cost_model: half_spread
+
+data_requirements:
+  - {name: SPX_INDEX_LEVEL, kind: price, frequency: daily, start: "1990-01-01", mandatory: true, purpose: "straddle underlying and Black-Scholes beta", evidence_page: 8}
+  - {name: SPX_ATM_CALL_1M_MID, kind: price, frequency: weekly, start: "1990-01-01", mandatory: true, purpose: "call leg of the zero-beta straddle", evidence_page: 8}
+  - {name: SPX_ATM_PUT_1M_MID, kind: price, frequency: weekly, start: "1990-01-01", mandatory: true, purpose: "put leg of the zero-beta straddle", evidence_page: 8}
+  - {name: OEX_INDEX_LEVEL, kind: price, frequency: daily, start: "1986-01-01", mandatory: true, purpose: "daily-frequency, crash-inclusive robustness check", evidence_page: 9}
+  - {name: OEX_ATM_CALL_1D_MID, kind: price, frequency: daily, start: "1986-01-01", mandatory: true, purpose: "call leg, OEX check", evidence_page: 9}
+  - {name: OEX_ATM_PUT_1D_MID, kind: price, frequency: daily, start: "1986-01-01", mandatory: true, purpose: "put leg, OEX check", evidence_page: 9}
+  - {name: cboe_vix_or_equivalent, kind: macro, frequency: daily, start: "1990-01-01", mandatory: true, purpose: "Black-Scholes implied volatility for the beta formula (eq. 11)", evidence_page: 8}
+  - {name: us_short_rate_and_dividend_yield, kind: risk_free_rate, frequency: daily, start: "1990-01-01", mandatory: true, purpose: "beta formula and put-call parity", evidence_page: 8}
+
+ambiguities:
+  - field: strategy.is_long_short
+    headline: "Only the SHORT side of this position is profitable; there is no long-only version"
+    issue: >
+      Table III's headline number (-3.15%/week ATM SPX) is the return to a
+      LONG holder. The paper's economic point is that SELLING this position
+      earns a premium.
+    resolution: >
+      Record the strategy as long-short and refuse to invent a long-only
+      variant here (see strategy.long_only_adaptation). A card that quietly
+      "adapted" this into a long position would be testing a documented loss
+      and calling it a strategy.
+    confidence: high
+    material: true
+    evidence_page: 30
+
+  - field: data_requirements
+    headline: "No listed index-option data of any kind is held; Step 03 is expected to fail fast"
+    issue: >
+      This fund's data registry (ros/data/firm_registry.py) holds NSE broad
+      and factor INDEX levels only. No option chain, on any index, at any
+      maturity, exists in the registry or via a declared proxy.
+    resolution: >
+      Let Step 03 fail fast rather than inventing a proxy for an options
+      market. A proxy for "the price of a call option" is not a small
+      substitution -- it would change the economic claim entirely.
+    confidence: high
+    material: true
+
+  - field: replication_targets
+    headline: "Pinned to Table III's ATM SPX/OEX rows only, not the crash-neutral or GMM tables"
+    issue: >
+      The paper reports several distinct accounting bases for the same
+      underlying claim: raw zero-beta straddles (Table III), a GMM/pricing-
+      kernel test (Table IV), crash-neutral "ratio-call spread" straddles
+      (Table V) and a transaction-cost-inclusive monthly strategy (Table VI).
+      Pinning to all of them would let a replication claim success on
+      whichever basis happens to match, which is not a real target.
+    resolution: >
+      Pin only to Table III's raw, zero-beta, at-the-money SPX and OEX rows --
+      the paper's own headline table (cited in its abstract and introduction).
+      Table IV/V/VI are read as robustness checks on the same claim, not as
+      additional independent targets to satisfy.
+    confidence: high
+    material: true
+    evidence_page: 29
+
+replication_targets:
+  - {portfolio: "Zero-beta ATM SPX straddle (X-s -5 to 0)", metric: mean_weekly_return_pct, value: -3.15, absolute_tolerance: 0.50, evidence_page: 29}
+  - {portfolio: "Zero-beta ATM SPX straddle (X-s 0 to 5)",  metric: mean_weekly_return_pct, value: -3.15, absolute_tolerance: 0.50, evidence_page: 29}
+  - {portfolio: "Zero-beta ATM OEX straddle (X-s -5 to 0)", metric: mean_daily_return_pct,  value: -0.50, absolute_tolerance: 0.15, evidence_page: 29}
+  - {portfolio: "Zero-beta ATM OEX straddle (X-s 0 to 5)",  metric: mean_daily_return_pct,  value: -0.48, absolute_tolerance: 0.15, evidence_page: 29}
+
+benchmark_templates: []
+
+# 1 headline moneyness bucket x 2 indices x 3 beta-sensitivity variants
+# (Black-Scholes beta, +10%, -10%, Table III) x a crash-neutral variant
+# (Table V) x a GMM specification search (Table IV, 10 gamma estimates) --
+# understating this would be exactly how a lucky draw launders itself, even
+# though this card never reaches the point of testing it.
+n_configs_tried: 30
+
+convertibility:
+  verdict: not_convertible
+  confidence: high
+  headline: "No options, no shorting: this fund cannot hold any version of the paper's actual position"
+  what_must_be_true:
+    - >
+      The fund would need to trade listed index options -- it holds cash
+      NIFTY-family equity index exposure only, no derivatives of any kind.
+    - >
+      The profitable side of the paper's finding is SHORT the straddle; a
+      long position in the identical instrument LOSES about 3% per week on
+      the paper's own numbers (Table III). Even with options data in hand,
+      only the loss-making leg would be long-only-compatible.
+    - >
+      The evidence is a single developed-market index (S&P 500/100),
+      1986-1995. Transferring the CLAIM (not merely finding an instrument) to
+      India would need an Indian listed index-options history of comparable
+      depth and a mandate that permits shorting volatility.
+  weakest_link: >
+    The first one, and it is structural, not empirical: no data purchase
+    changes a mandate that prohibits options and short-selling. This is a
+    procurement-and-mandate question, not a research question, and no amount
+    of additional evidence resolves it differently.
+  decisive_evidence: >
+    None would change this verdict under the fund's CURRENT mandate. If the
+    mandate were changed to permit a listed-derivatives sleeve, Nifty/BankNifty
+    index-option chains with strike-level bid-ask history back several years
+    would be the decisive data need, and that is a separate, much larger
+    proposal than this card.
+  if_it_fails: >
+    A clean not_convertible here is the useful output: it stops the fund
+    spending research time trying to force an index-option mispricing paper
+    into a cash-equity strategy, and it correctly separates "is the paper's
+    finding real" (the paper's own tests say yes) from "can this fund act on
+    it" (no, under the current mandate). The separately-run adaptation card
+    is where the one piece of this paper that IS long-only-compatible gets a
+    real test.
+  capacity_note: >
+    Not applicable -- the mechanism cannot be held at any size under the
+    fund's current mandate.
+
+no_further_data_needed: >
+  No amount of additional Indian market data changes this card's outcome. The
+  binding constraint is the fund's MANDATE (no options, no shorting), not data
+  availability -- buying an Indian index-options history would still leave a
+  long-only fund unable to hold the profitable (short) side of this position.
+  See convertibility.decisive_evidence for what would be needed if the mandate
+  itself changed.
+
+india_notes:
+  - category: data
+    item: >
+      No Indian listed index- or single-stock-option market of comparable
+      depth and history to the CBOE (1986-1995 sample) exists for this fund
+      to have bought data from in the first place, independent of whether the
+      fund's own mandate permitted trading it.
+    why: >
+      Even a hypothetical mandate change permitting derivatives would still
+      face a shallower, shorter Indian options history than the paper's own
+      evidence base -- this is a second, independent reason the paper's exact
+      construction cannot be run in India today, on top of the mandate
+      constraint.
+    triggered_by: >
+      the strategy's only tradable instruments are listed index call and put
+      options
+    addresses: ["1-month (SPX) / current-month (OEX) at-the-money and near-the-money call bid-ask midpoints, by strike bucket"]
+  - category: execution
+    item: >
+      This fund's mandate prohibits short-selling in every instrument, not
+      only options -- so the constraint that stops this card is the same one
+      that would stop a cash-equity short-selling strategy, and is not
+      specific to derivatives.
+    why: >
+      Frames the block correctly as a MANDATE constraint (would still bind
+      even with options data in hand), not merely a DATA constraint (which a
+      purchase could fix).
+    triggered_by: >
+      the paper's profitable position is SHORT the zero-beta straddle
+    addresses: ["S&P 500 / S&P 100 index level at each roll date"]
+
+notes: >
+  Expected to FAIL FAST at Step 03: the fund holds no listed index-option data
+  on any index, at any maturity, and cannot short. That is the correct, cheap
+  outcome for this card -- it screens the paper's actual, headline mechanism
+  and rejects it on data-and-mandate grounds in seconds rather than after
+  building an options-pricing pipeline nobody could trade against. See
+  coval_shumway_2001_size_volatility_adaptation.yaml for the part of this
+  paper that IS testable, long-only, in India today.

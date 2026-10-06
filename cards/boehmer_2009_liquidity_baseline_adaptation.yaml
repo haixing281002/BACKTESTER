@@ -1,0 +1,541 @@
+card_version: '1.0'
+paper:
+  id: boehmer_2009_liquidity_baseline_adaptation
+  title: 'India liquidity baseline: high-turnover half of the point-in-time top-500, equal weighted (the control
+    for Boehmer, Huszar & Jordan 2009, ''The good news in short interest'')'
+  authors:
+  - Ekkehart Boehmer
+  - Zsuzsa R. Huszar
+  - Bradford D. Jordan
+  date: '2009-04-23'
+  source_file: docs/papers/boehmer_huszar_jordan_2009_good_news_short_interest.pdf
+  source_sha256: 22205b85f0d95b44
+intent:
+  mode: adaptation
+  parent_card: boehmer_2009_short_interest_adaptation
+  rationale: 'THIS IS NOT A TEST OF SHORT INTEREST. No Indian stock-level short interest series is held and the
+    NSE bhavcopy tools carry none, so the paper''s signal cannot be built. What can be run on held data is the control
+    that both short interest cards name as a benchmark: the equal-weight, high-turnover half of the universe with
+    no short interest sort. The paper shows that its alpha rises with turnover (Table 5, page 38), so any short
+    interest result has to beat this baseline or it is a liquidity effect. Run on its own, the result says only
+    whether the liquidity component exists in India; it must never be quoted as evidence for or against the paper''s
+    short interest claim. Run at the operator''s instruction of 2026-10-06. Paired with boehmer_2009_short_interest_adaptation.yaml
+    and boehmer_2009_short_interest_longshort.yaml, each of which cross-references this card.
+
+    '
+  transferred_mechanism: 'Only the liquidity conditioning transfers: among point-in-time top-500 names, hold the
+    half with the highest trailing-month turnover, equal weighted, rebalanced monthly. The short interest sort,
+    the short leg and the factor-adjusted alpha do not transfer and are not run.
+
+    '
+  broken_assumptions:
+  - 'THE PAPER''S SIGNAL IS ABSENT. No short interest of any kind enters this card. A positive result here cannot
+    be attributed to short interest, and a null here does not bear on the paper''s claim.
+
+    '
+  - 'THE PAPER''S SORT IS ORDERED SIZE, THEN TURNOVER, THEN SHORT INTEREST (4x4x4, page 17). This card keeps only
+    a single cut on absolute turnover rank inside the whole universe, which is mixed with size because large names
+    have different turnover distributions. It is not the paper''s within-size-cell turnover control.
+
+    '
+  - 'THE TOP HALF IS MY CHOICE. The paper shows alpha concentrated in the three highest turnover quartiles (page
+    17) but does not name a half cut. This card''s own cut is a researcher degree of freedom; the opposite half
+    is run as a control.
+
+    '
+  - TURNOVER IS RUPEE TURNOVER ON TOTAL MARKET CAP. Traded value over total market cap, not free float, because
+    raw volume is not on the same split basis as the adjusted close (Step 04 finding). Promoter holdings are large
+    in India, so turnover is understated for closely held names. Only ranks are used.
+  - 'THE UNIVERSE IS A RANK-BASED PROXY. Point-in-time top 500 by market rank from the monthly universe file, not
+    the official NIFTY 500 constituent list.
+
+    '
+  - 'NO PAPER NUMBER IS A TARGET. The paper reports no result for this portfolio, so there is nothing to replicate.
+
+    '
+universe:
+  description: 'A point-in-time top-500-by-market-rank Indian equity universe (Monthly_uni_new.xlsx via get_top_n_universe),
+    restricted to Accord-priced names. Each month the half with the highest trailing-month turnover is held, equal
+    weighted. Not the official NIFTY 500 list.
+
+    '
+  asset_class: equity
+  geography: IN
+  assets:
+  - ACCORD_STOCK_LEVEL_PRICE_MCAP
+  benchmark: NIFTY 500
+  cash_asset: CASH_PROXY_CONSTANT_6PCT
+universe_translation:
+  source_universe: CRSP all US common stocks
+  source_breadth: 4400
+  source_selection_rule: 'CRSP share codes 10 and 11 on NYSE, AMEX and NASDAQ; listed at least one year; non-missing
+    return, volume, shares outstanding and price; no size, price or liquidity floor in the baseline.
+
+    '
+  target_universe: Top-500 point-in-time Indian equities (Monthly_uni_new.xlsx), Accord-priced, with daily volume
+  grade: loose
+  resolution: direct
+  rationale: 'The control needs only price, volume, market cap and monthly membership, all held at stock level.
+    The universe is named as it actually is, a rank-based top-500 proxy, and is graded loose against the paper''s
+    all-US universe because the paper''s low-short-interest names are far smaller than anything in it.
+
+    '
+  transfer_risks:
+  - Turnover from total, not free-float, shares; rank is distorted for closely held names.
+  - The paper's size-then-turnover grid cannot be reproduced on 500 names (about 8 names a cell).
+  - The paper's effect is concentrated in micro and small caps that this universe excludes.
+  - Membership is a market-rank proxy and ends in March 2026.
+  mechanism_needs:
+    needs_cross_section: true
+    min_names: 250
+    cap_segment: all
+    sector: null
+    min_history_years: 10.0
+    must_be_in_mandate: true
+    notes: 'A half cut of about 250 names needs the full 500-name universe. The control is only meaningful if the
+      held half stays populated as names drop in and out.
+
+      '
+  alternatives_considered:
+  - NIFTY Total Market constituents (broader, out of mandate)
+  - NIFTY Smallcap 250 constituents (the segment where the paper finds an effect)
+  why_not_alternatives: 'The monthly universe file covers only the top 500 in most months, so Total Market is not
+    available at stock level. A smallcap-like cut is run as a pre-declared sub-cut, using market ranks 251 to 500,
+    and is a proxy, not the official index.
+
+    '
+  required_instruments:
+  - ACCORD_STOCK_LEVEL_PRICE_MCAP
+  - NIFTY 500
+  evidence_page: 8
+strategy:
+  signal_name: trailing_month_turnover_level
+  signal_definition: 'Each month-end rebalance: universe_t = point-in-time top-500 by market rank, restricted to
+    Accord-priced names. Turnover_i = traded value of i over the trailing 21 trading days ending on the rebalance
+    date, divided by its market cap on that date (both in rupees; rupee turnover). This equals shares traded over
+    shares outstanding when value equals volume times price, and it does not depend on split or bonus basis. Only
+    the rank across names is used, so the units cancel. The signal is shifted by 1 + lag_days before use. Hold the
+    half of universe_t with the highest turnover, equal weighted. Ties are broken by Accord code, which is arbitrary
+    and fixed. A name with missing traded value or market cap is ineligible, never zero. Zero volume is a valid
+    value and ranks last.
+
+    '
+  inputs_required:
+  - daily close, traded value and market cap, Accord-priced Indian equities (~1,314 names)
+  - monthly point-in-time market-rank universe (Monthly_uni_new.xlsx)
+  - NIFTY 500 daily close (benchmark)
+  cross_sectional: true
+  formation_rule: Top half by count on trailing 21-day turnover among universe names, each month.
+  weighting_rule: Equal weighted, fully invested, gross 1.0, unlevered.
+  holding_period: one month, until the next rebalance
+  rebalance_frequency: monthly
+  is_long_short: false
+  long_only_adaptation: ''
+  constraints:
+  - long only, fully invested, no leverage
+  - eligibility needs point-in-time membership and a known volume
+  - 30bp round trip on all trades
+  - a month with fewer than 250 eligible names is carried forward, never traded
+  - lag_days >= 1
+  engine_template: cross_sectional
+  template_gap: ''
+  confidence: medium
+  evidence_pages:
+  - 8
+  - 17
+  - 36
+  - 38
+signal:
+  name: trailing_month_turnover_level
+  template: cross_sectional
+  lookback_days: 21
+  lag_days: 1
+  description: 'lag_days is the repo floor. lookback_days (21 trading days) is the rupee-turnover measurement window,
+    a level and not a return window, so there is no momentum component. Runs through universal_backtester.engine.Backtester
+    with build_allocator("cross_sectional") and membership, mirroring scripts/alquist_2018_india_small_cap_backtest.py.
+    That script does not yet exist for this card and has to be written at Step 05. The registered template holds
+    the highest score, so ascending is false, and there is no tie problem because every name has a turnover value.
+
+    '
+  params:
+    quantile: 0.5
+    weighting: equal
+    ascending: false
+    min_names: 250
+portfolio:
+  rebalance: monthly
+  long_only: true
+  max_gross: 1.0
+  allow_cash: false
+  mandate_allow_cash: false
+  start: '2013-03-31'
+  end: '2026-03-31'
+costs:
+  spread_bps: 30.0
+  cost_model: half_spread
+data_requirements:
+- name: ACCORD_STOCK_LEVEL_PRICE_MCAP
+  kind: price
+  frequency: daily
+  start: '2013-03-31'
+  mandatory: true
+  purpose: stock-level price, volume and market cap for the universe and the turnover rank
+- name: Monthly_uni_new.xlsx point-in-time universe
+  kind: membership
+  frequency: monthly
+  start: '2013-03-31'
+  mandatory: true
+  purpose: point-in-time top-500 universe; membership ends March 2026
+- name: NIFTY 500
+  kind: price
+  frequency: daily
+  start: '2013-03-31'
+  mandatory: true
+  purpose: fund benchmark and do-nothing comparator
+- name: NIFTY500 VALUE 50
+  kind: price
+  frequency: daily
+  start: '2013-03-31'
+  mandatory: true
+  purpose: 'factor fingerprint: a high-turnover tilt is likely to load on size and value'
+- name: NIFTY500 MOMENTUM 50
+  kind: price
+  frequency: daily
+  start: '2013-03-31'
+  mandatory: true
+  purpose: 'factor fingerprint: turnover often travels with momentum'
+- name: india_cash_rate
+  kind: risk_free_rate
+  frequency: daily
+  mandatory: true
+  purpose: Sharpe numeraire
+ambiguities:
+- field: strategy.signal_definition
+  headline: Top-half turnover cut is the drafter's own; the paper uses size-then-turnover quartiles
+  issue: 'The paper sorts turnover within size quartiles (page 17) and shows alpha in the three highest turnover
+    quartiles. The half cut is not in the paper.
+
+    '
+  resolution: 'Run the top half as the base case and the bottom half as a control, and report the top-half-within-ranks-251-to-500
+    sub-cut as a pre-declared sensitivity. No other cut is tried, so the choice is not searched.
+
+    '
+  confidence: medium
+  material: true
+  evidence_page: 17
+- field: strategy.signal_definition
+  headline: 'Raw volume vs adjusted close: turnover built from traded value over market cap instead'
+  issue: 'Shares outstanding is not held directly; market cap over close gives implied shares. That is valid only
+    if volume, close and market cap share a split and bonus basis on every date. The Accord close''s adjustment
+    basis is not confirmed, and Indian split and bonus density is high. Step 04 check (2026-10-06, scripts/boehmer_2009_step04/):
+    in the Accord daily file, close is back-adjusted to the current share basis (HDFC Bank 2019-09-19 split: close
+    550.5 to 599.8 with implied shares constant at 1,094), market cap is continuous, traded value is true rupees
+    (580.98 crore on 2019-09-19 equals raw volume times the pre-split price), but volume is RAW and jumps at the
+    split (5.3M to 23.1M shares). Shares turnover (volume over market cap divided by close) is therefore understated
+    before every split or bonus. Traded value over market cap uses two rupee quantities on the same basis and is
+    unaffected.'
+  resolution: 'Resolved at Step 04: build turnover as traded value over market cap, which is basis-free. Shares
+    turnover is not used. Report the rank correlation between the two as a diagnostic (0.93 on a daily snapshot,
+    median across months).'
+  confidence: high
+  material: true
+  evidence_page: 36
+- field: strategy.signal_definition
+  headline: Two turnover definitions in the paper; trailing 21-day shares traded chosen
+  issue: 'Page 8 defines turnover on average daily volume; the Table 4 caption (page 36) defines it on monthly shares
+    traded. The two differ only by a constant over a fixed window.
+
+    '
+  resolution: Use trailing 21-day shares traded over shares outstanding; the ranking is identical to the daily-average
+    version.
+  confidence: high
+  material: false
+  evidence_page: 36
+- field: data_plan.ideal (delisting returns)
+  headline: Delisted names are present (176 codes end early); their final returns are still unverified
+  issue: 'The paper keeps delisted stocks and uses delisting returns (page 8). Whether the Accord panel contains
+    delisted or suspended names and what their final return is has not been checked.
+
+    '
+  resolution: 'Step 04: 176 of 1,314 codes stop trading before the panel end (3 to 17 a year, every year 2012 to
+    2026) and 146 of them were in the top 500 at some point, so the panel is not survivor-only. The final-return
+    convention is still open: the series ends at the last traded price, which does not capture a merger exchange
+    or a delisting loss. Held names that stop trading are sold at the last price on the day they leave, as the engine
+    does, and the result is read with that limit stated.'
+  confidence: medium
+  material: true
+  evidence_page: 8
+- field: costs.spread_bps
+  headline: Paper reports no costs; 30bp is the fund floor and turnover of the held half is unmeasured
+  issue: The paper has no cost, turnover or capacity figure. Turnover rank is persistent but monthly membership
+    changes at the cut.
+  resolution: Charge 30bp, measure realised turnover, report break-even cost and sweep 30 to 90bp.
+  confidence: low
+  material: true
+- field: universe.description (membership size)
+  headline: Universe is exactly 500 every month after de-duplication; only June 2023 had 1,000 rows
+  issue: The held universe README records sheets with duplicate ranks reporting about 1,000 names, and empty months
+    after March 2026. A top-half-by-count cut of a 1,000-name month holds twice the names.
+  resolution: 'Resolved at Step 04: the top-500 frame has 171 months, 2011-12-30 to 2026-03-30; every month has
+    exactly 500 rows except 2023-06-30 with 1,000 rows from 500 duplicated Accord codes; de-duplicating by (month,
+    code) gives exactly 500 in every month. Apr to Jul 2026 sheets are empty.'
+  confidence: high
+  material: false
+replication_targets: []
+benchmark_templates:
+- name: Equal-weight eligible universe (no turnover filter)
+  template: equal_weight
+  params: {}
+  rebalance: monthly
+- name: Inverse-vol eligible universe (no turnover filter)
+  template: inverse_vol
+  params: {}
+  rebalance: monthly
+data_plan:
+  ideal:
+  - field: Daily close, traded value and market cap for every name in the point-in-time top 500, including delisted
+      and suspended names
+    granularity: daily
+    history_from: '2012-01-02'
+    why: The signal is trailing-month rupee turnover (traded value over market cap), and the returns are monthly.
+    why_granularity: 'Daily, because a 21-day turnover window cannot be formed from monthly bars; intraday data
+      answers a question the paper does not ask.
+
+      '
+    why_history: 2012-01-02 is the start of the Accord panel; the backtest starts 2013-03-31 after a one-year warmup.
+    adjustments: close is back-adjusted to the current share basis; market cap is continuous; traded value is true
+      rupees; raw volume is NOT adjusted and is not used; delisted and suspended names are present with the series
+      ending at the last traded price; market cap is total, not free float
+    minimum_viable: true
+  - field: Point-in-time top-500 membership, monthly
+    granularity: monthly
+    history_from: '2012-01-02'
+    why: Avoids survivorship bias in the universe.
+    why_granularity: monthly, matching the source file's snapshots
+    why_history: same window as the price panel; usable only to March 2026
+    adjustments: market rank field, forward filled between snapshots
+    minimum_viable: true
+  - field: Free-float shares outstanding, point-in-time
+    granularity: quarterly
+    history_from: '2012-01-02'
+    why: True turnover is shares traded over free-float shares, which is the economically meaningful measure.
+    why_granularity: quarterly, matching Indian shareholding disclosure
+    why_history: same window as the price panel
+    adjustments: as-reported, with the disclosure date
+    minimum_viable: false
+  - field: An Indian overnight or 91-day T-bill rate series, daily
+    granularity: daily
+    history_from: '2012-01-02'
+    why: Sharpe numeraire, currently a flat 6% proxy.
+    why_granularity: daily
+    why_history: same window as the price panel
+    adjustments: annualised decimal; state the day-count convention
+    minimum_viable: false
+  rejected_alternatives:
+  - option: Use delivery percentage or F&O open interest as a stand-in for short interest
+    why_not: Neither measures shares sold short, so the result would test a different paper under the same title.
+      The baseline says openly that it contains no short interest.
+  - option: Reproduce the paper's 4x4x4 size, turnover and short interest grid
+    why_not: There are about 8 names a cell on a 500-name universe, and the signal is missing.
+  - option: Value-weight the held half
+    why_not: The paper's effect is larger equal weighted, and value weighting would collapse the held half into
+      the largest names, defeating the liquidity-conditioning question.
+  - option: Use only the index sleeves the fund holds
+    why_not: No index sleeve has a turnover series; the question is stock-level.
+  granularity_verdict: Daily price, volume and market cap, because the signal is a 21-day turnover level.
+  optimality_argument: 'The smallest dataset that can answer the control question is the held daily stock panel
+    and point-in-time membership. Every addition either tests a different mechanism (open interest, delivery percentage),
+    cannot form the estimator (monthly bars), or refines the claim without changing the answer (free float).
+
+    '
+  what_would_change_the_answer: 'Delisted-name coverage could change the result materially. Free-float shares would
+    change which names count as high turnover but not whether the control is informative.
+
+    '
+selection:
+  rule: 'Monthly: universe = point-in-time top-500 by market rank restricted to Accord-priced names, eligible =
+    universe names with a known trailing 21-day volume. Rank on turnover (trailing 21-day shares traded over market
+    cap divided by close), highest first. HOLD the top half by count, equal weighted. No explicit securities are
+    named.
+
+    '
+  explicit_securities: []
+  verified_against: master_universe
+  as_of: '2026-03-31'
+  why_these: 'The rule is the whole decision. The allocator re-derives the held half each month from the held panel.
+    Every held name should be written to a holdings log by write_holdings_log().
+
+    '
+backtest_plan:
+  sample_start: '2013-03-31'
+  sample_end: '2026-03-31'
+  why_this_window: 'Fund convention start (accord_data.BACKTEST_START). The end is March 2026 where point-in-time
+    membership stops. Truncating earlier would drop the 2020 crash and recovery, the main test for a high-turnover
+    small-cap tilt.
+
+    '
+  warmup_days: 45
+  why_warmup: A full 21-day turnover window plus the lag before the first rebalance.
+  rebalance_rule: Last trading day of each month; signals shifted by 1 + lag_days.
+  weights_rule: Equal weight the held half, fully invested, gross 1.0.
+  explicit_weights: {}
+  benchmarks:
+  - name: NIFTY 500
+    why_this: The fund benchmark and the do-nothing option.
+  - name: Equal-weight eligible universe (no turnover filter)
+    why_this: Strips the turnover cut and keeps the universe and weighting, so any edge is attributable to turnover
+      and not to equal weighting.
+  - name: Low-turnover half (control)
+    why_this: If the opposite half does as well, the turnover rank carries no information.
+  - name: NIFTY500 VALUE 50
+    why_this: The off-the-shelf product that would capture a size and value tilt if the turnover half proves to
+      be one.
+  must_beat:
+  - NIFTY 500, on the paired stationary bootstrap, at 5%
+  - the equal-weight eligible universe, or the turnover cut adds nothing
+  - the low-turnover half, or the rank is not directional
+  success_looks_like: 'The high-turnover half beats NIFTY 500 and the equal-weight universe on geometric Sharpe
+    with a paired bootstrap p <= 0.05, beats the low-turnover half, keeps its alpha after the factor fingerprint
+    against VALUE 50 and MOMENTUM 50, and survives a cost sweep from 30 to 90bp. Success means the liquidity component
+    exists in India. It does not mean short interest works.
+
+    '
+  failure_looks_like: "Any of: no edge over the equal-weight universe; the low-turnover half does as well; alpha\
+    \ disappears against the factor fingerprint; the verdict flips inside the cost sweep; or the sub-cut on ranks\
+    \ 251 to 500 disagrees in sign with the full universe. A null means the liquidity component is absent in this\
+    \ universe, which the paper also finds in its largest size quartile.\n A null is read as no detectable effect,\
+    \ not absence: the held half is half of the universe, so it is tested against a highly correlated portfolio\
+    \ over about 150 monthly observations. Report the standard error of the annualised difference."
+  known_failure_modes:
+  - 'SURVIVORSHIP: a price panel without delisted or suspended names flatters high-turnover small names that later
+    vanish.'
+  - 'SIZE AND MOMENTUM IN DISGUISE: turnover correlates with size and recent returns, so an edge may be an existing
+    factor.'
+  - 'FREE FLOAT: total-share turnover misranks closely held names.'
+  - 'SHORT HISTORY: about 12 years and 150 monthly observations.'
+no_further_data_needed: 'No purchase is needed IF the survivorship check passes: the control needs only the held
+  daily stock panel and point-in-time membership. That is conditional on a check not yet run. If the panel turns
+  out to be survivor-only, delisted-name data becomes the decisive request. Free-float shares and a real short rate
+  refine the claim without changing the answer, and are non-minimum fields in the data plan.'
+open_questions:
+- question: 'Is the Accord price panel survivor-only, and what return applies to a delisted or suspended name?
+
+    '
+  why_it_matters: A survivor-only panel flatters the high-turnover half of small names.
+  what_i_assumed: 'That delisted names are present until a check says otherwise, to be tested by the master-universe
+    check before Step 04; the card states the result either way.
+
+    '
+  headline: Does the held price panel include delisted names, and what is their final return?
+  ask_of: data_owner
+  blocks_run: false
+- question: 'Is the top-half-by-turnover cut the right control for a short interest paper whose own grid conditions
+    on size first?
+
+    '
+  why_it_matters: The wrong control would let a short interest result look better or worse than it is.
+  what_i_assumed: The half cut as the base case with the bottom half and the ranks 251 to 500 sub-cut as controls.
+  headline: Is a top-half turnover cut the right control, or should it be within size bands?
+  ask_of: researcher
+  blocks_run: false
+- question: Is n_configs_tried = 1 honest, given the paper's own variants?
+  why_it_matters: The deflated Sharpe depends on it.
+  what_i_assumed: '1 for this card, since the paper reports no result for this portfolio; the paper''s 18 short
+    interest variants belong to the short interest cards.
+
+    '
+  headline: n_configs_tried = 1; the paper reports no turnover-only result to count
+  ask_of: researcher
+  blocks_run: false
+n_configs_tried: 1
+notes: "The promotion question is whether a high-turnover equal-weight half of the top 500 beats NIFTY 500 and the\
+  \ plain equal-weight universe after costs. It is a control. Its result must be reported next to any short interest\
+  \ result and never in place of one. Step 05 needs a new script mirroring scripts/alquist_2018_india_small_cap_backtest.py,\
+  \ using the cross_sectional allocator and trailing turnover as the alpha, and has not been written.\n STEP 04\
+  \ (2026-10-06): the turnover signal was changed from shares turnover to rupee turnover after a check found raw\
+  \ volume on a different split basis from the adjusted close; the universe is exactly 500 every month after de-duplication;\
+  \ delisted names are present."
+convertibility:
+  verdict: convertible
+  confidence: low
+  headline: Runnable today on held data; answers a liquidity question, not the paper's short interest claim
+  what_must_be_true:
+  - The top-turnover half carries return information in India, the same direction as the paper's Table 5.
+  - The result is not just size, value or momentum already held through the sleeves.
+  - The edge survives 30bp round trip at monthly turnover.
+  - The held panel includes delisted names, so the high-turnover small names are not flattered.
+  - It is implementable at the fund's size in the lower half of the top 500.
+  weakest_link: 'That the high-turnover half is not an existing size, value or momentum tilt under a new name. Turnover
+    is correlated with all three, so a positive raw result is the likely outcome and says little until it survives
+    the factor fingerprint.
+
+    '
+  decisive_evidence: 'The factor fingerprint against VALUE 50 and MOMENTUM 50 and the ranks 251 to 500 sub-cut.
+    Both use held data, so no request is needed.
+
+    '
+  if_it_fails: 'A null says no liquidity component is detectable in the top 500, consistent with the paper''s own
+    largest-quartile result. A positive result that vanishes after the fingerprint says turnover is a proxy for
+    a factor already held.
+
+    '
+  capacity_note: 'Moderate and unmeasured. Equal weighting the top half puts as much weight on the smaller, thinner
+    names as the larger ones; no traded-value capacity has been joined in.
+
+    '
+india_notes:
+- category: data
+  item: Turnover is rupee turnover on TOTAL market cap, but Indian promoter holdings are large, so free-float turnover
+    can differ a lot in rank.
+  why: 'The strategy ranks on turnover alone, so a distorted turnover rank distorts the portfolio directly, most
+    for closely held names.
+
+    '
+  triggered_by: turnover defined as shares traded over shares outstanding (pages 8, 36)
+  addresses:
+  - daily close, traded value and market cap, Accord-priced Indian equities (~1,314 names)
+  evidence_page: 36
+- category: validity
+  item: 'The universe is a market-rank proxy for the top 500 and ends in March 2026, not the official NIFTY 500
+    constituent history.
+
+    '
+  why: 'The strategy ranks inside a changing universe every month, so membership errors change which names can be
+    held.
+
+    '
+  triggered_by: the monthly cross-sectional rank and the paper's inclusion of delisted stocks (page 8)
+  addresses:
+  - monthly point-in-time market-rank universe (Monthly_uni_new.xlsx)
+  evidence_page: 8
+- category: execution
+  item: 'Circuit limits and thin depth in the lower half of the top 500 can stop a monthly rebalance into high-turnover
+    small names from filling at the close price.
+
+    '
+  why: 'High turnover names are often the ones near price bands after large moves, where a backtest at the close
+    assumes a fill that may not be available.
+
+    '
+  triggered_by: the strategy buys high-turnover stocks each month
+  addresses:
+  - daily close, traded value and market cap, Accord-priced Indian equities (~1,314 names)
+  evidence_page: null
+- category: cost
+  item: '30bp is the fund floor; the realised turnover of the held half and the cost of trading smaller names are
+    not measured here.
+
+    '
+  why: The paper reports no cost, and the portfolio's principal activity is monthly rebalancing.
+  triggered_by: monthly rebalance with a cut at the median
+  addresses:
+  - NIFTY 500 daily close (benchmark)
+  evidence_page: null
+- category: timing
+  item: Traded value for the rebalance day is only known after the close, so the window must end the day before
+    and be shifted by lag_days.
+  why: Using the rebalance day's own volume is look-ahead that favours a turnover filter.
+  triggered_by: the signal is a trailing-month volume level
+  addresses:
+  - daily close, traded value and market cap, Accord-priced Indian equities (~1,314 names)
+  evidence_page: 36
