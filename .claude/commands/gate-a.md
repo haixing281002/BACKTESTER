@@ -34,6 +34,15 @@ every judgement call tagged with its owner, what declining each request costs,
 the India requirements, the convertibility chain, and the audit trail. Your
 queue carries that output. It does not paraphrase it.
 
+**On a `quick`-mode card** (CLAUDE.md's default Stage 02 output, `data_plan`
+and `convertibility` both unset), `c.convertibility_block()` prints "NO
+CONVERTIBILITY VERDICT ON THIS CARD" and the data-plan reconciliation below
+returns `checked: False` — both are the correct, honest output for a card that
+hasn't written that analysis yet, not a bug. Say so plainly in the queue
+rather than treating it as a gap to chase: a quick card is going to Gate A to
+get a read on whether the mechanism is worth the full card, not for an IC-grade
+decision.
+
 **What is yours to write, and nothing else:**
 
 1. Where a reviewer should spend their attention first, and WHY that one and

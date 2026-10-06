@@ -119,7 +119,7 @@ def main() -> int:
         print("    is a model's job, not this script's. In Claude Code, run:")
         print()
         print(f"        /ingest {paper.path}")
-        print(f"        /draft-card {paths['analysis']} adaptation")
+        print(f"        /draft-card {paths['analysis']}   (quick by default -- see CLAUDE.md)")
         print(f"        /critique-card {card_path} {paper.path}")
         print()
         print("    Or run the whole chain and stop at the gate:")

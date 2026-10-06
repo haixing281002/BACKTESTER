@@ -42,7 +42,11 @@ human decision point.
 2. `/ingest $1` — read the rendered PDF properly. This is the heavy stage: it
    decides **which Indian universe** the paper should be tested on and
    **what the strategy actually is**.
-3. `/draft-card <analysis.json> adaptation` — write the Strategy Card.
+3. `/draft-card <analysis.json>` — write the Strategy Card. Defaults to `quick`:
+   one card, just the extracted strategy and a full `backtest_plan`, to see
+   whether the mechanism shows up at all before writing the full data-plan /
+   convertibility essay. Pass `adaptation` or `replication` explicitly once a
+   quick-test result justifies the full card (see `/draft-card`'s own notes).
 4. `/critique-card <card.yaml> $1` — attack your own draft.
    Fold anything material back into the card, then re-validate it.
 5. `/map-data <card.yaml>` — the gate binds, you advise.
