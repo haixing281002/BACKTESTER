@@ -1,0 +1,444 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lightyear</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.35.2/plotly.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
+<style>
+:root{
+  --bg:#f4f6f9; --panel:#ffffff; --ink:#1b2430; --muted:#5d6b7c; --line:#dfe4ea;
+  --navy:#1f4e79; --navy2:#163a5c; --amber:#d98324; --green:#2e7d4f; --red:#b3261e; --grey:#8a96a3;
+  --pass:#e3f3e8; --fail:#fbe5e3; --na:#eceef1; --run:#fff4e0; --code:#f7f9fb;
+  --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 "Segoe UI", Arial, sans-serif}
+header{background:linear-gradient(90deg,var(--navy2),var(--navy));color:#fff;padding:12px 20px;display:flex;align-items:center;gap:18px}
+.brand{font-weight:700;font-size:20px;letter-spacing:.5px;display:flex;align-items:center;gap:10px}
+.brand svg{width:26px;height:26px}
+.brand small{font-weight:400;opacity:.7;font-size:12px}
+.chips{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+.chip{background:rgba(255,255,255,.12);border-radius:20px;padding:3px 10px;font-size:12px}
+.chip.ok::before{content:"● ";color:#7fd69a}.chip.bad::before{content:"● ";color:#ff9a8f}
+.wrap{display:grid;grid-template-columns:270px 1fr;min-height:calc(100vh - 54px)}
+aside{background:var(--panel);border-right:1px solid var(--line);padding:14px;overflow:auto}
+main{padding:20px 24px;overflow:auto;min-width:0}
+button{font:inherit;border:1px solid var(--line);background:#fff;border-radius:6px;padding:7px 14px;cursor:pointer;color:var(--ink)}
+button.primary{background:var(--navy);border-color:var(--navy);color:#fff}
+button.primary:hover{background:var(--navy2)}
+button.danger{color:var(--red);border-color:#e7b7b2}
+button:disabled{opacity:.5;cursor:not-allowed}
+input,select,textarea{font:inherit;border:1px solid var(--line);border-radius:6px;padding:7px 9px;width:100%;background:#fff;color:var(--ink)}
+textarea{min-height:70px;resize:vertical}
+label{font-size:12px;color:var(--muted);display:block;margin:10px 0 4px}
+.runlist{list-style:none;margin:12px 0 0;padding:0}
+.runlist li{padding:9px 10px;border-radius:6px;cursor:pointer;border:1px solid transparent;margin-bottom:4px}
+.runlist li:hover{background:var(--bg)}
+.runlist li.sel{border-color:var(--navy);background:#eef3f8}
+.runlist .t{font-weight:600;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.runlist .s{font-size:11px;color:var(--muted)}
+.pill{display:inline-block;border-radius:12px;padding:1px 9px;font-size:11px;font-weight:600;background:var(--na);color:var(--muted)}
+.pill.phase_a,.pill.phase_b,.pill.building,.pill.revising{background:var(--run);color:#8a5a00}
+.pill.gate_a,.pill.gate_b{background:#e5eef8;color:var(--navy)}
+.pill.decided{background:var(--pass);color:var(--green)}
+.pill.failed,.pill.cancelled,.pill.interrupted,.pill.stopped{background:var(--fail);color:var(--red)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px 20px;margin-bottom:16px}
+.card h2{margin:0 0 10px;font-size:17px;color:var(--navy)}
+.card h3{margin:16px 0 8px;font-size:14px;color:var(--navy)}
+.muted{color:var(--muted)} .small{font-size:12px}
+.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.drop{border:2px dashed #b9c6d4;border-radius:10px;padding:26px;text-align:center;color:var(--muted);cursor:pointer;background:#fafcfe}
+.drop.over{border-color:var(--navy);background:#eef3f8}
+.drop b{color:var(--navy)}
+/* stage tracker */
+.track{display:flex;align-items:stretch;gap:0;overflow-x:auto;padding:4px 0 10px}
+.st{flex:1;min-width:92px;text-align:center;position:relative;padding-top:30px;font-size:11.5px;color:var(--muted)}
+.st::before{content:"";position:absolute;top:13px;left:0;right:0;height:3px;background:var(--line)}
+.st:first-child::before{left:50%}.st:last-child::before{right:50%}
+.st .dot{position:absolute;top:4px;left:50%;transform:translateX(-50%);width:21px;height:21px;border-radius:50%;background:#fff;border:3px solid var(--line);z-index:1}
+.st.gate .dot{border-radius:4px;transform:translateX(-50%) rotate(45deg)}
+.st.done .dot{background:var(--navy);border-color:var(--navy)} .st.done::before{background:var(--navy)}
+.st.running .dot{border-color:var(--amber);background:#fff;animation:pulse 1.2s infinite}
+.st.running{color:var(--ink);font-weight:600}
+.st.gate{color:var(--navy);font-weight:700}
+.st .id{display:block;font-family:var(--mono);font-size:10.5px}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(217,131,36,.6)}70%{box-shadow:0 0 0 9px rgba(217,131,36,0)}100%{box-shadow:0 0 0 0 rgba(217,131,36,0)}}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin:4px 0 16px}
+.tab{padding:8px 14px;border:0;border-bottom:3px solid transparent;border-radius:0;background:none;color:var(--muted)}
+.tab.on{color:var(--navy);border-bottom-color:var(--navy);font-weight:600}
+.tab .badge{background:var(--amber);color:#fff;border-radius:8px;padding:0 6px;font-size:10px;margin-left:5px}
+/* log */
+.log{background:#0f1720;color:#d8dee6;font:12px/1.55 var(--mono);border-radius:8px;padding:12px;height:560px;overflow:auto;white-space:pre-wrap;word-break:break-word}
+.log .e{padding:2px 0;border-bottom:1px solid #1b2633}
+.log .k{display:inline-block;width:62px;color:#7b8794}
+.log .text{color:#e8edf2} .log .tool{color:#8fb8e8} .log .tool_out{color:#8d99a6}
+.log .stage{color:#ffc56b;font-weight:700} .log .gate{color:#7fd69a;font-weight:700}
+.log .error,.log .tool_error{color:#ff8f86} .log .result{color:#c9a7ff} .log .server{color:#9fd3c7}
+pre.yaml,pre.code{background:var(--code);border:1px solid var(--line);border-radius:8px;padding:12px;font:12px/1.5 var(--mono);overflow:auto;max-height:620px;margin:0}
+.yk{color:var(--navy);font-weight:600}.yc{color:#7b8794;font-style:italic}.ys{color:#2e7d4f}
+.md{line-height:1.6}.md table{border-collapse:collapse;margin:8px 0;font-size:13px}.md th,.md td{border:1px solid var(--line);padding:4px 8px}
+.md th{background:#eef3f8}.md code{background:var(--code);padding:1px 4px;border-radius:4px;font-size:12px}
+.md pre{background:var(--code);padding:10px;border-radius:6px;overflow:auto}
+.md h1{font-size:18px;color:var(--navy)}.md h2{font-size:16px;color:var(--navy)}.md h3{font-size:14px}
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:6px}
+.kpi{border:1px solid var(--line);border-radius:8px;padding:10px 12px;background:#fff}
+.kpi .l{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+.kpi .v{font-size:19px;font-weight:700;color:var(--navy)}
+.kpi .b{font-size:12px;color:var(--amber)}
+.chart{height:340px}
+table.t{border-collapse:collapse;width:100%;font-size:13px}
+table.t th{background:var(--navy);color:#fff;text-align:left;padding:7px 9px;font-weight:600}
+table.t td{border-bottom:1px solid var(--line);padding:6px 9px}
+td.PASS{background:var(--pass);color:var(--green);font-weight:700;text-align:center}
+td.FAIL{background:var(--fail);color:var(--red);font-weight:700;text-align:center}
+td.NA{background:var(--na);color:var(--muted);text-align:center}
+.decide{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.decide button{min-width:110px;font-weight:600}
+.decide button.on{outline:3px solid var(--amber)}
+.d-APPROVE{color:var(--green)} .d-REJECT{color:var(--red)} .d-FIX{color:#8a5a00} .d-OBSERVE{color:var(--navy)}
+.banner{border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:13px}
+.banner.err{background:var(--fail);color:var(--red)} .banner.info{background:#e5eef8;color:var(--navy)}
+.banner.ok{background:var(--pass);color:var(--green)}
+.path{font:12px var(--mono);background:var(--code);border:1px solid var(--line);border-radius:6px;padding:5px 8px;display:flex;gap:8px;align-items:center;margin-bottom:4px}
+.path span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.path button{padding:2px 8px;font-size:11px}
+.empty{text-align:center;padding:60px 20px;color:var(--muted)}
+.facts{display:grid;grid-template-columns:160px 1fr;gap:6px 14px;font-size:13px}
+.facts div:nth-child(odd){color:var(--muted)}
+.hide{display:none!important}
+@media (max-width:900px){.wrap{grid-template-columns:1fr}aside{border-right:0;border-bottom:1px solid var(--line)}.grid2,.kpis{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <svg viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="14" stroke="#fff" stroke-width="2" opacity=".5"/><path d="M5 22 L16 9 L27 22" stroke="#d98324" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="16" cy="9" r="2.6" fill="#fff"/></svg>
+    Lightyear <small id="ver"></small>
+  </div>
+  <div class="chips" id="chips"></div>
+</header>
+<div class="wrap">
+  <aside>
+    <button class="primary" style="width:100%" onclick="showNew()">+ New paper</button>
+    <ul class="runlist" id="runlist"></ul>
+  </aside>
+  <main id="main"></main>
+</div>
+
+<template id="tpl-new">
+  <div class="card" style="max-width:760px">
+    <h2>Run a paper through the pipeline</h2>
+    <p class="muted small">Claude Code (headless, your login) reads the paper and writes the card up to Gate A. After you approve, it runs the backtest and assembles Gate B. You make the decision at Gate B.</p>
+    <div class="drop" id="drop"><b>Drop a PDF here</b> or click to choose<br><span class="small" id="dropname">No file chosen</span>
+      <input type="file" id="file" accept="application/pdf" class="hide"></div>
+    <label>…or a paper already in docs/papers</label>
+    <select id="existing"><option value="">(none)</option></select>
+    <div class="grid2">
+      <div><label>Operator (named human)</label><input id="operator" placeholder="Your name"></div>
+      <div><label>Model for Claude Code</label>
+        <select id="model"><option value="">Your Claude Code default</option><option value="opus">Opus</option><option value="sonnet">Sonnet</option></select></div>
+    </div>
+    <label class="row" style="color:var(--ink);font-size:13px;margin-top:14px"><input type="checkbox" id="auto" style="width:auto"> Don't wait at Gate A (show the card, keep going; Gate B is still a stop)</label>
+    <div class="row" style="margin-top:16px"><button class="primary" id="go" onclick="startRun()">Start run</button><span class="small muted" id="newmsg"></span></div>
+  </div>
+</template>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const LS = {get(k,d){try{return localStorage.getItem(k)??d}catch(e){return d}}, set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+let H = null, CUR = null, ST = null, LOGNEXT = 0, TAB = LS.get("ly_tab","log"), POLL = null, CHARTED = null, DEC = null;
+const RUNNING = ["phase_a","phase_b","building","revising"];
+const STATUS_TEXT = {phase_a:"Stages 00–02 running", gate_a:"At Gate A", revising:"Revising card", phase_b:"Stages 03–07 running",
+  building:"Building charts + workbook", gate_b:"At Gate B", decided:"Decided", failed:"Failed", stopped:"Stopped",
+  cancelled:"Cancelled", interrupted:"Interrupted"};
+
+async function api(path, opts){ const r = await fetch(path, opts); if(!r.ok){ let m; try{m=(await r.json()).detail}catch(e){m=r.statusText} throw new Error(m) } return r.json() }
+function md(s){ if(window.marked && window.DOMPurify) return DOMPurify.sanitize(marked.parse(s||"")); return "<pre class='code'>"+esc(s)+"</pre>" }
+function pct(x,d=1){ return (x==null||isNaN(x)) ? "–" : (x*100).toFixed(d)+"%" }
+function num(x,d=2){ return (x==null||isNaN(x)) ? "–" : Number(x).toFixed(d) }
+function yamlHL(s){ return esc(s).split("\n").map(l => {
+  if(/^\s*#/.test(l)) return `<span class="yc">${l}</span>`;
+  const m = l.match(/^(\s*-?\s*)([A-Za-z0-9_\-\.]+)(:)(.*)$/);
+  return m ? `${m[1]}<span class="yk">${m[2]}</span>${m[3]}<span class="ys">${m[4]}</span>` : l }).join("\n") }
+function copy(t, btn){ navigator.clipboard?.writeText(t).then(()=>{ if(btn){const o=btn.textContent; btn.textContent="copied"; setTimeout(()=>btn.textContent=o,1200)} }) }
+
+async function boot(){
+  H = await api("/api/health");
+  $("#ver").textContent = "v"+H.version;
+  $("#chips").innerHTML = `<span class="chip ${H.claude?'ok':'bad'}">Claude Code ${H.claude?'found':'missing'}</span>
+    <span class="chip ${H.libreoffice?'ok':'bad'}">LibreOffice ${H.libreoffice?'ready':'missing'}</span>
+    <span class="chip">local only · 127.0.0.1</span>`;
+  await refreshRuns();
+  const want = location.hash.slice(1) || LS.get("ly_run","");
+  if(want) openRun(want).catch(showNew); else showNew();
+}
+
+async function refreshRuns(){
+  const runs = await api("/api/runs");
+  $("#runlist").innerHTML = runs.length ? runs.map(r => `<li class="${r.id===CUR?'sel':''}" onclick="openRun('${r.id}')">
+     <div class="t">${esc(r.paper_title || r.slug)}</div>
+     <div class="s"><span class="pill ${r.status}">${esc(STATUS_TEXT[r.status]||r.status)}</span> ${esc((r.created||"").replace("T"," ").slice(0,16))}</div></li>`).join("")
+    : `<li class="muted small" style="cursor:default">No runs yet.</li>`;
+}
+
+async function showNew(){
+  CUR = null; clearInterval(POLL); location.hash = "";
+  $("#main").innerHTML = ""; $("#main").appendChild($("#tpl-new").content.cloneNode(true));
+  $("#operator").value = LS.get("ly_operator","");
+  (await api("/api/papers")).forEach(p => $("#existing").insertAdjacentHTML("beforeend", `<option>${esc(p)}</option>`));
+  const drop = $("#drop"), file = $("#file");
+  drop.onclick = () => file.click();
+  file.onchange = () => { $("#dropname").textContent = file.files[0]?.name || "No file chosen" };
+  drop.ondragover = e => { e.preventDefault(); drop.classList.add("over") };
+  drop.ondragleave = () => drop.classList.remove("over");
+  drop.ondrop = e => { e.preventDefault(); drop.classList.remove("over"); if(e.dataTransfer.files[0]){ file.files = e.dataTransfer.files; file.onchange() } };
+  if(H?.active_run) $("#newmsg").textContent = "A run is still working; Lightyear runs one paper at a time.";
+  refreshRuns();
+}
+
+async function startRun(){
+  const fd = new FormData(), f = $("#file").files[0], ex = $("#existing").value, op = $("#operator").value.trim();
+  if(!op){ $("#newmsg").textContent = "Enter the operator's name."; return }
+  if(!f && !ex){ $("#newmsg").textContent = "Choose a paper. There is no default paper."; return }
+  LS.set("ly_operator", op);
+  if(f) fd.append("pdf", f); else fd.append("existing", ex);
+  fd.append("operator", op); fd.append("model", $("#model").value); fd.append("auto_continue", $("#auto").checked);
+  $("#go").disabled = true; $("#newmsg").textContent = "Starting…";
+  try{ const r = await api("/api/runs", {method:"POST", body:fd}); H.active_run = r.id; TAB = "log"; await openRun(r.id) }
+  catch(e){ $("#newmsg").textContent = e.message; $("#go").disabled = false }
+}
+
+async function openRun(id){
+  if(CUR !== id){ CUR = id; LOGNEXT = 0; CHARTED = null; DEC = null; LS.set("ly_run", id); location.hash = id; renderShell() }
+  await tick();
+  clearInterval(POLL); POLL = setInterval(tick, 2000);
+  refreshRuns();
+}
+
+function renderShell(){
+  GA_SIG = RES_SIG = GB_SIG = F_SIG = null;
+  $("#main").innerHTML = `
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <div><h2 id="rtitle" style="margin:0"></h2><div class="small muted" id="rsub"></div></div>
+        <div class="row" id="ractions"></div>
+      </div>
+      <div id="rbanner" style="margin-top:12px"></div>
+      <div class="track" id="track"></div>
+    </div>
+    <div class="tabs" id="tabs"></div>
+    <div id="panes">
+      <div data-p="gatea"></div><div data-p="results"></div><div data-p="gateb"></div>
+      <div data-p="log"><div class="card"><div class="row" style="justify-content:space-between;margin-bottom:8px"><h2 style="margin:0">Live log</h2>
+        <label class="row small" style="margin:0;color:var(--muted)"><input type="checkbox" id="follow" checked style="width:auto"> follow</label></div>
+        <div class="log" id="log"></div></div></div>
+      <div data-p="files"></div>
+    </div>`;
+}
+
+function tabsFor(st){
+  const t = [["log","Live log"]];
+  if(st.phase_a) t.unshift(["gatea","Gate A"+(st.status==="gate_a"?' <span class="badge">action</span>':"")]);
+  if(st.results){ t.push(["results","Results"]); t.push(["gateb","Gate B"+(st.status==="gate_b"?' <span class="badge">decide</span>':"")]) }
+  t.push(["files","Files"]);
+  if(!t.find(x=>x[0]===TAB)) TAB = t[0][0];
+  $("#tabs").innerHTML = t.map(([k,l]) => `<button class="tab ${k===TAB?'on':''}" onclick="setTab('${k}')">${l}</button>`).join("");
+  document.querySelectorAll("#panes > div").forEach(d => d.classList.toggle("hide", d.dataset.p !== TAB));
+}
+function setTab(k){ TAB = k; LS.set("ly_tab",k); tabsFor(ST); if(k==="results") drawCharts(true) }
+
+async function tick(){
+  if(!CUR) return;
+  const id = CUR;
+  let st; try{ st = await api(`/api/runs/${id}`) }catch(e){ return }
+  if(id !== CUR) return;
+  const prev = ST?.status; ST = st;
+  $("#rtitle").textContent = st.paper_title || st.slug;
+  $("#rsub").innerHTML = `${esc(st.pdf)} · operator ${esc(st.operator)} · run ${esc(st.id)}${st.cost_usd?` · Claude usage ≈ $${st.cost_usd.toFixed(2)} (computed; your plan's limits apply)`:""}`;
+  const running = RUNNING.includes(st.status);
+  $("#ractions").innerHTML = `<span class="pill ${st.status}">${esc(STATUS_TEXT[st.status]||st.status)}</span>
+    ${running?`<button class="danger" onclick="act('cancel')">Cancel</button>`:""}
+    ${["failed","interrupted","cancelled"].includes(st.status)?`<button class="primary" onclick="act('resume')">Resume</button>`:""}`;
+  let b = "";
+  if(st.error && !running) b = `<div class="banner err">${esc(st.error)}</div>`;
+  else if(st.status==="gate_a") b = `<div class="banner info"><b>Gate A is ready.</b> Read the card, then approve to run stages 03–07, or ask for a revision.</div>`;
+  else if(st.status==="gate_b") b = `<div class="banner info"><b>Gate B is ready.</b> The evidence is scored. A named human records the decision.</div>`;
+  else if(st.status==="decided") b = `<div class="banner ok">Decision recorded: <b>${esc(st.decision.decision)}</b> by ${esc(st.decision.decided_by)} at ${esc(st.decision.at)}.</div>`;
+  $("#rbanner").innerHTML = b;
+  renderTrack(st);
+  tabsFor(st);
+  if(st.phase_a) renderGateA(st);
+  if(st.results){ renderResults(st); renderGateB(st) }
+  renderFiles(st);
+  await pullLog();
+  if(prev && prev !== st.status){
+    refreshRuns(); H = await api("/api/health");
+    if(st.status==="gate_a") setTab("gatea");
+    if(st.status==="gate_b") setTab("results");
+  }
+  if(!running && !["gate_a","gate_b"].includes(st.status)) { /* settle */ }
+}
+
+function renderTrack(st){
+  const all = [...H.stages.A, ...H.stages.B];
+  $("#track").innerHTML = all.map(([id,label]) => {
+    const s = st.stages[id] || "pending", gate = (id==="GA"||id==="GB");
+    let cls = s; if(gate && ((id==="GA"&&st.status==="gate_a")||(id==="GB"&&st.status==="gate_b"))) cls="running";
+    if(id==="GB" && st.status==="decided") cls="done";
+    return `<div class="st ${cls} ${gate?'gate':''}"><span class="dot"></span><span class="id">${id==="03m"?"03·map":id}</span>${esc(label)}</div>` }).join("");
+}
+
+async function pullLog(){
+  const r = await api(`/api/runs/${CUR}/log?after=${LOGNEXT}`);
+  if(!r.items.length) return;
+  LOGNEXT = r.next;
+  const box = $("#log");
+  box.insertAdjacentHTML("beforeend", r.items.map(e => `<div class="e ${e.kind}"><span class="k">${esc(e.t.slice(11))}</span>${esc(e.kind==="tool_out"? "  ↳ "+e.msg : e.msg)}</div>`).join(""));
+  if($("#follow")?.checked) box.scrollTop = box.scrollHeight;
+}
+
+let GA_SIG = null;
+function renderGateA(st){
+  const pa = st.phase_a, sig = st.status + (st.card_yaml||"").length + (st.gate_a_md||"").length;
+  if(GA_SIG === sig) return; GA_SIG = sig;
+  const at = st.status==="gate_a";
+  const cardAbs = H.repo.replace(/\\/g,"/")+"/"+pa.card_path;
+  $('[data-p="gatea"]').innerHTML = `
+   <div class="card"><h2>Gate A: the strategy card</h2>
+     <div class="md">${md(pa.plain_summary)}</div>
+     <div class="facts" style="margin-top:12px">
+       <div>Paper</div><div>${esc(pa.paper_title)}</div>
+       <div>Indian universe</div><div>${esc(pa.universe)}</div>
+       <div>Data verdict</div><div>${esc(pa.data_verdict)}</div>
+       <div>Card file</div><div><div class="path"><span title="${esc(cardAbs)}">${esc(cardAbs)}</span><button onclick="copy(this.previousElementSibling.title,this)">copy</button></div></div>
+     </div>
+     ${(pa.open_questions||[]).length?`<h3>For the human at Gate A</h3><ul>${pa.open_questions.map(q=>`<li>${esc(q)}</li>`).join("")}</ul>`:""}
+   </div>
+   ${at?`<div class="card"><h2>Your call at Gate A</h2>
+     <div class="grid2"><div><label>Approved by</label><input id="ga_by" value="${esc(LS.get('ly_operator',st.operator))}"></div><div></div></div>
+     <label>Notes for the backtest (optional; passed to stages 03–07) or what to change in the card</label><textarea id="ga_notes"></textarea>
+     <div class="row" style="margin-top:12px"><button class="primary" onclick="approveA()">Approve and run stages 03–07</button>
+       <button onclick="reviseA()">Revise the card with these notes</button><span class="small muted" id="ga_msg"></span></div></div>`
+   : st.approval?`<div class="banner ok">Approved by ${esc(st.approval.by)} at ${esc(st.approval.at)}${st.approval.notes?` · notes: ${esc(st.approval.notes)}`:""}</div>`:""}
+   <div class="grid2">
+     <div class="card"><h2>Card YAML</h2><pre class="yaml">${st.card_yaml?yamlHL(st.card_yaml):"(not found)"}</pre></div>
+     <div class="card"><h2>Gate A document</h2><div class="md" style="max-height:640px;overflow:auto">${st.gate_a_md?md(st.gate_a_md):"(not found)"}</div></div>
+   </div>`;
+}
+
+async function approveA(){
+  const by = $("#ga_by").value.trim(); if(!by){ $("#ga_msg").textContent="Name required."; return }
+  try{ await api(`/api/runs/${CUR}/approve`, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({by, notes:$("#ga_notes").value})}); GA_SIG=null; TAB="log"; tick() }
+  catch(e){ $("#ga_msg").textContent = e.message }
+}
+async function reviseA(){
+  const notes = $("#ga_notes").value.trim(); if(!notes){ $("#ga_msg").textContent="Write what should change."; return }
+  try{ await api(`/api/runs/${CUR}/revise`, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({notes})}); GA_SIG=null; TAB="log"; tick() }
+  catch(e){ $("#ga_msg").textContent = e.message }
+}
+
+let RES_SIG = null;
+function renderResults(st){
+  const sig = st.id + st.status + (st.workbook||"");
+  if(RES_SIG === sig) return; RES_SIG = sig; CHARTED = null;
+  const r = st.results, rc = st.recalc || {};
+  const rcText = rc.status ? `${rc.status==="success"?"✓":"!"} recalculated in LibreOffice · ${rc.total_formulas} formulas · ${rc.total_errors} errors` : (rc.error?`recalc: ${esc(rc.error).slice(0,160)}`:"");
+  $('[data-p="results"]').innerHTML = `
+    <div class="card"><div class="row" style="justify-content:space-between"><h2 style="margin:0">${esc(r.strategy_name)} vs ${esc(r.benchmark_name)}</h2>
+      <div class="row">${st.workbook?`<a href="/api/runs/${st.id}/workbook"><button class="primary">⬇ Download Excel</button></a>`:""}<span class="small muted">${rcText}</span></div></div>
+      <p class="muted" style="margin:8px 0 14px">${esc(r.headline)}</p>
+      <div class="kpis" id="kpis"></div><div class="small muted">Sharpe against a flat 6% hurdle. Every number is computed on the server from the run's daily returns, the same definitions as the workbook.</div></div>
+    <div class="grid2">
+      <div class="card"><h2>Growth of 100</h2><div class="chart" id="c_growth"></div></div>
+      <div class="card"><h2>Drawdown from peak</h2><div class="chart" id="c_dd"></div></div>
+      <div class="card"><h2>Rolling 3-month volatility (annualised)</h2><div class="chart" id="c_vol"></div></div>
+      <div class="card"><h2>Calendar-year return</h2><div class="chart" id="c_cal"></div></div>
+    </div>
+    <div class="card"><h2>Strategy monthly returns</h2><div class="chart" id="c_heat" style="height:300px"></div></div>
+    <div class="card hide" id="sleevecard"><h2 id="sleevetitle">Sleeve</h2><div class="chart" id="c_sleeve"></div></div>
+    <div class="card"><h2>Validation</h2><table class="t"><tr><th>Measure</th><th>Value</th><th>Source</th></tr>
+      ${(r.validation||[]).map(v=>`<tr><td>${esc(v.label)}</td><td>${typeof v.value==="number"?(v.format==="pct"?pct(v.value,2):v.format==="int"?Math.round(v.value):num(v.value)):esc(v.value)}</td><td class="small muted">${esc(v.source)}</td></tr>`).join("")}</table>
+      ${(r.notes||[]).length?`<h3>Caveats</h3><ul>${r.notes.map(n=>`<li>${esc(n)}</li>`).join("")}</ul>`:""}</div>`;
+  if(TAB==="results") drawCharts(true);
+}
+
+async function drawCharts(force){
+  if(!window.Plotly || !ST?.results || (CHARTED===CUR && !force)) return;
+  if(!$("#c_growth")) return;
+  let c; try{ c = await api(`/api/runs/${CUR}/charts`) }catch(e){ return }
+  CHARTED = CUR;
+  const col = {strategy:"#1f4e79", benchmark:"#d98324", sleeve:"#6a994e"};
+  const main = ["strategy","benchmark"].filter(k => c.growth[k]);
+  const lay = (yfmt, ytitle) => ({margin:{l:56,r:16,t:8,b:36}, font:{family:"Segoe UI, Arial", size:12}, hovermode:"x unified",
+      legend:{orientation:"h", y:-0.18}, yaxis:{tickformat:yfmt, title:ytitle, gridcolor:"#eef1f4", zerolinecolor:"#c9d1da"},
+      xaxis:{gridcolor:"#f3f5f7"}, paper_bgcolor:"#fff", plot_bgcolor:"#fff"});
+  const cfg = {displaylogo:false, responsive:true, modeBarButtonsToRemove:["lasso2d","select2d"]};
+  const line = (k, series, extra={}) => ({x:c.dates, y:series[k], name:c.names[k], type:"scatter", mode:"lines", line:{color:col[k], width:k==="strategy"?2.2:1.6}, ...extra});
+  Plotly.newPlot("c_growth", main.map(k=>line(k,c.growth)), {...lay(",.0f","Value")}, cfg);
+  Plotly.newPlot("c_dd", main.map(k=>line(k,c.drawdown,{fill:k==="strategy"?"tozeroy":"none", fillcolor:"rgba(31,78,121,.12)"})), {...lay(".0%","Drawdown")}, cfg);
+  Plotly.newPlot("c_vol", main.map(k=>line(k,c.rolling_vol)), {...lay(".0%","Volatility")}, cfg);
+  Plotly.newPlot("c_cal", main.map(k=>({x:c.calendar.years, y:c.calendar[k], name:c.names[k], type:"bar", marker:{color:col[k]},
+      text:c.calendar[k].map(v=>pct(v)), textposition:"outside", hovertemplate:"%{x}: %{y:.1%}<extra>"+c.names[k]+"</extra>"})), {...lay(".0%","Return"), barmode:"group", hovermode:"closest"}, cfg);
+  const z = c.monthly.z, mx = Math.max(0.01, ...z.flat().filter(v=>v!=null).map(Math.abs));
+  Plotly.newPlot("c_heat", [{z, x:c.monthly.months, y:c.monthly.years, type:"heatmap", zmin:-mx, zmax:mx, colorscale:[[0,"#b3261e"],[0.5,"#ffffff"],[1,"#2e7d4f"]],
+      text:z.map(r=>r.map(v=>v==null?"":(v*100).toFixed(1)+"%")), texttemplate:"%{text}", hovertemplate:"%{y} %{x}: %{z:.2%}<extra></extra>", colorbar:{tickformat:".0%"}}],
+      {...lay("",""), hovermode:"closest", yaxis:{type:"category", autorange:"reversed"}}, cfg);
+  if(c.growth.sleeve){ $("#sleevecard").classList.remove("hide"); $("#sleevetitle").textContent = c.names.sleeve+" (sleeve) vs NIFTY 500";
+    Plotly.newPlot("c_sleeve", ["sleeve","benchmark"].map(k=>line(k,c.growth)), {...lay(",.0f","Value")}, cfg) }
+  const m = c.metrics, K = [["CAGR","cagr",pct],["Volatility","vol",pct],["Sharpe vs 6%","sharpe",num],["Max drawdown","max_dd",pct],["Final value of 100","final",v=>num(v,1)]];
+  $("#kpis").innerHTML = K.map(([l,k,f]) => `<div class="kpi"><div class="l">${l}</div><div class="v">${f(m.strategy[k])}</div><div class="b">${esc(c.names.benchmark)}: ${f(m.benchmark[k])}</div></div>`).join("");
+}
+
+let GB_SIG = null;
+function renderGateB(st){
+  const sig = st.status + st.id; if(GB_SIG === sig) return; GB_SIG = sig;
+  const r = st.results, crit = r.gate_b.criteria || [], at = st.status==="gate_b";
+  const res = c => c.passed ? "PASS" : (c.blocking===false ? "NA" : "FAIL");
+  $('[data-p="gateb"]').innerHTML = `
+    <div class="card"><h2>Gate B: investment decision</h2>
+      <div class="facts"><div>Evidence supports</div><div><b>${esc(r.evidence_supports)}</b></div>
+        <div>Decisive criterion</div><div>${esc(r.decisive_criterion||"–")}</div>
+        <div>Decision</div><div><b>${st.decision?esc(st.decision.decision):"PENDING"}</b></div></div>
+      <h3>Criteria (computed by gate_b())</h3>
+      <table class="t"><tr><th>Criterion</th><th style="width:110px">Result</th><th>Value</th><th>Threshold</th></tr>
+        ${crit.map(c=>{const x=res(c);return `<tr><td>${esc(c.name)}</td><td class="${x}">${x==="NA"?"not computed":x}</td><td>${esc(c.value)}</td><td>${esc(c.threshold)}</td></tr>`}).join("")}</table></div>
+    ${at?`<div class="card"><h2>Record the decision</h2>
+      <p class="small muted">This is the one stop in the chain. No model votes. The record is written to the run folder and to outputs/lightyear/decisions.jsonl.</p>
+      <div class="decide">${["APPROVE","OBSERVE","FIX","REJECT"].map(d=>`<button class="d-${d} ${DEC===d?'on':''}" onclick="pickDec('${d}')">${d}</button>`).join("")}</div>
+      <div class="grid2"><div><label>Decided by (named human)</label><input id="gb_by" value="${esc(LS.get('ly_operator',''))}"></div><div></div></div>
+      <label>Rationale</label><textarea id="gb_why"></textarea>
+      <div class="row" style="margin-top:12px"><button class="primary" onclick="decideB()">Record decision</button><span class="small muted" id="gb_msg"></span></div></div>`
+    : st.decision?`<div class="card"><h2>Decision on record</h2><div class="facts"><div>Decision</div><div class="d-${esc(st.decision.decision)}"><b>${esc(st.decision.decision)}</b></div><div>By</div><div>${esc(st.decision.decided_by)}</div><div>When</div><div>${esc(st.decision.at)}</div><div>Rationale</div><div>${esc(st.decision.rationale)}</div></div></div>`:""}
+    <div class="card"><h2>Gate B brief</h2><div class="md">${st.gate_b_md?md(st.gate_b_md):"(no brief file)"}</div></div>`;
+}
+function pickDec(d){ DEC = d; document.querySelectorAll(".decide button").forEach(b=>b.classList.toggle("on", b.textContent===d)) }
+async function decideB(){
+  const by = $("#gb_by").value.trim(), why = $("#gb_why").value.trim();
+  if(!DEC){ $("#gb_msg").textContent="Pick a decision."; return } if(!by||!why){ $("#gb_msg").textContent="Name and rationale required."; return }
+  if(!confirm(`Record ${DEC} by ${by}? This goes on the record.`)) return;
+  try{ await api(`/api/runs/${CUR}/decide`, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({decision:DEC, by, rationale:why})}); GB_SIG=null; tick() }
+  catch(e){ $("#gb_msg").textContent = e.message }
+}
+
+let F_SIG = null;
+function renderFiles(st){
+  const sig = (st.files_abs||[]).join("|"); if(F_SIG === sig) return; F_SIG = sig;
+  $('[data-p="files"]').innerHTML = `<div class="card"><h2>Every file this run wrote or read</h2>
+    <p class="small muted">Local paths. Copy one and open it from Explorer or VS Code.</p>
+    ${(st.files_abs||[]).map(p=>`<div class="path"><span title="${esc(p)}">${esc(p)}</span><button onclick="copy(this.previousElementSibling.title,this)">copy</button></div>`).join("")}</div>`;
+}
+
+async function act(what){
+  if(what==="cancel" && !confirm("Cancel the running phase? Claude Code is stopped; files written so far stay.")) return;
+  try{ await api(`/api/runs/${CUR}/${what}`, {method:"POST"}); H = await api("/api/health"); tick(); refreshRuns() }catch(e){ alert(e.message) }
+}
+window.addEventListener("resize", () => { if(window.Plotly) document.querySelectorAll(".chart .js-plotly-plot").forEach(p => Plotly.Plots.resize(p)) });
+boot();
+</script>
+</body>
+</html>
