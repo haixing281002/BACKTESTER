@@ -49,7 +49,15 @@ def state_path(rid):
 
 
 def load(rid):
-    return json.load(open(state_path(rid), encoding="utf-8"))
+    # Under the same lock as save(): on Windows, os.replace fails while another thread holds the file open.
+    for attempt in range(20):
+        try:
+            with _lock, open(state_path(rid), encoding="utf-8") as f:
+                return json.load(f)
+        except (PermissionError, json.JSONDecodeError):
+            if attempt == 19:
+                raise
+            time.sleep(0.05)
 
 
 def save(st):
@@ -57,8 +65,16 @@ def save(st):
         st["updated"] = now()
         p = state_path(st["id"])
         tmp = p + ".tmp"
-        json.dump(st, open(tmp, "w", encoding="utf-8"), indent=1, default=str)
-        os.replace(tmp, p)
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(st, f, indent=1, default=str)
+        for attempt in range(20):
+            try:
+                os.replace(tmp, p)
+                return
+            except PermissionError:          # a reader outside this process (antivirus, an editor) has it open
+                if attempt == 19:
+                    raise
+                time.sleep(0.05)
 
 
 def update(rid, **kw):
@@ -210,7 +226,7 @@ def stage_estimates():
             if not os.path.exists(p):
                 continue
             try:
-                times = json.load(open(p, encoding="utf-8")).get("stage_times", {})
+                times = load(rid).get("stage_times", {})
             except Exception:
                 continue
             for s, tt in times.items():
