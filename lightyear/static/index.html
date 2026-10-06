@@ -4,9 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Lightyear</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.35.2/plotly.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
+<!-- served from lightyear/static/vendor so the page works offline and behind a corporate proxy -->
+<script src="/static/vendor/plotly.min.js"></script>
+<script src="/static/vendor/marked.min.js"></script>
+<script src="/static/vendor/purify.min.js"></script>
 <style>
 :root{
   --bg:#f4f6f9; --panel:#ffffff; --ink:#1b2430; --muted:#5d6b7c; --line:#dfe4ea;
@@ -56,7 +57,7 @@ label{font-size:12px;color:var(--muted);display:block;margin:10px 0 4px}
 .drop b{color:var(--navy)}
 /* stage tracker */
 .track{display:flex;align-items:stretch;gap:0;overflow-x:auto;padding:4px 0 10px}
-.st{flex:1;min-width:92px;text-align:center;position:relative;padding-top:30px;font-size:11.5px;color:var(--muted)}
+.st{flex:1;min-width:96px;text-align:center;position:relative;padding:30px 4px 0;font-size:11.5px;line-height:1.3;color:var(--muted)}
 .st::before{content:"";position:absolute;top:13px;left:0;right:0;height:3px;background:var(--line)}
 .st:first-child::before{left:50%}.st:last-child::before{right:50%}
 .st .dot{position:absolute;top:4px;left:50%;transform:translateX(-50%);width:21px;height:21px;border-radius:50%;background:#fff;border:3px solid var(--line);z-index:1}
@@ -174,6 +175,7 @@ async function boot(){
     <span class="chip ${H.libreoffice?'ok':'bad'}">LibreOffice ${H.libreoffice?'ready':'missing'}</span>
     <span class="chip">local only · 127.0.0.1</span>`;
   await refreshRuns();
+  const qtab = new URLSearchParams(location.search).get("tab"); if(qtab) TAB = qtab;
   const want = location.hash.slice(1) || LS.get("ly_run","");
   if(want) openRun(want).catch(showNew); else showNew();
 }
@@ -383,7 +385,8 @@ async function drawCharts(force){
   Plotly.newPlot("c_dd", main.map(k=>line(k,c.drawdown,{fill:k==="strategy"?"tozeroy":"none", fillcolor:"rgba(31,78,121,.12)"})), {...lay(".0%","Drawdown")}, cfg);
   Plotly.newPlot("c_vol", main.map(k=>line(k,c.rolling_vol)), {...lay(".0%","Volatility")}, cfg);
   Plotly.newPlot("c_cal", main.map(k=>({x:c.calendar.years, y:c.calendar[k], name:c.names[k], type:"bar", marker:{color:col[k]},
-      text:c.calendar[k].map(v=>pct(v)), textposition:"outside", hovertemplate:"%{x}: %{y:.1%}<extra>"+c.names[k]+"</extra>"})), {...lay(".0%","Return"), barmode:"group", hovermode:"closest"}, cfg);
+      text:c.calendar[k].map(v=>pct(v)), textposition:"outside", cliponaxis:false, hovertemplate:"%{x}: %{y:.1%}<extra>"+c.names[k]+"</extra>"})),
+      {...lay(".0%","Return"), margin:{l:56,r:16,t:26,b:40}, barmode:"group", hovermode:"closest"}, cfg);
   const z = c.monthly.z, mx = Math.max(0.01, ...z.flat().filter(v=>v!=null).map(Math.abs));
   Plotly.newPlot("c_heat", [{z, x:c.monthly.months, y:c.monthly.years, type:"heatmap", zmin:-mx, zmax:mx, colorscale:[[0,"#b3261e"],[0.5,"#ffffff"],[1,"#2e7d4f"]],
       text:z.map(r=>r.map(v=>v==null?"":(v*100).toFixed(1)+"%")), texttemplate:"%{text}", hovertemplate:"%{y} %{x}: %{z:.2%}<extra></extra>", colorbar:{tickformat:".0%"}}],

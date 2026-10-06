@@ -17,7 +17,17 @@ def main():
     url = f"http://127.0.0.1:{a.port}"
     print(f"Lightyear on {url}  (local only; Ctrl+C to stop)")
     if not a.no_browser:
-        threading.Timer(1.5, lambda: webbrowser.open(url)).start()
+        def open_when_ready():
+            import socket
+            import time
+            for _ in range(240):                       # wait up to 60 s for the server to listen
+                try:
+                    socket.create_connection(("127.0.0.1", a.port), timeout=0.5).close()
+                    webbrowser.open(url)
+                    return
+                except OSError:
+                    time.sleep(0.25)
+        threading.Thread(target=open_when_ready, daemon=True).start()
     uvicorn.run("lightyear.server:app", host="127.0.0.1", port=a.port, log_level="warning")
 
 
