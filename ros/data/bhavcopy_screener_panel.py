@@ -189,18 +189,71 @@ def coverage_report(panel: pd.DataFrame) -> Dict[str, float]:
     }
 
 
-def manifest_stanza(out_path: str, top_n: int = 500) -> str:
-    rel = os.path.relpath(out_path, "data/raw")
-    return f"""bhavcopy_screener_panel:
-  file: {rel}
-  pit_status: not_point_in_time   # the universe and traded value are point in time; the share counts are NOT
-  licence: "NSE bhavcopy public archive and Screener.in public pages; personal research use; not redistributed"
-  caveats:
-    - "Only two sources: NSE bhavcopy and Screener.in. Nothing else enters this panel."
-    - "Shares are today's shares (Screener market cap / price) carried back. Share issuance inside the window is not captured."
-    - "Screener lists only companies that exist today; delisted names have no shares and no turnover (survivorship bias). See coverage_report()."
-    - "Universe is top-{top_n} by trailing traded value, not by market cap and not an official index."
-    - "Corporate-action neutralisation is a heuristic threshold on daily gross return; see ca_events."
-    - "Prices are raw bhavcopy, price return only, no dividends."
-    - "Free-float fraction is a current promoter-holding snapshot."
-"""
+def to_master_frame(panel: pd.DataFrame) -> pd.DataFrame:
+    """The panel in ros/data/master.py's long shape, with the turnover column kept.
+
+    adj_close   corporate-action-neutralised close, rescaled to today's share basis
+    adv         that day's traded value in Rs crore (a daily value, not an average)
+    market_cap  adjusted close x today's shares, Rs crore (NOT point-in-time)
+    The extra columns (turnover_window, free_float_frac) ride along; master.py ignores
+    what it does not know.
+    """
+    keep = ["date", "security_id", "symbol", "adj_close_now_basis", "in_universe",
+            "traded_value_cr", "mcap_cr_est", "turnover_window", "free_float_frac"]
+    m = panel[keep].rename(columns={"adj_close_now_basis": "adj_close",
+                                    "traded_value_cr": "adv", "mcap_cr_est": "market_cap"})
+    return m
+
+
+def shares_snapshot_frame(shares: pd.DataFrame, asof: str) -> pd.DataFrame:
+    """One row per symbol, dated with the day Screener was fetched. This is a snapshot,
+    not a history: the date column only records when it was read."""
+    out = shares.copy()
+    out.insert(0, "date", asof)
+    return out
+
+
+def manifest_stanza(master_path: str, shares_path: str, top_n: int = 1000) -> str:
+    """The block to paste into data/raw/MANIFEST.yaml. The master block feeds the engine;
+    the two series entries are what Step 03 reads, under the names the card requires."""
+    mrel = os.path.relpath(master_path, "data/raw").replace("\\", "/")
+    srel = os.path.relpath(shares_path, "data/raw").replace("\\", "/")
+    caveats = [
+        "Only two sources: NSE bhavcopy and Screener.in. Nothing else enters this panel.",
+        "Shares are today's shares (Screener market cap / price) carried back. Share issuance inside the window is not captured, and Screener is not point-in-time.",
+        "Screener lists only companies that exist today; delisted names have no shares and no turnover (survivorship bias). See coverage_report().",
+        f"Universe is top-{top_n} by trailing traded value, not by market cap and not an official index.",
+        "Corporate-action neutralisation is a heuristic threshold on daily gross return; a real move outside 0.72 to 1.40 in one day is flattened.",
+        "Prices are raw bhavcopy, price return only, no dividends.",
+        "Free-float fraction is a current promoter-holding snapshot.",
+    ]
+    cav = "".join(f'      - "{c}"\n' for c in caveats)
+    return (
+        "master:\n"
+        f"  file: {mrel}\n"
+        "  pit_status: backfilled   # traded value and membership are point in time; shares and market cap are not\n"
+        '  licence: "NSE bhavcopy public archive and Screener.in public pages; personal research use; not redistributed"\n'
+        "\nseries:\n"
+        "  - name: NSE_BHAVCOPY_STOCK_PANEL\n"
+        "    kind: price\n"
+        "    frequency: daily\n"
+        f"    file: {mrel}\n"
+        "    date_column: date\n"
+        "    pit_status: backfilled\n"
+        '    licence: "NSE bhavcopy public archive; personal research use"\n'
+        '    coverage_note: "raw daily close and traded value for every main-board stock incl. delisted, corporate-action neutralised, top-N by trailing traded value with in_universe flag"\n'
+        "    caveats:\n" + cav +
+        "  - name: Screener.in current shares\n"
+        "    kind: fundamental\n"
+        "    frequency: annual\n"
+        f"    file: {srel}\n"
+        "    date_column: date\n"
+        "    pit_status: backfilled\n"
+        '    licence: "Screener.in public pages; personal research use; not redistributed"\n'
+        '    coverage_note: "one row per symbol: current market cap / price = shares in crore, promoter holding; a snapshot dated the day of fetch"\n'
+        "    caveats:\n"
+        '      - "Restated latest values, not point in time; the date column is the fetch date, not an announcement date."\n'
+        '      - "Only companies that exist today have a page, so delisted names are missing."\n'
+    )
+
+

@@ -535,6 +535,22 @@ python -m ros.interpretation history                      # who interpreted what
   never on the NSE symbol: symbols get reused and a rename splices two companies
   into one series. See `data/raw/master/README.md`.
 
+## Presentation: clean and professional, for every paper
+
+**Added 2026-10-06 at the operator's instruction.** A result is shown as the strategy against **NIFTY 500**, and nothing else,
+in the charts and in the headline table. At most ONE extra sleeve may appear, and only when it is genuinely important, on its own
+chart (`universal_backtester/clean_charts.py` writes this set: cumulative return, drawdown, rolling volatility, calendar-year
+returns, exposure, and an optional single-sleeve chart). Comparators the card's `must_beat` list needs for its tests belong in an
+appendix file and sheet, not in the headline. Do not plot six lines; nobody can read them.
+`universal_backtester/charting.py` (plots every series it is given) is kept for old scripts and should not be used for a new paper.
+
+**Every Excel file follows the xlsx skill:** Arial throughout; blue text for hardcoded inputs, black for formulas, yellow fill for key
+assumptions; formulas rather than pasted results (the Summary of a results workbook is formulas over a Returns sheet); every hardcoded
+number and assumption documented next to it with its source; percentages stored as fractions; zero formula errors after
+`recalc.py` (it needs LibreOffice; where that is not installed, say so and verify the formulas independently).
+`scripts/lee_swaminathan_1998_build_workbook.py` is the worked example. `universal_backtester/excel_tearsheet.py` predates this rule
+and has not been brought into line.
+
 ## Data
 
 `data/raw/Factor_Indices_Historical_Price_Data.xlsx` — eight NSE daily close

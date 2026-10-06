@@ -186,3 +186,36 @@ def test_universe_symbols_lists_everyone_who_was_ever_in(tmp_path):
                {"AAA": 3e8, "BBB": 1e8})
     syms = universe_symbols(df, top_n=2, lookback_sessions=20, min_sessions=10)
     assert syms == ["AAA", "BBB"]
+
+
+# ------------------------------------------------------------------ master export and manifest
+def test_master_frame_uses_master_py_column_names_and_keeps_turnover(tmp_path):
+    from ros.data.bhavcopy_screener_panel import to_master_frame
+    days = pd.bdate_range("2023-01-02", periods=60)
+    df = _bhav(days, {("AAA", "INE111A01011"): np.full(60, 100.0)}, {"AAA": 5e8})
+    _scr(tmp_path, "AAA", mcap_cr=1000.0, price=100.0)
+    shares = screener_shares(str(tmp_path), ["AAA"])
+    panel = build_turnover_panel(df, shares, top_n=1, window=10, lookback_sessions=20, min_sessions=10)
+    m = to_master_frame(panel)
+    assert {"date", "security_id", "symbol", "adj_close", "in_universe", "adv", "market_cap",
+            "turnover_window"} <= set(m.columns)
+    assert m["adj_close"].iloc[0] == pytest.approx(100.0)
+
+
+def test_shares_snapshot_carries_the_fetch_date(tmp_path):
+    from ros.data.bhavcopy_screener_panel import shares_snapshot_frame
+    _scr(tmp_path, "AAA", mcap_cr=1000.0, price=100.0)
+    snap = shares_snapshot_frame(screener_shares(str(tmp_path), ["AAA"]), "2026-10-06")
+    assert list(snap.columns)[0] == "date" and snap["date"].iloc[0] == "2026-10-06"
+
+
+def test_manifest_stanza_is_valid_yaml_with_the_names_the_card_requires():
+    import yaml
+    from ros.data.bhavcopy_screener_panel import manifest_stanza
+    from ros.data.intake import PIT_STATUSES, _validate_entry
+    blob = yaml.safe_load(manifest_stanza("data/raw/master/m.csv", "data/raw/master/s.csv", 1000))
+    assert blob["master"]["pit_status"] in PIT_STATUSES
+    names = [e["name"] for e in blob["series"]]
+    assert names == ["NSE_BHAVCOPY_STOCK_PANEL", "Screener.in current shares"]
+    for i, e in enumerate(blob["series"]):
+        assert not [x for x in _validate_entry(e, i) if "file not found" not in x]

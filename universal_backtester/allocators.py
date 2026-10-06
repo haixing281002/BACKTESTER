@@ -437,3 +437,90 @@ class CrossSectionalLongShort(Allocator):
     def diagnostics(self) -> Dict[str, Any]:
         return {"rebalances_skipped_thin_universe": self._skipped,
                 "mean_names_held_both_legs": (float(np.mean(self._held)) if self._held else 0.0)}
+
+
+@register("two_way_cell_tranches")
+class TwoWayCellTranches(Allocator):
+    """Long one cell, short another, hold K overlapping monthly tranches.
+
+    Built for Lee & Swaminathan (1998), where stocks are sorted independently on past
+    return (deciles) and past turnover (terciles) and the strategy buys one intersection
+    cell and sells another, holding K months with Jegadeesh-Titman overlapping portfolios.
+
+    The two-way sort itself is NOT done here. The caller passes `alpha` as a cell
+    indicator frame: +1 = in the long cell, -1 = in the short cell, 0 = in neither, NaN =
+    not rankable. That keeps the sort in a plain, testable function and keeps this class
+    to what an allocator should do: turn a membership indicator into weights.
+
+    On each rebalance date it forms a tranche (equal weight inside each leg, `long_weight`
+    and `short_weight` of gross), appends it to the K most recent successful tranches, and
+    targets their equal-weighted average. A name that is no longer eligible gets zero (cash,
+    not re-levered). If either needed leg has fewer than `min_cell` names the month is
+    SKIPPED: the book is carried forward unchanged, no tranche is added and none is
+    dropped, and the month is counted in diagnostics. Single-sided use: set `short_weight`
+    to 0 (then only the long cell must reach `min_cell`).
+
+    Simplification to be aware of: the paper lets each tranche drift on its own; here the
+    combined book is reset to equal tranche weights at each monthly rebalance.
+
+    Parameters
+    ----------
+    k_tranches   : number of overlapping monthly tranches (the paper's K)
+    long_weight  : gross weight on the long cell per tranche (default 0.5)
+    short_weight : gross weight on the short cell per tranche (default 0.5; 0 = long only)
+    min_cell     : minimum names in each needed cell, else skip the month
+    """
+    requires = ("alpha", "eligible")
+
+    def __init__(self, assets, k_tranches=6, long_weight=0.5, short_weight=0.5,
+                 min_cell=15, **kw):
+        super().__init__(assets, k_tranches=k_tranches, long_weight=long_weight,
+                         short_weight=short_weight, min_cell=min_cell, **kw)
+        if int(k_tranches) < 1:
+            raise ValueError("k_tranches must be at least 1")
+        self.k = int(k_tranches)
+        self.long_weight = float(long_weight)
+        self.short_weight = float(short_weight)
+        self.min_cell = int(min_cell)
+        self._tranches: List[np.ndarray] = []
+        self._formed = 0
+        self._skipped = 0
+        self._skip_dates: List[str] = []
+        self._n_long: List[int] = []
+        self._n_short: List[int] = []
+
+    def target_weights(self, ctx: AllocatorContext) -> np.ndarray:
+        a = np.nan_to_num(np.asarray(ctx.alpha, dtype=float), nan=0.0)
+        elig = np.asarray(ctx.eligible, dtype=bool)
+        long_m = (a > 0.5) & elig
+        short_m = (a < -0.5) & elig
+        n_long, n_short = int(long_m.sum()), int(short_m.sum())
+        need_long = self.long_weight > 0
+        need_short = self.short_weight > 0
+        if (need_long and n_long < self.min_cell) or (need_short and n_short < self.min_cell):
+            self._skipped += 1
+            self._skip_dates.append(str(pd.Timestamp(ctx.date).date()))
+            return ctx.current_weights.copy()
+
+        w = np.zeros(self.n)
+        if need_long:
+            w[long_m] = self.long_weight / n_long
+        if need_short:
+            w[short_m] = -self.short_weight / n_short
+        self._tranches.append(w)
+        self._tranches = self._tranches[-self.k:]
+        self._formed += 1
+        self._n_long.append(n_long)
+        self._n_short.append(n_short)
+        target = np.mean(self._tranches, axis=0)
+        target[~elig] = 0.0
+        return target
+
+    def diagnostics(self) -> Dict[str, Any]:
+        return {"tranches_formed": self._formed,
+                "months_skipped_thin_cell": self._skipped,
+                "skipped_dates": list(self._skip_dates),
+                "mean_long_names_formed": (float(np.mean(self._n_long)) if self._n_long else 0.0),
+                "mean_short_names_formed": (float(np.mean(self._n_short)) if self._n_short else 0.0),
+                "min_long_names_formed": (int(np.min(self._n_long)) if self._n_long else 0),
+                "min_short_names_formed": (int(np.min(self._n_short)) if self._n_short else 0)}
