@@ -12,7 +12,7 @@
 :root{
   --bg:#f4f6f9; --panel:#ffffff; --ink:#1b2430; --muted:#5d6b7c; --line:#dfe4ea;
   --navy:#1f4e79; --navy2:#163a5c; --amber:#d98324; --green:#2e7d4f; --red:#b3261e; --grey:#8a96a3;
-  --pass:#e3f3e8; --fail:#fbe5e3; --na:#eceef1; --run:#fff4e0; --code:#f7f9fb;
+  --pass:#e3f3e8; --fail:#fbe5e3; --na:#eceef1; --run:#fff4e0; --code:#f7f9fb; --soft:#eef3f8;
   --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
 }
 *{box-sizing:border-box}
@@ -31,14 +31,14 @@ button{font:inherit;border:1px solid var(--line);background:#fff;border-radius:6
 button.primary{background:var(--navy);border-color:var(--navy);color:#fff}
 button.primary:hover{background:var(--navy2)}
 button.danger{color:var(--red);border-color:#e7b7b2}
-button:disabled{opacity:.5;cursor:not-allowed}
+button:disabled{opacity:.45;cursor:not-allowed}
 input,select,textarea{font:inherit;border:1px solid var(--line);border-radius:6px;padding:7px 9px;width:100%;background:#fff;color:var(--ink)}
 textarea{min-height:70px;resize:vertical}
 label{font-size:12px;color:var(--muted);display:block;margin:10px 0 4px}
 .runlist{list-style:none;margin:12px 0 0;padding:0}
 .runlist li{padding:9px 10px;border-radius:6px;cursor:pointer;border:1px solid transparent;margin-bottom:4px}
 .runlist li:hover{background:var(--bg)}
-.runlist li.sel{border-color:var(--navy);background:#eef3f8}
+.runlist li.sel{border-color:var(--navy);background:var(--soft)}
 .runlist .t{font-weight:600;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .runlist .s{font-size:11px;color:var(--muted)}
 .pill{display:inline-block;border-radius:12px;padding:1px 9px;font-size:11px;font-weight:600;background:var(--na);color:var(--muted)}
@@ -53,10 +53,10 @@ label{font-size:12px;color:var(--muted);display:block;margin:10px 0 4px}
 .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .drop{border:2px dashed #b9c6d4;border-radius:10px;padding:26px;text-align:center;color:var(--muted);cursor:pointer;background:#fafcfe}
-.drop.over{border-color:var(--navy);background:#eef3f8}
+.drop.over{border-color:var(--navy);background:var(--soft)}
 .drop b{color:var(--navy)}
 /* stage tracker */
-.track{display:flex;align-items:stretch;gap:0;overflow-x:auto;padding:4px 0 10px}
+.track{display:flex;align-items:stretch;overflow-x:auto;padding:4px 0 6px}
 .st{flex:1;min-width:96px;text-align:center;position:relative;padding:30px 4px 0;font-size:11.5px;line-height:1.3;color:var(--muted)}
 .st::before{content:"";position:absolute;top:13px;left:0;right:0;height:3px;background:var(--line)}
 .st:first-child::before{left:50%}.st:last-child::before{right:50%}
@@ -66,12 +66,31 @@ label{font-size:12px;color:var(--muted);display:block;margin:10px 0 4px}
 .st.running .dot{border-color:var(--amber);background:#fff;animation:pulse 1.2s infinite}
 .st.running{color:var(--ink);font-weight:600}
 .st.gate{color:var(--navy);font-weight:700}
+.st.halt .dot{border-color:var(--red)} .st.halt{color:var(--red)}
 .st .id{display:block;font-family:var(--mono);font-size:10.5px}
 @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(217,131,36,.6)}70%{box-shadow:0 0 0 9px rgba(217,131,36,0)}100%{box-shadow:0 0 0 0 rgba(217,131,36,0)}}
-.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin:4px 0 16px}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin:4px 0 16px;flex-wrap:wrap}
 .tab{padding:8px 14px;border:0;border-bottom:3px solid transparent;border-radius:0;background:none;color:var(--muted)}
 .tab.on{color:var(--navy);border-bottom-color:var(--navy);font-weight:600}
+.tab.tech{margin-left:auto;font-size:12px}
 .tab .badge{background:var(--amber);color:#fff;border-radius:8px;padding:0 6px;font-size:10px;margin-left:5px}
+/* progress */
+.eta{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+.eta .big{font-size:26px;font-weight:700;color:var(--navy)}
+.bar{height:10px;background:var(--soft);border-radius:6px;overflow:hidden;margin:10px 0 6px}
+.bar > div{height:100%;background:linear-gradient(90deg,var(--navy),#3d7ab3);border-radius:6px;transition:width .8s ease}
+.bar.indet > div{width:35%!important;animation:slide 1.6s infinite ease-in-out}
+@keyframes slide{0%{margin-left:-35%}100%{margin-left:100%}}
+.now{display:flex;gap:12px;align-items:flex-start;background:var(--soft);border-radius:8px;padding:12px 14px}
+.now .spin{width:18px;height:18px;border:3px solid #c9d7e6;border-top-color:var(--navy);border-radius:50%;animation:rot 1s linear infinite;flex:none;margin-top:2px}
+@keyframes rot{to{transform:rotate(360deg)}}
+.fact{min-height:150px;display:flex;flex-direction:column;justify-content:center;padding:6px 4px}
+.fact .kind{font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--amber);font-weight:700}
+.fact .txt{font-size:18px;line-height:1.55;margin-top:6px;transition:opacity .4s}
+.fact .src{font-size:12px;color:var(--muted);margin-top:10px}
+.dots{display:flex;gap:5px;justify-content:center;margin-top:8px;flex-wrap:wrap}
+.dots span{width:7px;height:7px;border-radius:50%;background:var(--line);cursor:pointer}
+.dots span.on{background:var(--navy)}
 /* log */
 .log{background:#0f1720;color:#d8dee6;font:12px/1.55 var(--mono);border-radius:8px;padding:12px;height:560px;overflow:auto;white-space:pre-wrap;word-break:break-word}
 .log .e{padding:2px 0;border-bottom:1px solid #1b2633}
@@ -82,7 +101,7 @@ label{font-size:12px;color:var(--muted);display:block;margin:10px 0 4px}
 pre.yaml,pre.code{background:var(--code);border:1px solid var(--line);border-radius:8px;padding:12px;font:12px/1.5 var(--mono);overflow:auto;max-height:620px;margin:0}
 .yk{color:var(--navy);font-weight:600}.yc{color:#7b8794;font-style:italic}.ys{color:#2e7d4f}
 .md{line-height:1.6}.md table{border-collapse:collapse;margin:8px 0;font-size:13px}.md th,.md td{border:1px solid var(--line);padding:4px 8px}
-.md th{background:#eef3f8}.md code{background:var(--code);padding:1px 4px;border-radius:4px;font-size:12px}
+.md th{background:var(--soft)}.md code{background:var(--code);padding:1px 4px;border-radius:4px;font-size:12px}
 .md pre{background:var(--code);padding:10px;border-radius:6px;overflow:auto}
 .md h1{font-size:18px;color:var(--navy)}.md h2{font-size:16px;color:var(--navy)}.md h3{font-size:14px}
 .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:6px}
@@ -93,25 +112,48 @@ pre.yaml,pre.code{background:var(--code);border:1px solid var(--line);border-rad
 .chart{height:340px}
 table.t{border-collapse:collapse;width:100%;font-size:13px}
 table.t th{background:var(--navy);color:#fff;text-align:left;padding:7px 9px;font-weight:600}
-table.t td{border-bottom:1px solid var(--line);padding:6px 9px}
+table.t td{border-bottom:1px solid var(--line);padding:7px 9px;vertical-align:top}
 td.PASS{background:var(--pass);color:var(--green);font-weight:700;text-align:center}
 td.FAIL{background:var(--fail);color:var(--red);font-weight:700;text-align:center}
 td.NA{background:var(--na);color:var(--muted);text-align:center}
+.tag{display:inline-block;border-radius:10px;padding:0 8px;font-size:11px;font-weight:600;white-space:nowrap}
+.tag.ok,.tag.held,.tag.low{background:var(--pass);color:var(--green)}
+.tag.warn,.tag.proxy,.tag.fetch,.tag.medium{background:var(--run);color:#8a5a00}
+.tag.bad,.tag.missing,.tag.high{background:var(--fail);color:var(--red)}
 .decide{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
 .decide button{min-width:110px;font-weight:600}
 .decide button.on{outline:3px solid var(--amber)}
 .d-APPROVE{color:var(--green)} .d-REJECT{color:var(--red)} .d-FIX{color:#8a5a00} .d-OBSERVE{color:var(--navy)}
-.banner{border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:13px}
+.banner{border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:13px}
 .banner.err{background:var(--fail);color:var(--red)} .banner.info{background:#e5eef8;color:var(--navy)}
 .banner.ok{background:var(--pass);color:var(--green)}
 .path{font:12px var(--mono);background:var(--code);border:1px solid var(--line);border-radius:6px;padding:5px 8px;display:flex;gap:8px;align-items:center;margin-bottom:4px}
 .path span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .path button{padding:2px 8px;font-size:11px}
-.empty{text-align:center;padding:60px 20px;color:var(--muted)}
-.facts{display:grid;grid-template-columns:160px 1fr;gap:6px 14px;font-size:13px}
-.facts div:nth-child(odd){color:var(--muted)}
+.facts{display:grid;grid-template-columns:170px 1fr;gap:6px 14px;font-size:13px}
+.facts > div:nth-child(odd){color:var(--muted)}
+.lead{font-size:18px;font-weight:600;color:var(--ink);line-height:1.45;margin:0 0 8px}
+ol.steps{margin:6px 0 0;padding-left:22px} ol.steps li{margin:4px 0}
+.chk{display:grid;grid-template-columns:26px 1fr;gap:4px 10px;border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:8px;background:#fff}
+.chk.on{border-color:var(--green);background:#f6fbf7}
+.chk input{width:18px;height:18px;margin-top:2px}
+.chk .it{font-weight:600}
+.chk .sub{grid-column:2;font-size:12.5px;color:var(--muted)}
+.chk .sub b{color:var(--ink);font-weight:600}
+.gap{display:grid;grid-template-columns:78px 1fr;gap:4px 10px;padding:9px 0;border-bottom:1px solid var(--line)}
+.gap:last-child{border-bottom:0}
+.gap .e{grid-column:2;font-size:12.5px;color:var(--muted)}
+.pn{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.pn ul{list-style:none;padding:0;margin:0}
+.pn li{padding:8px 10px 8px 34px;position:relative;border-bottom:1px solid var(--line)}
+.pn li:last-child{border-bottom:0}
+.pn .pos li::before{content:"▲";position:absolute;left:10px;color:var(--green)}
+.pn .neg li::before{content:"▼";position:absolute;left:10px;color:var(--red)}
+.pn h3{margin-top:0}
+.src{font-size:10.5px;color:var(--grey);text-transform:uppercase;letter-spacing:.4px;margin-left:6px}
+details{margin-top:6px} summary{cursor:pointer;color:var(--navy);font-weight:600}
 .hide{display:none!important}
-@media (max-width:900px){.wrap{grid-template-columns:1fr}aside{border-right:0;border-bottom:1px solid var(--line)}.grid2,.kpis{grid-template-columns:1fr 1fr}}
+@media (max-width:900px){.wrap{grid-template-columns:1fr}aside{border-right:0;border-bottom:1px solid var(--line)}.grid2,.kpis,.pn{grid-template-columns:1fr 1fr}.facts{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -133,13 +175,13 @@ td.NA{background:var(--na);color:var(--muted);text-align:center}
 <template id="tpl-new">
   <div class="card" style="max-width:760px">
     <h2>Run a paper through the pipeline</h2>
-    <p class="muted small">Claude Code (headless, your login) reads the paper and writes the card up to Gate A. After you approve, it runs the backtest and assembles Gate B. You make the decision at Gate B.</p>
+    <p class="muted small">Lightyear reads the paper and writes a strategy card up to Gate A. After you approve it, it runs the backtest on Indian data and prepares Gate B. You make the decision at Gate B.</p>
     <div class="drop" id="drop"><b>Drop a PDF here</b> or click to choose<br><span class="small" id="dropname">No file chosen</span>
       <input type="file" id="file" accept="application/pdf" class="hide"></div>
     <label>…or a paper already in docs/papers</label>
     <select id="existing"><option value="">(none)</option></select>
     <div class="grid2">
-      <div><label>Operator (named human)</label><input id="operator" placeholder="Your name"></div>
+      <div><label>Your name (operator)</label><input id="operator" placeholder="Your name"></div>
       <div><label>Model for Claude Code</label>
         <select id="model"><option value="">Your Claude Code default</option><option value="opus">Opus</option><option value="sonnet">Sonnet</option></select></div>
     </div>
@@ -152,21 +194,51 @@ td.NA{background:var(--na);color:var(--muted);text-align:center}
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const LS = {get(k,d){try{return localStorage.getItem(k)??d}catch(e){return d}}, set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
-let H = null, CUR = null, ST = null, LOGNEXT = 0, TAB = LS.get("ly_tab","log"), POLL = null, CHARTED = null, DEC = null;
+let H = null, CUR = null, ST = null, LOGNEXT = 0, TAB = null, USER_TAB = false, POLL = null, CHARTED = null, DEC = null;
+let GA_SIG = null, RES_SIG = null, GB_SIG = null, F_SIG = null, P_SIG = null;
 const RUNNING = ["phase_a","phase_b","building","revising"];
-const STATUS_TEXT = {phase_a:"Stages 00–02 running", gate_a:"At Gate A", revising:"Revising card", phase_b:"Stages 03–07 running",
+const STATUS_TEXT = {phase_a:"Reading the paper", gate_a:"At Gate A", revising:"Revising the card", phase_b:"Running the backtest",
   building:"Building charts + workbook", gate_b:"At Gate B", decided:"Decided", failed:"Failed", stopped:"Stopped",
   cancelled:"Cancelled", interrupted:"Interrupted"};
+
+// General knowledge shown while a run works and before the paper's own facts arrive.
+const TRIVIA = [
+ ["term","Sharpe ratio: the return above cash divided by how much the returns swing. William Sharpe introduced it in 1966 as the 'reward-to-variability' ratio."],
+ ["term","Drawdown: how far a portfolio has fallen from its highest point so far. A 20% drawdown needs a 25% gain just to get back to even."],
+ ["history","Momentum was documented by Jegadeesh and Titman in 1993: US stocks that had risen most over the past 3 to 12 months kept outperforming the biggest fallers for months afterwards."],
+ ["history","The National Stock Exchange of India was set up in 1992 and began equity trading in 1994, bringing fully electronic, screen-based trading to Indian markets."],
+ ["history","The NIFTY 50 index starts from a base value of 1,000 on 3 November 1995."],
+ ["data","Lightyear's prices come from the NSE bhavcopy: the exchange's end-of-day file with the open, high, low, close and volume of every traded security."],
+ ["history","India finished moving its stock market to T+1 settlement in January 2023, among the first major markets to do so: trades settle the next working day."],
+ ["term","Survivorship bias: testing only on companies that still exist today makes any strategy look better, because the failures have quietly dropped out of the data."],
+ ["term","Look-ahead bias: using information in a backtest before it was actually available. Lightyear's backtests shift every signal by at least a day to avoid it."],
+ ["history","Harry Markowitz's 1952 paper 'Portfolio Selection' founded modern portfolio theory; he shared the 1990 Nobel prize in economics with William Sharpe and Merton Miller."],
+ ["history","Fama and French's 1993 three-factor model explains stock returns with three drivers: the market, company size and value (cheap versus expensive stocks)."],
+ ["term","Overfitting: try enough variations and one will look brilliant by luck. The 'deflated Sharpe ratio' (Bailey and López de Prado, 2014) corrects for how many were tried."],
+ ["term","Bootstrap: re-sampling the actual returns thousands of times to see how much a result could vary by chance. Bradley Efron introduced the method in 1979."],
+ ["trivia","Rule of 72: divide 72 by a yearly growth rate to estimate the years needed to double. At 12% a year, money doubles in about six years."],
+ ["term","Free float: the shares actually available to trade, leaving out promoter and other locked-in holdings. NIFTY indices have been free-float weighted since 2009."],
+ ["history","Momentum can crash: after the 2009 market bottom, past losers rebounded so sharply that classic momentum strategies lost heavily (Daniel and Moskowitz, 'Momentum Crashes', 2016)."],
+ ["term","CAGR (compound annual growth rate): the steady yearly rate that would turn the starting value into the ending value over the same period."],
+ ["term","Volatility: how much returns swing, usually quoted per year. Daily volatility is scaled up by the square root of 252, the approximate number of trading days in a year."],
+ ["term","Point-in-time data: what was actually known on each past date. Using today's restated figures in a backtest quietly leaks the future into the past."],
+ ["history","'Betting Against Beta' (Frazzini and Pedersen, 2014) found that low-risk stocks have tended to earn more per unit of risk than high-risk stocks, across many markets."],
+ ["term","Turnover: how much of the portfolio is traded each year. High turnover means high costs, which can quietly eat a strategy's edge."],
+ ["trivia","Lightyear has two checkpoints. At Gate A you approve what will be tested. At Gate B you decide what to do with the result: no model ever makes that call."],
+];
 
 async function api(path, opts){ const r = await fetch(path, opts); if(!r.ok){ let m; try{m=(await r.json()).detail}catch(e){m=r.statusText} throw new Error(m) } return r.json() }
 function md(s){ if(window.marked && window.DOMPurify) return DOMPurify.sanitize(marked.parse(s||"")); return "<pre class='code'>"+esc(s)+"</pre>" }
 function pct(x,d=1){ return (x==null||isNaN(x)) ? "–" : (x*100).toFixed(d)+"%" }
 function num(x,d=2){ return (x==null||isNaN(x)) ? "–" : Number(x).toFixed(d) }
+function mins(m){ if(m==null) return "–"; if(m < 1) return "under a minute"; const r = Math.round(m); return r >= 60 ? `${Math.floor(r/60)} h ${r%60} min` : `${r} min` }
+function ago(iso){ if(!iso) return ""; const s = (Date.now() - new Date(iso).getTime())/1000; return s < 60 ? "just now" : s < 3600 ? `${Math.round(s/60)} min ago` : "" }
 function yamlHL(s){ return esc(s).split("\n").map(l => {
   if(/^\s*#/.test(l)) return `<span class="yc">${l}</span>`;
   const m = l.match(/^(\s*-?\s*)([A-Za-z0-9_\-\.]+)(:)(.*)$/);
   return m ? `${m[1]}<span class="yk">${m[2]}</span>${m[3]}<span class="ys">${m[4]}</span>` : l }).join("\n") }
 function copy(t, btn){ navigator.clipboard?.writeText(t).then(()=>{ if(btn){const o=btn.textContent; btn.textContent="copied"; setTimeout(()=>btn.textContent=o,1200)} }) }
+function stageName(id){ const all = [...(H?.stages?.A||[]), ...(H?.stages?.B||[])]; const s = all.find(x=>x[0]===id); return s ? s[1] : id }
 
 async function boot(){
   H = await api("/api/health");
@@ -175,7 +247,7 @@ async function boot(){
     <span class="chip ${H.libreoffice?'ok':'bad'}">LibreOffice ${H.libreoffice?'ready':'missing'}</span>
     <span class="chip">local only · 127.0.0.1</span>`;
   await refreshRuns();
-  const qtab = new URLSearchParams(location.search).get("tab"); if(qtab) TAB = qtab;
+  const qtab = new URLSearchParams(location.search).get("tab"); if(qtab){ TAB = qtab; USER_TAB = true }
   const want = location.hash.slice(1) || LS.get("ly_run","");
   if(want) openRun(want).catch(showNew); else showNew();
 }
@@ -189,7 +261,7 @@ async function refreshRuns(){
 }
 
 async function showNew(){
-  CUR = null; clearInterval(POLL); location.hash = "";
+  CUR = null; clearInterval(POLL); clearInterval(FACT_T); location.hash = "";
   $("#main").innerHTML = ""; $("#main").appendChild($("#tpl-new").content.cloneNode(true));
   $("#operator").value = LS.get("ly_operator","");
   (await api("/api/papers")).forEach(p => $("#existing").insertAdjacentHTML("beforeend", `<option>${esc(p)}</option>`));
@@ -205,29 +277,29 @@ async function showNew(){
 
 async function startRun(){
   const fd = new FormData(), f = $("#file").files[0], ex = $("#existing").value, op = $("#operator").value.trim();
-  if(!op){ $("#newmsg").textContent = "Enter the operator's name."; return }
+  if(!op){ $("#newmsg").textContent = "Enter your name."; return }
   if(!f && !ex){ $("#newmsg").textContent = "Choose a paper. There is no default paper."; return }
   LS.set("ly_operator", op);
   if(f) fd.append("pdf", f); else fd.append("existing", ex);
   fd.append("operator", op); fd.append("model", $("#model").value); fd.append("auto_continue", $("#auto").checked);
   $("#go").disabled = true; $("#newmsg").textContent = "Starting…";
-  try{ const r = await api("/api/runs", {method:"POST", body:fd}); H.active_run = r.id; TAB = "log"; await openRun(r.id) }
+  try{ const r = await api("/api/runs", {method:"POST", body:fd}); H.active_run = r.id; USER_TAB = false; TAB = "progress"; await openRun(r.id) }
   catch(e){ $("#newmsg").textContent = e.message; $("#go").disabled = false }
 }
 
 async function openRun(id){
-  if(CUR !== id){ CUR = id; LOGNEXT = 0; CHARTED = null; DEC = null; LS.set("ly_run", id); location.hash = id; renderShell() }
+  if(CUR !== id){ CUR = id; LOGNEXT = 0; CHARTED = null; DEC = null; ST = null; if(!USER_TAB) TAB = null; LS.set("ly_run", id); location.hash = id; renderShell() }
   await tick();
   clearInterval(POLL); POLL = setInterval(tick, 2000);
   refreshRuns();
 }
 
 function renderShell(){
-  GA_SIG = RES_SIG = GB_SIG = F_SIG = null;
+  GA_SIG = RES_SIG = GB_SIG = F_SIG = P_SIG = null; FACT_I = 0; clearInterval(FACT_T); FACT_T = null;
   $("#main").innerHTML = `
     <div class="card">
       <div class="row" style="justify-content:space-between">
-        <div><h2 id="rtitle" style="margin:0"></h2><div class="small muted" id="rsub"></div></div>
+        <h2 id="rtitle" style="margin:0"></h2>
         <div class="row" id="ractions"></div>
       </div>
       <div id="rbanner" style="margin-top:12px"></div>
@@ -235,24 +307,29 @@ function renderShell(){
     </div>
     <div class="tabs" id="tabs"></div>
     <div id="panes">
-      <div data-p="gatea"></div><div data-p="results"></div><div data-p="gateb"></div>
-      <div data-p="log"><div class="card"><div class="row" style="justify-content:space-between;margin-bottom:8px"><h2 style="margin:0">Live log</h2>
+      <div data-p="progress"></div><div data-p="gatea"></div><div data-p="results"></div><div data-p="gateb"></div><div data-p="files"></div>
+      <div data-p="log"><div class="card"><div class="row" style="justify-content:space-between;margin-bottom:8px"><h2 style="margin:0">Technical log</h2>
         <label class="row small" style="margin:0;color:var(--muted)"><input type="checkbox" id="follow" checked style="width:auto"> follow</label></div>
+        <p class="small muted" style="margin-top:0">Everything Claude Code did, step by step. Also saved as run.log in the run folder (see Files).</p>
         <div class="log" id="log"></div></div></div>
-      <div data-p="files"></div>
     </div>`;
 }
 
+function defaultTab(st){
+  if(st.status==="gate_a" || st.status==="revising" && st.phase_a) return st.status==="gate_a" ? "gatea" : "progress";
+  if(st.status==="gate_b" || st.status==="decided") return "results";
+  return "progress";
+}
 function tabsFor(st){
-  const t = [["log","Live log"]];
-  if(st.phase_a) t.unshift(["gatea","Gate A"+(st.status==="gate_a"?' <span class="badge">action</span>':"")]);
+  const t = [["progress","Progress"]];
+  if(st.phase_a) t.push(["gatea","Gate A"+(st.status==="gate_a"?' <span class="badge">your call</span>':"")]);
   if(st.results){ t.push(["results","Results"]); t.push(["gateb","Gate B"+(st.status==="gate_b"?' <span class="badge">decide</span>':"")]) }
-  t.push(["files","Files"]);
-  if(!t.find(x=>x[0]===TAB)) TAB = t[0][0];
-  $("#tabs").innerHTML = t.map(([k,l]) => `<button class="tab ${k===TAB?'on':''}" onclick="setTab('${k}')">${l}</button>`).join("");
+  t.push(["files","Files"]); t.push(["log","Technical log"]);
+  if(!TAB || !t.find(x=>x[0]===TAB)) TAB = defaultTab(st);
+  $("#tabs").innerHTML = t.map(([k,l]) => `<button class="tab ${k===TAB?'on':''} ${k==='log'?'tech':''}" onclick="setTab('${k}',true)">${l}</button>`).join("");
   document.querySelectorAll("#panes > div").forEach(d => d.classList.toggle("hide", d.dataset.p !== TAB));
 }
-function setTab(k){ TAB = k; LS.set("ly_tab",k); tabsFor(ST); if(k==="results") drawCharts(true) }
+function setTab(k, byUser){ TAB = k; if(byUser) USER_TAB = true; tabsFor(ST); if(k==="results") drawCharts(true) }
 
 async function tick(){
   if(!CUR) return;
@@ -261,38 +338,95 @@ async function tick(){
   if(id !== CUR) return;
   const prev = ST?.status; ST = st;
   $("#rtitle").textContent = st.paper_title || st.slug;
-  $("#rsub").innerHTML = `${esc(st.pdf)} · operator ${esc(st.operator)} · run ${esc(st.id)}${st.cost_usd?` · Claude usage ≈ $${st.cost_usd.toFixed(2)} (computed; your plan's limits apply)`:""}`;
   const running = RUNNING.includes(st.status);
   $("#ractions").innerHTML = `<span class="pill ${st.status}">${esc(STATUS_TEXT[st.status]||st.status)}</span>
     ${running?`<button class="danger" onclick="act('cancel')">Cancel</button>`:""}
     ${["failed","interrupted","cancelled"].includes(st.status)?`<button class="primary" onclick="act('resume')">Resume</button>`:""}`;
   let b = "";
   if(st.error && !running) b = `<div class="banner err">${esc(st.error)}</div>`;
-  else if(st.status==="gate_a") b = `<div class="banner info"><b>Gate A is ready.</b> Read the card, then approve to run stages 03–07, or ask for a revision.</div>`;
-  else if(st.status==="gate_b") b = `<div class="banner info"><b>Gate B is ready.</b> The evidence is scored. A named human records the decision.</div>`;
-  else if(st.status==="decided") b = `<div class="banner ok">Decision recorded: <b>${esc(st.decision.decision)}</b> by ${esc(st.decision.decided_by)} at ${esc(st.decision.at)}.</div>`;
+  else if(st.status==="gate_a") b = `<div class="banner info"><b>Gate A is ready for you.</b> Read what will be tested, tick each item you agree with, then approve. Or ask for changes.</div>`;
+  else if(st.status==="gate_b") b = `<div class="banner info"><b>The backtest is done.</b> Look at the results, then record your decision on the Gate B tab.</div>`;
+  else if(st.status==="decided") b = `<div class="banner ok">Decision recorded: <b>${esc(st.decision.decision)}</b> by ${esc(st.decision.decided_by)} at ${esc(st.decision.at.replace("T"," "))}.</div>`;
   $("#rbanner").innerHTML = b;
   renderTrack(st);
+  if(prev && prev !== st.status){ if(!USER_TAB || ["gate_a","gate_b"].includes(st.status)) TAB = defaultTab(st); USER_TAB = false; refreshRuns(); H = await api("/api/health") }
   tabsFor(st);
+  renderProgress(st);
   if(st.phase_a) renderGateA(st);
   if(st.results){ renderResults(st); renderGateB(st) }
   renderFiles(st);
   await pullLog();
-  if(prev && prev !== st.status){
-    refreshRuns(); H = await api("/api/health");
-    if(st.status==="gate_a") setTab("gatea");
-    if(st.status==="gate_b") setTab("results");
-  }
-  if(!running && !["gate_a","gate_b"].includes(st.status)) { /* settle */ }
 }
 
 function renderTrack(st){
   const all = [...H.stages.A, ...H.stages.B];
   $("#track").innerHTML = all.map(([id,label]) => {
     const s = st.stages[id] || "pending", gate = (id==="GA"||id==="GB");
-    let cls = s; if(gate && ((id==="GA"&&st.status==="gate_a")||(id==="GB"&&st.status==="gate_b"))) cls="running";
-    if(id==="GB" && st.status==="decided") cls="done";
+    let cls = s;
+    if(id==="GA" && st.status==="gate_a") cls = "running";
+    if(id==="GB" && st.status==="gate_b") cls = "running";
+    if(id==="GB" && st.status==="decided") cls = "done";
+    if(cls==="running" && !gate && !RUNNING.includes(st.status)) cls = "halt";
     return `<div class="st ${cls} ${gate?'gate':''}"><span class="dot"></span><span class="id">${id==="03m"?"03·map":id}</span>${esc(label)}</div>` }).join("");
+}
+
+/* ---------------- progress: ETA, what's happening, while-you-wait facts */
+let FACT_I = 0, FACT_T = null, FACTS = [];
+function factList(st){
+  const pf = st.paper_facts, out = [];
+  if(pf && Array.isArray(pf.facts)) pf.facts.forEach(f => out.push({kind:f.kind||"fact", text:f.text, src:`From the paper${pf.title?": "+pf.title:""}`}));
+  TRIVIA.forEach(([k,t]) => out.push({kind:k, text:t, src:"Did you know"}));
+  return out;
+}
+function showFact(i){
+  if(!FACTS.length || !$("#facttxt")) return;
+  FACT_I = (i + FACTS.length) % FACTS.length; const f = FACTS[FACT_I];
+  const box = $("#facttxt"); box.style.opacity = 0;
+  setTimeout(() => { $("#factkind").textContent = ({finding:"Key finding",data:"The data",method:"How it works",history:"History",term:"Jargon buster",trivia:"Trivia"})[f.kind] || f.kind;
+    box.textContent = f.text; $("#factsrc").textContent = f.src; box.style.opacity = 1;
+    document.querySelectorAll("#factdots span").forEach((d,k)=>d.classList.toggle("on", k===FACT_I)) }, 250);
+}
+function renderProgress(st){
+  const e = st.eta, running = RUNNING.includes(st.status);
+  const nPaper = st.paper_facts?.facts?.length || 0;
+  const sig = st.status + "|" + nPaper;
+  if(P_SIG !== sig){
+    P_SIG = sig;
+    FACTS = factList(st);
+    if(nPaper && FACT_I >= nPaper) FACT_I = 0;
+    let gateMsg = "";
+    if(st.status==="gate_a") gateMsg = `<div class="banner info row" style="justify-content:space-between"><span><b>Gate A is waiting for you.</b> The card is ready to review.</span><button class="primary" onclick="setTab('gatea',true)">Open Gate A</button></div>`;
+    if(st.status==="gate_b") gateMsg = `<div class="banner info row" style="justify-content:space-between"><span><b>Results are in.</b></span><span class="row"><button class="primary" onclick="setTab('results',true)">See results</button><button onclick="setTab('gateb',true)">Gate B</button></span></div>`;
+    if(st.status==="decided") gateMsg = `<div class="banner ok row" style="justify-content:space-between"><span>This run is complete.</span><button onclick="setTab('results',true)">See results</button></div>`;
+    $('[data-p="progress"]').innerHTML = `${gateMsg}
+      <div class="card ${running?'':'hide'}" id="etacard">
+        <div class="eta"><span class="big" id="etabig"></span><span class="muted" id="etasub"></span></div>
+        <div class="bar" id="etabar"><div style="width:0%"></div></div>
+        <div class="small muted" id="etanote"></div>
+        <h3>What is happening now</h3>
+        <div class="now"><div class="spin"></div><div><div id="nowtxt"></div><div class="small muted" id="nowago"></div></div></div>
+      </div>
+      <div class="card"><div class="row" style="justify-content:space-between"><h2 style="margin:0">${running?"While you wait":"About this paper"}</h2>
+        <div class="row"><button onclick="showFact(FACT_I-1)">‹</button><button onclick="showFact(FACT_I+1)">›</button></div></div>
+        <div class="fact"><div class="kind" id="factkind"></div><div class="txt" id="facttxt"></div><div class="src" id="factsrc"></div></div>
+        <div class="dots" id="factdots">${FACTS.map((_,k)=>`<span onclick="showFact(${k})"></span>`).join("")}</div>
+        ${nPaper?"":`<p class="small muted" style="margin:10px 0 0;text-align:center">Facts from your paper appear here once it has been read (usually a few minutes in).</p>`}
+      </div>`;
+    showFact(FACT_I);
+    clearInterval(FACT_T); FACT_T = setInterval(() => showFact(FACT_I+1), 12000);
+  }
+  if(!running || !$("#etacard")) return;
+  const cur = st.current_stage, stage = cur ? `Stage ${cur==="03m"?"03 (map)":cur} · ${stageName(cur)}` : "Starting up";
+  if(e){
+    const total = Math.max(e.phase_total||1, 0.1), done = Math.min(0.97, Math.max(0.02, 1 - e.minutes_left/total));
+    $("#etabig").textContent = e.minutes_left < 1 ? `Almost at ${e.until}` : `About ${mins(e.minutes_left)} to ${e.until}`;
+    $("#etasub").textContent = stage + (e.stage_elapsed!=null && cur ? ` · ${mins(e.stage_elapsed)} in` + (e.stage_estimate?` (usually ~${mins(e.stage_estimate)})`:"") : "");
+    $("#etabar").classList.toggle("indet", st.status==="building");
+    $("#etabar > div").style.width = (done*100).toFixed(1)+"%";
+    $("#etanote").textContent = e.learned_from ? `Estimate based on ${e.learned_from} timed stages from earlier runs. Long backtests can run over.` : "First rough estimate; it gets better as Lightyear times more runs.";
+  }
+  $("#nowtxt").textContent = st.activity || "Getting started…";
+  $("#nowago").textContent = st.activity_at ? "updated " + ago(st.activity_at) : "";
 }
 
 async function pullLog(){
@@ -304,47 +438,74 @@ async function pullLog(){
   if($("#follow")?.checked) box.scrollTop = box.scrollHeight;
 }
 
-let GA_SIG = null;
+/* ---------------- Gate A */
+const SEV = {high:0, medium:1, low:2};
+function statusTag(s){ const k = /held/.test(s)?"held":/fetch/.test(s)?"fetch":/proxy/.test(s)?"proxy":/missing/.test(s)?"missing":"proxy"; return `<span class="tag ${k}">${esc(s||"?")}</span>` }
 function renderGateA(st){
-  const pa = st.phase_a, sig = st.status + (st.card_yaml||"").length + (st.gate_a_md||"").length;
+  const pa = st.phase_a, sig = st.id + st.status + (st.card_yaml||"").length + (st.gate_a_md||"").length + JSON.stringify(pa).length;
   if(GA_SIG === sig) return; GA_SIG = sig;
   const at = st.status==="gate_a";
   const cardAbs = H.repo.replace(/\\/g,"/")+"/"+pa.card_path;
+  const legacy = !(pa.how_it_works?.length || pa.approve?.length || pa.gaps?.length);
+  const approve = pa.approve || [], gaps = [...(pa.gaps||[])].sort((a,b)=>(SEV[a.severity]??3)-(SEV[b.severity]??3));
   $('[data-p="gatea"]').innerHTML = `
-   <div class="card"><h2>Gate A: the strategy card</h2>
-     <div class="md">${md(pa.plain_summary)}</div>
-     <div class="facts" style="margin-top:12px">
-       <div>Paper</div><div>${esc(pa.paper_title)}</div>
-       <div>Indian universe</div><div>${esc(pa.universe)}</div>
-       <div>Data verdict</div><div>${esc(pa.data_verdict)}</div>
-       <div>Card file</div><div><div class="path"><span title="${esc(cardAbs)}">${esc(cardAbs)}</span><button onclick="copy(this.previousElementSibling.title,this)">copy</button></div></div>
-     </div>
-     ${(pa.open_questions||[]).length?`<h3>For the human at Gate A</h3><ul>${pa.open_questions.map(q=>`<li>${esc(q)}</li>`).join("")}</ul>`:""}
+   <div class="card"><h2>What will be tested</h2>
+     ${pa.one_line?`<p class="lead">${esc(pa.one_line)}</p>`:""}
+     ${legacy?`<pre class="code" style="white-space:pre-wrap;max-height:420px">${esc(pa.plain_summary)}</pre>`:`<div class="md">${md(pa.plain_summary)}</div>`}
+     ${(pa.how_it_works||[]).length?`<h3>How the strategy works</h3><ol class="steps">${pa.how_it_works.map(s=>`<li>${esc(s)}</li>`).join("")}</ol>`:""}
+     ${pa.success_looks_like?`<h3>What would count as success</h3><p style="margin:0">${esc(pa.success_looks_like)}</p>`:""}
    </div>
+   ${(pa.sleeves||[]).length?`<div class="card"><h2>The sleeves</h2>
+     <p class="small muted" style="margin-top:0">A sleeve is one separately managed slice of the portfolio. This strategy has ${pa.sleeves.length}.</p>
+     <table class="t"><tr><th>Sleeve</th><th>What it holds</th><th>Stands in for</th><th>How we build it</th></tr>
+     ${pa.sleeves.map(s=>`<tr><td><b>${esc(s.name)}</b></td><td>${esc(s.holds)}</td><td>${esc(s.stands_in_for)}</td><td class="small">${esc(s.how_built)}</td></tr>`).join("")}</table></div>`:""}
+   <div class="card"><h2>Universe and data</h2>
+     <div class="facts"><div>Paper</div><div>${esc(pa.paper_title)}</div>
+       <div>Which Indian stocks</div><div>${esc(pa.universe)}</div>
+       <div>Data verdict</div><div>${esc(pa.data_verdict)}</div></div>
+     ${(pa.data||[]).length?`<h3>Data needed</h3><table class="t"><tr><th>Need</th><th>Source</th><th style="width:120px">Status</th><th>Note</th></tr>
+       ${pa.data.map(d=>`<tr><td>${esc(d.need)}</td><td>${esc(d.source)}</td><td>${statusTag(d.status)}</td><td class="small">${esc(d.note)}</td></tr>`).join("")}</table>`:""}
+   </div>
+   ${approve.length?`<div class="card"><h2>What you are approving</h2>
+     <p class="small muted" style="margin-top:0">These are the judgement calls in this card. Tick each one you agree with. If you disagree, write it in the box below and press <i>Revise the card</i>.</p>
+     ${approve.map((a,k)=>`<label class="chk" id="chk${k}"><input type="checkbox" ${at?"":"checked disabled"} onchange="chkA()"><div class="it">${esc(a.item)}</div>
+       <div class="sub"><b>Our choice:</b> ${esc(a.our_choice)}</div><div class="sub"><b>Why:</b> ${esc(a.why)}</div>${a.alternative?`<div class="sub"><b>Alternative:</b> ${esc(a.alternative)}</div>`:""}</label>`).join("")}</div>`:""}
+   ${gaps.length?`<div class="card"><h2>Known gaps and loopholes</h2>
+     <p class="small muted" style="margin-top:0">Where our data or system is weaker than the paper's. These limit what the result can prove.</p>
+     ${gaps.map(g=>`<div class="gap"><div><span class="tag ${esc(g.severity)}">${esc(g.severity)}</span></div><div><b>${esc(g.gap)}</b></div><div class="e">${esc(g.effect)}</div></div>`).join("")}</div>`:""}
    ${at?`<div class="card"><h2>Your call at Gate A</h2>
      <div class="grid2"><div><label>Approved by</label><input id="ga_by" value="${esc(LS.get('ly_operator',st.operator))}"></div><div></div></div>
-     <label>Notes for the backtest (optional; passed to stages 03–07) or what to change in the card</label><textarea id="ga_notes"></textarea>
-     <div class="row" style="margin-top:12px"><button class="primary" onclick="approveA()">Approve and run stages 03–07</button>
+     <label>Notes: instructions for the backtest, or what to change in the card</label><textarea id="ga_notes"></textarea>
+     <div class="row" style="margin-top:12px"><button class="primary" id="ga_go" onclick="approveA()">Approve and run the backtest</button>
        <button onclick="reviseA()">Revise the card with these notes</button><span class="small muted" id="ga_msg"></span></div></div>`
-   : st.approval?`<div class="banner ok">Approved by ${esc(st.approval.by)} at ${esc(st.approval.at)}${st.approval.notes?` · notes: ${esc(st.approval.notes)}`:""}</div>`:""}
-   <div class="grid2">
-     <div class="card"><h2>Card YAML</h2><pre class="yaml">${st.card_yaml?yamlHL(st.card_yaml):"(not found)"}</pre></div>
-     <div class="card"><h2>Gate A document</h2><div class="md" style="max-height:640px;overflow:auto">${st.gate_a_md?md(st.gate_a_md):"(not found)"}</div></div>
+   : st.approval?`<div class="banner ok">Approved by ${esc(st.approval.by)} at ${esc(st.approval.at.replace("T"," "))}${st.approval.notes?` · notes: ${esc(st.approval.notes)}`:""}</div>`:""}
+   <div class="card"><h2>Details for reviewers</h2>
+     <div class="facts" style="margin-bottom:8px"><div>Card file</div><div><div class="path"><span title="${esc(cardAbs)}">${esc(cardAbs)}</span><button onclick="copy(this.previousElementSibling.title,this)">copy</button></div></div></div>
+     ${(pa.open_questions||[]).length?`<details><summary>Other open questions (${pa.open_questions.length})</summary><ul>${pa.open_questions.map(q=>`<li>${esc(q)}</li>`).join("")}</ul></details>`:""}
+     <details><summary>The strategy card (YAML)</summary><pre class="yaml" style="margin-top:8px">${st.card_yaml?yamlHL(st.card_yaml):"(not found)"}</pre></details>
+     <details><summary>The full Gate A document</summary><div class="md" style="max-height:640px;overflow:auto;margin-top:8px">${st.gate_a_md?md(st.gate_a_md):"(not found)"}</div></details>
+     ${(pa.contract_warnings||[]).length?`<p class="small muted">Lightyear note: the hand-off left out ${esc(pa.contract_warnings.join(", "))}.</p>`:""}
    </div>`;
+  chkA();
 }
-
+function chkA(){
+  const boxes = [...document.querySelectorAll('[data-p="gatea"] .chk input')];
+  boxes.forEach(b => b.closest(".chk").classList.toggle("on", b.checked));
+  const left = boxes.filter(b=>!b.checked).length, go = $("#ga_go");
+  if(go){ go.disabled = left > 0; $("#ga_msg").textContent = left ? `${left} item${left>1?"s":""} still to tick` : "" }
+}
 async function approveA(){
   const by = $("#ga_by").value.trim(); if(!by){ $("#ga_msg").textContent="Name required."; return }
-  try{ await api(`/api/runs/${CUR}/approve`, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({by, notes:$("#ga_notes").value})}); GA_SIG=null; TAB="log"; tick() }
+  try{ await api(`/api/runs/${CUR}/approve`, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({by, notes:$("#ga_notes").value})}); GA_SIG=null; USER_TAB=false; TAB="progress"; tick() }
   catch(e){ $("#ga_msg").textContent = e.message }
 }
 async function reviseA(){
   const notes = $("#ga_notes").value.trim(); if(!notes){ $("#ga_msg").textContent="Write what should change."; return }
-  try{ await api(`/api/runs/${CUR}/revise`, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({notes})}); GA_SIG=null; TAB="log"; tick() }
+  try{ await api(`/api/runs/${CUR}/revise`, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({notes})}); GA_SIG=null; USER_TAB=false; TAB="progress"; tick() }
   catch(e){ $("#ga_msg").textContent = e.message }
 }
 
-let RES_SIG = null;
+/* ---------------- Results */
 function renderResults(st){
   const sig = st.id + st.status + (st.workbook||"");
   if(RES_SIG === sig) return; RES_SIG = sig; CHARTED = null;
@@ -354,7 +515,11 @@ function renderResults(st){
     <div class="card"><div class="row" style="justify-content:space-between"><h2 style="margin:0">${esc(r.strategy_name)} vs ${esc(r.benchmark_name)}</h2>
       <div class="row">${st.workbook?`<a href="/api/runs/${st.id}/workbook"><button class="primary">⬇ Download Excel</button></a>`:""}<span class="small muted">${rcText}</span></div></div>
       <p class="muted" style="margin:8px 0 14px">${esc(r.headline)}</p>
-      <div class="kpis" id="kpis"></div><div class="small muted">Sharpe against a flat 6% hurdle. Every number is computed on the server from the run's daily returns, the same definitions as the workbook.</div></div>
+      <div class="kpis" id="kpis"></div><div class="small muted">Sharpe against a flat 6% cash hurdle. Every number here is computed from the run's daily returns, with the same definitions as the workbook.</div></div>
+    <div class="card"><h2>Positives and negatives</h2>
+      <div class="pn"><div class="pos"><h3 style="color:var(--green)">What works</h3><ul id="pos"></ul></div>
+        <div class="neg"><h3 style="color:var(--red)">What doesn't</h3><ul id="neg"></ul></div></div>
+      <p class="small muted" style="margin:10px 0 0"><span class="src" style="margin:0">measured</span> = calculated directly from the daily returns. <span class="src" style="margin:0">from the tests</span> = from the run's validation (bootstrap, walk-forward, costs, factors).</p></div>
     <div class="grid2">
       <div class="card"><h2>Growth of 100</h2><div class="chart" id="c_growth"></div></div>
       <div class="card"><h2>Drawdown from peak</h2><div class="chart" id="c_dd"></div></div>
@@ -370,10 +535,17 @@ function renderResults(st){
 }
 
 async function drawCharts(force){
-  if(!window.Plotly || !ST?.results || (CHARTED===CUR && !force)) return;
+  if(!ST?.results || (CHARTED===CUR && !force)) return;
   if(!$("#c_growth")) return;
   let c; try{ c = await api(`/api/runs/${CUR}/charts`) }catch(e){ return }
   CHARTED = CUR;
+  const r = ST.results, ob = c.observations || {positives:[], negatives:[]};
+  const li = (t, src) => `<li>${esc(t)}<span class="src">${src}</span></li>`;
+  $("#pos").innerHTML = ob.positives.map(t=>li(t,"measured")).join("") + (r.strengths||[]).map(t=>li(t,"from the tests")).join("") || `<li class="muted">None found.</li>`;
+  $("#neg").innerHTML = ob.negatives.map(t=>li(t,"measured")).join("") + (r.weaknesses||[]).map(t=>li(t,"from the tests")).join("") || `<li class="muted">None found.</li>`;
+  const m = c.metrics, K = [["CAGR","cagr",pct],["Volatility","vol",pct],["Sharpe vs 6%","sharpe",num],["Max drawdown","max_dd",pct],["Final value of 100","final",v=>num(v,1)]];
+  $("#kpis").innerHTML = K.map(([l,k,f]) => `<div class="kpi"><div class="l">${l}</div><div class="v">${f(m.strategy[k])}</div><div class="b">${esc(c.names.benchmark)}: ${f(m.benchmark[k])}</div></div>`).join("");
+  if(!window.Plotly){ document.querySelectorAll(".chart").forEach(el => el.innerHTML = `<p class="muted small">Chart library did not load.</p>`); return }
   const col = {strategy:"#1f4e79", benchmark:"#d98324", sleeve:"#6a994e"};
   const main = ["strategy","benchmark"].filter(k => c.growth[k]);
   const lay = (yfmt, ytitle) => ({margin:{l:56,r:16,t:8,b:36}, font:{family:"Segoe UI, Arial", size:12}, hovermode:"x unified",
@@ -393,11 +565,9 @@ async function drawCharts(force){
       {...lay("",""), hovermode:"closest", yaxis:{type:"category", autorange:"reversed"}}, cfg);
   if(c.growth.sleeve){ $("#sleevecard").classList.remove("hide"); $("#sleevetitle").textContent = c.names.sleeve+" (sleeve) vs NIFTY 500";
     Plotly.newPlot("c_sleeve", ["sleeve","benchmark"].map(k=>line(k,c.growth)), {...lay(",.0f","Value")}, cfg) }
-  const m = c.metrics, K = [["CAGR","cagr",pct],["Volatility","vol",pct],["Sharpe vs 6%","sharpe",num],["Max drawdown","max_dd",pct],["Final value of 100","final",v=>num(v,1)]];
-  $("#kpis").innerHTML = K.map(([l,k,f]) => `<div class="kpi"><div class="l">${l}</div><div class="v">${f(m.strategy[k])}</div><div class="b">${esc(c.names.benchmark)}: ${f(m.benchmark[k])}</div></div>`).join("");
 }
 
-let GB_SIG = null;
+/* ---------------- Gate B */
 function renderGateB(st){
   const sig = st.status + st.id; if(GB_SIG === sig) return; GB_SIG = sig;
   const r = st.results, crit = r.gate_b.criteria || [], at = st.status==="gate_b";
@@ -416,7 +586,7 @@ function renderGateB(st){
       <div class="grid2"><div><label>Decided by (named human)</label><input id="gb_by" value="${esc(LS.get('ly_operator',''))}"></div><div></div></div>
       <label>Rationale</label><textarea id="gb_why"></textarea>
       <div class="row" style="margin-top:12px"><button class="primary" onclick="decideB()">Record decision</button><span class="small muted" id="gb_msg"></span></div></div>`
-    : st.decision?`<div class="card"><h2>Decision on record</h2><div class="facts"><div>Decision</div><div class="d-${esc(st.decision.decision)}"><b>${esc(st.decision.decision)}</b></div><div>By</div><div>${esc(st.decision.decided_by)}</div><div>When</div><div>${esc(st.decision.at)}</div><div>Rationale</div><div>${esc(st.decision.rationale)}</div></div></div>`:""}
+    : st.decision?`<div class="card"><h2>Decision on record</h2><div class="facts"><div>Decision</div><div class="d-${esc(st.decision.decision)}"><b>${esc(st.decision.decision)}</b></div><div>By</div><div>${esc(st.decision.decided_by)}</div><div>When</div><div>${esc(st.decision.at.replace("T"," "))}</div><div>Rationale</div><div>${esc(st.decision.rationale)}</div></div></div>`:""}
     <div class="card"><h2>Gate B brief</h2><div class="md">${st.gate_b_md?md(st.gate_b_md):"(no brief file)"}</div></div>`;
 }
 function pickDec(d){ DEC = d; document.querySelectorAll(".decide button").forEach(b=>b.classList.toggle("on", b.textContent===d)) }
@@ -428,17 +598,20 @@ async function decideB(){
   catch(e){ $("#gb_msg").textContent = e.message }
 }
 
-let F_SIG = null;
+/* ---------------- Files */
 function renderFiles(st){
   const sig = (st.files_abs||[]).join("|"); if(F_SIG === sig) return; F_SIG = sig;
-  $('[data-p="files"]').innerHTML = `<div class="card"><h2>Every file this run wrote or read</h2>
+  const row = p => `<div class="path"><span title="${esc(p)}">${esc(p)}</span><button onclick="copy(this.previousElementSibling.title,this)">copy</button></div>`;
+  $('[data-p="files"]').innerHTML = `<div class="card"><h2>Files</h2>
     <p class="small muted">Local paths. Copy one and open it from Explorer or VS Code.</p>
-    ${(st.files_abs||[]).map(p=>`<div class="path"><span title="${esc(p)}">${esc(p)}</span><button onclick="copy(this.previousElementSibling.title,this)">copy</button></div>`).join("")}</div>`;
+    <h3>This run's folder</h3>${row(st.run_dir_abs)}
+    <h3>Readable run log (updated live)</h3>${row(st.run_log_abs)}
+    <h3>Everything this run wrote or read</h3>${(st.files_abs||[]).map(row).join("")}</div>`;
 }
 
 async function act(what){
   if(what==="cancel" && !confirm("Cancel the running phase? Claude Code is stopped; files written so far stay.")) return;
-  try{ await api(`/api/runs/${CUR}/${what}`, {method:"POST"}); H = await api("/api/health"); tick(); refreshRuns() }catch(e){ alert(e.message) }
+  try{ await api(`/api/runs/${CUR}/${what}`, {method:"POST"}); H = await api("/api/health"); USER_TAB=false; TAB="progress"; tick(); refreshRuns() }catch(e){ alert(e.message) }
 }
 window.addEventListener("resize", () => { if(window.Plotly) document.querySelectorAll(".chart .js-plotly-plot").forEach(p => Plotly.Plots.resize(p)) });
 boot();

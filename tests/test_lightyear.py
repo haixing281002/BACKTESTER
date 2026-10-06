@@ -74,6 +74,35 @@ def test_full_flow(client):
     assert json.loads(open(ledger).read().splitlines()[-1])["decision"] == "OBSERVE"
 
 
+def test_stage_tracker_moves_forward_only_and_reads_banners(client):
+    from lightyear import jobs
+    paper = client.get("/api/papers").json()[0]
+    rid = jobs.create(f"docs/papers/{paper}", "x", "Tester", "", False)
+    jobs.update(rid, status="phase_b", current_stage=None)
+    B = jobs.IDS_B
+    jobs._detect(rid, "LIGHTYEAR-STAGE: 03\nchecking data", B, "text")
+    jobs._detect(rid, "=====\nSTAGE 05 -- BUILD AND EXECUTE\n=====", B, "tool")      # loose: 03 -> 05 is two steps, allowed
+    st = jobs.load(rid)
+    assert st["current_stage"] == "05" and st["stages"]["04"] == "done" and st["stages"]["03"] == "done"
+    jobs._detect(rid, "LIGHTYEAR-STAGE: 03", B, "text")                                # never backwards
+    assert jobs.load(rid)["current_stage"] == "05"
+    jobs._detect(rid, "I will stop at STAGE 0 or so", B, "tool")                       # not a phase-B id
+    jobs._detect(rid, "Stage 7 then Gate B", B, "text")                                # loose lead: 05 -> 07 ok
+    assert jobs.load(rid)["current_stage"] == "07"
+    e = jobs.eta(jobs.load(rid))
+    assert e["until"] == "Gate B" and e["minutes_left"] > 0 and e["phase_total"] >= e["minutes_left"] - 1
+
+
+def test_observations_are_plain_and_signed():
+    from lightyear import charts
+    d = pd.bdate_range("2022-01-03", periods=600)
+    rng = np.random.default_rng(3)
+    df = pd.DataFrame({"date": d, "strategy": rng.normal(8e-4, 0.006, 600), "benchmark": rng.normal(2e-4, 0.012, 600)})
+    out = charts.build(df, {"strategy": "S", "benchmark": "NIFTY 500"})["observations"]
+    assert any("Smoother ride" in p for p in out["positives"])
+    assert all(isinstance(x, str) and "%" in x or "correlation" in x for x in out["positives"] + out["negatives"])
+
+
 def test_contract_rejects_percent_returns(tmp_path):
     from lightyear import contract
     d = pd.bdate_range("2022-01-03", periods=100)

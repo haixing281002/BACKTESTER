@@ -119,9 +119,19 @@ def run_state(rid: str):
             st["gate_b_md"] = open(_repo_file(res["gate_b_brief_path"]), encoding="utf-8").read()
         except HTTPException:
             st["gate_b_md"] = None
+    st["eta"] = jobs.eta(st)
+    fp = os.path.join(run_dir(rid), "paper_facts.json")
+    if os.path.exists(fp):
+        try:
+            st["paper_facts"] = json.load(open(fp, encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            st["paper_facts"] = None       # half-written; next poll picks it up
     st["run_dir_abs"] = run_dir(rid)
-    st["files_abs"] = sorted({os.path.join(REPO, f) for f in (pa.get("files") or []) + (res.get("files") or [])}
-                             | {os.path.join(run_dir(rid), f) for f in os.listdir(run_dir(rid))})
+    listed = {os.path.normpath(os.path.join(REPO, f)) for f in (pa.get("files") or []) + (res.get("files") or [])}
+    here = {os.path.join(run_dir(rid), f) for f in os.listdir(run_dir(rid))
+            if os.path.isfile(os.path.join(run_dir(rid), f)) and not f.endswith(".tmp")}
+    st["files_abs"] = sorted(listed | here)
+    st["run_log_abs"] = os.path.join(run_dir(rid), "run.log")
     return st
 
 

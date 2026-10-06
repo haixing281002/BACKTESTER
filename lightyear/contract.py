@@ -7,9 +7,13 @@ import pandas as pd
 
 from .paths import REPO
 
-PHASE_A_KEYS = ["status", "reason", "paper_title", "slug", "card_path", "gate_a_path", "plain_summary",
-                "universe", "data_verdict", "open_questions", "files"]
+PHASE_A_KEYS = ["status", "reason", "paper_title", "slug", "card_path", "gate_a_path", "plain_summary"]
+# presentation fields: a missing one is a warning shown on the page, never a failed run
+PHASE_A_OPTIONAL = {"one_line": "", "how_it_works": [], "sleeves": [], "universe": "", "data": [], "approve": [],
+                    "gaps": [], "success_looks_like": "", "data_verdict": "", "open_questions": [], "files": []}
 RESULTS_KEYS = ["strategy_name", "benchmark_name", "headline", "evidence_supports", "gate_b", "validation", "notes"]
+RESULTS_OPTIONAL = {"strengths": [], "weaknesses": [], "tables": [], "assumptions": [], "files": [],
+                    "sleeve_name": None, "decisive_criterion": "", "gate_b_brief_path": None}
 
 
 class ContractError(Exception):
@@ -40,6 +44,18 @@ def check_phase_a(run_dir):
         for k in ("card_path", "gate_a_path"):
             if not d.get(k) or not os.path.exists(_abs(d[k])):
                 raise ContractError(f"phase_a.json {k} does not exist on disk: {d.get(k)}")
+    return _defaults(d, PHASE_A_OPTIONAL)
+
+
+def _defaults(d, optional):
+    warn = []
+    for k, v in optional.items():
+        if d.get(k) is None:
+            if v is not None:
+                warn.append(k)
+            d[k] = v
+    if warn:
+        d["contract_warnings"] = [f"missing: {k}" for k in warn]
     return d
 
 
@@ -73,4 +89,4 @@ def check_results(run_dir):
     big = (df[["strategy", "benchmark"]].abs() > 0.5).any(axis=1).sum()
     if big:
         raise ContractError(f"{big} daily returns exceed 50%: are they percentages instead of fractions?")
-    return r, df
+    return _defaults(r, RESULTS_OPTIONAL), df
