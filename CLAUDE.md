@@ -82,11 +82,61 @@ alphabetically, and read a card about somebody else's paper on every run. Read
 an example for its shape; never copy one and edit it — a card carries a paper's
 sha256 and its own ambiguities.
 
+## Default Stage 02 output: ONE quick-test card, not an essay
+
+**Changed 2026-10-06.** The default purpose of Stage 02 is now to answer one
+question fast: *does the mechanism the paper describes show up at all, in this
+fund's market, once it's actually run?* Everything else — the full data-plan
+essay, the selection-verification debate, the convertibility chain — is real
+work this repo still does, but it is now **deferred until a quick-test result
+says it's worth the time**, not written before the first backtest.
+
+Concretely, `/draft-card` now defaults to drafting **exactly one card** per
+paper (never the full-construction/adaptation pair — that split is still
+available, but only when something specific forces a leg to be dropped, same
+as before) containing only what is structurally needed to run and to make
+Gate A legible:
+
+- `strategy` and `universe_translation`, carried over from Stage 01 as-is —
+  this is "the strategy we extracted," not a redesign.
+- `backtest_plan` in full: window, warmup, rebalance, weights, benchmarks,
+  `must_beat`, `success_looks_like` / `failure_looks_like`. This cannot be
+  shortened — it is what makes the run reproducible and tells a human at Gate A
+  what is about to be tested, and it is cheap because Stage 01 already decided
+  the universe and mechanism.
+- `selection.rule`, stated plainly. An explicit, verified list is still subject
+  to the same `verified_against`/`as_of` discipline if named; skip the list
+  entirely rather than invent verification you have not done.
+- The India non-negotiables regardless: `lag_days >= 1`, 30bp round-trip costs,
+  no cash unless the mandate needs it.
+
+**`data_plan` and `convertibility` are omitted from a quick-test card**, not
+filled thinly — both are `Optional` on the schema precisely so a card can skip
+them without failing validation. Writing a shallow optimality argument or a
+convertibility chain nobody has actually thought through is worse than leaving
+the section out, for the same reason an unverified security list is worse than
+no list: it looks checked and is not. A quick-test card says, implicitly, "this
+is a first read, not a financing memo."
+
+**This does not touch Gate A itself.** The card still goes through Gate A
+before any data binds (Stage 03) or any number is computed — a human still
+reads it and still decides. It also does not relax the 99%-completeness bar
+for a card that *is* heading to Gate B/IC: once a quick-test result is
+promising enough to pursue, go back and write the full card — `data_plan`,
+`selection`'s verification, `convertibility` with a real `weakest_link` — before
+that card reaches an investment committee. The completeness score
+(`ros/cards/completeness.py`) is the signal for which lane a card is in: low is
+fine and expected for a quick test; a card presented at Gate B should still
+score the way `examples/cards/devanathan_2026_india_factor_adaptation.yaml`
+does.
+
 ## Stage 02 is where the work happens. Gate A only verifies.
 
-If a human at Gate A has to work out the sample window, the warmup, the
-benchmarks, or what would count as failure, then Stage 02 did not finish and the
-gate is doing the design. Three card sections stop that, all written by the model:
+The sections below describe the FULL card — the one a quick-test result earns
+its way into writing, not the default first pass above. If a human at Gate A
+has to work out the sample window, the warmup, the benchmarks, or what would
+count as failure, then Stage 02 did not finish and the gate is doing the
+design. Three card sections stop that, all written by the model:
 
 - **`data_plan`** — the dataset this paper DESERVES, designed from the paper and
   *then* compared with what the fund holds. Never the other way round: starting

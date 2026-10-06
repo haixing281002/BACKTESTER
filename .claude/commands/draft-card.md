@@ -1,12 +1,62 @@
 ---
 description: "Stage 02 — draft a Strategy Card from an ingested analysis"
-argument-hint: "<analysis.json> [replication|adaptation]"
+argument-hint: "<analysis.json> [quick|replication|adaptation]"
 ---
 
 # Stage 02 — STRATEGY CARD  (LLM owns, code validates)
 
-Read `$1` (a `PaperAnalysis`). Mode is `$2`, defaulting to `adaptation`.
+Read `$1` (a `PaperAnalysis`). Mode is `$2`, defaulting to **`quick`** (changed
+2026-10-06 — see CLAUDE.md's "Default Stage 02 output: ONE quick-test card").
 If no analysis exists yet, run `/ingest` first — do not card from the abstract.
+
+## Mode `quick` (the default): does the mechanism show up at all?
+
+Write `cards/<slug>.yaml` (no mode suffix — there is exactly one card). Fill
+only:
+
+- `intent.mode` — still `replication` or `adaptation`, the schema's only two
+  legal values (`ros/cards/schema.py`'s `MODES`). `quick` is this command's
+  own argument describing how MUCH of the card to write, not a schema field —
+  pick whichever of the two actually describes what Stage 01 reconstructed
+  (running on the paper's own data vs. running on this fund's data), same
+  choice you would make in full mode.
+- `strategy` and `universe_translation` — copied over from `$1` as Stage 01
+  already decided them. This is "the strategy we extracted," not a redesign;
+  do not re-argue the universe choice here.
+- `backtest_plan` in full (window + `why_this_window`, warmup + `why_warmup`,
+  `rebalance_rule`, `weights_rule`, `benchmarks` each with `why_this`,
+  `must_beat`, `success_looks_like` AND `failure_looks_like`). This is not
+  optional in `quick` mode either — it is what makes the run reproducible and
+  is what Gate A actually reviews. Keep each argument to a sentence or two;
+  this is not the place to write an essay, just to not leave a decision for
+  the human to make.
+- `selection.rule` — stated plainly. If you name an explicit list, it still
+  needs `verified_against`/`as_of` (use `UNVERIFIED` honestly if nothing
+  confirmed it) — do not skip the honesty field to save time, skip the LIST
+  instead and keep just the rule.
+- `signal.template` naming a **registered** template
+  (`python -c "from ros.engine.templates import list_templates; print(list_templates())"`).
+- The non-negotiables regardless of mode: costs 30bp round trip, `lag_days >= 1`,
+  `mandate_allow_cash: false` unless the mechanism genuinely needs cash.
+
+**Leave `data_plan` and `convertibility` unset** (both are `Optional` on the
+schema and the card validates without them). Do not write a thin version of
+either — a shallow optimality argument or an unconsidered convertibility chain
+is worse than no section, same reasoning this repo already applies to an
+unverified security list: it looks checked and is not. Record instead, in
+`open_questions`, that the full data-plan argument and convertibility chain are
+deferred pending this quick-test result.
+
+Validate and send to Gate A exactly as any other card (see below) — Gate A
+still runs, a human still decides, before Stage 03 touches any data. A `quick`
+card will score low on `ros/cards/completeness.py` and that is expected: the
+score is what tells you which lane a card is in, not a bar every card must
+clear. If the backtest result is promising enough to take further, re-run
+`/draft-card $1 adaptation` (or `replication`) on the SAME analysis to write
+the full card before it goes anywhere near Gate B — see "Mode `adaptation`
+and `replication`" below for what that adds.
+
+## Mode `adaptation` and `replication`: the full card, once a result earns it
 
 Before drafting, read `ros/cards/schema.py` for the field contract and
 `examples/cards/devanathan_2026_india_factor_adaptation.yaml` as a worked
