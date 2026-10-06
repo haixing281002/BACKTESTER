@@ -508,7 +508,14 @@ python run_pipeline.py --card cards/<card>.yaml \
 python -m pytest tests/ -q                                # 300 tests
 python validate/cross_check.py --excel                    # engine vs clean-room impl
 python -m ros.interpretation history                      # who interpreted what
+python -m lightyear                                       # the whole chain as a local web page
 ```
+
+**Lightyear** (`lightyear/`, see its README) runs this chain from a local page: upload a paper, Claude Code
+runs headless (no API key) through Gate A, a human approves, Claude Code runs 03 to 07, and Lightyear builds
+the interactive charts and the colour-coded workbook from the run's hand-off files. When you are the headless
+session Lightyear launched, the prompt states the hand-off contract: write exactly those files, print
+`LIGHTYEAR-STAGE: <id>` as each stage starts, never record a Gate B decision, never touch git.
 
 ## Non-negotiables when working in this repo
 
