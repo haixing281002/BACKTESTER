@@ -254,35 +254,35 @@ portfolio.
   "daily adjusted close", "trailing 12m book value", "as-reported EPS with
   publication date". This is what Stage 03 resolves.
 
-### The long-only question — read this every time
+### The long-short question — read this every time
 
-**This fund cannot short.** Most academic factor premia are published as
-long-short spreads.
+**This fund can hold short positions (mandate updated 2026-09-28).** Most
+academic factor premia are published as long-short spreads, and the default
+is now to keep BOTH legs on the one card, translated to India — not to strip
+the short leg to fit a constraint that no longer exists.
 
-Set `is_long_short: true` whenever the paper's headline result involves a short
-leg, then state `long_only_adaptation` explicitly. The schema will reject the
-card without it, deliberately.
+Set `is_long_short: true` whenever the paper's headline result involves a
+short leg. That is a statement of fact about the paper's construction, not a
+trigger for a second card — CLAUDE.md's "One card. Always." There is still
+only ever `cards/<slug>.yaml`. A long-short card runs through
+`universal_backtester`'s explicit `allow_short=True` path (never `ros/engine`,
+which is long-only by construction and would silently clip or misread
+negative weights).
 
-`is_long_short: true` is also the trigger for the two-card rule: draft this
-long-only adaptation card AND a paired `<slug>_india_longshort.yaml` that keeps
-both legs, translated to India but not stripped. The credibility card runs
-through `universal_backtester`'s explicit `allow_short=True` path, never
-`ros/engine` — see CLAUDE.md's "One card and one backtest, or two."
+`long_only_adaptation` is NOT mandatory just because `is_long_short: true` —
+leave it blank when both legs run as the paper describes. Fill it only when a
+real, NAMED constraint forces a leg to be dropped or altered: an instrument
+India does not allow shorting on at all, a borrow that genuinely does not
+exist at the size needed, a risk limit this specific short exceeds. State
+exactly what changed and why. That fact still lives on this one card.
 
-Three honest adaptations, in rough order of preference:
-
-| Adaptation | What it becomes |
-|---|---|
-| Long leg only | A tilted long book. Carries full market beta. |
-| Long leg vs benchmark | An active-return strategy; the comparison is to NIFTY 500, not to cash. |
-| Long-minus-index tilt | Overweight the long leg within the index; closest to what the fund could actually run. |
-
-And say what it costs. Where the paper reports leg-level returns, quote them:
-the short leg frequently carries the larger and more reliable half of the spread.
-**Dropping it is not a haircut on the result — it can remove most of it.** A
-long-only version of a long-short paper is a DIFFERENT STRATEGY and must never be
-scored against the paper's numbers. If the paper does not break out the legs,
-that is an extraction concern worth stating.
+Where the paper reports leg-level returns, quote them: the short leg
+frequently carries the larger and more reliable half of the spread, so if a
+leg genuinely must be dropped, say what that costs rather than treating it as
+a haircut. A card that drops a leg is testing a DIFFERENT STRATEGY from the
+paper's own construction and must never be scored against the paper's
+numbers — state this plainly in `intent.rationale`. If the paper does not
+break out the legs, that is an extraction concern worth stating.
 
 ### Mapping to the engine
 

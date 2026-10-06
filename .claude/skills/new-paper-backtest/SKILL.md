@@ -1,9 +1,33 @@
 ---
 name: new-paper-backtest
-description: "Scaffold a new individual-stock backtest script for a paper, in the shape this repo's three real scripts already use (accord_stock_selection_backtest.py, alquist_2018_india_small_cap_backtest.py, asness_2015_india_value_longshort_backtest.py). Use this when a Strategy Card's mechanism needs individual-stock ranking on the Accord Fintech dataset rather than the NSE index-sleeve workbook -- ros/runner.py's execute_card() cannot run this path yet (it's coupled to the index workbook loader), so a dedicated scripts/<slug>_backtest.py is still the correct, documented way to execute such a card's Step 05."
+description: "Scaffold a new individual-stock backtest script for a paper, in the shape this repo's three reference scripts use (accord_stock_selection_backtest.py, alquist_2018_india_small_cap_backtest.py, asness_2015_india_value_longshort_backtest.py) but loading the panel via ros/data/master.py's load_master() (NSE bhavcopy, the current default) rather than Accord. Use this when a Strategy Card's mechanism needs individual-stock ranking rather than the NSE index-sleeve workbook -- ros/runner.py's execute_card() cannot run this path yet (it's coupled to the index workbook loader), so a dedicated scripts/<slug>_backtest.py is still the correct, documented way to execute such a card's Step 05."
 ---
 
 # New paper -> individual-stock backtest script
+
+## Accord is no longer the default data source (2026-10-06)
+
+The three reference scripts below were all written against the Accord
+Fintech panel (`universal_backtester/accord_data.py`,
+`data/raw/stocks/*.xlsx`). That data is kept on disk and the loaders still
+work, but `ros/data/firm_registry.py`'s `build_firm_registry()` no longer
+registers it by default (`include_accord=True` brings it back explicitly) —
+the fund's primary individual-stock source is now its own NSE bhavcopy
+ingestion (`ros/data/nse_bhavcopy_ingest.py`, fed by a local
+`download_history.py` pull), read through `ros/data/master.py`'s
+`load_master()` into the same shape of wide price/membership/ADV panels
+Accord's loaders produce. A new script should load its panel that way —
+`load_master(<path to the manifest-declared master CSV>)` — in place of
+`load_accord_price_panel()`/`load_accord_monthly_universe()`, with
+`get_top_n_universe()`/`restrict_to_priced_universe()` dropped (membership is
+already point-in-time in `load_master()`'s own `membership` panel, no
+ranking step needed). Everything from step 4 (`main()`) onward in this skill
+is otherwise unchanged: the engine (`universal_backtester.engine.Backtester`,
+`build_allocator`), the checkpoints, the decile/holdings/workbook outputs all
+take a wide panel and do not care which loader produced it.
+
+Reach for Accord only when told to explicitly (e.g. for a reconciliation
+against bhavcopy, as `scripts/reconcile_accord_vs_nse.py` already does).
 
 ## Why this exists as its own skill, not just "write a script"
 
@@ -70,14 +94,17 @@ has these sections, in this order:
 
 ## Non-negotiables carried over from CLAUDE.md, not optional in the scaffold
 
-- Never key anything on NSE symbol or company name; Accord Code only.
+- Never key anything on NSE symbol or company name; key on Accord Code
+  (Accord loaders) or the ISIN-linked entity ID (bhavcopy loaders) — never a
+  symbol, which gets reused/renamed across corporate actions.
 - A cross-section needs `membership=` passed to the `Backtester` — never a
   survivor-only price file.
 - `lag_days >= 1` always; this fund's real per-card choices have ranged
   1-100 depending on the signal — check the card, never assume.
 - 30bp round-trip cost floor for factor sleeves unless the card states a
   different, justified figure.
-- If the card is long-short, the long-short leg is a research finding, never
-  reported as investable, and the long-only comparison leg is what actually
-  reaches Gate B.
+- If the card is long-short (`is_long_short: true`), both legs stay live and
+  ARE investable (mandate updated 2026-09-28) — run them through
+  `allow_short=True`, never `ros/engine`. Drop a leg only for a real, named
+  constraint (see CLAUDE.md's "One card. Always."), not by default.
 - Every stage gets a `checkpoint()` call (see `pipeline-stage-checkpoint`).

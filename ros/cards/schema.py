@@ -1269,6 +1269,66 @@ class StrategyCard:
         L.append("  " + "-" * W)
         return "\n".join(L)
 
+    def plain_summary(self) -> str:
+        """WHAT THIS STRATEGY ACTUALLY DOES, in one paragraph a non-specialist
+        can read before any of the structured fact tables.
+
+        `at_a_glance()` is a field table -- fast for someone who already knows
+        what each field means. It is not an explanation. This is the plain-
+        English version: what gets bought, on what signal, how often it
+        trades, and why the model thinks it should work -- built from
+        `strategy.signal_definition`/`formation_rule`/`weighting_rule` (what
+        is mechanically happening) and `intent.rationale` (why this card is
+        being run at all). If either is missing or thin, this block says so
+        rather than papering over it with a field list -- a reviewer should
+        never have to reconstruct "what is this testing" from the universe/
+        signal/portfolio tables themselves.
+        """
+        W = 96
+        st, it = self.strategy, self.intent
+        L = ["  " + "=" * W, "  WHAT THIS STRATEGY ACTUALLY DOES", "  " + "=" * W, ""]
+
+        if st is None or not st.signal_definition.strip():
+            L.append("  NOT STATED. Stage 01/02 did not write an executable "
+                     "description of the mechanism -- everything below is "
+                     "field values with no narrative tying them together.")
+            L += ["", "  " + "=" * W]
+            return "\n".join(L)
+
+        parts = [("THE SIGNAL", st.signal_definition),
+                 ("HOW IT PICKS SECURITIES", st.formation_rule),
+                 ("HOW IT SIZES POSITIONS", st.weighting_rule)]
+        for label, text in parts:
+            if str(text or "").strip():
+                L.append(f"  {label}:")
+                for line in _wrap(text, W - 4):
+                    L.append(f"    {line}")
+                L.append("")
+
+        mechanics = []
+        if st.rebalance_frequency:
+            mechanics.append(f"rebalances {st.rebalance_frequency}")
+        mechanics.append("long-short" if st.is_long_short else "long-only")
+        mechanics.append("cross-sectional (ranks securities)" if st.cross_sectional
+                         else "time-series (one series vs. its own history)")
+        L.append(f"  MECHANICS: {', '.join(mechanics)}.")
+        L.append("")
+
+        if it and it.rationale.strip():
+            L.append("  WHY WE ARE TESTING THIS:")
+            for line in _wrap(it.rationale, W - 4):
+                L.append(f"    {line}")
+        else:
+            L.append("  WHY WE ARE TESTING THIS: NOT STATED.")
+
+        if it and it.transferred_mechanism.strip():
+            L += ["", "  WHAT ACTUALLY CARRIES OVER TO INDIA:"]
+            for line in _wrap(it.transferred_mechanism, W - 4):
+                L.append(f"    {line}")
+
+        L += ["", "  " + "=" * W]
+        return "\n".join(L)
+
     def convertibility_block(self) -> str:
         """The model's answer to the question the fund is actually paying for.
 
