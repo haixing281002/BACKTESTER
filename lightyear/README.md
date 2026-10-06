@@ -36,6 +36,15 @@ non-blocking Gate A). Gate B always stops.
   - Phase A writes `outputs/lightyear/<run>/phase_a.json` (card path, Gate A doc, summary, verdicts).
   - Phase B writes `daily_returns.csv` (date, strategy, benchmark[, sleeve]) and `results.json`
     (`gate_b()` dict with decision PENDING, validation, tables, assumptions, notes).
+  - Phase B also writes `holdings.csv` (every position at every rebalance), optionally `trades.csv`
+    (Lightyear derives trades from holdings otherwise) and `comparators.csv` (daily returns of the simpler
+    alternatives: long leg alone, equal-weight list, the index). They become the Holdings, Rebalances, Trades
+    and Comparators sheets and the page's Positions tab and appendix chart.
+  - After Gate B is on the page, an **analyst review** (a third, short Claude Code session) reads every result
+    and writes `review.json`: a plain-English read, trust level, strengths, weaknesses and red flags in the test
+    itself. It never decides; it can be re-run from the Results tab.
+- `gates.py`: Gate B rows for page and workbook. An advisory criterion with a value is a real FAIL (advisory),
+  not "not computed"; in Excel each result is a live formula against an editable (yellow) threshold.
 - `contract.py`: checks those files before anything is shown (no percentages-as-fractions mix-ups, no model decision).
 - `charts.py`: chart series and KPIs, same definitions as the workbook formulas (a test holds them equal).
 - `workbook.py`: the colour-coded workbook (named-range formulas, Gate B fills, colour key, Excel charts),

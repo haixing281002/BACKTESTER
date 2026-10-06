@@ -11,8 +11,18 @@ from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from . import __version__, jobs, prompts
+from . import __version__, gates, jobs, prompts, workbook
 from .paths import PAPERS, REPO, STATIC, find_claude, run_dir, slugify
+
+def _code_fingerprint():
+    """Modification times of Lightyear's Python files. If they change while the server runs, the page says
+    'restart Lightyear': a running server keeps the old code (that is how a run once used stale prompts)."""
+    here = os.path.dirname(os.path.abspath(__file__))
+    return {f: os.path.getmtime(os.path.join(here, f)) for f in sorted(os.listdir(here)) if f.endswith(".py")}
+
+
+_BOOT_CODE = _code_fingerprint()
+
 
 @asynccontextmanager
 async def _lifespan(_app):
@@ -58,8 +68,9 @@ def health():
     except FileNotFoundError as e:
         claude = None
     lo = os.path.exists(os.path.expanduser(r"~\LibreOffice\program\soffice.exe")) or bool(os.environ.get("SOFFICE"))
+    changed = [f for f, t in _code_fingerprint().items() if _BOOT_CODE.get(f) != t]
     return {"ok": True, "version": __version__, "repo": REPO, "claude": claude, "libreoffice": lo,
-            "active_run": jobs.active_run(),
+            "active_run": jobs.active_run(), "restart_needed": bool(changed), "changed_files": changed,
             "stages": {"A": prompts.STAGES_A, "B": prompts.STAGES_B}}
 
 
@@ -119,6 +130,14 @@ def run_state(rid: str):
             st["gate_b_md"] = open(_repo_file(res["gate_b_brief_path"]), encoding="utf-8").read()
         except HTTPException:
             st["gate_b_md"] = None
+    if res.get("gate_b"):
+        res["gate_rows"] = gates.rows(res["gate_b"].get("criteria", []))
+    rv = os.path.join(run_dir(rid), "review.json")
+    if os.path.exists(rv):
+        try:
+            st["review"] = json.load(open(rv, encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            st["review"] = None
     st["eta"] = jobs.eta(st)
     fp = os.path.join(run_dir(rid), "paper_facts.json")
     if os.path.exists(fp):
@@ -148,6 +167,54 @@ def run_charts(rid: str):
     if not os.path.exists(p):
         raise HTTPException(404, "charts not built yet")
     return json.load(open(p, encoding="utf-8"))
+
+
+@app.get("/api/runs/{rid}/positions")
+def run_positions(rid: str):
+    """Holdings per rebalance and the trades between them, for the page's Positions tab."""
+    import pandas as pd
+    _state(rid)
+    rd = run_dir(rid)
+    out = {"holdings": [], "trades": []}
+    hp, tp = os.path.join(rd, "holdings.csv"), os.path.join(rd, "trades.csv")
+    if os.path.exists(hp):
+        h = pd.read_csv(hp)
+        if "leg" not in h.columns:
+            h["leg"] = h["weight"].apply(lambda w: "long" if w > 0 else "short")
+        out["holdings"] = h[["date", "symbol", "leg", "weight"]].to_dict("records")
+        t = pd.read_csv(tp) if os.path.exists(tp) else workbook.derive_trades(h)
+        t["date"] = pd.to_datetime(t["date"]).dt.strftime("%Y-%m-%d")
+        out["trades"] = t[["date", "symbol", "action", "weight_before", "weight_after"]].to_dict("records")
+        out["trades_derived"] = not os.path.exists(tp)
+    return out
+
+
+@app.post("/api/runs/{rid}/review")
+def rerun_review(rid: str):
+    st = _state(rid)
+    if st["status"] not in ("gate_b", "decided"):
+        raise HTTPException(409, "The analyst review runs on a finished backtest.")
+    if st.get("review_status") == "running":
+        raise HTTPException(409, "A review is already running.")
+    _busy_guard()
+    jobs.start(jobs.analyst_review, rid)
+    return {"ok": True}
+
+
+@app.post("/api/runs/{rid}/rebuild")
+def rebuild(rid: str):
+    """Rebuild charts and the workbook from the hand-off files (after a Lightyear update), without re-running Claude."""
+    st = _state(rid)
+    if st["status"] not in ("gate_b", "decided", "failed"):
+        raise HTTPException(409, "Nothing to rebuild yet.")
+    _busy_guard()
+    keep = st["status"] if st["status"] == "decided" else None
+    def go():
+        jobs.build_outputs(rid, review=False)
+        if keep:
+            jobs.update(rid, status=keep)
+    jobs.start(go, rid)
+    return {"ok": True}
 
 
 @app.get("/api/runs/{rid}/workbook")

@@ -122,12 +122,25 @@ bootstrap Sharpe interval, deflated Sharpe, walk-forward stability, a cost sensi
 and Gate B criteria computed by ros.governance.gates.gate_b(). Use universal_backtester/clean_charts.py for charts.
 Keep every number in code; never estimate a statistic in prose. If a script runs for more than a couple of
 minutes, run it in the background and keep announcing progress.
+Shell: shell variables such as $? and command substitution are blocked in this session; do checks in python.
+Sanity checks before the hand-off (report each in "notes", in plain words): how many names each leg holds at
+each rebalance and the largest single weight (flag any rebalance with fewer than 5 names or a weight above 25%
+of capital: a result driven by one or two stocks is luck, not a strategy); the 5 worst days and what caused them;
+whether simpler comparators (long leg alone, the plain universe) beat the strategy.
 
 Then write these hand-off files into {run_dir}/ (the server builds the workbook and interactive charts from them):
 
 1. daily_returns.csv  -- columns: date,strategy,benchmark[,sleeve]. Daily simple returns as fractions, the
    strategy NET of costs, benchmark = NIFTY 500. One row per trading day of the live period. `sleeve` only if
    one extra sleeve is genuinely important.
+1b. holdings.csv -- REQUIRED for any stock-level strategy: columns date,symbol,leg,weight[,price,...]. One row per
+   position per rebalance date: the target weight as a fraction of capital (shorts negative), leg = long|short.
+   Every rebalance, every name. Extra columns (the signal values that chose the name) are welcome.
+1c. trades.csv -- optional: date,symbol,action,weight_before,weight_after[,price,...] with action one of
+   BUY|SELL|SHORT|COVER|ADD|TRIM|FLIP. If you do not write it, Lightyear derives it from holdings.csv.
+1d. comparators.csv -- REQUIRED when the card names must-beat comparators or the run builds legs/variants:
+   date + one column per comparator with its daily net returns as fractions (for example "Long leg only",
+   "Equal-weight universe", "Official index"). These go in the workbook's Comparators sheet and an appendix chart.
 2. results.json with exactly these keys:
 {{
   "strategy_name": "<short name of the strategy book>",
@@ -148,6 +161,34 @@ Then write these hand-off files into {run_dir}/ (the server builds the workbook 
 }}
 "tables" should include the sensitivity / walk-forward / comparator CSVs your run wrote.
 STOP after the Gate B brief. decision stays PENDING.
+"""
+
+REVIEW = """You are the ANALYST REVIEWER inside LIGHTYEAR, a local web page for a non-technical operator. A backtest has
+finished and its results are on the page. Your job: read everything and explain, in plain English, whether this
+strategy is any good, what drove the result, and what in the result could be wrong. You do NOT decide anything
+(Gate B is a named human's decision) and you never change any result file, card or script.
+
+Read: {run_dir}/results.json, {run_dir}/charts.json (metrics, observations, comparators),
+{run_dir}/daily_returns.csv, {run_dir}/holdings.csv and trades.csv if present, the Gate B brief named in
+results.json, the card {card}, and the backtest script the run used (named in results.json "files").
+Use python to check things for yourself (concentration per rebalance, the worst days and which stocks caused
+them, how much of the gain came from a few days or a few names, whether simpler alternatives did better, look-
+ahead or survivorship risks, whether a number in the headline disagrees with the daily returns).
+Never run git, never fetch data, never edit files other than the one below.
+
+Write {run_dir}/review.json with exactly these keys, every text item one or two short plain sentences with
+its number:
+{{
+  "verdict": "<4-6 sentences: is this a good strategy as tested, why, and how much to trust the result. No recommendation to approve or reject.>",
+  "trust": "high" | "medium" | "low",
+  "trust_why": "<one sentence>",
+  "strengths": ["<3-5 genuine positives>"],
+  "weaknesses": ["<3-5 genuine negatives>"],
+  "red_flags": ["<things that may be bugs, biases or design flaws in the test itself, and how to check them>"],
+  "what_would_change_it": ["<2-4 concrete changes to the test that could change the answer>"]
+}}
+Be specific and honest: name stocks, dates and numbers. If the test design (not the idea) explains a bad or a
+good result, say so first.
 """
 
 REVISE_A = _COMMON + """

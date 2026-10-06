@@ -17,12 +17,13 @@ import threading
 import time
 import uuid
 
-from . import charts, contract, prompts, workbook
+from . import charts, contract, gates, prompts, workbook
 from .paths import LEDGER, REPO, RUNS, find_claude, rel, run_dir
 
 ALLOWED_TOOLS = ["Read", "Write", "Edit", "Glob", "Grep", "TodoWrite", "Skill",
                  "Bash(python:*)", "Bash(python3:*)", "Bash(py:*)", "Bash(ls:*)", "Bash(mkdir:*)",
-                 "Bash(cat:*)", "Bash(head:*)", "Bash(tail:*)", "Bash(wc:*)", "Bash(echo:*)"]
+                 "Bash(cat:*)", "Bash(head:*)", "Bash(tail:*)", "Bash(wc:*)", "Bash(echo:*)", "Bash(tee:*)",
+                 "Bash(grep:*)", "Bash(sort:*)", "Bash(find:*)", "Bash(cd:*)"]
 DISALLOWED_TOOLS = ["Bash(git:*)", "Bash(rm:*)", "Bash(curl:*)", "Bash(pip:*)", "WebFetch", "WebSearch"]
 STAGE_RE = re.compile(r"LIGHTYEAR-STAGE:\s*([0-9A-Za-z]+)")
 # looser signals, used only to move the tracker forward by at most two stages:
@@ -411,7 +412,7 @@ def phase_b(rid):
     build_outputs(rid)
 
 
-def build_outputs(rid):
+def build_outputs(rid, review=True):
     """Deterministic: validate the hand-off, build charts.json and the workbook, recalc with LibreOffice."""
     update(rid, status="building", activity="Checking the results, drawing the charts and building the Excel workbook.")
     rd = run_dir(rid)
@@ -422,30 +423,84 @@ def build_outputs(rid):
         log(rid, "error", str(e))
         return
     _finish_stages(rid, [s for s, _ in prompts.STAGES_B])
+    extra, warn = contract.load_optional(rd, df["date"])
+    for w in warn:
+        log(rid, "error", f"Hand-off warning: {w}")
     names = {"strategy": res.get("strategy_name") or "Strategy", "benchmark": res.get("benchmark_name") or "NIFTY 500",
              "sleeve": res.get("sleeve_name") or "Sleeve"}
-    ch = charts.build(df, names)
+    ch = charts.build(df, names, comparators=extra.get("comparators"))
     json.dump(ch, open(os.path.join(rd, "charts.json"), "w", encoding="utf-8"), default=float)
-    log(rid, "server", "Interactive chart series built from daily_returns.csv.")
+    log(rid, "server", "Interactive chart series built from daily_returns.csv"
+        + (" and comparators.csv." if "comparators" in extra else "."))
+    recalc = _workbook(rid, res, df, extra, ch["observations"], _load_review(rd))
+    res["gate_rows"] = gates.rows(res["gate_b"].get("criteria", []))
+    update(rid, status="gate_b", current_stage="GB", results=res, recalc=recalc, handoff_warnings=warn,
+           has_holdings="holdings" in extra, has_trades=("trades" in extra or "holdings" in extra),
+           has_comparators="comparators" in extra)
+    log(rid, "gate", "Gate B ready. A named human records the decision on the page.")
+    if review and not os.environ.get("LIGHTYEAR_SKIP_REVIEW"):
+        try:
+            analyst_review(rid)
+        except Exception as e:      # the review is extra; Gate B is already on the page
+            update(rid, review_status="failed")
+            log(rid, "error", f"Analyst review failed: {e}")
+
+
+def _load_review(rd):
+    p = os.path.join(rd, "review.json")
+    try:
+        return json.load(open(p, encoding="utf-8")) if os.path.exists(p) else None
+    except (json.JSONDecodeError, OSError):
+        return None
+
+
+def _workbook(rid, res, df, extra, observations, review):
+    """Build the workbook and recalculate it. Never loses the run over a workbook problem."""
     st = load(rid)
+    rd = run_dir(rid)
     xlsx = os.path.join(rd, f"{st['slug']}_results.xlsx")
     title = f"{st.get('paper_title') or st['slug']}: India test"
-    recalc = None
     try:
-        workbook.build(rd, res, df, title, xlsx)
+        workbook.build(rd, res, df, title, xlsx, holdings=extra.get("holdings"), trades=extra.get("trades"),
+                       comparators=extra.get("comparators"), observations=observations, review=review)
+        update(rid, workbook=os.path.basename(xlsx))
         if os.environ.get("LIGHTYEAR_SKIP_RECALC"):
-            raise RuntimeError("recalc skipped (LIGHTYEAR_SKIP_RECALC set)")
+            return {"error": "recalc skipped (LIGHTYEAR_SKIP_RECALC set)"}
         log(rid, "server", "Workbook built; recalculating with LibreOffice.")
         p = subprocess.run([sys.executable, os.path.join(REPO, "scripts", "xlsx_recalc_libreoffice.py"), xlsx],
                            capture_output=True, text=True, timeout=600)
         recalc = json.loads(p.stdout) if p.stdout.strip().startswith("{") else {"error": (p.stderr or p.stdout)[-500:]}
         log(rid, "server", f"Recalc: {recalc.get('status', recalc.get('error'))}, "
             f"{recalc.get('total_formulas', '?')} formulas, {recalc.get('total_errors', '?')} errors.")
-    except Exception as e:  # the workbook is a convenience; never lose the run over it
-        recalc = {"error": str(e)}
+        return recalc
+    except Exception as e:
         log(rid, "error", f"Workbook step failed: {e}")
-    update(rid, status="gate_b", current_stage="GB", results=res, workbook=os.path.basename(xlsx), recalc=recalc)
-    log(rid, "gate", "Gate B ready. A named human records the decision on the page.")
+        return {"error": str(e)}
+
+
+def analyst_review(rid):
+    """Claude reads the finished run and writes review.json: plain-English strengths, weaknesses, red flags.
+    Runs after Gate B is shown (it never holds the page up) and never decides anything."""
+    update(rid, review_status="running")
+    log(rid, "server", "Analyst review: Claude is reading the results.")
+    card = ((load(rid).get("phase_a") or {}).get("card_path")) or "(no card)"
+    ok, _ = run_claude(rid, _fmt(prompts.REVIEW, rid, card=card), "Analyst review", [])
+    rd = run_dir(rid)
+    rev = _load_review(rd)
+    if not rev:
+        update(rid, review_status="failed")
+        log(rid, "error", "Analyst review did not write a valid review.json.")
+        return
+    try:
+        res, df = contract.check_results(rd)
+        extra, _ = contract.load_optional(rd, df["date"])
+        ch = json.load(open(os.path.join(rd, "charts.json"), encoding="utf-8"))
+        recalc = _workbook(rid, res, df, extra, ch.get("observations"), rev)
+        update(rid, review_status="done", recalc=recalc)
+    except Exception as e:
+        update(rid, review_status="done")
+        log(rid, "error", f"Review saved, but the workbook refresh failed: {e}")
+    log(rid, "server", "Analyst review ready.")
 
 
 # ------------------------------------------------------------------ human actions
