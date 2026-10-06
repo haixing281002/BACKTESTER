@@ -1,0 +1,536 @@
+card_version: "1.0"
+
+paper:
+  id: ssrn_962461
+  title: "India quick test: 10-month moving-average timing across five sleeves (from Faber, 'A Quantitative Approach to Tactical Asset Allocation', 2013 update)"
+  authors: [Mebane T. Faber]
+  date: "2013-02-01"
+  source_file: docs/papers/ssrn_962461.pdf
+  source_sha256: "e19667fcad0ed40914512d9dcf3c5f08e5a6329181932626a79dfe9c1eb3ab37"
+  url: "https://ssrn.com/abstract=962461"
+
+intent:
+  mode: adaptation
+  parent_card: ""
+  rationale: >
+    The paper says a very simple rule cuts the losses of almost any risky asset:
+    once a month, look at the asset's price; if it is above its average price of
+    the last ten months, own it; if it is below, sell it and sit in cash until it
+    climbs back above. Applied to five different asset classes held at 20% each,
+    the paper reports that this kept roughly the return of buy-and-hold while the
+    worst fall shrank from 46% to under 10% (US data, 1973-2012). This card asks
+    one question fast: does the same rule reduce drawdowns without giving up much
+    return on five Indian equity sleeves over the last five years of NSE data?
+    It is a first read, not a financing memo. The paper's US numbers are never a
+    target for this run.
+  transferred_mechanism: >
+    Five sleeves, 20% each: the NIFTY 500 index, and four baskets of NIFTY 500-sized
+    stocks that stand in for the paper's other asset classes (export earners for
+    foreign equity, banks and housing financiers for bonds, metals, mining and oil
+    producers for commodities, real-estate developers for REITs). At each month-end
+    a sleeve whose price is above its own 10-month average is held for the next
+    month; a sleeve below it has its 20% moved to cash. Nothing is ranked against
+    anything else.
+  broken_assumptions:
+    - >
+      THE ASSETS ARE NOT DIVERSIFIED THE WAY THE PAPER'S WERE. The paper's five
+      assets include US Treasuries, which fell less than 20% when the others fell
+      50-70% (page 16). All five sleeves here are Indian equities with full market
+      beta, so most of the 'bond-like volatility' cannot transfer. This card tests
+      the timing rule, not the asset mix.
+    - >
+      FIVE YEARS, NOT FORTY. The data starts in October 2021. After a 10-month
+      warmup there are about 50 monthly signals and no deep bear market. The paper
+      says the gain shows up only over whole business cycles (page 25).
+    - >
+      PRICE RETURN, NOT TOTAL RETURN. Bhavcopy has no dividends, and the NIFTY 500
+      workbook is a price index. The paper insists on total return (page 22, page 58).
+    - >
+      CASH IS A FLAT 6%. There is no Indian T-bill series in the permitted sources,
+      so cash accrues a constant 6% a year, swept 4-8%.
+    - >
+      COSTS ARE CHARGED. The paper charges nothing (page 22). This card charges 30bp
+      round trip on every switch and on the monthly rebalance back to 20%.
+    - >
+      THE TRADE IS THE NEXT DAY. The paper trades at the close of the signal day
+      (page 22). Here the signal is read at the month-end close and traded at the
+      next trading day's close.
+
+universe:
+  description: >
+    Five sleeves inside the NIFTY 500 mandate: the NIFTY 500 index, and four
+    industry baskets drawn from the top 500 NSE main-board stocks by trailing traded
+    value (bhavcopy master, point in time, delisted names kept), each standing in
+    for one of the paper's non-Indian-equity asset classes. Cash is a flat 6% proxy.
+  asset_class: equity
+  geography: IN
+  assets:
+    - "NIFTY 500"
+    - "SLEEVE_EXPORT_EARNERS (IT services + pharmaceuticals)"
+    - "SLEEVE_RATE_SENSITIVE (banks + housing finance)"
+    - "SLEEVE_COMMODITY_PRODUCERS (metals, mining, upstream oil and gas)"
+    - "SLEEVE_REAL_ESTATE (listed real-estate developers)"
+  benchmark: NIFTY 500
+  cash_asset: CASH_PROXY_CONSTANT_6PCT
+
+universe_translation:
+  source_universe: "Five US-investor asset-class total-return indices (S&P 500, MSCI EAFE, US 10y Treasuries, GSCI, NAREIT), 1973-2012, monthly; plus the S&P 500 alone from 1901"
+  source_breadth: 5
+  source_selection_rule: >
+    A fixed list of five asset classes chosen in advance as a global multi-asset
+    portfolio (13 in the extension). Every asset is always considered and each is
+    timed on its own (pages 15, 29).
+  target_universe: "NSE main-board stocks, top 500 by trailing traded value, point in time (bhavcopy), as NIFTY 500 plus four industry sleeves"
+  grade: loose
+  resolution: needs_data
+  rationale: >
+    This run may use only NSE bhavcopy, Screener.in and the NIFTY 500 index
+    workbook, and the fund is an Indian equity fund. So the five asset classes
+    become five sleeves inside the NIFTY 500 mandate: the NIFTY 500 for the paper's
+    S&P 500, and four industry baskets of the top 500 NSE stocks for the other four.
+    Faber's signal is computed on the thing that is held, so unlike a gold or crude
+    paper this translation does not need the underlying commodity or bond prices to
+    compute the signal; it needs only the baskets themselves.
+  transfer_risks:
+    - "The paper's portfolio result rests on weakly correlated asset classes, including bonds. Five Indian equity sleeves all carry market beta, so Stage 05 must report the sleeve correlation matrix before any result is read."
+    - "About 50 monthly signals in a window with no deep Indian bear market: the cost of whipsaws is measurable, the benefit in a crash mostly is not."
+    - "Price return only, while the paper insists on total return; dividends of roughly 1-2% a year are missing from the sleeves and the cash leg earns a flat 6%, which flatters timing against buy-and-hold."
+    - "Sleeve membership depends on an industry label per stock that the master file does not carry; the industry-to-sleeve mapping is the drafter's, not an index provider's."
+    - "Equity proxies can move against the asset they stand for: banks can fall when bond prices rise on a growth scare, and the commodity basket mixes producers with very different sensitivities."
+  mechanism_needs:
+    needs_cross_section: false
+    min_names: 5
+    cap_segment: all
+    sector: null
+    min_history_years: 10.0
+    must_be_in_mandate: false
+    notes: >
+      Five comes from the paper's own construction: five independently timed
+      sleeves. Ten years is the drafter's floor for a trend filter whose payoff
+      the paper says only appears across whole business cycles (page 25); this run
+      has five, which is stated as a broken assumption rather than hidden.
+  alternatives_considered:
+    - "NIFTY 500 constituents (catalogued; ranked second by the code, in mandate)"
+    - "NSE factor sleeves (ranked first by the code, 8 streams, in mandate)"
+    - "NSE-listed ETFs and REITs: gold, gilt, Nasdaq-100 and REIT units (closest to the paper's asset classes, outside the equity mandate)"
+    - "NIFTY 500 timed alone (the paper's single-asset Step 2)"
+    - "Stock-by-stock 10-month timing across NIFTY 500 constituents"
+  why_not_alternatives: >
+    The catalogued "NIFTY 500 constituents" universe needs official constituent
+    prices and membership history the fund does not hold; the bhavcopy top 500 by
+    traded value is the held stand-in for it, so it is named as such rather than
+    claiming the official index. The factor sleeves are outside the two sources this run may use, and the
+    fund's own measurement puts them at 0.74-0.94 pairwise correlation, which is
+    no more diverse than the proxies. NSE-listed ETFs and REITs (gold, gilt,
+    Nasdaq-100, Embassy) are the most faithful translation and do trade in the NSE
+    bhavcopy archive, but the local download keeps only INE-ISIN equity rows, so
+    none are on disk; they are asked for as a data request and are outside the
+    equity mandate. NIFTY 500 timed alone is kept as the stripped-down comparator,
+    not the strategy, because the paper's claim is about a portfolio. Stock-by-stock
+    timing is a different mechanism (trend following on single names), not GTAA.
+  required_instruments:
+    - NSE_BHAVCOPY_STOCK_PANEL
+    - "Screener.in current shares"
+    - "Screener.in industry classification"
+    - "NIFTY 500"
+    - CASH_PROXY_CONSTANT_6PCT
+  evidence_page: 15
+
+strategy:
+  signal_name: sma10_trend_filter_gtaa
+  signal_definition: >
+    At the close of the last trading day of each month, for each of the five
+    sleeves, compare the sleeve's price level that day with the simple average of
+    its last ten month-end levels (this month-end and the nine before it). If the
+    level is above the average, the sleeve is 'on' for the next month; if it is
+    below, the sleeve is 'off'. Moves during the month are ignored. An exact tie
+    keeps last month's state. A sleeve with fewer than ten month-ends of history is
+    not traded. For the four baskets, the level is a free-float-weighted price index
+    of the basket built from bhavcopy closes, with no single stock above 20% of a basket.
+  inputs_required:
+    - "month-end NIFTY 500 close (index workbook)"
+    - "daily corporate-action-neutralised close and traded value per stock (bhavcopy master)"
+    - "today's shares outstanding per stock from Screener (market cap over price) and the master's free-float fraction, for weights inside a basket"
+    - "an industry label per stock, to assign it to a sleeve (Screener industry)"
+    - "a flat 6% annual cash rate (declared constant)"
+  cross_sectional: false
+  formation_rule: >
+    Each sleeve is judged only against its own 10-month average; sleeves are never
+    ranked against each other. Every 'on' sleeve is held; every 'off' sleeve is
+    replaced by cash.
+  weighting_rule: >
+    Each sleeve always gets 20% of the money. An 'on' sleeve holds its 20%; an 'off'
+    sleeve's 20% sits in cash earning 6% a year. The cash is NOT spread over the
+    sleeves that are on - the paper tested that 'all-in' version and rejected it as
+    needlessly risky (page 55). Weights are reset to 20% each month.
+  holding_period: "one month, reviewed every month-end; positions usually run several months"
+  rebalance_frequency: monthly
+  is_long_short: false
+  long_only_adaptation: ""
+  constraints:
+    - "the same 10-month average for every sleeve; no per-sleeve tuning"
+    - "no leverage; gross exposure at most 100%"
+    - "off sleeves go to cash, never to other sleeves"
+    - "sleeve baskets drawn only from the top 500 by trailing traded value at each quarterly reconstitution; delisted names sold at cost when they leave"
+  engine_template: NEEDS_NEW_TEMPLATE
+  template_gap: >
+    Inputs each month-end: for every sleeve, its month-end level and the average of
+    its last ten month-end levels. Output: weight_i = 0.20 x 1[level_i > SMA10_i],
+    remainder in cash. Constraints: long-only, gross <= 1, no renormalisation across
+    sleeves, a tie keeps the prior state, a sleeve with under ten month-ends is
+    held in cash. Objective: reproduce the paper's per-asset switch exactly. The
+    nearest registered template, ts_momentum, renormalises the on sleeves to 100%
+    (the paper's rejected all-in variant) and uses the sign of trailing return rather
+    than a moving-average cross; fixed_weight and vol_target have no per-sleeve
+    switch. The sleeve baskets themselves (industry label -> top-500 free-float-weighted
+    index, 20% name cap) are a data-preparation step, not an allocator.
+  confidence: high
+  evidence_pages: [21, 22, 29, 33, 55]
+
+signal:
+  name: sma10_trend_filter_gtaa
+  template: ts_momentum
+  lookback_days: 210
+  lag_days: 1
+  description: >
+    lookback_days 210 is ten months of trading days; the rule itself uses ten
+    month-end closes. lag_days 1: the signal is read at the month-end close (NSE
+    closes publish after the close) and traded at the next trading day's close.
+    The named template is only the NEAREST registered allocator and is NOT the
+    paper's construction (it renormalises and uses trailing-return sign); Step 05 is
+    blocked on the per-sleeve switch described in strategy.template_gap, run as a
+    dedicated script, long-only, never ts_momentum as is.
+  params:
+    sma_months: 10
+    sleeve_weight: 0.20
+    renormalise_on_sleeves: false
+    tie_rule: keep_previous_state
+    basket_weighting: free_float_cap_weighted
+    basket_name_cap: 0.20
+    basket_universe_rank: 500
+
+portfolio:
+  rebalance: monthly
+  long_only: true
+  max_gross: 1.0
+  allow_cash: true
+  mandate_allow_cash: false
+  start: "2022-09-01"
+  end: "2026-10-05"
+
+costs:
+  spread_bps: 30.0
+  cost_model: half_spread
+
+data_requirements:
+  - {name: "NIFTY 500", kind: price, frequency: daily, start: "2021-10-01", mandatory: true, purpose: "the domestic-equity sleeve, its own timing signal, and the fund benchmark"}
+  - {name: NSE_BHAVCOPY_STOCK_PANEL, kind: price, frequency: daily, start: "2021-10-04", mandatory: true, purpose: "closes and traded value for every main-board stock, incl. delisted, to build the four basket sleeves and their top-500 membership"}
+  - {name: "Screener.in current shares", kind: fundamental, frequency: annual, start: "2026-10-06", mandatory: true, purpose: "today's shares, for cap weights inside each basket; not point in time"}
+  - {name: "Screener.in industry classification", kind: fundamental, frequency: annual, start: "2026-10-06", mandatory: true, purpose: "assign each stock to a sleeve; a current label, not point in time"}
+  - {name: CASH_PROXY_CONSTANT_6PCT, kind: risk_free_rate, frequency: daily, mandatory: true, purpose: "what an off sleeve earns; the paper's 90-day T-bill"}
+
+ambiguities:
+  - field: universe.assets
+    headline: "Bonds, commodities, REITs and foreign equity become Indian equity baskets"
+    issue: >
+      The paper's five assets are US stocks, foreign stocks, US 10-year bonds,
+      commodities and REITs (page 15). None of the last four is in the permitted
+      sources or the equity mandate.
+    resolution: >
+      Use industry baskets inside the top 500 as stand-ins: IT services and pharma
+      for foreign equity, banks and housing finance for bonds, metals, mining and
+      upstream oil and gas for commodities, real-estate developers for REITs. Report
+      the sleeve correlation matrix first, and say plainly the run tests the timing
+      rule on these baskets, not the paper's asset mix.
+    confidence: low
+    material: true
+    evidence_page: 15
+  - field: strategy.signal_definition
+    headline: "Does the 10-month average include the current month? Read as yes"
+    issue: >
+      'Buy when monthly price > 10-month SMA' (page 21) does not say whether the
+      current month-end is one of the ten.
+    resolution: >
+      Include it (this month-end and the nine before it), the usual reading of a
+      trailing simple moving average. Report the 9-in-10-excluding-current reading
+      as a sensitivity.
+    confidence: medium
+    material: false
+    evidence_page: 21
+  - field: signal.params.sma_months
+    headline: "Paper's 10 months was picked 'to be representative'; 3-12 swept"
+    issue: >
+      The author says 10 months was chosen to match the 200-day average (page 57)
+      and shows lengths 3 to 12 work similarly (page 33).
+    resolution: >
+      Base case 10 months, the paper's published rule. Report 6, 8 and 12 months as
+      sensitivities, never as the headline, and count the sweep in n_configs_tried.
+    confidence: high
+    material: true
+    evidence_page: 33
+  - field: signal.lag_days
+    headline: "Paper trades on the signal day's close; card trades next day"
+    issue: "All entries and exits are at the close of the signal day (page 22)."
+    resolution: >
+      Read the signal at the month-end close and trade at the next trading day's
+      close, because NSE closes publish after the close. Report the same-day version
+      only as a diagnostic of how much the lag costs.
+    confidence: high
+    material: false
+    evidence_page: 22
+  - field: costs.spread_bps
+    headline: "Paper charges no costs; card charges 30bp round trip"
+    issue: "Taxes, commissions and slippage are excluded (page 22) and argued to be small (page 35)."
+    resolution: >
+      Charge 30bp round trip on every sleeve switch and on the monthly reset to 20%,
+      and on basket reconstitution trades inside a sleeve. Report realised turnover
+      and the break-even cost.
+    confidence: high
+    material: true
+    evidence_page: 22
+  - field: universe.cash_asset
+    headline: "No Indian T-bill series: cash earns a flat 6%, swept 4-8%"
+    issue: "The paper's off sleeves earn 90-day T-bills (page 22). The permitted sources hold no Indian rate."
+    resolution: >
+      Accrue a flat 6% a year on cash and sweep 4-8%. Because the book averages
+      about 30% in cash in the paper (page 46), every result is partly a statement
+      about this assumed rate. Return per unit of volatility is compared on returns
+      in excess of the same rate, so cash is neither a free gain nor a free cushion.
+    confidence: medium
+    material: true
+    evidence_page: 22
+  - field: strategy.signal_definition
+    headline: "Basket weighting is the drafter's: free-float cap-weighted, 20% name cap"
+    issue: >
+      The paper's assets are cap-weighted indices; the baskets here have to be built,
+      and a few names (one large bank, one oil major) would dominate a pure
+      cap-weighted basket.
+    resolution: >
+      Weight by free-float market cap (Screener's current shares times the adjusted
+      close times the master's current free-float fraction), cap any one name at 20%
+      of its basket, rebuild quarterly with the master's top-500 flag. Report an
+      equal-weight basket version as a sensitivity. Free float is a current snapshot,
+      not point in time.
+    confidence: low
+    material: true
+    evidence_page: 15
+
+  - field: universe.assets
+    headline: "NIFTY 500 sleeve overlaps the four baskets; ex-basket version as sensitivity"
+    issue: >
+      The NIFTY 500 already contains the banks, IT, pharma, metals, oil and realty
+      stocks that form the four baskets, so the five sleeves overlap and a few large
+      names are counted twice. The paper's S&P 500 also held energy and financials,
+      so some overlap is faithful, but in India the four baskets are a large share of
+      the index.
+    resolution: >
+      Keep the NIFTY 500 as the headline domestic sleeve (the paper's analogue and the
+      fund's benchmark). Run a sensitivity where the domestic sleeve is the top 500
+      excluding the basket stocks, free-float weighted. Report both correlation
+      matrices.
+    confidence: medium
+    material: true
+    evidence_page: 15
+  - field: backtest_plan.sample_start
+    headline: "Master's top-500 flag starts ~Mar 2022; early baskets use Oct 2021 membership"
+    issue: >
+      The master's in_universe flag is zero for every stock until about 2022-03-29,
+      because it needs a quarter of trailing traded value. Filling earlier months with
+      later membership would be look-ahead inside the first year of signals.
+    resolution: >
+      Before the flag starts, use the top 500 by traded value over October 2021 only,
+      known at the 2021-10-29 close and held fixed. Basket levels start 2021-11-01, so
+      the first trade is 2022-09-01.
+    confidence: high
+    material: true
+    evidence_page: 22
+
+replication_targets: []
+
+benchmark_templates:
+  - {name: "Buy & Hold: five sleeves at 20% each, monthly reset", template: fixed_weight, params: {weights: [0.2, 0.2, 0.2, 0.2, 0.2]}, rebalance: monthly}
+  - {name: "NIFTY 500 alone, fully invested", template: fixed_weight, params: {weights: [1.0, 0.0, 0.0, 0.0, 0.0]}, rebalance: monthly}
+
+selection:
+  rule: >
+    Quarterly, from the bhavcopy master, take the stocks ranked in the top 500 by
+    trailing traded value (no look-ahead, delisted names kept and sold at cost when
+    they leave). Assign each to a sleeve by its Screener industry label: IT services
+    or pharmaceuticals -> export earners; private and public sector banks or housing
+    finance -> rate sensitive; steel, non-ferrous metals, mining, or crude oil and
+    gas production -> commodity producers; real estate developers -> real estate.
+    Every other stock is in no basket (it is covered by the NIFTY 500 sleeve).
+    Before the master's top-500 flag starts (about March 2022), membership is the top
+    500 by traded value over October 2021 alone, known at the 2021-10-29 close and held
+    fixed until the flag takes over, so no later information decides early
+    membership. Weights inside a basket are free-float market cap (Screener shares
+    times the master's free_float_frac), capped at 20% a name.
+    No explicit securities are named.
+  explicit_securities: []
+  why_these: >
+    The rule is the whole decision. The industry-to-sleeve mapping is the drafter's
+    reading of which Indian listed businesses carry each asset's exposure; the
+    exact Screener industry labels must be confirmed when they are fetched.
+
+backtest_plan:
+  sample_start: "2022-09-01"
+  sample_end: "2026-10-05"
+  why_this_window: >
+    The bhavcopy cache starts on 2021-10-04, and the master's top-500 flag only
+    starts around March 2022, so basket levels start on 2021-11-01 from October 2021
+    membership (see selection). The first ten month-ends run from November 2021 to
+    August 2022; the first signal is the August 2022 month-end and the first trade is
+    1 September 2022. The end is the last bhavcopy day. The window holds
+    the 2022 rate-hike drawdown, the 2023-24 rally, and the September 2024 to March
+    2025 correction, which is the nearest thing to a bear market it contains.
+  warmup_days: 210
+  why_warmup: >
+    Ten month-end closes are needed before the first signal; November 2021 to August
+    2022 is about 210 trading days. Nothing before 1 September 2022 counts in the record.
+  rebalance_rule: >
+    Signal at the close of the last trading day of each month; trade at the next
+    trading day's close (lag 1). Every sleeve is reset to 20% or 0% at that trade.
+    Baskets are reconstituted at the first rebalance after each quarter-end.
+  weights_rule: "20% per on sleeve, 0% per off sleeve, the remainder in cash at 6%; long-only, gross <= 1, no renormalisation."
+  explicit_weights: {}
+  benchmarks:
+    - name: "NIFTY 500"
+      why_this: "The fund benchmark and the do-nothing option. Headline chart and table."
+    - name: "Buy & Hold: the same five sleeves at 20% each, reset monthly"
+      why_this: "The paper's own comparator (page 29). Isolates the timing from the choice of sleeves. Appendix."
+    - name: "Static mix at the timing book's average exposure, rest in cash"
+      why_this: "If the timing book is, say, 70% invested on average, a fixed 70/30 mix tells whether the switch adds anything beyond simply holding less equity. Appendix."
+    - name: "NIFTY 500 timed alone with the same 10-month rule"
+      why_this: "The paper's single-asset Step 2 (pages 21-28); strips out the sleeves to show what the rule does on the market itself. Appendix."
+  must_beat:
+    - "Buy & Hold five sleeves, on maximum drawdown AND on return per unit of volatility, or the timing adds nothing"
+    - "the static mix at the same average exposure, on return per unit of volatility, or the rule is just de-risking"
+    - "NIFTY 500 on maximum drawdown, since that is the paper's claim"
+  success_looks_like: >
+    After 30bp costs, with cash at 6%: maximum drawdown at most two-thirds of the
+    Buy & Hold sleeves'; volatility clearly lower; annual return within about 2
+    percentage points of Buy & Hold; return per unit of volatility above both Buy &
+    Hold and the static same-exposure mix; and the same direction at 6, 8 and 12
+    months and with cash at 4% and 8%.
+  failure_looks_like: >
+    Any of: drawdown not reduced against Buy & Hold; drawdown reduced only as much
+    as the static same-exposure mix reduces it (the rule is just holding less
+    equity); return given up of more than about 3 points a year; the result flips
+    sign at 6 or 12 months; or the advantage disappears when cash earns 4%. Because
+    the window holds no deep bear market, a null here means 'no benefit visible in
+    a mild window', not that the rule fails in a crash.
+  known_failure_modes:
+    - "WHIPSAW: in a choppy market the rule sells after a fall and buys after a rise; the 2024-25 correction and rebound are exactly that shape."
+    - "CORRELATED SLEEVES: if all five sleeves switch off together, the book swings between nearly all-in and nearly all-cash, a market-timing bet rather than a diversified one."
+    - "SHORT SAMPLE: about 50 monthly signals and perhaps 10-20 switches in total; no statistic from this run carries much weight."
+    - "CASH RATE: the off share earns an assumed 6%, so a rate assumption drives part of the comparison."
+    - "BASKET CONCENTRATION: the bank and commodity baskets are dominated by a few large names even with a 20% cap."
+
+data_requests:
+  - item: "NSE-listed ETF and REIT closes from the same NSE bhavcopy archive: a gold ETF, a 10-year gilt ETF, a Nasdaq-100 or other foreign-equity ETF, a liquid ETF, and listed REIT units"
+    why: "They are the closest Indian-listed versions of the paper's gold-commodity, bond, foreign-equity, cash and REIT assets, and they would restore the low correlation the paper's result depends on."
+    unlocks: "A second, faithful multi-asset run of the same rule (labelled OUT OF MANDATE), which says whether the paper's mechanism works in India at all, separately from whether equity proxies carry it."
+    without_it: "Run only the equity-proxy sleeves inside the mandate. The result then answers 'does the rule help on Indian equity baskets', and cannot speak to the diversification half of the paper's claim."
+    priority: high
+    headline: "ETFs and REITs in the NSE bhavcopy would test the paper's real asset mix (out of mandate)"
+    format_hint: "the same daily bhavcopy files as cache/, with ISINs starting INF and series RR kept, from 2021-10-01"
+    evidence_page: 15
+  - item: "Screener.in industry label for every stock in the top 500 by traded value"
+    why: "Each basket sleeve is defined by industry, and the master file carries no industry column."
+    unlocks: "Sleeves that can be re-derived by rule on any date, and a check of the drafter's industry-to-sleeve mapping."
+    without_it: "Build each basket from the Screener peer table already cached for an anchor company in that industry, which gives fewer names (about eight per basket) and an anchor the drafter chose; the baskets would be narrower and the choice would be flagged as a guess."
+    priority: high
+    headline: "Need Screener industry labels to build the four baskets by rule"
+    format_hint: "symbol, isin, screener_sector, screener_industry, fetch_date"
+    evidence_page: 15
+  - item: "A longer bhavcopy history, at least back to 2007, from the NSE archive"
+    why: "The paper's benefit appears in multi-year bear markets (2008 is its main example, page 26); five years contain none in India."
+    unlocks: "A test that includes 2008 and 2020, where the rule's claimed benefit would actually show up."
+    without_it: "The run covers about 50 months without a deep bear market. A null is read as 'no visible benefit in a mild window', and the crash-protection claim stays untested."
+    priority: high
+    headline: "Five years has no Indian bear market; the rule's payoff cannot show without 2008 or 2020"
+    format_hint: "the same daily files cache/ already holds, further back"
+    evidence_page: 26
+
+open_questions:
+  - question: "Is the full data-plan argument and convertibility chain needed now, or does the quick-test result decide first?"
+    why_it_matters: "A quick-test card deliberately leaves data_plan and convertibility unwritten, and a thin version of either would look checked and not be."
+    what_i_assumed: "Both are deferred until the quick-test result shows whether the rule helps at all, per CLAUDE.md's quick-test default."
+    headline: "data_plan and convertibility are deferred until the quick test says it is worth the time"
+    ask_of: researcher
+    blocks_run: false
+  - question: "The rule holds cash about 30% of the time on average. The mandate is fully invested. Is a cash-holding sleeve acceptable, and if not, where does an off sleeve's 20% go?"
+    why_it_matters: "Holding cash is the mechanism, not a detail. A fully invested version is a different strategy."
+    what_i_assumed: "Run the faithful version with cash as the headline test. The mandate version moves an off sleeve's 20% into the NIFTY 500 sleeve, and is reported beside it."
+    headline: "The rule IS holding cash; the mandate forbids it. Faithful version first?"
+    ask_of: pm
+    blocks_run: false
+    evidence_page: 29
+  - question: "Is the industry-to-sleeve mapping (IT and pharma for foreign equity, banks and housing finance for bonds, metals, mining and oil producers for commodities, developers for REITs) acceptable?"
+    why_it_matters: "The mapping decides what four of the five sleeves are; a different mapping is a different test."
+    what_i_assumed: "Yes as stated, with the correlation matrix reported so a reviewer can see how different the sleeves really are."
+    headline: "Confirm the four equity stand-ins for bonds, commodities, REITs and foreign equity"
+    ask_of: pm
+    blocks_run: false
+  - question: "Is n_configs_tried = 20 honest?"
+    why_it_matters: "It feeds the deflated Sharpe."
+    what_i_assumed: "20 is a floor: 10 moving-average lengths (page 33), 5 vs 13 assets, two cash choices, three weighting schemes, two rotation variants and leverage (pages 42-50); the author also mentions other timeframes and 50 asset classes without counts (pages 56-57)."
+    headline: "n_configs_tried = 20 is a floor; the author tried more than he counts"
+    ask_of: researcher
+    blocks_run: false
+    evidence_page: 33
+
+n_configs_tried: 20
+
+notes: >
+  Quick-test card (CLAUDE.md default 2026-10-06): data_plan and convertibility are
+  deliberately not written. The question is whether the 10-month moving-average
+  switch reduces drawdowns without giving up much return on five Indian equity
+  sleeves, after 30bp costs, over October 2021 to October 2026. Step 05 is blocked
+  on a per-sleeve switch allocator (strategy.template_gap). Data: NSE bhavcopy,
+  Screener.in and the NIFTY 500 workbook only, per the operator.
+
+india_notes:
+  - category: data
+    item: >
+      The NIFTY 500 workbook and bhavcopy are price-return series. The paper insists
+      on total return and warns that mismatched data will not reproduce it (page 58).
+    why: >
+      Dividends are missing from every sleeve while cash earns 6%, which tilts the
+      comparison toward the timing book; the bank and commodity-producer sleeves are
+      the highest-yielding, so they are understated most.
+    triggered_by: "'All data series are total return series including dividends' (page 22)"
+    addresses: ["month-end NIFTY 500 close (index workbook)", "daily corporate-action-neutralised close and traded value per stock (bhavcopy master)"]
+    evidence_page: 22
+  - category: validity
+    item: >
+      Screener's industry labels and share counts are current snapshots, not point
+      in time, and only companies that exist today have a page.
+    why: >
+      Sleeve membership and cap weights use today's classification and shares; a
+      company that changed business or delisted inside the window is mis-assigned or
+      missing from its basket.
+    triggered_by: "industry baskets standing in for the paper's asset classes (page 15)"
+    addresses: ["today's shares outstanding per stock from Screener (market cap over price), for cap weights inside a basket", "an industry label per stock, to assign it to a sleeve (Screener industry)"]
+    evidence_page: 15
+  - category: data
+    item: >
+      There is no Indian T-bill series in the permitted sources; cash is a declared
+      constant 6% swept 4-8%.
+    why: >
+      Indian short rates rose sharply inside this window (the 2022-23 RBI hiking
+      cycle, repo 4.0% to 6.5% by the drafter's recollection, unsourced), so a
+      constant overstates cash early in the window.
+    triggered_by: "cash returns estimated with 90-day Treasury bills (page 22)"
+    addresses: ["a flat 6% annual cash rate (declared constant)"]
+    evidence_page: 22
+  - category: execution
+    item: >
+      An off-to-on switch moves 20% of the book into a basket in one day; for the
+      real-estate and commodity baskets this lands in mid-cap names.
+    why: >
+      The paper assumed ETFs or mutual funds with no slippage (page 35). Here the
+      basket is bought stock by stock, so 30bp is a floor and should be swept.
+    triggered_by: "'slippage should be nearly negligible' (page 35)"
+    addresses: []
+    evidence_page: 35

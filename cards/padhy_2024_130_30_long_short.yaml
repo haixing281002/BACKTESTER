@@ -1,0 +1,704 @@
+card_version: "1.0"
+
+paper:
+  id: padhy_2024_130_30_long_short
+  title: "India quick test: the paper's four-screen 130/30 book run on NIFTY500 Momentum 50 companies (from Bathia, Pechetti, Gupta, Vaidya & Padhy 2024, 'Analyzing the 130/30 Long-Short Strategy in Indian Stocks')"
+  authors: [Amit Bathia, Charith Pechetti, Ananya Gupta, Nandip Vaidya, Jagabandhu Padhy]
+  date: "2024"
+  source_file: docs/papers/padhy_2024_130_30_long_short.pdf
+  source_sha256: "b218437b552240da94b038467a410075b39c97cce9bac15bbbf58a7fda7184a6"
+
+intent:
+  mode: adaptation
+  parent_card: ""
+  rationale: >
+    The paper takes India's 30 largest stocks (the Sensex) every six months and
+    asks which of them have beaten the index steadily over the last six months:
+    small tracking error, a high information ratio, a high Sharpe ratio and a
+    high Treynor ratio. Stocks that pass all four tests are bought with 130% of
+    the money. Stocks that fail all four are sold short with 30%. The result is
+    a 130/30 book that is still 100% net long the market. REVISED AT GATE A
+    (operator, 2026-10-06): the stock list is changed from the 30 largest
+    stocks to the companies of the NIFTY500 Momentum 50 index, and each stock
+    is scored against that index, the way the paper scores Sensex stocks
+    against the Sensex. The question becomes: inside a list that is already
+    momentum winners, does the paper's 130/30 overlay (long the steadiest
+    winners, short the weakest) beat simply holding the momentum index, and
+    NIFTY 500, after costs and borrow? This is a different question from the
+    paper's. The paper's screens are themselves a form of momentum, so this
+    run sorts on momentum twice. The paper's own mega-cap version (top 30 by
+    free-float cap, scored against NIFTY 50) is kept as a sensitivity so the
+    two can be told apart. It is a first read, not a financing memo. The
+    paper's per-period numbers come from a different window, universe and
+    index, so they are never a target for this run.
+  transferred_mechanism: >
+    At the close of the last trading day of March and September, rebuild the
+    NIFTY500 Momentum 50 list from bhavcopy using NSE's published selection
+    rule (risk-adjusted 6- and 12-month price momentum among the NIFTY 500).
+    For each of the 50, measure over the past six months against the
+    NIFTY500 Momentum 50 index: tracking error, information ratio, Sharpe
+    ratio and Treynor ratio. Buy, in equal weights totalling 130% of capital,
+    the names in the best 40% on all four. Short, in equal weights totalling
+    30%, the names in the worst 40% on all four. Hold for six months. If
+    either list is empty, hold the 50 names in equal weight, long only, for
+    that half-year.
+  broken_assumptions:
+    - >
+      DIFFERENT UNIVERSE (operator's choice at Gate A). The paper studies 30
+      mega-caps. The NIFTY500 Momentum 50 holds the 50 NIFTY 500 stocks with
+      the strongest risk-adjusted 6- and 12-month momentum, a mix of large,
+      mid and small caps that changes heavily each review. The paper's screens
+      reward recent risk-adjusted outperformance, which is close to the index's
+      own selection score, so this run sorts on momentum twice. A result here
+      says whether the overlay adds to a momentum index, not whether the
+      paper's mega-cap result holds in India.
+    - >
+      NO CONSTITUENT HISTORY. Neither NSE bhavcopy nor Screener.in carries the
+      index's membership, and the index workbook holds only its daily close.
+      The 50 names are rebuilt at each formation date from bhavcopy prices by
+      NSE's published rule as the drafter understands it. The rule was not
+      checked against NSE's methodology document, because only bhavcopy and
+      Screener may be used. The rebuilt list is a lookalike, not the official
+      list.
+    - >
+      DIFFERENT WINDOW. The paper forms portfolios from April 2019 to March
+      2024 and holds to September 2024. The fund's bhavcopy starts in October
+      2021, and the momentum rule needs 12 months of prices, so the first
+      formation is 30 September 2022. That gives eight six-month holding
+      periods (October 2022 to September 2026). Four overlap the paper's.
+    - >
+      NO SENSEX. The fund's data is NSE bhavcopy, Screener.in and the NSE
+      index workbook. The Sensex is a BSE product and is not held. It is not
+      needed for the main run, which scores against the NIFTY500 Momentum 50
+      index. The mega-cap sensitivity scores against NIFTY 50.
+    - >
+      MARKET CAP USES TODAY'S SHARES. Bhavcopy has no share count, so the
+      NIFTY 500 parent list is approximated as the top 500 by price times
+      Screener's current share count times current free float. Names that
+      have since delisted have no Screener page and cannot be ranked.
+    - >
+      PRICE RETURN, NOT ADJUSTED CLOSE. The paper uses Yahoo adjusted closes.
+      Bhavcopy is corporate-action neutralised but carries no dividends.
+    - >
+      THE PAPER'S COST MODEL IS NOT COPIED. It charges 1.1% of the net gain or
+      loss, so a flat half-year costs nothing. This card charges 30bp round trip
+      on traded notional plus a borrow fee on the short leg.
+    - >
+      RISK-FREE IS A FLAT 6%. The paper uses a government bond price series. No
+      Indian rate series is held. The rate enters the Sharpe and Treynor screens
+      only as a constant, so it shifts every stock by about the same amount and
+      matters only where a stock's excess return changes sign.
+
+universe:
+  description: >
+    The 50 stocks the NIFTY500 Momentum 50 rule would select, rebuilt at each
+    semi-annual formation date with no look-ahead from NSE bhavcopy prices. The
+    parent NIFTY 500 is approximated as the top 500 NSE main-board stocks by
+    free-float market cap (bhavcopy price x Screener current shares x current
+    free float). It is a lookalike of the official index, not its published
+    membership. All names are inside the NIFTY 500 mandate, so a result is
+    something the fund could hold, subject to borrow on the short leg, which
+    is much harder for mid and small caps than for mega-caps.
+  asset_class: equity
+  geography: IN
+  assets:
+    - NSE_BHAVCOPY_STOCK_PANEL
+  benchmark: NIFTY 500
+  cash_asset: CASH_PROXY_CONSTANT_6PCT
+
+universe_translation:
+  source_universe: "BSE Sensex 30, a fixed undated list of 30 names (Appendix 1, pages 7-8), not rebuilt as membership changed"
+  source_breadth: 30
+  source_selection_rule: "none: the same 30 stocks in every period, with no point-in-time membership, liquidity or listing filter"
+  target_universe: "NIFTY500 Momentum 50 lookalike: 50 NSE stocks chosen by NSE's risk-adjusted 6m/12m momentum rule from the top 500 by free-float market cap, rebuilt point in time at each formation date from bhavcopy (official membership not held)"
+  grade: loose
+  resolution: direct
+  rationale: >
+    Chosen by the operator at Gate A (2026-10-06) in place of the drafter's
+    top 30 by free-float cap. The paper is already Indian, so no change of
+    market is needed. The change is of segment and of selection: the paper
+    studies the 30 largest companies, while this list is the 50 strongest
+    risk-adjusted momentum names in the NIFTY 500. Hence "loose", not "close".
+    The construction carries over intact: 40% of 50 is 20 names per screen,
+    intersected, and the scoring index is the universe's own index, as the
+    paper scores Sensex stocks against the Sensex. The momentum index's daily
+    close is held in the index workbook. Its membership is not, so the 50 are
+    rebuilt by rule. The drafter's top 30 by free-float cap, scored against
+    NIFTY 50, is kept as the paper-faithful sensitivity.
+  transfer_risks:
+    - "The official constituent list is not held. The rebuilt 50 follow NSE's rule as the drafter understands it (unverified against the methodology document), on an approximated NIFTY 500, with today's share counts. The list will differ from the real one at the margin."
+    - "Double momentum: the index already picks names on risk-adjusted 6m and 12m return, and the paper's Sharpe screen is nearly the same 6m quantity. The screens may mostly re-rank the index's own score, so the long leg may be the top of the momentum list and the short leg its bottom."
+    - "The short leg shorts stocks that are still 12-month momentum winners. Many are mid or small caps outside the F&O list, where SLB borrow is thin and stock futures do not exist."
+    - "Eight six-month holding periods only, and the paper's two largest wins are before the data starts."
+    - "Momentum crashes hit the whole universe at once: a sharp reversal hurts the 130% long, and the 30% short is drawn from the same momentum names."
+  mechanism_needs:
+    needs_cross_section: true
+    min_names: 30
+    cap_segment: mega
+    sector: null
+    min_history_years: 5.0
+    must_be_in_mandate: true
+    notes: >
+      The paper's own needs are unchanged (30 mega-caps, five years). The
+      operator chose a different segment at Gate A. The code's ranking still
+      scores against the paper's mega-cap needs, so it will mark the momentum
+      list as off-segment. That is correct: it is a different question, run by
+      choice, with the mega-cap version kept as a sensitivity.
+  alternatives_considered:
+    - "Top 30 by free-float market cap, scored against NIFTY 50 (the drafter's first choice; kept as the paper-faithful sensitivity)"
+    - "NIFTY 50 constituents (in mandate, 50 names; membership history not held)"
+    - "The official NIFTY500 Momentum 50 membership (not in bhavcopy or Screener; would need NSE's constituent files)"
+    - "The paper's own fixed 30-name list (Appendix 1)"
+  why_not_alternatives: >
+    The operator asked for the NIFTY500 Momentum 50 companies, so it is the
+    base case. The top 30 by free-float cap stays as a sensitivity because it
+    is what the paper studied: if the overlay works on the momentum list and
+    not on the mega-caps, the momentum list is doing the work. The official
+    membership is the right input but is outside the two permitted sources; a
+    data request asks for it. The paper's fixed list carries look-ahead and is
+    never the result.
+  required_instruments:
+    - NSE_BHAVCOPY_STOCK_PANEL
+    - "Screener.in current shares"
+    - NIFTY500 MOMENTUM 50
+    - NIFTY 50
+    - NIFTY 500
+  evidence_page: 7
+
+strategy:
+  signal_name: four_screen_risk_adjusted_relative_strength_130_30
+  signal_definition: >
+    Every six months (the last trading day of March and of September), look back
+    over the past six months (about 126 trading days) of daily returns for each
+    of the 50 stocks and for the NIFTY500 Momentum 50 index. For each stock
+    compute four numbers. Tracking error is the standard deviation of the daily
+    gap between the stock's return and the index's. Information ratio is the
+    average daily gap divided by tracking error. Sharpe ratio is the stock's
+    six-month return minus six months of a 6% annual rate, divided by the
+    standard deviation of its daily returns. Treynor ratio is the same excess
+    return divided by the stock's beta to the index. Rank the 50 stocks on each
+    number. "Best 40%" means the 20 lowest tracking errors and the 20 highest
+    IR, Sharpe and Treynor. "Worst 40%" is the reverse. 40% of N is rounded to
+    the nearest whole name. Ties are broken by security identifier. A stock
+    without a full six months of prices is not eligible that period. A stock
+    with a beta at or below zero has no meaningful Treynor ratio and is
+    excluded from both legs that period. The paper states none of these four
+    rules.
+  inputs_required:
+    - "daily close for each stock, corporate-action neutralised (bhavcopy ingest)"
+    - "point-in-time NIFTY500 Momentum 50 lookalike at each formation date: top 500 by free-float market cap (bhavcopy price x Screener shares x free float), then NSE's risk-adjusted 6m/12m momentum score, top 50"
+    - "NIFTY500 Momentum 50 index daily close (scoring benchmark for tracking error, IR and beta, and the do-nothing comparator)"
+    - "NIFTY 50 daily close (scoring benchmark for the mega-cap sensitivity only)"
+    - "risk-free rate: flat 6% a year, operator-declared"
+    - "NIFTY 500 daily close (fund benchmark)"
+  cross_sectional: true
+  formation_rule: >
+    Step 1, the universe: rank the top 500 by free-float market cap on the
+    formation date. For each, take the 6-month and 12-month price return, each
+    divided by the annualised standard deviation of daily log returns over the
+    past year. Turn each into a z-score across the 500, average the two, and
+    keep the top 50 (names with under about 12 months of prices are not
+    eligible). This is NSE's published method as the drafter understands it,
+    without its buffer rules. Step 2, the paper: a stock is bought only if it
+    is in the best 40% on all four measures, and shorted only if it is in the
+    worst 40% on all four. The paper never says "all four", but it reports
+    periods where no stock qualified, which could not happen if any one
+    measure were enough (pages 4-6). If either list is empty, no 130/30 book
+    is formed that half-year, and the fund holds the 50 names in equal weight,
+    long only.
+  weighting_rule: >
+    Equal weights in each leg. The long names share 130% of capital and the
+    short names share minus 30%, so the book is 100% net long and 160% gross.
+    This follows the paper's worked examples (Rs 1,30,000 long against Rs 30,000
+    short per Rs 1,00,000, pages 4-6). Its method text says longs get Rs 1,00,000
+    divided by the count (page 4), which contradicts those examples. Weights are
+    reset only at formation and drift with prices in between. The index's own
+    score-times-market-cap weights are not used: the paper equal-weights.
+  holding_period: "six months, the half-year after formation"
+  rebalance_frequency: semi-annual
+  is_long_short: true
+  long_only_adaptation: ""
+  constraints:
+    - "all four screens must hold for a name to enter a leg"
+    - "both legs non-empty, or the half-year holds the equal-weight 50 long only"
+    - "net 100%, gross 160%, no cash"
+    - "formation uses only data to the formation close; trades at the next day's close"
+    - "runs through universal_backtester with allow_short=True (books formed at 1.6 gross, engine cap 2.0 for drift), never through ros/engine"
+  engine_template: NEEDS_NEW_TEMPLATE
+  template_gap: >
+    Inputs at each formation date: (a) the rebuilt NIFTY500 Momentum 50 list
+    (top 500 by free-float cap, then the average of the z-scored 6m and 12m
+    volatility-adjusted returns, top 50); (b) for each of the 50, tracking
+    error, IR, Sharpe and Treynor over the trailing 126 days against the
+    NIFTY500 Momentum 50 index. Outputs: +1.3/n_long on names passing all four
+    long screens and -0.3/n_short on names passing all four short screens.
+    When either set is empty, the output is 1/N equal weight on all 50.
+    Constraints: allow_short=True, books formed at exactly 1.6 gross, and
+    membership passed so a name leaving the 50 mid-period is held to the next
+    formation (the paper's own six-month hold). Schedule: the engine's
+    quarterly calendar (last trading day of each quarter) is used. The
+    allocator acts only at the March and September quarter-ends and returns
+    the current drifted weights at June and December, so nothing trades on
+    those dates. They must not be gross-checked or rescaled, so the engine's
+    max_gross_exposure is set to 2.0. A name that stops trading mid-hold (a
+    merger or delisting) is closed at its last traded price, and the proceeds
+    are spread across the rest of its leg in proportion. The same allocator,
+    with universe = top 30 by free-float cap and score benchmark = NIFTY 50,
+    runs the mega-cap sensitivity. The nearest existing allocator is
+    universal_backtester cross_sectional_long_short, which accepts
+    long_weight=1.3 and short_weight=0.3 but holds a fixed number of names per
+    leg on one score. It has no momentum-universe builder, no four-way
+    intersection and no empty-leg fallback.
+  confidence: medium
+  evidence_pages: [3, 4, 5, 6]
+
+signal:
+  name: four_screen_risk_adjusted_relative_strength_130_30
+  template: "universal_backtester:cross_sectional_long_short"
+  lookback_days: 126
+  lag_days: 1
+  description: >
+    lag_days is 1: a formation uses closes to the last trading day of March or
+    September, and trades at the next trading day's close, since bhavcopy
+    publishes after the close. The paper implies trading on the formation close
+    itself (lag 0), which India's data timing does not allow. The universe rule
+    reads 12 months of prices; the four screens read 6. The card runs through
+    universal_backtester with allow_short=True. The named template is only the
+    nearest allocator (strategy.template_gap).
+  params:
+    formation_months: 6
+    holding_months: 6
+    screen_fraction: 0.40
+    screens: [tracking_error_low, information_ratio_high, sharpe_high, treynor_high]
+    combine: all_four
+    long_weight: 1.30
+    short_weight: 0.30
+    universe: nifty500_momentum50_lookalike
+    universe_size: 50
+    universe_momentum_lookbacks_months: [6, 12]
+    score_benchmark: "NIFTY500 MOMENTUM 50"
+    sensitivity_universe: top30_free_float_cap
+    sensitivity_score_benchmark: "NIFTY 50"
+    risk_free_annual: 0.06
+    empty_leg_fallback: equal_weight_universe_long_only
+
+portfolio:
+  rebalance: quarterly
+  # The schema and universal_backtester have no semi-annual schedule. Quarter-ends
+  # include the March and September formation dates; the allocator returns the
+  # current drifted weights at the June and December quarter-ends, so nothing trades.
+  long_only: false
+  max_gross: 1.6
+  allow_cash: false
+  mandate_allow_cash: false
+  start: "2022-10-03"
+  end: "2026-09-18"
+
+costs:
+  spread_bps: 30.0
+  cost_model: half_spread
+  borrow_bps: 150.0
+  # 150bp a year on short notional is an unverified placeholder: the short leg now
+  # includes mid and small caps, where SLB borrow is scarcer and dearer than for
+  # mega-caps. Swept 50 to 500bp. The paper's 84bp is charged on net gain, not notional.
+
+data_requirements:
+  - {name: NSE_BHAVCOPY_STOCK_PANEL, kind: price, frequency: daily, start: "2021-10-04", mandatory: true, purpose: "daily corporate-action-neutralised closes for every main-board stock, including later-delisted or merged names, to rebuild the momentum 50, compute the four screens and the holding returns"}
+  - {name: "Screener.in current shares", kind: fundamental, frequency: annual, start: "2026-10-06", mandatory: true, purpose: "today's share count and promoter holding, to turn price into free-float market cap for the NIFTY 500 approximation and the top-30 sensitivity; not point-in-time"}
+  - {name: "NIFTY500 MOMENTUM 50", kind: price, frequency: daily, start: "2021-10-04", mandatory: true, purpose: "the universe's own index: benchmark for tracking error, IR and beta, the do-nothing comparator, and the check on how closely the rebuilt list tracks the real index"}
+  - {name: "NIFTY 50", kind: price, frequency: daily, start: "2021-10-04", mandatory: true, purpose: "scoring benchmark for the mega-cap (top 30) sensitivity"}
+  - {name: "NIFTY 500", kind: price, frequency: daily, start: "2021-10-04", mandatory: true, purpose: "fund benchmark and do-nothing comparator"}
+  - {name: india_cash_rate, kind: risk_free_rate, frequency: daily, mandatory: true, purpose: "excess return in the Sharpe and Treynor screens and the Sharpe numeraire; flat 6% declared constant"}
+
+ambiguities:
+  - field: universe.description
+    headline: "Operator wants NIFTY500 Momentum 50 names; membership isn't held, so the 50 are rebuilt by rule"
+    issue: >
+      At Gate A the operator asked whether this can be run on the NIFTY500
+      Momentum 50 companies. The fund holds the index's daily close but not its
+      constituents, and neither bhavcopy nor Screener carries them.
+    resolution: >
+      Yes, with a rebuilt list. At each formation date, take the top 500 by
+      free-float cap, score each on the average of z-scored 6m and 12m returns
+      divided by one-year volatility, and keep the top 50. The rule is the
+      drafter's reading of NSE's methodology, unverified and without buffers.
+      Fidelity is checked in code: the rebuilt 50, weighted the index's way,
+      must track the official index's daily close (see backtest_plan). If it
+      does not, the result is labelled as on a momentum lookalike.
+    confidence: medium
+    material: true
+    evidence_page: 7
+  - field: strategy.signal_definition
+    headline: "Screens scored against the Momentum 50 index, as the paper scores Sensex stocks vs the Sensex"
+    issue: >
+      The paper measures tracking error, IR and beta against the index the
+      stocks come from. With the universe changed, NIFTY 50 would score
+      momentum mid-caps against a mega-cap index they do not belong to.
+    resolution: >
+      Score against the NIFTY500 Momentum 50 index (held in the workbook).
+      NIFTY 50 stays the scoring index for the top-30 mega-cap sensitivity.
+    confidence: high
+    material: true
+    evidence_page: 3
+  - field: strategy.formation_rule
+    headline: "Universe rebuilt at the paper's Mar/Sep dates, not at the index's own review dates"
+    issue: >
+      The official index reviews on its own semi-annual cycle, so at a March or
+      September formation the live list was chosen some months earlier. The
+      exact review and cut-off dates are not in the permitted sources.
+    resolution: >
+      Base case: rebuild the 50 on the formation date itself. Sensitivity: use
+      the list rebuilt one quarter earlier (the preceding December or June
+      quarter-end), closer to an in-force list.
+    confidence: medium
+    material: false
+    evidence_page: 3
+  - field: strategy.formation_rule
+    headline: "Paper never says the four screens must ALL hold; empty periods imply it, so AND is used"
+    issue: >
+      Figure 2 (page 3) lists four criteria per side but does not say whether a
+      stock must meet all of them or any. The text reports periods where "none
+      of the companies satisfied the criteria" (pages 4-6).
+    resolution: >
+      Require all four. Under an any-one rule each screen alone picks 40% of
+      the names, so a leg could never be empty, which contradicts the paper.
+      The any-one rule is not run.
+    confidence: high
+    material: true
+    evidence_page: 4
+  - field: strategy.holding_period
+    headline: "Returns are earned in the six months AFTER formation; the paper's labels name the formation half"
+    issue: >
+      Page 4 says classified stocks were compared over "the next 6 months", but
+      the conclusion (page 6) describes a +52.6% result as "October 2019 to
+      March 2020". The weights are multiplied by "the 6-month HPR" without
+      saying which six months.
+    resolution: >
+      Form on months t-6 to t and hold t to t+6. A code check of NIFTY 50
+      half-year returns from the fund's index workbook backs this: the Sensex
+      gain the paper reports for "Oct 2019 to Mar 2020" (+34.6%) has the sign
+      and size of April to September 2020 (NIFTY 50 +30.8%), while October 2019
+      to March 2020 fell 25.1%. A same-period reading would be pure look-ahead
+      and is not run.
+    confidence: medium
+    material: true
+    evidence_page: 4
+  - field: strategy.weighting_rule
+    headline: "Method says long = Rs 1 lakh / n; every worked example invests Rs 1.3 lakh. 130/30 is used"
+    issue: "Page 4's method text and the worked examples on pages 4-6 give different long-leg sizes."
+    resolution: "Long 130%, short 30%, net 100%, as the title and every worked example do."
+    confidence: high
+    material: true
+    evidence_page: 4
+  - field: strategy.signal_definition
+    headline: "Sharpe and IR frequencies, rounding, ties and negative beta are unstated; drafter's rules"
+    issue: >
+      The Sharpe denominator is the "standard deviation of the returns"
+      computed in Excel, frequency unstated. IR's averaging frequency is
+      unstated. The paper gives no rounding rule for 40% of N, no tie rule,
+      and no rule for a beta at or below zero, which flips the sign of Treynor.
+    resolution: >
+      Daily standard deviation and daily averages over the 126-day window. 40%
+      is rounded to the nearest name (20 of 50, 12 of 30). Ties are broken by
+      security identifier. A beta at or below zero excludes the stock from
+      both legs that period. All four rules are the drafter's own.
+    confidence: low
+    material: false
+    evidence_page: 3
+  - field: strategy.formation_rule
+    headline: "When a leg is empty the paper just doesn't trade; this card holds the equal-weight 50"
+    issue: >
+      The paper reports nothing for the four formations where a leg was empty
+      (pages 4-6). A fund cannot hold nothing.
+    resolution: >
+      Hold the 50 in equal weight, long only, for that half-year, the
+      no-signal version of the same universe. Report the result both over the
+      whole window and over traded half-years only. Cash at 6% is a sensitivity.
+    confidence: medium
+    material: true
+    evidence_page: 4
+  - field: costs.spread_bps
+    headline: "Paper charges 1.1% of net GAIN, not of notional; card charges 30bp round trip + 150bp/yr borrow"
+    issue: "26bp transaction plus 84bp short-selling cost, applied to the net gain or loss (page 4)."
+    resolution: "30bp round trip on traded notional at each rebalance plus 150bp a year on short notional (raised from 100bp because the short leg now includes mid and small caps). Costs swept 30 to 90bp and borrow 50 to 500bp."
+    confidence: medium
+    material: true
+    evidence_page: 4
+  - field: selection.rule
+    headline: "Screener has no free float for promoter-less giants (HDFC Bank, ICICI, ITC, L&T); counted as 1.0"
+    issue: >
+      The master's free_float_frac is a promoter-holding snapshot. It is blank for
+      widely held companies with no promoter group, which a code check found among
+      the top 40 at every tested formation date.
+    resolution: >
+      A blank free float counts as 1.0 (fully free float), both in the NIFTY 500
+      approximation and in the top-30 sensitivity. Dropping the name or using
+      zero would remove the largest widely held banks.
+    confidence: high
+    material: true
+    evidence_page: 7
+  - field: portfolio.rebalance
+    headline: "No semi-annual schedule exists; quarterly calendar used, trading only at Mar and Sep"
+    issue: "The schema and universal_backtester support daily to annual schedules but not semi-annual."
+    resolution: "portfolio.rebalance is quarterly. The allocator forms books only at the March and September quarter-ends and carries drifted weights through June and December, so the traded schedule is the paper's semi-annual one."
+    confidence: high
+    material: false
+    evidence_page: 3
+  - field: signal.lag_days
+    headline: "Paper trades on the formation close (lag 0); card trades the next day's close"
+    issue: "The paper forms and invests on the same half-year boundary price."
+    resolution: "Formation uses closes to day t and the trade is at the close of t+1. Required by the repo floor (lag >= 1)."
+    confidence: high
+    material: false
+    evidence_page: 3
+
+replication_targets: []
+
+benchmark_templates:
+  - {name: "Equal-weight rebuilt Momentum 50 (no screen)", template: equal_weight, params: {}, rebalance: quarterly}
+  - {name: "Inverse-vol rebuilt Momentum 50 (no screen)", template: inverse_vol, params: {}, rebalance: quarterly}
+
+selection:
+  rule: >
+    Semi-annually (last trading day of March and September): (1) parent = the
+    500 NSE main-board stocks with the largest free-float market cap that day
+    (price x Screener current shares x current free float; a blank free float
+    counts as 1.0); (2) momentum score = average of the cross-sectional
+    z-scores of the 6-month and 12-month price return, each divided by the
+    annualised standard deviation of daily log returns over the past year;
+    names with under about 12 months of prices are not eligible; (3) eligible
+    = the 50 highest scores, with at least 126 trading days of prices in the
+    formation window. Rank the 50 against the NIFTY500 Momentum 50 index on
+    tracking error (low is good), information ratio, Sharpe and Treynor (high
+    is good). LONG = best 40% (20) on all four, sharing +130%. SHORT = worst
+    40% on all four, sharing -30%. If either leg is empty, hold the 50 in
+    equal weight, long only. No securities are named.
+  explicit_securities: []
+  verified_against: master_universe
+  as_of: "2026-10-05"
+  why_these: >
+    The operator asked for the NIFTY500 Momentum 50 companies. The official
+    membership is not in bhavcopy or Screener, so the rule is re-derived each
+    half-year from the bhavcopy master (data/raw/master/bhavcopy_screener_master.csv).
+    No list is named, so there is nothing to mis-remember. The paper's own
+    list (Appendix 1) is not used, because it is one undated snapshot applied
+    to five years.
+
+backtest_plan:
+  sample_start: "2022-10-03"
+  sample_end: "2026-09-18"
+  why_this_window: >
+    Bhavcopy starts on 4 October 2021, and the momentum universe needs 12
+    months of prices, so the first formation is 30 September 2022 and the
+    first trade is on 3 October 2022. The index workbook (NIFTY 500, NIFTY 50,
+    NIFTY500 Momentum 50) ends on 18 September 2026, so the run ends there and
+    the last half-year is eight trading days short. That gives eight
+    half-years, including the 2023 to 2024 rally and the 2024 to 2025
+    correction, which hit momentum names hard. Four (October 2022 to September
+    2024) overlap the paper's own sample.
+  warmup_days: 248
+  why_warmup: >
+    The first formation reads all the history that exists before it: about
+    248 trading days from 4 October 2021 to 30 September 2022, a little under
+    a full year for the 12-month momentum score. Later formations read a full
+    year. Nothing is reported for the warmup.
+  rebalance_rule: "Rebuild the Momentum 50 and form on the last trading day of March and September using closes to that day; trade at the next trading day's close; hold six months with weights drifting."
+  weights_rule: "Equal weight within each leg: +130% across the long names, -30% across the short names (net 100%, gross 160%). In a half-year with an empty leg, 1/50 long-only on all 50."
+  explicit_weights: {}
+  benchmarks:
+    - name: "NIFTY 500"
+      why_this: "The fund benchmark and the do-nothing option. Headline chart and table."
+    - name: "NIFTY500 Momentum 50"
+      why_this: "The universe's own index and the real bar: if the 130/30 overlay cannot beat simply holding the momentum index, it adds nothing. The one extra sleeve."
+    - name: "Equal-weight rebuilt Momentum 50 (no screen)"
+      why_this: "Same names, same rebalance, no screen and no shorting. Isolates what the four screens and the 130/30 overlay buy over the rebuilt list itself. Appendix."
+    - name: "Long leg only, 100% (no short, no leverage)"
+      why_this: "Separates the selection of longs from the 30% short and the 30% extra long. Appendix."
+    - name: "Top-30 mega-cap version (paper-faithful sensitivity)"
+      why_this: "The paper's own segment: top 30 by free-float cap, scored against NIFTY 50. Tells whether a result belongs to the overlay or to the momentum universe. Appendix."
+  must_beat:
+    - "NIFTY 500 over the whole window, after 30bp costs and borrow"
+    - "the NIFTY500 Momentum 50 index over the whole window, or the overlay adds nothing to the index it draws from"
+    - "the equal-weight rebuilt 50, or the screen is not selecting anything"
+    - "the long-leg-only book, or the short leg and 30% extension add nothing"
+  success_looks_like: >
+    The 130/30 book beats NIFTY 500, the NIFTY500 Momentum 50 index and the
+    equal-weight rebuilt 50 over the eight half-years after costs and borrow.
+    It also beats the momentum index in more than half of the half-years where
+    a 130/30 book was actually formed, with at least four formed. The short
+    leg returns less than the momentum index on average, so shorting is
+    earning its place. The sign holds at 60bp costs, at 500bp borrow and with
+    the list rebuilt one quarter earlier. The rebuilt 50 tracks the official
+    index (daily return correlation of at least 0.95 when weighted the index's
+    way), so the result is about the index's companies. With at most eight
+    independent half-years, success means "worth writing the full card for",
+    not a significant result.
+  failure_looks_like: >
+    Any of: the book trails NIFTY 500, the NIFTY500 Momentum 50 index or the
+    equal-weight rebuilt 50 over the window; it trails the momentum index in
+    half or more of the formed half-years; the short leg beats the momentum
+    index on average (the screen is shorting the winners among winners); a
+    130/30 book is formed in fewer than four of the eight half-years; or the
+    edge disappears at 500bp borrow. Separately, if the rebuilt 50's daily
+    returns correlate below 0.95 with the official index, the result may not
+    be called "on NIFTY500 Momentum 50 companies" and is labelled a momentum
+    lookalike. A null here means no detectable edge in four years of data,
+    not proof of absence.
+  known_failure_modes:
+    - "TINY SAMPLE: eight six-month holding periods. No bootstrap on so few independent bets can be significant."
+    - "DOUBLE MOMENTUM: the screens may simply re-rank the index's own score, so the book is a concentrated momentum bet with leverage, not a new signal."
+    - "MOMENTUM CRASH: the whole universe is momentum names; a sharp reversal (as in late 2024 to early 2025) hits the 130% long, and the 30% short gives little cover because it is drawn from the same names."
+    - "SHORT LEG: many of the 50 are mid or small caps outside the F&O list. They have no stock futures, and SLB borrow is thin, so a six-month short may be unavailable or recalled."
+    - "CONCENTRATION: the paper's legs held 2 to 5 names, so one stock can decide a half-year."
+    - "HIGH TURNOVER: the momentum list changes heavily each review, so most of the book trades each half-year. At 160% gross that is up to about 48bp per rebalance at 30bp, more for illiquid names."
+    - "REBUILT LIST: unverified rule, no buffers, approximated NIFTY 500 with today's shares; delisted names lack Screener shares and cannot be ranked."
+
+data_requests:
+  - item: "Official NIFTY500 Momentum 50 constituent history (effective date, ISIN, add/remove) from April 2022, and NSE's index methodology document"
+    why: "The operator asked for the index's companies. The 50 are rebuilt by a rule the drafter has not been able to check, because NSE Indices files are outside the two permitted sources."
+    unlocks: "The run on the real list, a check of the rebuilt rule, and the index's exact review and cut-off dates."
+    without_it: "The 50 are rebuilt by the drafter's reading of the rule, and the run reports how closely the rebuilt list tracks the official index's daily close. Below 0.95 correlation the result is labelled a momentum lookalike, not the index's companies."
+    priority: high
+    headline: "Real Momentum 50 membership isn't held; the 50 are rebuilt by an unverified rule"
+    format_hint: "effective_date, isin, symbol, action (add/remove); plus the methodology PDF"
+  - item: "NSE bhavcopy history from April 2014 (or at least April 2019), from the same NSE archive"
+    why: "Eight half-years cannot distinguish a real edge from luck, and the paper's own two biggest wins (2020 to 2021) fall before the fund's data begins."
+    unlocks: "About 22 half-years instead of eight, including the 2020 momentum crash and rebound."
+    without_it: "The run uses eight half-years from October 2022 and is read only as a first look: a result in either direction is described as underpowered."
+    priority: high
+    headline: "Eight half-years can't separate edge from luck; earlier bhavcopy (same source) would"
+    format_hint: "the same daily files ros/data/nse_bhavcopy_download.py writes, further back"
+  - item: "Securities lending and borrowing (SLB) availability and fees, and the F&O eligibility list over time, for the names in the rebuilt 50"
+    why: "The 30% short is held for six months and now includes mid and small caps. Stock futures exist only for F&O names, and SLB for others is thin. Neither availability nor cost is held."
+    unlocks: "A borrow charge from data instead of a placeholder, and a check that each short could have been held for the whole six months."
+    without_it: "Borrow is a flat 150bp a year on short notional, swept 50 to 500bp, and the result states how much borrow it can absorb before it stops beating the momentum index. A sensitivity limits the short leg to names with a positive traded value every day of the formation window."
+    priority: high
+    headline: "Can a six-month short in mid/small momentum names be held at all? Borrow is a 150bp/yr guess"
+    format_hint: "date, isin, fo_eligible, slb_available, annualised_fee_bps"
+
+open_questions:
+  - question: "Is the operator's question 'the paper's overlay on momentum names' or 'the paper's result, tested on a different segment'?"
+    why_it_matters: "On the Momentum 50 the screens largely repeat the index's own selection, so a win shows the overlay adds to momentum, not that the paper's mega-cap finding holds. Which reading is wanted decides which universe is the headline."
+    what_i_assumed: "The operator's universe is the headline, as asked. The top-30 mega-cap version runs as a sensitivity and is shown in the appendix, so both readings are answered by one run."
+    headline: "Momentum 50 is the headline, as asked; the paper's own mega-cap version runs alongside"
+    ask_of: pm
+    blocks_run: false
+  - question: "Is the rebuilt Momentum 50 close enough to the real index to call the result 'on its companies'?"
+    why_it_matters: "The membership is not held, and the rule is from the drafter's memory of NSE's methodology, without its buffers or exact review dates."
+    what_i_assumed: "The rule in selection.rule. Fidelity is measured in code against the official index's daily close; below 0.95 daily return correlation the result is relabelled a lookalike."
+    headline: "The 50 are rebuilt by an unverified NSE rule; fidelity is checked against the index's close"
+    ask_of: data_owner
+    blocks_run: false
+  - question: "In a half-year where a leg is empty, should the fund hold the equal-weight 50, the momentum index, the long leg alone, or cash?"
+    why_it_matters: "The paper had an empty leg in 4 of 10 formations, so the fallback can decide a large part of the record."
+    what_i_assumed: "Equal-weight rebuilt 50, long only, with results shown both whole-window and traded-half-years-only, and cash at 6% as a sensitivity."
+    headline: "Empty-leg half-years: hold equal-weight 50? Can decide much of the record"
+    ask_of: pm
+    blocks_run: false
+  - question: "Can the 30% short leg actually be held for six months in these names, through SLB or rolled stock futures, and at what cost?"
+    why_it_matters: "The mandate allows shorts, but many momentum names are outside F&O, so there are no futures, and SLB borrow in mid and small caps is thin and can be recalled."
+    what_i_assumed: "Every name is shortable through SLB or futures at about 150bp a year. This is unsourced and swept 50 to 500bp, with a liquid-names-only short leg as a sensitivity."
+    headline: "Confirm six-month shorts in mid/small momentum names are holdable (unsourced)"
+    ask_of: data_owner
+    blocks_run: false
+  - question: "Is the full data-plan argument and convertibility chain needed, or does the quick-test result decide first?"
+    why_it_matters: "A quick-test card deliberately leaves data_plan and convertibility unwritten, and a thin version of either would look checked and not be."
+    what_i_assumed: "Both are deferred until the quick-test result says the mechanism shows up at all, per CLAUDE.md's quick-test default."
+    headline: "data_plan and convertibility are deferred until the quick test says it is worth the time"
+    ask_of: researcher
+    blocks_run: false
+  - question: "Is n_configs_tried = 2 honest?"
+    why_it_matters: "The deflated Sharpe trial count depends on it, and the universe was changed after the first card was drafted."
+    what_i_assumed: "The paper reports one configuration. Changing the universe at Gate A is a second, so 2. The card's own sensitivities (top-30 mega-caps, lagged list, cash fallback, liquid shorts, cost and borrow sweeps) come on top and must be added when the result is read."
+    headline: "n_configs_tried = 2 (paper's setting + operator's universe); sensitivities come on top"
+    ask_of: researcher
+    blocks_run: false
+
+n_configs_tried: 2
+
+notes: >
+  Quick-test card (CLAUDE.md default 2026-10-06): data_plan and convertibility are
+  deliberately not written. Revised at Gate A on 2026-10-06 at the operator's request
+  ("can this be done on nifty500 momentum50 index companies"): the universe moves from
+  the top 30 by free-float cap to a rebuilt NIFTY500 Momentum 50, scored against that
+  index; the top 30 stays as a sensitivity; the window starts a half-year later
+  because the momentum rule needs 12 months; the end moves to 18 September 2026, where
+  the index workbook ends; borrow is raised to 150bp and swept to 500bp. Step 05 is
+  blocked on a new allocator (strategy.template_gap). Data: NSE bhavcopy plus
+  Screener.in only, per the operator, plus the NIFTY index workbook. Paper-quality
+  flags for the reviewer: no statistical test behind the "rejected" null hypothesis;
+  some figures conflict; the promised pairs-trading comparison is absent; two
+  references are garbled.
+
+india_notes:
+  - category: execution
+    item: >
+      A six-month single-stock short in India is not a simple cash-market short.
+      Cash-market shorts must be covered the same day unless borrowed through
+      SLB, so the 30% leg needs SLB borrow or rolled single-stock futures. Many
+      NIFTY500 Momentum 50 names are mid or small caps outside the F&O list, so
+      futures do not exist for them and SLB is the only route, often thin.
+    why: "The operator's universe moves the short leg out of the mega-caps where borrow is easiest."
+    triggered_by: "30% short positions held for six months (pages 4-6), on a momentum universe"
+    addresses: ["daily close for each stock, corporate-action neutralised (bhavcopy ingest)"]
+    evidence_page: 4
+  - category: data
+    item: >
+      NSE publishes the NIFTY500 Momentum 50's level but the fund holds no
+      constituent history. The index was launched years after its 2005 base
+      date, so its pre-launch level is backfilled. Its launch date is not in the
+      permitted sources, so part of this 2022-2026 window may also be backfilled.
+      The rebuilt list remains an approximation of the real one either way.
+    why: "A result is only 'on the index's companies' if the rebuilt list tracks the index."
+    triggered_by: "operator's choice of the NIFTY500 Momentum 50 universe at Gate A"
+    addresses: ["point-in-time NIFTY500 Momentum 50 lookalike at each formation date: top 500 by free-float market cap (bhavcopy price x Screener shares x free float), then NSE's risk-adjusted 6m/12m momentum score, top 50"]
+    evidence_page: 7
+  - category: validity
+    item: >
+      The paper's Sharpe screen (six-month excess return over volatility) is
+      close to the momentum index's own selection score. On this universe the
+      screens may mostly re-rank names by the score that put them there, so a
+      result may be leveraged momentum rather than the paper's signal.
+    why: "Without the top-30 sensitivity, a momentum result would be read as the paper's result."
+    triggered_by: "Sharpe and Treynor ratios as selection screens (page 3)"
+    addresses: ["NIFTY500 Momentum 50 index daily close (scoring benchmark for tracking error, IR and beta, and the do-nothing comparator)"]
+    evidence_page: 3
+  - category: validity
+    item: >
+      The paper's Appendix 1 list is a single snapshot of the Sensex applied to
+      2019-2024. It is missing names that left in that window (for example HDFC
+      Ltd, merged into HDFC Bank in 2023). That is look-ahead in the universe,
+      and it can flatter a strategy that buys recent winners.
+    why: "A fixed list built from later membership excludes the names that fell out, and the strategy's shorts are drawn from exactly those laggards."
+    triggered_by: "the fixed list of 30 companies (Appendix 1, pages 7-8)"
+    addresses: ["NIFTY 50 daily close (scoring benchmark for the mega-cap sensitivity only)"]
+    evidence_page: 7
+  - category: data
+    item: >
+      Screener's free float is derived from promoter holding, so companies with
+      no promoter group (HDFC Bank, ICICI Bank, ITC, L&T, HDFC Ltd) have no value.
+      These are counted as fully free float, not dropped.
+    why: "A free-float rule that treats a blank as missing removes the largest widely held stocks from the NIFTY 500 approximation."
+    triggered_by: "free-float market cap ranking for the parent NIFTY 500 (Appendix 1, pages 7-8)"
+    addresses: ["point-in-time NIFTY500 Momentum 50 lookalike at each formation date: top 500 by free-float market cap (bhavcopy price x Screener shares x free float), then NSE's risk-adjusted 6m/12m momentum score, top 50"]
+    evidence_page: 7
+  - category: data
+    item: >
+      The risk-free rate is a flat 6% a year. The paper uses a government bond
+      series. Since the rate is the same for every stock, it changes Sharpe and
+      Treynor ranks only for stocks whose six-month return sits near 3%.
+    why: "The screens rank excess returns, so a constant rate barely moves ranks, but it is still not the paper's input."
+    triggered_by: "Sharpe and Treynor ratios against government bond returns (page 3)"
+    addresses: ["risk-free rate: flat 6% a year, operator-declared"]
+    evidence_page: 3
+  - category: cost
+    item: >
+      The paper's 1.1% cost is charged on net gain or loss, so a flat half-year
+      is free. Here the momentum list turns over heavily and gross is 160%, so a
+      full turnover at a rebalance is up to 1.6 times capital round trip, about
+      48bp at 30bp, twice a year, plus borrow all year on the 30% short. Mid
+      and small momentum names trade wider than the 30bp floor.
+    why: "Leverage and a high-turnover universe make costs bite harder than on the paper's mega-caps."
+    triggered_by: "26bp transaction plus 84bp short-selling cost on net gain (page 4)"
+    addresses: ["NIFTY 500 daily close (fund benchmark)"]
+    evidence_page: 4
