@@ -23,7 +23,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from ros.data.bhavcopy_screener_panel import (  # noqa: E402
     assert_sources, build_turnover_panel, coverage_report, manifest_stanza, screener_shares,
-    universe_symbols,
+    shares_snapshot_frame, to_master_frame, universe_symbols,
 )
 from ros.data.nse_bhavcopy_ingest import combine_cache  # noqa: E402
 from ros.data.screener_fetch import fetch_symbol  # noqa: E402
@@ -67,10 +67,19 @@ def cmd_build(a):
     syms = universe_symbols(df, top_n=a.top_n)
     shares = screener_shares(a.scr, syms)
     panel = build_turnover_panel(df, shares, top_n=a.top_n, window=a.window)
-    os.makedirs(os.path.dirname(a.out) or ".", exist_ok=True)
-    panel.to_csv(a.out, index=False)
+    os.makedirs(a.out_dir, exist_ok=True)
+    panel_path = os.path.join(a.out_dir, "bhavcopy_screener_panel.csv")
+    master_path = os.path.join(a.out_dir, "bhavcopy_screener_master.csv")
+    shares_path = os.path.join(a.out_dir, "screener_shares_snapshot.csv")
+    panel.to_csv(panel_path, index=False)
+    to_master_frame(panel).to_csv(master_path, index=False)
+    import datetime as _dt
+    shares_snapshot_frame(shares, _dt.date.today().isoformat()).to_csv(shares_path, index=False)
     print(f"wrote {len(panel)} rows, {panel['security_id'].nunique()} entities, "
-          f"{panel['date'].min().date()} to {panel['date'].max().date()} -> {a.out}")
+          f"{panel['date'].min().date()} to {panel['date'].max().date()}")
+    print(f"  panel  -> {panel_path}")
+    print(f"  master -> {master_path}")
+    print(f"  shares -> {shares_path}")
     print("coverage (the gap is the survivorship bias):")
     for k, v in coverage_report(panel).items():
         print(f"  {k}: {v}")
@@ -78,8 +87,8 @@ def cmd_build(a):
     print(f"  shares estimates that disagree by >15% (equity capital / face value vs market cap / price): "
           f"{len(flagged)} of {len(shares)}")
     print()
-    print("Paste into data/raw/MANIFEST.yaml:")
-    print(manifest_stanza(a.out, a.top_n))
+    print("Declare it in data/raw/MANIFEST.yaml (local only, see docs/BHAVCOPY_SCREENER.md):")
+    print(manifest_stanza(master_path, shares_path, a.top_n))
 
 
 if __name__ == "__main__":
@@ -99,9 +108,9 @@ if __name__ == "__main__":
     p = sub.add_parser("build")
     p.add_argument("--cache", default="cache")
     p.add_argument("--scr", default="scr")
-    p.add_argument("--top-n", type=int, default=500)
+    p.add_argument("--top-n", type=int, default=1000)
     p.add_argument("--window", type=int, default=21)
-    p.add_argument("--out", default="data/raw/master/bhavcopy_screener_panel.csv")
+    p.add_argument("--out-dir", default="data/raw/master")
     p.set_defaults(fn=cmd_build)
     a = ap.parse_args()
     a.fn(a)

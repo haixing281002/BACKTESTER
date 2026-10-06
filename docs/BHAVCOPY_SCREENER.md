@@ -38,3 +38,5 @@ rupees, so it does not depend on split or bonus basis (a test checks this).
 - **Corporate actions** are neutralised by a threshold on daily gross return (a heuristic).
 - **Free-float fraction** is a current promoter-holding snapshot, a sensitivity input only.
 - Screener fetching follows its own guide: public pages only, no login, one session, a delay between pages.
+
+See `docs/SCREENER_FETCH_GUIDE.md` for how the Screener fetch works (URLs, page anatomy, parsing helpers, rules and gotchas).

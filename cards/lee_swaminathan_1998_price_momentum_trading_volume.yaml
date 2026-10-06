@@ -1,0 +1,493 @@
+card_version: "1.0"
+
+paper:
+  id: lee_swaminathan_1998_price_momentum_trading_volume
+  title: "India quick test: price momentum conditioned on trading volume (from Lee & Swaminathan 1998, 'Price Momentum and Trading Volume')"
+  authors: [Charles M. C. Lee, Bhaskaran Swaminathan]
+  date: "1998-06-23"
+  source_file: docs/papers/lee_swaminathan_1998_price_momentum_trading_volume.pdf
+  source_sha256: "fa054bcf8eb79c83"
+
+intent:
+  mode: adaptation
+  parent_card: ""
+  rationale: >
+    The paper says that when you pick past winners to buy and past losers to sell,
+    it matters how heavily each stock has been traded. Past winners that are
+    lightly traded keep doing well, and past losers that are heavily traded keep
+    doing badly, so buying the first group and selling the second beat plain
+    winners-minus-losers momentum by a wide margin, for up to three years. This
+    card asks one question fast: does that pattern show up at all in Indian
+    stocks over the last five years of NSE data? It is a first read, not a
+    financing memo. The paper's own numbers are US, 1965 to 1995, so they are
+    never a target for this run.
+  transferred_mechanism: >
+    Every month, rank all eligible Indian stocks twice, independently: by their
+    return over the past J months and by their average daily turnover over the
+    same months. Buy the stocks that are in the top tenth by past return but in
+    the lowest third by turnover. Sell the stocks that are in the bottom tenth by
+    past return but in the highest third by turnover. Hold for K months with
+    overlapping monthly tranches. J=6 and K=6 is the base case.
+  broken_assumptions:
+    - >
+      FIVE YEARS, NOT THIRTY-ONE. The paper tests 1965 to 1995. This run has
+      about five years of NSE data (October 2021 onward), which gives about 48
+      monthly formations. The paper's Year 2 and Year 3 results cannot be tested
+      in this window at all, and they are half of its claim.
+    - >
+      THE SORT NEEDS MORE STOCKS THAN ANY INDIAN INDEX HOLDS. The thinnest cell
+      (low-volume winners) is about 1.8% of the stocks (35 of about 1,980 in
+      Table 6, page 38). Fifteen names in it needs about 850 stocks. NIFTY 500
+      gives about 9; a top-1,000 universe by traded value gives about 18.
+    - >
+      THE UNIVERSE IS RANKED BY TRADED VALUE, NOT MARKET CAP. Bhavcopy has no
+      market cap, so the universe is the top 1,000 by trailing traded value, not
+      an index and not the paper's NYSE and AMEX.
+    - >
+      TURNOVER IS BUILT FROM TODAY'S SHARES. Daily turnover is shares traded over
+      shares outstanding. Here it is traded value over a market cap built from
+      Screener's current share count carried back, which ignores issuance and
+      float. Screener is not point-in-time.
+    - >
+      THE PAPER'S REASON FOR DROPPING NASDAQ MAY NOT APPLY. It excludes NASDAQ
+      because dealer double counting inflates turnover. The drafter reads NSE as
+      an order-driven market without that problem. This is unverified.
+    - >
+      NO INDIAN FACTOR MODEL. The paper adjusts risk with a three-factor
+      regression. No Indian equivalent is held, so alpha cannot be reproduced as
+      printed.
+    - >
+      THE PAPER'S FIVE-DAY DELISTING FILTER IS NOT COPIED. It drops stocks
+      delisted within five days of formation, which uses information not known
+      at formation. This card keeps delisted names in and sells them at the last
+      price.
+
+universe:
+  description: >
+    NSE main-board stocks, the top 1,000 by trailing traded value, rebuilt every
+    quarter with no look-ahead, from NSE bhavcopy. Not an official index. Names
+    beyond rank 500 are outside the NIFTY 500 mandate, so the run says whether the
+    effect exists in Indian stocks, not whether the fund can hold all of it.
+  asset_class: equity
+  geography: IN
+  assets:
+    - NSE_BHAVCOPY_STOCK_PANEL
+  benchmark: NIFTY 500
+  cash_asset: CASH_PROXY_CONSTANT_6PCT
+
+universe_translation:
+  source_universe: "NYSE and AMEX listed common stocks, excluding NASDAQ, with at least two years of data"
+  source_breadth: 1980
+  source_selection_rule: >
+    All NYSE and AMEX firms with two years of prior data; exclude primes,
+    closed-end funds, REITs, ADRs, foreign firms, firms delisted within five days
+    of formation and firms priced under $1; require return, volume, market cap and
+    price. No size cut. Breadth is derived from Table 6 (page 38).
+  target_universe: "NSE main-board stocks, top 1,000 by trailing traded value, point in time (bhavcopy)"
+  grade: loose
+  resolution: needs_data
+  rationale: >
+    The two-way sort needs about 850 stocks to put 15 names in its thinnest cell,
+    and no catalogued Indian universe reaches that: NIFTY 500 has 500 and NIFTY
+    Total Market has 750. NSE bhavcopy carries 1,700 to 2,000 main-board stocks a
+    day, so a top-1,000 universe by traded value can be built. A NIFTY 500 cut of
+    the same panel is the holdable run, with a thin extreme cell.
+  transfer_risks:
+    - "No catalogued Indian universe has the breadth the sort needs; the chosen one is custom, ranked by traded value, and is not an index."
+    - "A five-year window gives about 48 monthly formations; the paper's Year 2 and Year 3 results are untestable."
+    - "Turnover uses today's total shares from Screener, which is not point-in-time and ignores float and issuance."
+    - "Winners and losers are the stocks most likely to sit at price bands, so a monthly close-price fill may not be available."
+    - "The short leg (high-volume losers) is probably more liquid than the short-interest paper's short leg, but India's shorting limits are unverified."
+  mechanism_needs:
+    needs_cross_section: true
+    min_names: 850
+    cap_segment: all
+    sector: null
+    min_history_years: 3.0
+    must_be_in_mandate: false
+    notes: >
+      850 comes from the paper's own thinnest cell: low-volume winners hold about
+      1.8% of stocks (35 of about 1,980, Table 6 page 38), so 15 names needs about
+      850 stocks. The five years available is shorter than the three years of
+      holding that the paper's long-term claim needs plus formation.
+  alternatives_considered:
+    - "NIFTY 500 constituents (ranked first by the code, in mandate, 500 names)"
+    - "NIFTY Total Market constituents (ranked second, out of mandate, 750 names)"
+  why_not_alternatives: >
+    Both fall short of the 850 names the sort needs, so their extreme cells would
+    hold about 9 and 13 names. NIFTY 500 stays as the holdable cut of the same
+    panel and is reported next to the wider result.
+  required_instruments:
+    - NSE_BHAVCOPY_STOCK_PANEL
+    - NIFTY 500
+  evidence_page: 10
+
+strategy:
+  signal_name: volume_conditioned_price_momentum
+  signal_definition: >
+    Each month, for every eligible stock, measure two things over the last J
+    months (J=6 in the base case): its return, and its average daily turnover
+    (shares traded each day divided by shares outstanding, averaged over the
+    window). Rank all stocks on return into ten groups (R1 lowest, R10 highest)
+    and, independently, on turnover into three groups (V1 lowest, V3 highest).
+    The stocks that land in R10 and V1 are the low-volume winners. The stocks that
+    land in R1 and V3 are the high-volume losers. In this run turnover is traded
+    value over market cap, which is the same ratio in rupees. A one-week gap
+    separates the end of the measurement window from the start of holding. A stock
+    needs two years of history to be eligible. Ties, missing volume and how a tie
+    splits across groups are not stated in the paper, so ties are broken by stock
+    identifier and a stock with missing volume is skipped, never treated as zero.
+  inputs_required:
+    - "daily raw close, traded quantity and traded value from NSE bhavcopy"
+    - "corporate-action-neutralised daily returns (bhavcopy ingest)"
+    - "today's shares outstanding per stock from Screener (market cap over price)"
+    - "point-in-time top-1,000 membership by trailing traded value (bhavcopy ingest)"
+    - "NIFTY 500 daily close (benchmark)"
+  cross_sectional: true
+  formation_rule: >
+    Buy the low-volume winners (top tenth by past return, lowest third by
+    turnover) and sell the high-volume losers (bottom tenth by past return,
+    highest third by turnover), picking from the whole eligible universe with the
+    two rankings made independently. The paper's two other strategies come from
+    the same grid and are run as comparators: plain winners minus losers (R10-R1)
+    and high-volume winners minus high-volume losers (R10V3-R1V3).
+  weighting_rule: >
+    Equal weight within each leg, equal money on the long and the short side, as
+    the paper does. Hold K months (K=6 in the base case) using overlapping monthly
+    tranches, so about one sixth of the book is replaced each month.
+  holding_period: "K months (6 in the base case), overlapping monthly tranches"
+  rebalance_frequency: monthly
+  is_long_short: true
+  long_only_adaptation: ""
+  constraints:
+    - "the two rankings are independent, not sequential"
+    - "a one-week (5 trading day) gap between the end of the measurement window and the start of holding"
+    - "overlapping K-month tranches, equal weighted"
+    - "a stock needs two years of history to be eligible"
+    - "a month where either extreme cell has fewer than 15 names carries the book forward and is reported"
+    - "the short leg runs through universal_backtester allow_short and only on names that can actually be shorted"
+  engine_template: NEEDS_NEW_TEMPLATE
+  template_gap: >
+    Inputs each month: for every eligible stock, its past J-month return and its
+    past J-month average daily turnover. Outputs: weights on the low-volume winner
+    cell (long) and the high-volume loser cell (short), equal weighted within each
+    leg, equal gross on both legs, and K overlapping tranches so each month's
+    holding weights are the equal-weighted average of the target weights set in
+    the current and previous K-1 months. Constraints: an independent decile by
+    tercile sort on the full eligible set, a one-week gap before holding starts,
+    and carrying weights forward when a cell has fewer than 15 names. Objective:
+    reproduce the paper's two-way sort and overlapping tranches. No registered
+    allocator does this: cross_sectional ranks one score and has no cells or
+    overlap. The nearest is universal_backtester cross_sectional_long_short,
+    named in signal.template.
+  confidence: medium
+  evidence_pages: [3, 10, 11, 33, 35, 36]
+
+signal:
+  name: volume_conditioned_price_momentum
+  template: "universal_backtester:cross_sectional_long_short"
+  lookback_days: 126
+  lag_days: 5
+  description: >
+    lag_days is 5 trading days, the paper's one-week gap, and is above the repo's
+    floor of 1. lookback_days (126, about six months) is the J=6 measurement
+    window. This card runs through universal_backtester with allow_short=True,
+    never through ros/engine. The named template is only the nearest allocator:
+    the two-way sort and the overlapping tranches do not exist yet, so Step 05 is
+    blocked on building them (strategy.template_gap).
+  params:
+    J_months: 6
+    K_months: 6
+    return_groups: 10
+    volume_groups: 3
+    long_cell: "R10V1"
+    short_cell: "R1V3"
+    weighting: equal
+    overlapping_tranches: true
+    min_names_per_cell: 15
+
+portfolio:
+  rebalance: monthly
+  long_only: false
+  max_gross: 1.0
+  allow_cash: false
+  mandate_allow_cash: false
+  start: "2022-04-01"
+  end: "2026-10-05"
+
+costs:
+  spread_bps: 30.0
+  cost_model: half_spread
+  borrow_bps: 100.0
+  # 100bp a year is an unverified placeholder for the short leg. Sweep 50 to 400.
+
+data_requirements:
+  - {name: NSE_BHAVCOPY_STOCK_PANEL, kind: price, frequency: daily, start: "2021-10-04", mandatory: true, purpose: "raw daily close and traded value for every main-board stock, including delisted names, to build returns, turnover and the point-in-time universe"}
+  - {name: "Screener.in current shares", kind: fundamental, frequency: annual, start: "2026-10-06", mandatory: true, purpose: "today's shares outstanding (market cap over price) to turn traded value into turnover; not point-in-time"}
+  - {name: "NIFTY 500", kind: price, frequency: daily, start: "2021-10-04", mandatory: true, purpose: "fund benchmark and do-nothing comparator"}
+  - {name: india_cash_rate, kind: risk_free_rate, frequency: daily, mandatory: true, purpose: "Sharpe numeraire"}
+  - {name: "India Fama-French three-factor monthly returns", kind: factor_return, frequency: monthly, mandatory: false, purpose: "the paper's own risk adjustment; fallback is the fund's factor fingerprint against held sleeves"}
+
+ambiguities:
+  - field: strategy.formation_rule
+    headline: "Paper's best strategy is low-volume winners vs high-volume losers; abstract leads with another"
+    issue: >
+      The abstract leads with buying high-volume winners and selling high-volume
+      losers (R10V3-R1V3, 2% to 7% a year better than plain momentum). The strategy
+      with the highest returns and the three-year persistence is R10V1-R1V3 (page 3,
+      Figures 2 and 3).
+    resolution: >
+      Trade R10V1-R1V3 as the one card's strategy, because it is the paper's
+      strongest and its main long-term claim. Run R10-R1 and R10V3-R1V3 from the same
+      grid as comparators. This is a choice for Gate A to confirm.
+    confidence: medium
+    material: true
+    evidence_page: 3
+  - field: signal.params
+    headline: "Paper reports 16 formation-holding pairs; the base case here is J=6, K=6"
+    issue: "The paper shows every strategy at J and K in 3, 6, 9 and 12 and calls no pair preferred."
+    resolution: "Base case J=6, K=6, the middle of the grid and the pair the paper uses for its sub-period table. Other pairs are sensitivities, not extra cards."
+    confidence: medium
+    material: true
+    evidence_page: 11
+  - field: strategy.signal_definition
+    headline: "Turnover here is traded value over today's-share market cap, not shares over shares"
+    issue: >
+      The paper divides shares traded by shares outstanding at each day's close.
+      Bhavcopy has traded value and no share count. Screener gives only today's
+      shares.
+    resolution: >
+      Build market cap as the corporate-action-adjusted close times today's shares,
+      and turnover as traded value over that market cap. Because both are rupees it
+      does not depend on split or bonus basis. It misses issuance and float.
+    confidence: medium
+    material: true
+    evidence_page: 11
+  - field: strategy.holding_period
+    headline: "Overlapping tranches and the one-week gap are not fully specified"
+    issue: >
+      The paper says portfolios are formed at the start of each month with a
+      one-week lag before the return measurement begins and that K tranches are
+      averaged. It does not say whether the lag is five trading days or a calendar
+      week, or how a stock leaving the eligible set is treated inside a tranche.
+    resolution: >
+      Use five trading days. A stock that drops out of the eligible set stays in its
+      tranche until that tranche is closed, and a stock that delists is sold at the
+      last traded price.
+    confidence: medium
+    material: false
+    evidence_page: 11
+  - field: universe.description
+    headline: "Universe is a custom top-1,000 by traded value; not the paper's NYSE and AMEX"
+    issue: "No catalogued Indian universe has 850 names, and bhavcopy has no market cap."
+    resolution: "Use the top 1,000 by trailing traded value, rebuilt quarterly with no look-ahead, and report the NIFTY 500 cut next to it."
+    confidence: medium
+    material: true
+    evidence_page: 10
+  - field: strategy.signal_definition
+    headline: "Ties, missing volume and the price floor are unstated or have no Indian twin"
+    issue: "The paper gives no tie rule and a $1 price floor, which has no direct rupee equivalent."
+    resolution: "Break ties by stock identifier, skip a stock with missing volume, and apply a rupee price floor of Rs 10 (flagged as the drafter's own number and swept to Rs 5 and Rs 20)."
+    confidence: low
+    material: false
+    evidence_page: 10
+  - field: costs.spread_bps
+    headline: "Paper charges no costs; 30bp round trip, with overlapping tranches turning over 1/K a month"
+    issue: "The paper reports no costs or turnover and says returns fall substantially with costs (page 25)."
+    resolution: "Charge 30bp round trip plus a 100bp-a-year borrow on short notional, measure realised turnover, report the break-even cost, and sweep costs and borrow."
+    confidence: low
+    material: true
+    evidence_page: 25
+  - field: intent.rationale
+    headline: "NASDAQ exclusion reason (dealer double counting) is assumed not to apply to NSE"
+    issue: "The paper drops NASDAQ because dealer trades inflate its turnover (page 9)."
+    resolution: "Treat NSE turnover as clean because it is an order-driven market, flagged as the drafter's reading, to be confirmed by the data owner."
+    confidence: low
+    material: false
+    evidence_page: 9
+
+replication_targets: []
+
+benchmark_templates:
+  - {name: "Equal-weight eligible universe (no sort)", template: equal_weight, params: {}, rebalance: monthly}
+  - {name: "Inverse-vol eligible universe (no sort)", template: inverse_vol, params: {}, rebalance: monthly}
+
+selection:
+  rule: >
+    Monthly: universe = top 1,000 NSE main-board stocks by trailing traded value, no
+    look-ahead, with two years of history. Rank every eligible stock independently on
+    past J-month return (ten groups) and past J-month average daily turnover (three
+    groups). LONG = lowest third by turnover and highest tenth by return. SHORT =
+    highest third by turnover and lowest tenth by return. Equal weighted in each leg.
+    No explicit securities are named.
+  explicit_securities: []
+  verified_against: master_universe
+  as_of: "2026-10-05"
+  why_these: >
+    The rule is the whole decision. The panel is rebuilt from the bhavcopy cache and
+    Screener pages by ros/data/bhavcopy_screener_panel.py; the rule is re-derived
+    every month from it.
+
+backtest_plan:
+  sample_start: "2022-04-01"
+  sample_end: "2026-10-05"
+  why_this_window: >
+    The bhavcopy cache starts 2021-10-04 and the first formation needs six months of
+    history, so the first formation is April 2022. The end is the last bhavcopy day.
+    The window keeps the 2022 to 2023 rate cycle and the 2024 to 2025 small-cap run
+    and correction, the main tests for a sort that leans on turnover.
+  warmup_days: 131
+  why_warmup: "126 trading days for the six-month measurement window plus the five-day gap, so the first formation uses a full window."
+  rebalance_rule: "Last trading day of each month; ranks use data to the day before, shifted by the five-day gap; K=6 overlapping monthly tranches."
+  weights_rule: "Equal weight in each leg; legs equal in rupees; gross 1.0, unlevered."
+  explicit_weights: {}
+  benchmarks:
+    - name: "NIFTY 500"
+      why_this: "The fund benchmark and the do-nothing option."
+    - name: "Plain price momentum, same universe (R10-R1)"
+      why_this: "The paper's own baseline; the new strategy must beat it or volume adds nothing."
+    - name: "High-volume momentum (R10V3-R1V3)"
+      why_this: "The abstract's first strategy, run from the same grid so the choice between the two is visible."
+    - name: "Long leg only (R10V1)"
+      why_this: "The holdable cut and a check on how much of the result is the short leg."
+    - name: "Equal-weight eligible universe"
+      why_this: "Strips the sort and keeps the universe and weighting, so any edge is attributable to the sort."
+  must_beat:
+    - "plain price momentum R10-R1, or volume adds nothing"
+    - "NIFTY 500, on the paired stationary bootstrap, at 5%"
+    - "the equal-weight eligible universe, or the sort is not selecting anything"
+  success_looks_like: >
+    The low-volume winners minus high-volume losers book earns a positive return
+    after 30bp costs and borrow, beats plain momentum in the same universe with a
+    paired bootstrap p <= 0.05, keeps the same sign when the universe is cut to the
+    NIFTY 500 names, keeps the same sign at J and K of 3 and 12, and survives a cost
+    sweep from 30 to 90bp and a borrow sweep from 50 to 400bp.
+  failure_looks_like: >
+    Any of: no edge over plain momentum; the result disappears in the NIFTY 500 cut;
+    the sign flips across J and K; the result lives only in stocks under the Rs 10
+    floor sweep; the extreme cells are too thin to rank (under 15 names) in most
+    months; or the short leg earns its edge only from stocks that cannot be borrowed.
+    A null on five years means no detectable effect in this window, not absence.
+  known_failure_modes:
+    - "SHORT SAMPLE: about 48 monthly formations and K=6 overlapping tranches, so far fewer independent observations; Year 2 and Year 3 cannot be tested."
+    - "THIN CELLS: the low-volume winner cell holds about 18 names in a 1,000-stock universe and about 9 in NIFTY 500."
+    - "TURNOVER FROM TODAY'S SHARES: issuance and float are ignored, so turnover is distorted for closely held names and before share issuances."
+    - "SURVIVORSHIP: names without a Screener page have no shares and no turnover, so the sort misses stocks that delisted in the window."
+    - "SHORT LEG: borrowability and price-band halts on losers are unmeasured."
+
+data_requests:
+  - item: "A longer bhavcopy history, ideally ten years or more, from the NSE archive"
+    why: "The paper's Year 2 and Year 3 results, which are half its claim, need several independent three-year paths; five years supplies at most one."
+    unlocks: "A real test of the paper's long-horizon claim and many more independent formations."
+    without_it: "The run is limited to the first-year effect on about 48 monthly formations. A null is read as no detectable effect in a short window, and the long-term claim stays untested."
+    priority: high
+    headline: "Five years of bhavcopy cannot test the paper's Year 2 and Year 3 claim; ask for more"
+    format_hint: "the same daily files that ros/data/nse_bhavcopy_download.py writes, further back"
+  - item: "Free-float shares outstanding by quarter with the disclosure date"
+    why: "Turnover is shares traded over shares outstanding; promoter holdings make total-share turnover misrank closely held stocks."
+    unlocks: "A turnover that matches the paper's and does not depend on today's share count."
+    without_it: "Turnover is traded value over a today's-shares market cap, ranks only, with the issuance and float distortions stated."
+    priority: nice_to_have
+    headline: "Free-float shares by quarter would make turnover match the paper's (refines the claim)"
+    format_hint: "isin, quarter_end, disclosure_date, free_float_shares"
+  - item: "India Fama-French three-factor monthly returns"
+    why: "The paper's own risk adjustment is a three-factor alpha."
+    unlocks: "A like-for-like alpha."
+    without_it: "Factor fingerprint against the held VALUE 50 and MOMENTUM 50 sleeves; alpha cannot be compared to the paper's."
+    priority: nice_to_have
+    headline: "India three-factor series would label alpha like the paper (does not decide the result)"
+    format_hint: "month, rmrf, smb, hml, rf"
+
+open_questions:
+  - question: "Is the full data-plan argument and convertibility chain needed, or does the quick-test result decide first?"
+    why_it_matters: "A quick-test card deliberately leaves data_plan and convertibility unwritten, and a thin version of either would look checked and not be."
+    what_i_assumed: "Both are deferred until the quick-test result says the mechanism shows up at all, per CLAUDE.md's quick-test default."
+    headline: "data_plan and convertibility are deferred until the quick test says it is worth the time"
+    ask_of: researcher
+    blocks_run: false
+  - question: "Should the card trade low-volume winners vs high-volume losers (the paper's strongest) or high-volume winners vs losers (the abstract's first)?"
+    why_it_matters: "They are different strategies with different short legs and different long-run behaviour, and one card only runs one."
+    what_i_assumed: "Low-volume winners vs high-volume losers, with the other two strategies as comparators from the same grid."
+    headline: "Which of the paper's strategies should the one card trade?"
+    ask_of: pm
+    blocks_run: false
+  - question: "Is a top-1,000 universe by traded value, partly outside NIFTY 500, acceptable as the test universe?"
+    why_it_matters: "Names beyond rank 500 are outside the mandate, and the paper's effect is stronger in smaller stocks."
+    what_i_assumed: "Yes as the test of whether the effect exists, with the NIFTY 500 cut reported as the holdable run and labelled OUT OF MANDATE for the rest."
+    headline: "Run on a custom top-1,000 universe that is partly outside the NIFTY 500 mandate?"
+    ask_of: pm
+    blocks_run: false
+  - question: "Can Screener's current-share data be accepted for turnover knowing it is not point-in-time?"
+    why_it_matters: "It ignores issuance and float and covers only companies that exist today."
+    what_i_assumed: "Yes for ranks only, with the coverage gap (names without a Screener page) reported in every output."
+    headline: "Accept today's Screener share counts for turnover despite no point-in-time history?"
+    ask_of: data_owner
+    blocks_run: false
+  - question: "Are the India short-selling facts right: shorting limited outside F&O names, and high-volume losers likely easier to borrow?"
+    why_it_matters: "They decide whether the short leg can be run as the paper describes."
+    what_i_assumed: "Broadly right, as unsourced market knowledge; a source is added if confirmed."
+    headline: "Confirm India's short-selling limits for the high-volume losers leg (unsourced)"
+    ask_of: data_owner
+    blocks_run: false
+  - question: "Is n_configs_tried = 48 honest?"
+    why_it_matters: "The deflated Sharpe depends on it."
+    what_i_assumed: "48 = three strategies times sixteen formation-holding pairs, a floor; the cell sensitivities add more."
+    headline: "n_configs_tried = 48 is a floor: 3 strategies times 16 J and K pairs"
+    ask_of: researcher
+    blocks_run: false
+
+n_configs_tried: 48
+
+notes: >
+  Quick-test card (CLAUDE.md default 2026-10-06): data_plan and convertibility are
+  deliberately not written. The promotion question is whether low-volume winners
+  minus high-volume losers beats plain momentum and NIFTY 500 in Indian stocks
+  after costs and borrow. Step 05 is blocked on a new allocator (strategy.template_gap).
+  Data: NSE bhavcopy plus Screener.in only, per the operator, five years.
+
+india_notes:
+  - category: data
+    item: >
+      Turnover rests on today's Screener share counts carried back, so it ignores
+      share issuance and float, and names that delisted in the window have no
+      shares at all.
+    why: >
+      The volume tercile is half of the signal, and Indian promoter holdings and
+      frequent issuance make a today's-shares turnover misrank closely held and
+      recently diluted stocks, in the direction that matters for low-volume names.
+    triggered_by: "turnover defined as shares traded over shares outstanding at each day's end (page 11)"
+    addresses: ["today's shares outstanding per stock from Screener (market cap over price)"]
+    evidence_page: 11
+  - category: execution
+    item: >
+      Past winners and losers are the stocks most likely to sit at NSE price bands,
+      so a monthly rebalance at the close assumes fills that circuit limits may not
+      allow on exactly the stocks the strategy wants.
+    why: "The long cell is the top tenth by return and the short cell the bottom tenth, which are the stocks that have just moved most."
+    triggered_by: "extreme decile cells by past return (page 10)"
+    addresses: ["daily raw close, traded quantity and traded value from NSE bhavcopy"]
+    evidence_page: 10
+  - category: validity
+    item: >
+      The universe is the top 1,000 by traded value, rebuilt quarterly, not an index,
+      and it ranks by turnover of money, which is itself close to the volume sort.
+    why: "A universe chosen by traded value partly selects on the same liquidity dimension the volume tercile sorts on, so the terciles inside it are narrower than the paper's."
+    triggered_by: "independent sort on average daily turnover (page 11)"
+    addresses: ["point-in-time top-1,000 membership by trailing traded value (bhavcopy ingest)"]
+    evidence_page: 11
+  - category: timing
+    item: >
+      The one-week gap must be five trading days after the window ends, and bhavcopy
+      for a day is only known after the close, so ranks use data to the previous day.
+    why: "Using the formation day's own volume or return is look-ahead that favours the sort."
+    triggered_by: "a one-week lag between formation and holding (pages 9, 11)"
+    addresses: ["corporate-action-neutralised daily returns (bhavcopy ingest)"]
+    evidence_page: 11
+  - category: cost
+    item: >
+      The paper reports no costs or turnover, and overlapping tranches turn over about
+      one over K of the book a month into high-return and low-return stocks.
+    why: "Trading the extremes of a return sort in smaller names costs more than the 30bp floor, and the short leg adds borrow."
+    triggered_by: "monthly overlapping tranches with no cost model (pages 11, 25)"
+    addresses: ["NIFTY 500 daily close (benchmark)"]
+    evidence_page: 25
