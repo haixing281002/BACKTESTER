@@ -1,0 +1,796 @@
+card_version: "1.0"
+
+paper:
+  id: faber_2010_relative_strength_adaptation
+  title: "India adaptation: monthly top-3 sector relative-strength rotation within NIFTY 500"
+  authors: [Mebane T. Faber]
+  date: "2010-04-01"
+  source_file: docs/papers/faber_2010_relative_strength.pdf
+  source_sha256: "9f06e6051e7eb76b"
+  url: "SSRN 1585517 (first draft, practitioner white paper)"
+
+intent:
+  mode: adaptation
+  rationale: >
+    The paper is long-only, fully invested and equity-only in its governing
+    part, so it is one of the few published strategies whose shape this fund
+    can hold without dropping a leg. What does not transfer is the data: the
+    US result rests on 82 years of Kenneth French value-weighted industry
+    portfolios, and India has neither that history nor a published,
+    exhaustive, non-overlapping set of sector total-return series. This card
+    tests whether the MECHANISM -- cross-sectional sector momentum -- exists in
+    NIFTY 500 since 2005 and survives 30bp costs, not whether Faber's numbers
+    reproduce.
+  transferred_mechanism: >
+    Each month-end, rank ~10 mutually exclusive, jointly exhaustive,
+    free-float-cap-weighted industry portfolios built from NIFTY 500
+    constituents on trailing 12-month total return (no skip month); hold the
+    top 3 at equal weight for one month; rebalance at the next month-end with
+    a one-day implementation lag (paper pp. 6-7, Exhibit 4.5).
+  broken_assumptions:
+    - >
+      HISTORY: the paper's central robustness claim is persistence by decade
+      over 1928-2009 (Exhibit 6, p11) and ~70% of 82 calendar years
+      outperforming (p9). India offers ~20 years of constituent history, so
+      the decade-persistence claim is untestable here and a 70% hit rate over
+      ~20 draws cannot be told apart from a coin.
+    - >
+      SECTOR STRUCTURE: FF10 industries are broad and roughly comparable in
+      breadth. Indian sectors are concentrated -- financials are roughly a
+      third of NIFTY 500 free-float cap and several groups are 2-3 names deep
+      -- so a 'sector' signal can be a single-stock signal.
+    - >
+      ZERO LAG, ZERO COST: the paper trades at the signal close with no taxes,
+      commissions or slippage (p7). The Top-3 book turns over ~281%/yr in the
+      paper (Exhibit 4.6, p9); here every rebalance pays 30bp round trip and
+      waits one day.
+    - >
+      CASH: the drawdown fix the paper recommends (p12) moves 100% to T-bills.
+      The fund is fully invested and holds no Indian short-rate series, so the
+      hedged variant is a non-governing mechanism test only.
+    - >
+      NO HELD SECTOR DATA: the fund holds 20 broad, cap-segment and factor
+      indices and no sector split at all. Every run on this card needs
+      supplied data.
+
+universe:
+  description: >
+    Ten industry portfolios formed from NIFTY 500 constituents, as-was
+    membership and as-was industry classification, free-float cap weighted
+    within each group. Group definitions are stated in selection.rule and are
+    a card-author assumption pending researcher sign-off.
+  asset_class: equity
+  geography: IN
+  assets:
+    - IN_SECTOR_FINANCIALS
+    - IN_SECTOR_IT
+    - IN_SECTOR_ENERGY
+    - IN_SECTOR_UTILITIES
+    - IN_SECTOR_STAPLES
+    - IN_SECTOR_DISCRETIONARY
+    - IN_SECTOR_HEALTHCARE
+    - IN_SECTOR_INDUSTRIALS
+    - IN_SECTOR_MATERIALS
+    - IN_SECTOR_OTHER
+  benchmark: NIFTY 500
+  cash_asset: CASH_PROXY
+
+universe_translation:
+  source_universe: >
+    Kenneth French 10 Industry Portfolios (value-weighted), built from all
+    NYSE, AMEX and NASDAQ stocks classified annually by 4-digit SIC,
+    monthly total returns incl. dividends, 1926-2009
+  source_breadth: 10
+  source_selection_rule: >
+    none -- all 10 industry portfolios are ranked every month; the industries
+    are mutually exclusive and jointly exhaustive of the listed US market (p3, p21)
+  target_universe: "NIFTY 500 constituents"
+  grade: close
+  resolution: needs_data
+  rationale: >
+    Faber ranks ten value-weighted industry portfolios that between them are
+    the whole listed market. The same construction applied to NIFTY 500
+    constituents (~93% of NSE free-float cap) is the closest Indian analogue:
+    exhaustive, non-overlapping, cap-weighted, and inside the mandate, so a
+    positive result is holdable as sector baskets. NIFTY 500 ranked first of
+    24 catalogued universes for a 200-name, all-cap, holdable requirement.
+  transfer_risks:
+    - >
+      Sector concentration: financials alone are roughly a third of NIFTY 500
+      free-float cap and several groups are dominated by 2-3 names, so a
+      sector's trailing return can be one stock's. The paper itself notes that
+      Telecom and Health had fewer than 20 companies until the 1950s (p19) --
+      India has that problem in several groups today, not historically.
+    - >
+      ~20 years of constituent history is a handful of sector cycles; the
+      paper's decade-by-decade persistence (Exhibit 6) cannot be reproduced,
+      and the post-2005 sample contains a few dominant sector regimes (2007
+      infrastructure/capital goods, 2010s private financials and staples,
+      2020-21 IT, post-2021 PSU/industrials) that could carry any result.
+    - >
+      As-was industry classification: NSE's industry taxonomy has been
+      revised, and applying today's classification backwards assigns
+      companies to the sector they later became, which is look-ahead.
+    - >
+      The paper's lag and cost are both zero (p7) and the principal activity
+      is monthly re-ranking at ~281%/yr turnover (p9) -- uncosted in the source.
+  required_instruments:
+    - nifty500_constituent_prices
+    - nifty500_membership_history
+    - nifty500_free_float_marketcap
+    - industry_classification_history
+    - NIFTY 500
+  evidence_page: 3
+  mechanism_needs:
+    needs_cross_section: true
+    min_names: 200
+    cap_segment: all
+    sector: null
+    min_history_years: 15.0
+    must_be_in_mandate: true
+    notes: >
+      The ranked cross-section is ten sectors, not stocks; 200 is the
+      constituent breadth needed to populate ten groups with at least ~20
+      names each, the threshold the paper itself treats as fragile (p19).
+      Must be holdable because the paper is long-only and fully invested:
+      there is no reason to test outside the mandate.
+  alternatives_considered:
+    - "NSE published sectoral total-return indices (NIFTY Bank, IT, FMCG, Pharma, Auto, Metal, Energy, Realty, ...)"
+    - NIFTY 200 constituents
+    - NIFTY MidSmallcap 400 constituents
+    - NIFTY Total Market constituents
+    - NSE factor sleeves
+  why_not_alternatives: >
+    NSE sectoral indices are the fast path but not the governing universe:
+    they overlap (Bank sits inside Financial Services), are not exhaustive
+    (many NIFTY 500 names are in no sectoral index), cap single-stock weights,
+    and have different base dates and backfills -- a rank across them is not
+    a rank across the market. They are requested as the proxy route. NIFTY
+    200 thins the smaller sectors below ~20 names; MidSmallcap 400 drops the
+    mega caps that ARE several Indian sectors. Total Market adds 250 micro
+    caps that barely move cap-weighted sector returns and leaves the mandate
+    for no mechanism reason. The held factor sleeves are not sectors: rotating
+    them is factor momentum, a different mechanism, and the best 10 of the 19
+    held non-benchmark series correlate 0.69-0.92 pairwise (mean 0.83, THIN,
+    measured with ros/data/diversification.py).
+
+strategy:
+  signal_name: sector_relative_strength_12m
+  signal_definition: >
+    At each month-end t, for each industry portfolio compute the trailing
+    12-month total return (dividends reinvested) ending at t, with no skip
+    month (p6: the 1-month signal on 31 Dec 2009 is December 2009's return).
+    Rank sectors descending. Ties break alphabetically by asset name
+    (unspecified in the paper; immaterial for continuous returns). A sector
+    with fewer than 252 trading days of history, or with no constituents at
+    t, is ineligible. The paper also tests 1/3/6/9-month windows and a
+    COMBINATION score equal to the simple mean of the 1/3/6/9/12-month
+    trailing returns (p7); the 12-month window governs here because the
+    engine supports it today and the combination needs a new primitive.
+  inputs_required:
+    - daily total-return-adjusted close per NIFTY 500 constituent
+    - as-was NIFTY 500 membership by date
+    - daily (or month-end) free-float market cap per constituent
+    - as-was industry classification per constituent
+  cross_sectional: true
+  formation_rule: >
+    Hold the top 3 of 10 ranked sectors; a sector that falls out of the top 3
+    is sold at the monthly rebalance and replaced (p6). The paper reports
+    Top 1 through Top 9.
+  weighting_rule: >
+    Equal weight 1/3 across held sectors (p6); free-float cap weight within
+    each sector, rebuilt monthly from as-was membership.
+  holding_period: one month
+  rebalance_frequency: monthly, last trading day
+  is_long_short: false
+  long_only_adaptation: >
+    None required: the paper is long-only and fully invested (p11); nothing
+    is dropped. The only element the mandate cannot carry is the optional
+    dynamic hedge to T-bills (p12), which is a cash position, not a short leg.
+  constraints:
+    - "long-only, unlevered, fully invested"
+    - "equal weight across the three held sectors"
+    - "monthly rebalance only; lag_days = 1"
+    - "30bp round trip on every traded rupee, including within-sector reweighting"
+  engine_template: cross_sectional
+  template_gap: >
+    Not needed for the governing run. For the registered variants: (1) a
+    primitive blended_momentum(prices, windows=[21,63,126,189,252], skip=0)
+    returning the arithmetic mean of trailing total returns across windows
+    (p7); (2) an overlay regime_filter(benchmark, n_months=10) that sets all
+    target weights to zero (cash) when the benchmark's month-end close is
+    below the mean of its last 10 month-end closes (p12), evaluated on the
+    same lag as the signal. Plus a data-prep step, not an engine change:
+    aggregate constituents into as-was free-float-weighted industry return
+    series before the panel reaches the engine.
+  confidence: high
+  evidence_pages: [3, 6, 7, 8, 12]
+
+signal:
+  name: sector_relative_strength_12m
+  template: cross_sectional
+  lookback_days: 252
+  lag_days: 1
+  description: Rank 10 NIFTY 500 industry portfolios on trailing 12m total return; hold top 3 equal weight; monthly.
+  params:
+    n_hold: 3
+    weighting: equal
+    min_names: 8
+    alpha_source: momentum
+    alpha_window: 252
+    alpha_skip: 0
+
+portfolio:
+  rebalance: monthly
+  long_only: true
+  max_gross: 1.0
+  allow_cash: false
+  mandate_allow_cash: false
+  start: "2005-04-01"
+  end: "2026-08-31"
+
+costs:
+  spread_bps: 30.0
+  cost_model: half_spread
+
+data_requirements:
+  - {name: nifty500_constituent_prices, kind: price, frequency: daily, start: "2004-04-01", mandatory: true, purpose: "build the industry portfolios", evidence_page: 3}
+  - {name: nifty500_membership_history, kind: membership, frequency: daily, start: "2004-04-01", mandatory: true, purpose: "as-was constituents, so the sectors contain names that later left", evidence_page: 21}
+  - {name: nifty500_free_float_marketcap, kind: fundamental, frequency: daily, start: "2004-04-01", mandatory: true, purpose: "value weights within each sector, as in FF10", evidence_page: 3}
+  - {name: industry_classification_history, kind: membership, frequency: monthly, start: "2004-04-01", mandatory: false, purpose: "as-was sector assignment; FF re-classify annually by SIC. Fallback: current labels backwards, disclosed as look-ahead", evidence_page: 21}
+  - {name: "NIFTY 500", kind: price, frequency: daily, mandatory: true, purpose: "fund benchmark; SMA signal for the hedged variant"}
+  - {name: "NIFTY500 MOMENTUM 50", kind: price, frequency: daily, mandatory: false, purpose: "off-the-shelf stock-momentum comparator, zero research turnover"}
+  - {name: india_cash_rate, kind: risk_free_rate, frequency: daily, mandatory: false, purpose: "cash accrual in the non-governing SMA-hedged variant only", evidence_page: 12}
+
+ambiguities:
+  - field: signal.params.alpha_window
+    issue: >
+      The paper tests five single windows and their average, and puts the
+      combination score forward as its headline (Exhibit 4.6, equity curve,
+      abstract's 70% claim) without saying why it is preferred.
+    resolution: >
+      12-month single window governs (Exhibit 4.5; the engine supports it).
+      3, 6 and 9-month windows run as robustness variants; the combination
+      runs only once a human implements the blended primitive. All count in
+      the trial budget.
+    confidence: medium
+    evidence_page: 7
+    material: true
+    headline: "12m window governs; paper's headline is the 1-3-6-9-12 blend, which needs a new primitive"
+  - field: strategy.formation_rule
+    issue: The paper reports Top 1 through Top 9 and does not choose one.
+    resolution: >
+      Top 3: the least concentrated of the three the paper charts (Exhibit 5)
+      and the only one that does not put 50-100% of the book in one or two
+      Indian sectors, where one group can be a few stocks. Top 1 and Top 2 run
+      as variants.
+    confidence: medium
+    evidence_page: 8
+    material: true
+    headline: "Top 3 of 10 chosen; paper shows 1-9 and picks none"
+  - field: signal.lag_days
+    issue: The paper enters and exits at the signal close (p7), i.e. zero lag.
+    resolution: >
+      1 trading day, the repo floor: NSE closes publish after the close.
+      Lag swept 1-5 days; a sector-momentum edge that dies between lag 1 and
+      lag 2 was never tradeable.
+    confidence: high
+    evidence_page: 7
+    material: true
+    headline: "Paper trades at the signal close; we wait a day"
+  - field: universe.assets
+    issue: >
+      FF10 industries come from 4-digit SIC (p21). India uses NSE's own
+      industry taxonomy, which has been revised, and has no official 10-way
+      grouping.
+    resolution: >
+      Ten groups defined by rule in selection.rule, chosen to mirror FF10's
+      breadth. Applied as-was on each date. Low confidence: the grouping
+      decides what 'a sector' is, and a different grouping is a different
+      cross-section. Raised as an open question to the researcher.
+    confidence: low
+    evidence_page: 3
+    material: true
+    headline: "Ten-sector grouping of NSE industries is the card author's; LOW confidence"
+  - field: costs.spread_bps
+    issue: >
+      The paper charges nothing (p7) and asserts without computation that 1%
+      round trip would still leave excess profits (p19).
+    resolution: >
+      30bp round trip is a FLOOR here, not the estimate: it is the house
+      figure for factor sleeves, and this strategy trades single-stock
+      baskets (three sectors, rebuilt monthly). Charged on sector switches
+      and on within-sector reweighting, swept 30-100bp so the paper's 1%
+      claim is tested, and the headline is ALSO reported at the desk-supplied
+      single-stock cost stack with the breakeven cost beside it. Until that
+      stack is supplied, every net figure is an upper bound.
+    confidence: medium
+    evidence_page: 19
+    material: true
+    headline: "30bp is a floor for sleeves; stock baskets cost more, so net edge is an upper bound"
+  - field: portfolio.allow_cash
+    issue: >
+      The paper's drawdown fix moves 100% to T-bills when the S&P 500 is below
+      its 10-month SMA (p12). The fund is fully invested.
+    resolution: >
+      Governing run is fully invested (Exhibit 4.5 analogue). The SMA-hedged
+      variant runs as a mechanism test on NIFTY 500's 10-month SMA with a
+      declared 6% cash proxy swept 4-8%, once the overlay is implemented, and
+      is never promoted.
+    confidence: high
+    evidence_page: 12
+    material: true
+    headline: "Paper's drawdown fix is a cash switch the mandate forbids; it runs as a side test"
+  - field: metrics.sharpe
+    issue: >
+      The paper's Sharpe is (CAGR - rf)/stdev with rf 3.81% (sectors) or 5.9%
+      (global): a geometric numerator, verified in code against seven printed
+      values.
+    resolution: >
+      Irrelevant to scoring: an adaptation is never compared with the paper's
+      numbers. Recorded so nobody tries.
+    confidence: high
+    evidence_page: 4
+    material: false
+  - field: signal.params.min_names
+    issue: >
+      The template refuses to trade below 8 eligible sectors, so on dates
+      when a thin group (OTHER, UTILITIES) is empty the rank is top 3 of 8 or
+      9, not of 10.
+    resolution: >
+      Keep 8 as the refusal floor; report the monthly count of eligible
+      sectors so every month below 10 is visible. Raised by the Stage 02b
+      critique.
+    confidence: high
+    evidence_page: 6
+    material: false
+  - field: strategy.weighting_rule
+    issue: >
+      FF10 is value-weighted by full market cap; NSE indices weight by free
+      float. Within-sector weighting is unstated beyond 'value weighted' (p3).
+    resolution: >
+      Free-float market cap, uncapped, so the sector return is what an
+      investor holding that sector's investable float earns. A 25% single-name
+      cap is a reported variant.
+    confidence: medium
+    evidence_page: 3
+    material: false
+
+replication_targets: []
+
+benchmark_templates:
+  - {name: "Equal-weight 10 sectors (paper's own benchmark)", template: equal_weight, params: {}, rebalance: monthly}
+  # No ranking at all, just away from volatile sectors: if this matches the
+  # strategy, the 'relative strength' result is a risk tilt.
+  - {name: "Inverse-vol 10 sectors (no signal)", template: inverse_vol, params: {}, rebalance: monthly}
+
+data_plan:
+  ideal:
+    - field: "Daily total-return-adjusted close for every NIFTY 500 constituent, as-was"
+      granularity: daily
+      history_from: "2004-04-01"
+      why: >
+        The ranked objects are industry portfolios, and an industry portfolio
+        is its constituents. Building them from stocks is the only way to get
+        sectors that are exhaustive and non-overlapping, as FF10 is (p3, p21).
+      why_granularity: >
+        Daily, although the signal is monthly: the engine charges costs and
+        the lag on trading days, and the 1-day lag the card imposes cannot be
+        formed from month-end closes. Nothing finer is used.
+      why_history: >
+        12 months of warm-up before the 2005-04-01 common start of the
+        NIFTY500 MOMENTUM 50 comparator. Earlier (1996+) would add the 2000
+        tech cycle, where sector momentum is known to have been strong in
+        India, and is a nice-to-have extension, not the governing window.
+      adjustments: "splits, bonuses, rights and dividends reinvested; key on ISIN, never NSE symbol"
+      minimum_viable: true
+    - field: "As-was NIFTY 500 membership by date"
+      granularity: daily
+      history_from: "2004-04-01"
+      why: >
+        Without it the sectors contain only today's survivors, which flatters
+        exactly the sectors that grew into the index -- i.e. the ones with
+        momentum.
+      why_granularity: "daily, because index changes take effect on a date"
+      why_history: "same window as prices"
+      adjustments: "effective date of each inclusion and exclusion"
+      minimum_viable: true
+    - field: "Free-float market cap per constituent"
+      granularity: daily
+      history_from: "2004-04-01"
+      why: "cap weights within each sector, as FF10 does (p3)"
+      why_granularity: >
+        Month-end would do for the weights; daily is asked for because
+        free-float factors change on NSE review dates, not month-ends.
+      why_history: "same window as prices"
+      adjustments: "NSE investable weight factor as applied on the date"
+      minimum_viable: true
+    - field: "As-was industry classification per constituent"
+      granularity: monthly
+      history_from: "2004-04-01"
+      why: >
+        Decides which sector each stock is in. FF reclassify annually by SIC
+        (p21); using today's NSE classification backwards is look-ahead.
+      why_granularity: "monthly is enough; reclassifications are rare and dated"
+      why_history: "same window as prices"
+      adjustments: "classification as published on the date, with the taxonomy version"
+      minimum_viable: false
+    - field: "NSE sectoral total-return indices, daily"
+      granularity: daily
+      history_from: "2004-04-01"
+      why: >
+        The fast proxy route: the engine can rank them today with no
+        aggregation code. Not the governing test (overlapping,
+        non-exhaustive, capped).
+      why_granularity: "daily, same as the constituent route"
+      why_history: "each index's own base date; the common start sets the window"
+      adjustments: "TRI not PRI; record base and launch dates, since pre-launch is backfilled"
+      minimum_viable: false
+    - field: "Single-stock transaction cost stack with an impact curve"
+      granularity: daily
+      history_from: "2004-04-01"
+      why: >
+        The strategy's principal activity is trading stock baskets; the net
+        edge is the paper's 300-600bp (p9) minus this.
+      why_granularity: "per trade; impact scales with the day's ADV, so daily traded value is the input"
+      why_history: "statutory components changed over the window; a single current figure understates early costs"
+      adjustments: "component rates as in force on each date"
+      minimum_viable: false
+    - field: "Indian 91-day T-bill yield, daily"
+      granularity: daily
+      history_from: "2004-04-01"
+      why: "cash accrual in the non-governing SMA variant only"
+      why_granularity: "daily, to match accrual"
+      why_history: "same window"
+      adjustments: "annualised decimal, stated day-count"
+      minimum_viable: false
+  rejected_alternatives:
+    - option: "Rotate across the 20 NSE indices the fund already holds"
+      why_not: >
+        They are not sectors: rotating them is factor/size momentum, a
+        different mechanism wearing this paper's name. And they barely
+        disperse: the best 10 of the 19 non-benchmark series correlate
+        0.69-0.92 pairwise, mean 0.83 (THIN) over 2,655 common days.
+    - option: "Monthly month-end closes only"
+      why_not: >
+        Enough to form the signal, but not the one-day lag or daily cost
+        accrual the engine applies; saves nothing, since constituent files
+        come daily anyway.
+    - option: "NSE sectoral indices as the governing universe"
+      why_not: >
+        Overlapping (Bank inside Financial Services), non-exhaustive, capped
+        single-stock weights, mixed base dates and backfill. A rank across
+        them is not a rank across the market. Kept as the proxy route.
+    - option: "Stock-level cross-sectional momentum over NIFTY 500"
+      why_not: >
+        A different, better-studied strategy the fund can already buy as
+        NIFTY500 MOMENTUM 50. It is the comparator here, not the test.
+    - option: "Today's industry classification applied backwards"
+      why_not: >
+        Look-ahead: companies land in the sector they later became. Only
+        acceptable as a disclosed fallback, read as an upper bound.
+  granularity_verdict: >
+    DAILY constituent data, aggregated to monthly sector signals: the signal
+    is monthly but the lag and costs are daily, and the sectors must be built
+    from stocks to be exhaustive and non-overlapping.
+  optimality_argument: >
+    The paper's claim is about ranking the WHOLE market split into industries.
+    Constituent-built sectors from NIFTY 500 are the only Indian dataset that
+    reproduces that object: exhaustive, non-overlapping, cap-weighted,
+    survivor-free and inside the mandate. Every alternative either tests a
+    different mechanism (held factor sleeves, stock momentum), ranks a
+    different object (overlapping sectoral indices), or adds breadth that
+    cannot move a cap-weighted sector return (Total Market). The four
+    minimum-viable fields are the smallest set that makes the sectors real;
+    classification history and a real rate improve what can be claimed.
+  what_would_change_the_answer: >
+    Survivor-free membership and total-return adjustment can change the
+    verdict: without them the winning sectors are flattered by exactly the
+    names that trended into the index. As-was classification can change it
+    at the margin by moving a few large names between sectors. The sectoral
+    index proxy and the T-bill series change only what may be claimed:
+    'sector momentum exists in NSE's published sector indices' is a weaker
+    statement than 'in the NIFTY 500 split by industry'.
+
+selection:
+  rule: >
+    Each month-end, take NIFTY 500 constituents as-was on that date. Assign
+    each to one of ten groups from its as-was NSE industry: FINANCIALS
+    (banks, NBFCs, insurance, capital markets); IT (software and IT
+    services); ENERGY (oil, gas and consumable fuels); UTILITIES (power
+    generation and distribution); STAPLES (FMCG, food, beverages, tobacco,
+    personal care); DISCRETIONARY (autos and components, consumer durables,
+    retail, textiles, consumer services); HEALTHCARE (pharma, hospitals,
+    diagnostics); INDUSTRIALS (capital goods, construction, defence,
+    transport); MATERIALS (metals and mining, chemicals, cement, paper);
+    OTHER (telecom, media, realty, diversified and everything unassigned).
+    Free-float cap weight within each group. Rank the ten groups on trailing
+    12-month total return and hold the top three at one third each.
+  explicit_securities: []
+  verified_against: ""
+  as_of: ""
+  why_these: >
+    No securities are named: the rule resolves on each date against the
+    master universe. The ten groups mirror FF10's breadth (p3) and are the
+    card author's grouping, flagged as an open question.
+
+backtest_plan:
+  sample_start: "2005-04-01"
+  sample_end: "2026-08-31"
+  why_this_window: >
+    Starts on the NIFTY500 MOMENTUM 50 comparator's first date so every
+    benchmark shares a window -- CONDITIONAL on data not yet supplied: the
+    effective start is max(2005-04-01, first date with as-was membership
+    plus 12 months), and if that puts the first trade after 2008-06 the
+    report must say 2008 is outside the test. Ends at the last complete month before the
+    latest held close (2026-09-18). Contains 2008, the 2013 taper, the
+    2015-18 bank clean-up, 2020 and the post-2021 PSU/industrial cycle -- the
+    sector regimes a rotation must either catch or pay for. Truncating to
+    post-2010 would drop 2008, where a trailing-12m sector signal is most
+    likely to be caught long the previous cycle's leaders.
+  warmup_days: 252
+  why_warmup: >
+    The 12-month signal cannot form earlier. Every benchmark starts after the
+    same warm-up so start dates align; unequal starts once reversed a ranking
+    in this repo.
+  rebalance_rule: "last trading day of each calendar month; trade 1 trading day after the signal close"
+  weights_rule: "1/3 in each of the top-3 sectors; free-float cap weight within sector; fully invested"
+  benchmarks:
+    - name: "NIFTY 500"
+      why_this: >
+        The do-nothing option and the fund's benchmark. Beating it only by
+        sitting in whichever sector led is lagged beta with 30bp friction.
+    - name: "Equal-weight 10 sectors, monthly rebalanced"
+      why_this: >
+        The paper's own benchmark (p5, p8) and the stripped-down version: same
+        sectors, same costs machinery, no ranking. The gap between this and
+        the strategy IS the relative-strength signal; the gap to NIFTY 500 is
+        partly just equal-weighting away from financials.
+    - name: "NIFTY500 MOMENTUM 50"
+      why_this: >
+        The off-the-shelf product the fund could buy for zero research
+        turnover. If sector rotation does not beat stock-level momentum, the
+        recommendation is to own the index.
+  must_beat:
+    - "Equal-weight 10 sectors, net of 30bp, or the ranking buys nothing"
+    - "NIFTY 500, net of 30bp, or the fund should hold its benchmark"
+    - "NIFTY500 MOMENTUM 50 on risk-adjusted terms, or the fund should buy the product"
+  success_looks_like: >
+    Net-of-cost active return over equal-weight sectors positive with a
+    bootstrap confidence interval excluding zero; the same sign at 3, 6 and 9
+    months as at 12 (the paper's claim is that every window works, p9);
+    edge still present at lag 5 and at 60bp; not carried by one sector held
+    most of the time; and deflated Sharpe probability of skill >= 0.95 at the
+    card's trial count.
+  failure_looks_like: >
+    Any of: active return over equal-weight sectors indistinguishable from
+    zero after 30bp; positive at one lookback and not the others (a lucky
+    window, not a mechanism); edge gone by lag 2-5 days; result driven by one
+    sector (IT 2020-21, or financials) held for long stretches; or dominated
+    by NIFTY500 MOMENTUM 50 on both return and drawdown.
+  known_failure_modes:
+    - "Sector reversals at regime turns: a 12-month signal is long the previous cycle's leaders into the break (2008, early 2020)."
+    - "Concentration: top-3 of 10 Indian sectors can be ~50% financials plus two narrow groups, so the book is a few stocks."
+    - "Look-ahead through classification: today's industry labels applied backwards."
+    - "Survivor bias through membership: sectors built only from current constituents."
+    - "Cost drag at ~281%/yr paper turnover (p9) against an edge the paper puts at 300-600bp (p9)."
+
+data_requests:
+  - item: "NIFTY 500 master universe: daily TR-adjusted prices, as-was membership, free-float market cap, 2004-04 onward"
+    why: >
+      The sectors are built from constituents. Without these three the
+      governing test cannot be formed: the fund holds no sector split at all.
+    unlocks: >
+      The faithful test: exhaustive, non-overlapping, survivor-free sectors
+      inside the mandate, and a direct answer to whether sector momentum
+      exists in NIFTY 500.
+    without_it: >
+      Fall back to the NSE sectoral TRI indices (next request) as a proxy
+      universe: runnable on the existing cross_sectional template, but
+      overlapping, non-exhaustive and partly backfilled, so a result reads as
+      'NSE's sector indices show momentum', not 'the NIFTY 500 does'. If
+      neither is supplied, this card cannot run; held data offers only factor
+      rotation, which is a different mechanism and is not a fallback.
+    priority: high
+    headline: "Constituent prices, membership and float for NIFTY 500: the sectors are built from these"
+    format_hint: "long CSV: date, isin, tr_close, in_nifty500 (0/1), free_float_mcap_inr; check with python -m ros.data.master"
+    evidence_page: 3
+    satisfies:
+      - "Daily total-return-adjusted close for every NIFTY 500 constituent, as-was"
+      - "As-was NIFTY 500 membership by date"
+      - "Free-float market cap per constituent"
+  - item: "As-was NSE industry classification per constituent, with taxonomy version"
+    why: "Decides sector membership; FF reclassify annually (p21). Today's labels backwards are look-ahead."
+    unlocks: "Sector assignment that was knowable on each date."
+    without_it: >
+      Apply the current classification to all history, disclose it as
+      look-ahead, and read every result as an upper bound. A large name that
+      migrated sectors (e.g. a conglomerate's demerger) moves the answer.
+    priority: high
+    headline: "As-was industry labels; today's labels backwards are look-ahead"
+    format_hint: "date, isin, nse_industry, nse_sector, taxonomy_version"
+    evidence_page: 21
+    satisfies: ["As-was industry classification per constituent"]
+  - item: "The desk's single-stock cost stack: STT, stamp, exchange/SEBI, brokerage, and an impact curve by ADV bucket"
+    why: >
+      The strategy trades stock baskets, not sleeves. 30bp is the sleeve
+      floor; the cost of this activity is what decides link 3 of the
+      convertibility chain against a 300-600bp claimed edge (p9).
+    unlocks: "A net edge that is a measurement rather than an upper bound, and a breakeven that means something."
+    without_it: >
+      Report at 30bp and swept to 100bp, with every net figure labelled an
+      upper bound and the breakeven cost stated. A PM then has to judge
+      whether the fund's real cost sits below the breakeven, without a number.
+    priority: high
+    headline: "Real single-stock cost stack: without it every net figure is an upper bound"
+    format_hint: "one row per component: name, bps_per_side, applies_to (buy/sell/both); impact as bps per % of ADV by bucket"
+    evidence_page: 19
+    satisfies: ["Single-stock transaction cost stack with an impact curve"]
+  - item: "NSE sectoral total-return indices, daily, with base and launch dates"
+    why: "The fast proxy route: ranks immediately on the existing template."
+    unlocks: "A same-week first read on whether Indian sector momentum exists at all, before the master universe lands."
+    without_it: >
+      Wait for the master universe; the proxy only shortens the path to a
+      first answer and cannot replace the governing test.
+    priority: nice_to_have
+    headline: "NSE sector TRIs: a quick proxy read while the master universe is built"
+    format_hint: "same shape as the existing NSE workbook, TRI not PRI, one sheet per index"
+    satisfies: ["NSE sectoral total-return indices, daily"]
+  - item: "Indian 91-day T-bill yield, daily, 2004 onward"
+    why: "Cash accrual in the SMA-hedged mechanism variant, which the mandate cannot hold."
+    unlocks: "A hedged variant whose cash periods earn the real rate cycle."
+    without_it: >
+      Declared constant 6%, swept 4-8%. Only the non-governing variant is
+      affected, so this cannot move the promotion decision.
+    priority: nice_to_have
+    headline: "Real T-bill rate; only the non-governing cash variant needs it"
+    format_hint: "date, annualised_rate (decimal)"
+    satisfies: ["Indian 91-day T-bill yield, daily"]
+
+open_questions:
+  - question: "Is the ten-group mapping of NSE industries in selection.rule the right cross-section?"
+    why_it_matters: >
+      The grouping decides what 'a sector' is. Splitting financials into
+      banks and non-banks, or merging utilities into energy, changes which
+      three groups top the rank and is effectively a different strategy.
+    what_i_assumed: >
+      The ten groups in selection.rule, mirroring FF10's breadth. Any
+      alternative grouping tried is counted in the trial budget.
+    ask_of: researcher
+    headline: "Is this ten-way grouping of NSE industries the right cross-section?"
+  - question: "Can the fund hold a three-sector book, given NIFTY 500 tracking-error limits?"
+    why_it_matters: >
+      Top 3 of 10 at one third each is a large active bet against a benchmark
+      a third financials. If the risk budget caps sector deviation, the
+      holdable version is a tilt, not a rotation.
+    what_i_assumed: >
+      Unconstrained for the test; tracking error reported. A capped-tilt
+      version is a follow-up, not this card.
+    ask_of: pm
+    headline: "Can the fund carry a 3-sector book against NIFTY 500? TE will be large"
+  - question: "Is n_configs_tried = 91 the honest trial count?"
+    why_it_matters: >
+      The deflated Sharpe discounts by the number of tries. The paper shows
+      54 unhedged sector configs, 9 hedged, 24 global and 4 global-hedged,
+      all full-sample, plus the SMA length from the author's earlier study.
+    what_i_assumed: >
+      91: every configuration the paper printed, across both universes,
+      since the mechanism is the same. The card's own lookback, top-X and lag
+      sweeps are counted by the pipeline on top.
+    ask_of: researcher
+    headline: "Trial count set to 91, every config the paper printed"
+
+no_further_data_needed: ""
+
+india_notes:
+  - category: validity
+    item: "Per-sector effective number of names, reported every month alongside the ranking"
+    why: >
+      Several Indian groups are dominated by two or three stocks, so the
+      top-ranked 'sector' can be one stock's trailing return. The paper had
+      this only for Telecom and Health before the 1950s (p19). Without the
+      diagnostic a stock-momentum result is reported as sector momentum.
+    triggered_by: "p19: industries with fewer than twenty companies"
+    addresses: ["as-was NIFTY 500 membership by date", "free-float market cap per constituent"]
+    evidence_page: 19
+  - category: validity
+    item: "NSE industry taxonomy version in force on each date"
+    why: >
+      NSE has revised its industry classification scheme. A single
+      classification applied across 2005-2026 splices two taxonomies, and
+      sector returns shift at the splice for reasons that are not momentum.
+    triggered_by: "FF reclassify annually by SIC (p21); the sector definition is the cross-section"
+    addresses: ["as-was industry classification per constituent"]
+    evidence_page: 21
+  - category: validity
+    item: "Policy-driven sector episodes in the sample (PSU re-rating, bank clean-up, PLI schemes)"
+    why: >
+      Indian sector leadership since 2005 has repeatedly followed government
+      policy, and a few such episodes can supply most of a 20-year result.
+      Report active return with and without the largest two sector episodes.
+    triggered_by: "the paper's persistence claim rests on 82 years of many cycles (Exhibit 6)"
+    addresses: []
+    evidence_page: 11
+  - category: execution
+    item: "How the fund would actually hold a sector: constituent basket vs sector ETF"
+    why: >
+      Indian sector ETFs are few, launched late and often thin, and track
+      capped sectoral indices rather than the card's exhaustive groups. The
+      tested object (cap-weighted constituent basket) may only be holdable as
+      a basket, which fixes the realistic cost at the stock level.
+    triggered_by: "p19: implementation via sector funds and ETFs"
+    addresses: ["daily total-return-adjusted close per NIFTY 500 constituent"]
+    evidence_page: 19
+  - category: cost
+    item: "Charge cost on within-sector reweighting, not only on sector switches"
+    why: >
+      A basket rebuilt monthly from as-was membership and float trades even
+      when the top 3 is unchanged. The paper's turnover (p9) counts only
+      sector switches in a costless world.
+    triggered_by: "Exhibit 4.6 turnover row, undefined basis"
+    addresses: []
+    evidence_page: 9
+
+convertibility:
+  verdict: convertible_with_data
+  confidence: medium
+  what_must_be_true:
+    - >
+      Sector momentum is real in the source, not an artefact. Reasonably
+      supported: it holds across every lookback and decade in 82 years of
+      FF10 (pp. 8-11), though every configuration is full-sample and no
+      hold-out exists.
+    - >
+      It exists among NIFTY 500 industry groups since 2005. Untested, and the
+      Indian cross-section is ten concentrated groups over ~20 years.
+    - >
+      It survives realistic cost at ~281%/yr turnover (paper, p9) plus
+      within-sector reweighting. The paper puts the edge at 300-600bp/yr (p9).
+      The run computes the drag at 30bp, but 30bp is the sleeve floor and a
+      single-stock basket costs more; until the desk supplies that stack, the
+      net edge is an upper bound, not a measurement.
+    - >
+      It survives long-only. Trivially: the paper is long-only, nothing is
+      dropped.
+    - >
+      It is implementable at size as sector baskets of NIFTY 500 names, with
+      a tracking error the fund can carry.
+  weakest_link: >
+    Link 2. It is not that sector momentum is implausible in India. It is
+    that this cross-section may not be able to show it. Ten groups where
+    financials are a third of the cap and several groups are three stocks
+    deep give far fewer independent bets than FF10, and ~20 years holds a
+    handful of sector cycles. A positive result could be two policy episodes;
+    a null could be low power. Link 3 is close behind -- the critique showed
+    it is only arithmetic once a single-stock cost stack exists, and none has
+    been supplied -- but a cost input fixes link 3, whereas no input fixes
+    link 2: it is where the answer could be uninterpretable either way.
+  decisive_evidence: >
+    Constituent-built, survivor-free NIFTY 500 sectors (data request 1): net
+    active return over equal-weight sectors with a bootstrap interval, the
+    same sign across 3/6/9/12-month windows, the per-sector effective-N
+    diagnostic, and the result with the two largest sector episodes removed.
+    If it survives all four, link 2 holds; if it lives in one window or one
+    episode, it does not.
+  if_it_fails: >
+    It would say that sector-level relative strength does not add to what an
+    equal-weight sector book or the NIFTY500 MOMENTUM 50 index already
+    provide in this market at this cost. That retires the whole family of
+    sector-ETF rotation proposals for this fund, which is worth more than one
+    paper. Stock-level momentum then remains the fund's momentum exposure.
+  capacity_note: >
+    Large sectors are deeply liquid; the binding groups are the narrow ones
+    (utilities, a thin OTHER) whose mid-cap names set the ceiling. No ADV has
+    been supplied, so capacity is an argument, not a number.
+  headline: "Weakest link: 10 concentrated Indian sectors over ~20y may not show it either way"
+
+n_configs_tried: 91
+
+notes: >
+  Governing run: 12-month signal, top 3 equal-weight, fully invested, lag 1,
+  30bp. Registered variants: 3/6/9-month windows; Top 1 and Top 2; lag 1-5;
+  cost 30-100bp; 25% single-name cap within sector; combination score and
+  NIFTY 500 10-month-SMA cash hedge once their components exist (cash variant
+  never promoted). Part 2 of the paper (five global asset classes) is out of
+  scope: the fund cannot hold EAFE, Treasuries, GSCI or REITs, and the
+  equity exposure proxies are too indirect to test a cross-asset ranking.

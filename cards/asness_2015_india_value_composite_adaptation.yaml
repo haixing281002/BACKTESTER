@@ -1,0 +1,911 @@
+card_version: "1.0"
+
+paper:
+  id: asness_2015_india_value_composite_adaptation
+  title: "India adaptation: composite-value long-only tilt on individual Indian stocks (from Asness, Frazzini, Israel & Moskowitz 2015, 'Fact, Fiction, and Value Investing')"
+  authors: [Clifford Asness, Andrea Frazzini, Ronen Israel, Tobias Moskowitz]
+  date: "2015-06-01"
+  source_file: docs/papers/asness_frazzini_israel_moskowitz_2015_fact_fiction_value.pdf
+  source_sha256: "19eb65c2a62e7aaf"
+
+intent:
+  mode: adaptation
+  parent_card: ""
+  rationale: >
+    The paper's headline mechanism -- rank stocks by a composite of value
+    measures, long the cheapest, short the most expensive -- is a long-short
+    academic factor (HML). This fund cannot short. Per the user's explicit
+    decision 2026-09-28 (repo precedent checked: no long-short paper here has
+    ever actually gotten a paired India-long-short credibility card despite
+    CLAUDE.md describing that policy; every one has shipped a single card),
+    this is the SINGLE card for this paper: the long-only adaptation, the only
+    one that could ever reach a fund decision. It is tested with real
+    individual-stock data (Accord Fintech, already held locally), not an
+    index-sleeve proxy -- the fund already holds an off-the-shelf NIFTY500
+    VALUE 50 sleeve, and this card asks whether a hand-built composite-value
+    stock selection does anything that sleeve does not.
+  transferred_mechanism: >
+    Annually, within the verified point-in-time top-500 Indian universe
+    (Monthly_uni_new.xlsx, restricted to Accord-priced names): compute an
+    equal-weighted composite cheapness z-score from two value ratios (E/P,
+    the inverse of Adjusted PE; and EBIT/EV, the inverse of EV/EBIT), each
+    using the most recent fiscal year whose real result-publication date
+    precedes the rebalance date. Rank the eligible set; hold the cheapest 30%
+    (the paper's own top/bottom-30% breakpoint convention) equal-weighted,
+    long-only. A non-tradable EXPENSIVE reference leg (the priciest 30%) is
+    also computed for reporting, mirroring HML's short leg without trading it.
+  broken_assumptions:
+    - >
+      SHORT LEG DROPPED: this is the single most consequential departure. The
+      paper's headline Sharpe ratios (e.g. composite HML 0.43, Exhibit 3) are
+      long-short. The paper does not decompose HML into a separate
+      long-minus-market and market-minus-short contribution anywhere in its
+      own tables, so the cost of dropping the short leg cannot be quoted from
+      the paper's own numbers -- it is an open question here, not a guess.
+    - >
+      NARROWER COMPOSITE THAN THE PAPER'S OWN "BEST MEASURED BY A COMPOSITE"
+      CLAIM: the paper's composite uses 4-5 measures (book-to-market,
+      earnings-to-price, cash-flow-to-price, dividend yield, 5-year reversal)
+      chosen partly because they are imperfectly correlated with each other
+      (Exhibit 3: correlations to BE/ME range 0.5-0.9). The two measures
+      available locally (Adjusted PE, EV/EBIT) are both earnings-multiples
+      and likely far more correlated with each other than the paper's own
+      composite legs are -- so the noise-reduction benefit the paper
+      documents for a composite (Exhibit 3-4) is only weakly present here.
+    - >
+      NO BOOK-TO-MARKET OR DIVIDEND YIELD: neither is present in the locally
+      held Accord valuation file. The paper's single most-studied measure
+      (BE/ME, used throughout Fama-French's own HML) cannot be reproduced at
+      all with data currently on this machine.
+    - >
+      SHORT HISTORY: ~13 years of usable Accord data (2013-2026) vs. the
+      paper's 88 years (1926-2014). None of the paper's sub-period
+      out-of-sample tests, its decade-by-decade robustness table (Exhibit 4),
+      or its large-vs-small-cap 4-period split (Exhibit 5) has a length-matched
+      Indian analogue.
+    - >
+      TOTAL MARKET CAP, NOT FREE FLOAT: Indian promoter holdings inflate
+      total market cap vs. investable float -- same caveat every other
+      Accord-based card in this repo carries, relevant here because the
+      eligible universe (top-500 by market rank) uses total cap.
+    - >
+      ANNUAL, FISCAL-YEAR-ANCHORED REBALANCE, NOT THE PAPER'S JUNE CALENDAR:
+      the paper rebalances every June, book and price both 6 months old
+      at formation (Fama-French convention). This card rebalances annually
+      too, but anchored to India's March fiscal year-end and the REAL
+      per-security result-publication date (median lag 58 days) rather than
+      importing the US calendar or a guessed lag.
+    - >
+      EQUAL-WEIGHTED WITHIN EACH LEG, MATCHING THE PAPER: unlike the size-tilt
+      card's deviation from Fama-French's value-weighted SMB, this construction
+      matches the paper's own equal-weighted HML-style portfolios directly --
+      recorded here for contrast with that other card, not because it is a
+      deviation.
+
+universe:
+  description: >
+    A verified, point-in-time top-500-by-market-rank Indian equity universe
+    (Monthly_uni_new.xlsx via get_top_n_universe), restricted to Accord-priced
+    names, further restricted at each rebalance to names with a known,
+    publication-date-valid Adjusted PE AND EV/EBIT. Ranked into value terciles
+    at each annual rebalance. Not a single named index.
+  asset_class: equity
+  geography: IN
+  assets:
+    - ACCORD_STOCK_LEVEL_PRICE_MCAP
+  benchmark: NIFTY 500
+  cash_asset: CASH_PROXY_CONSTANT_6PCT
+
+universe_translation:
+  source_universe: >
+    All NYSE/AMEX/NASDAQ ordinary common stocks in Ken French's data library
+    (CRSP-based, NYSE breakpoints), split into small-cap and large-cap halves
+    at the NYSE median; top/bottom 30% by value measure within each half.
+  source_breadth: null
+  source_selection_rule: >
+    Whole-CRSP-universe sort each period into top-30%/bottom-30% by value
+    measure (or an equal-weighted composite of several), breakpoints computed
+    on NYSE stocks only and applied to the full NYSE/AMEX/NASDAQ universe --
+    not a fixed headcount anywhere in the paper.
+  target_universe: "Top-500 point-in-time Indian equities (Monthly_uni_new.xlsx), Accord-priced, with known value ratios"
+  grade: close
+  resolution: direct
+  rationale: >
+    Not a sleeve proxy: the mechanism itself (rank individual stocks by a
+    composite value measure, hold the cheapest slice) is reproduced directly
+    on individual Indian stocks, using real fundamentals data, within a
+    verified point-in-time universe -- the same discipline as the fund's
+    existing size-tilt card (alquist_2018_india_small_cap_tilt_adaptation).
+    What differs from the paper is breadth of VALUE MEASURES (2 earnings
+    multiples vs. the paper's 4-5 measure composite spanning book, earnings,
+    cash flow and dividends) and sample length (~13 years vs. 88), not the
+    mechanism or the universe's own breadth (500 names comfortably supports a
+    30% terciles sort).
+  transfer_risks:
+    - >
+      The two available value measures (Adjusted PE, EV/EBIT) are both
+      earnings-multiples and are likely to be substantially more correlated
+      with each other than the paper's own 4-5 measure composite is internally
+      -- so this composite is closer to "one measure read twice" than to the
+      paper's own diversified composite. Measure the actual correlation
+      between the two z-scored legs before trusting the composite as
+      genuinely diversified; if it is near 1.0, this card is effectively a
+      single-measure earnings-yield sort wearing a composite's name.
+    - >
+      Consolidated vs. standalone basis (Accord's CONS_FR_1 field) is chosen
+      once (consolidated preferred, standalone fallback) rather than argued
+      per-sector; Indian conglomerates with large unconsolidated subsidiaries
+      could rank very differently on each basis.
+    - >
+      Indian promoter holdings inflate total market cap relative to free
+      float, interacting with the eligible-universe restriction (top-500 by
+      total market rank) in the same direction the size-tilt card already
+      flags.
+  mechanism_needs:
+    needs_cross_section: true
+    min_names: 150
+    cap_segment: all
+    sector: null
+    min_history_years: 10.0
+    must_be_in_mandate: true
+    notes: >
+      A genuine stock-level cross-sectional value sort, matching the paper's
+      own construction in kind. Needs real breadth to form a meaningful
+      tercile with populated buckets as names drop in and out of eligibility
+      (missing fundamentals excluded from that rebalance's ranking, not
+      imputed) -- only a constituent-level panel, not an index sleeve, can
+      supply this.
+  alternatives_considered:
+    - "NIFTY500 VALUE 50 / NIFTY200 VALUE 30 index sleeves (already held, index-level only)"
+    - "NIFTY Total Market constituents (broader, out-of-mandate)"
+  why_not_alternatives: >
+    Holding the existing NIFTY500 VALUE 50 sleeve tests "does the
+    professionally-constructed value index beat the broad market", a useful
+    but different question from the paper's own claim ("does ranking
+    individual stocks by a composite of value measures and holding the
+    cheapest slice earn a premium, and is a composite better than a single
+    measure") -- and this fund already holds NIFTY500 VALUE 50 and NIFTY200
+    VALUE 30 as off-the-shelf comparators, run alongside this card's own
+    selection as benchmarks. NIFTY Total Market would add breadth but sits
+    outside the fund's NIFTY 500 mandate and was not needed: 500 names
+    already comfortably supports a 30% tercile sort (score 65.0 in the
+    universe ranking, vs. 55.0 for Total Market).
+  required_instruments:
+    - ACCORD_STOCK_LEVEL_PRICE_MCAP
+    - NIFTY 500
+    - NIFTY500 VALUE 50
+    - NIFTY200 VALUE 30
+  evidence_page: 21
+
+strategy:
+  signal_name: india_composite_value_tilt
+  signal_definition: >
+    At each annual rebalance (India fiscal-year-anchored): universe_t =
+    top-500 by market rank as of the last known Monthly_uni_new.xlsx
+    snapshot, restricted to Accord-priced names. For each name, take the most
+    recent fiscal year whose known_date (real result-publication date via
+    w_publishing_date_data.xlsx, falling back to fiscal_year_end +
+    DEFAULT_REPORTING_LAG_DAYS only where no real date exists) is on or
+    before the rebalance date; prefer the consolidated basis, fall back to
+    standalone. eligible_t = universe_t names with both Adjusted PE and
+    EV/EBIT available on that basis. Compute E/P = 1/Adjusted_PE and EBIT/EV
+    = 1/(EV/EBIT); cross-sectionally z-score each within eligible_t; average
+    the two z-scores (equal-weighted) into one composite cheapness score.
+    Rank eligible_t by the composite (descending = cheapest first). CHEAP_t =
+    top 30% by count (the paper's own top/bottom-30% breakpoint), held
+    long-only, equal-weighted. [Reference only, not traded: EXPENSIVE_t =
+    bottom 30% by count, equal-weighted, for a value-spread comparison,
+    mirroring the paper's short leg without trading it.]
+  inputs_required:
+    - "daily close, Accord-priced Indian equities (~1,314 names)"
+    - "trailing fiscal-year Adjusted PE and EV/EBIT, per-security, publication-date-lagged (Accord valuation_ratios_all_till_2025.xlsx)"
+    - "real per-security result-publication date (Accord w_publishing_date_data.xlsx)"
+    - "monthly point-in-time market-rank universe (Monthly_uni_new.xlsx)"
+    - "NIFTY 500 daily close (benchmark, buy-and-hold reference)"
+    - "NIFTY500 VALUE 50 / NIFTY200 VALUE 30 daily close (off-the-shelf comparators)"
+  cross_sectional: true
+  formation_rule: >
+    Quantile cut at 30% by composite value z-score among that rebalance's
+    eligible names (not a fixed name count) -- matches the paper's own
+    top/bottom-30% NYSE-breakpoint construction in kind, applied here directly
+    to the Indian eligible universe (there is no NYSE-equivalent sub-exchange
+    split to preserve).
+  weighting_rule: >
+    Equal-weighted within the CHEAP tercile, long-only, unlevered -- matches
+    the paper's own equal-weighted HML-style construction (not
+    cap-weighted, not signal-proportional).
+  holding_period: "~1 year (held until the next annual rebalance)"
+  rebalance_frequency: annual
+  is_long_short: true
+  long_only_adaptation: >
+    Drop the EXPENSIVE (short) leg entirely; hold only the CHEAP tercile,
+    long-only, benchmarked to NIFTY 500 (active return) rather than to cash or
+    to the short leg. The paper never decomposes HML into a separate
+    long-minus-market and market-minus-short contribution in any of its own
+    tables (Exhibits 1-6), so the exact return given up by dropping the short
+    leg cannot be quoted from this paper's own numbers -- that is an open
+    question below, not a guess made here. What the paper does quote
+    directly and that applies with extra force to a long-only book: value
+    standalone is weak in large caps (Sharpe 0.25, Exhibit 6) and its
+    market-adjusted large-cap return is not reliably different from zero over
+    the full 88-year sample (1.7%/yr, t=1.16, Exhibit 5) -- a long-only book
+    captures only the long leg's absolute return, never the spread, so these
+    standalone-weakness findings bind harder here than in the paper's own
+    framing. The paper's own remedy (large-cap value+momentum Sharpe 0.65 vs.
+    0.25 alone, Exhibit 6) argues for reading this sleeve's result alongside
+    the fund's existing NIFTY500 MOMENTUM 50 / Quality sleeves at Step 07
+    (incremental IR), not judging it in isolation.
+  constraints:
+    - "long-only: w >= 0"
+    - "unlevered: sum(w) <= 1"
+    - "eligibility requires top-500 point-in-time universe membership AND both value ratios known as of the rebalance date"
+    - "30bp round-trip transaction cost (fund standing assumption, not the paper's zero-cost assumption)"
+    - "lag_days >= 1 from India's non-negotiable point-in-time rule, satisfied here via the real result-publication date"
+  engine_template: cross_sectional
+  template_gap: ""
+  confidence: medium
+  evidence_pages: [7, 11, 12, 18, 19, 21, 22, 23]
+
+signal:
+  name: india_composite_value_tilt
+  template: cross_sectional
+  lookback_days: 365
+  lag_days: 1
+  description: >
+    lag_days is 1, matching this repo's non-negotiable floor -- and is a
+    floor, not the real lag: the real gate is known_date (the security-level
+    real result-publication date), which is typically 30-100+ days after
+    fiscal year end, always respected before a value ratio enters the
+    ranking. lookback_days (365) is stated as the fundamentals-refresh
+    window -- the most recent fiscal year's results feed the composite until
+    the next annual known_date arrives -- not a return-based or covariance
+    window; this signal ranks on a fundamental LEVEL (a composite valuation
+    z-score), so there is no momentum-style lookback in the usual sense.
+    EXECUTION NOTE: like the fund's other Accord-based card
+    (alquist_2018_india_small_cap_tilt_adaptation), this does NOT run through
+    ros/runner.py's execute_card() -- that path is coupled to the NSE index
+    workbook loader and does not accept an Accord-sourced, fundamentals-joined
+    stock panel. It runs through universal_backtester.engine.Backtester with
+    universal_backtester.allocators.build_allocator("cross_sectional", ...),
+    a new script mirroring scripts/alquist_2018_india_small_cap_backtest.py
+    but ranking on the composite value z-score instead of market cap. The
+    two benchmark_templates below (equal_weight, inverse_vol) would need the
+    same custom execution path -- they operate on the same changing
+    cross-sectional eligible universe, not on fixed named sleeves, so neither
+    is runnable through ros/runner.py's standard sleeve-template path either.
+    MIN_NAMES FALLBACK (Stage 02b critique resolution): if eligible_t falls
+    below min_names (30) at any annual rebalance -- plausible in early years
+    if fundamentals coverage is thin, since eligibility requires BOTH value
+    ratios known, a stricter joint condition than the size-tilt card's
+    price-only requirement -- that rebalance is SKIPPED: the CHEAP and
+    EXPENSIVE sets carry forward unchanged from the prior rebalance, and the
+    skip is written to the holdings log explicitly rather than silently
+    defaulting to cash or an undefined prior state. In year one, where no
+    prior rebalance exists, a sub-floor eligible set halts the run with an
+    explicit error rather than starting from an undefined position.
+  params:
+    quantile: 0.30
+    ascending: false   # descending composite z-score = cheapest first
+    weighting: equal
+    min_names: 30
+    below_min_names_action: "skip_rebalance_carry_forward"
+    value_measures: ["adjusted_pe_inverse", "ev_ebit_inverse"]
+    basis_preference: ["consolidated", "standalone"]
+
+portfolio:
+  rebalance: annual
+  long_only: true
+  max_gross: 1.0
+  allow_cash: true
+  mandate_allow_cash: false
+  start: "2013-03-31"
+  end: "2026-08-31"
+
+costs:
+  spread_bps: 30.0
+  cost_model: half_spread
+
+data_requirements:
+  - {name: ACCORD_STOCK_LEVEL_PRICE_MCAP, kind: price, frequency: daily, start: "2013-03-31", mandatory: true, purpose: "stock-level pricing over the eligible universe"}
+  - {name: "Accord valuation ratios (Adjusted PE, EV/EBIT)", kind: fundamental, frequency: annual, start: "2013-03-31", mandatory: true, purpose: "the two legs of the composite value z-score"}
+  - {name: "Accord publication dates (w_publishing_date_data.xlsx)", kind: fundamental, frequency: annual, start: "2013-03-31", mandatory: true, purpose: "point-in-time gate so no ratio is used before it was actually knowable"}
+  - {name: "Monthly_uni_new.xlsx point-in-time universe", kind: membership, frequency: monthly, start: "2013-03-31", mandatory: true, purpose: "verified top-500 point-in-time universe restriction"}
+  - {name: "NIFTY 500", kind: price, frequency: daily, start: "2013-03-31", mandatory: true, purpose: "fund benchmark and do-nothing comparator"}
+  - {name: "NIFTY500 VALUE 50", kind: price, frequency: daily, start: "2013-03-31", mandatory: true, purpose: "off-the-shelf value-index comparator -- the real alternative to building this"}
+  - {name: "NIFTY200 VALUE 30", kind: price, frequency: daily, start: "2013-03-31", mandatory: true, purpose: "second off-the-shelf value comparator, narrower universe"}
+  - {name: "NIFTY500 MOMENTUM 50", kind: price, frequency: daily, start: "2013-03-31", mandatory: true, purpose: "factor-fingerprint check and incremental-IR test, per the paper's own value+momentum finding"}
+  - {name: india_cash_rate, kind: risk_free_rate, frequency: daily, mandatory: true, purpose: "Sharpe numeraire"}
+  - {name: "Accord profitability ratios (ROA/ROE/ROCE)", kind: fundamental, frequency: annual, mandatory: false, purpose: "non-blocking extension: test the paper's value+profitability combination (Exhibit 1)"}
+
+ambiguities:
+  - field: strategy.signal_definition
+    headline: "Composite is 2 earnings-multiples, not the paper's 4-5 measure book/earnings/cashflow/dividend mix"
+    issue: >
+      The paper's central "best measured by a composite" claim (Exhibit 3-4)
+      rests on the composite legs being imperfectly correlated (0.5-0.9 to
+      BE/ME). Adjusted PE and EV/EBIT, both earnings-based, are likely far
+      more correlated with each other, so averaging them may not reduce noise
+      the way the paper's composite does.
+    resolution: >
+      Proceed with the 2-measure composite as the best achievable version
+      with data currently on this machine, but measure and report the actual
+      correlation between the two z-scored legs at Step 03/05 rather than
+      assuming it is low -- this determines whether "composite" is an honest
+      label here. Flagged as a data_request below for the fields that would
+      fix this properly (book value, dividend per share).
+    confidence: high
+    material: true
+    evidence_page: 18
+
+  - field: strategy.signal_definition
+    headline: "Consolidated basis preferred over standalone; not argued per-sector"
+    issue: >
+      Accord's valuation file carries both consolidated (C) and standalone
+      (S) figures for many names. Indian conglomerates with large
+      unconsolidated subsidiaries or JVs can show materially different PE/
+      EV-EBIT on each basis.
+    resolution: >
+      Prefer consolidated, fall back to standalone only where consolidated is
+      absent -- the more complete picture of the whole enterprise, and the
+      convention the fund's other fundamentals-based work should converge on.
+      Not swept in this card's base run.
+    confidence: medium
+    material: false
+    evidence_page: 18
+
+  - field: portfolio.rebalance
+    headline: "Annual, fiscal-year-anchored rebalance replaces the paper's US June calendar"
+    issue: >
+      The paper rebalances every June with a 6-month book/price lag from the
+      prior December (a US calendar convention with no India analogue).
+    resolution: >
+      Rebalance annually, anchored to the REAL per-security
+      result-publication date (median lag 58 days after fiscal year end)
+      rather than importing the US June date or a guessed lag -- point-in-time
+      correct for India, though not literally the same calendar month as the
+      paper uses, and each name's own rebalance-eligible date can differ from
+      its peers' within the same "annual" round.
+    confidence: high
+    material: true
+
+  - field: costs.spread_bps
+    headline: "30bp round trip vs. the paper's explicit zero-cost, no-tax assumption (footnote 17)"
+    issue: >
+      Footnote 17 states plainly the paper's returns are "before trading
+      costs and do not include taxes or other practical costs." An annual
+      rebalance with a 30% tercile turning over meaningfully each year is not
+      free.
+    resolution: >
+      Use the fund's standard 30bp round-trip floor. Annual rebalancing
+      (vs. the size-tilt card's monthly) means far fewer round trips per
+      year, so this cost assumption should bind less here -- but it is still
+      not the paper's own zero-cost world.
+    confidence: high
+    material: true
+
+  - field: data.pit_status
+    headline: "Accord fundamentals accepted as PIT via known_date; real result dates cover most but not all rows"
+    issue: >
+      w_publishing_date_data.xlsx supplies a real result date for most
+      (accord_code, fiscal_year, basis) rows, but not all -- unmatched rows
+      fall back to a 75-day assumed lag (DEFAULT_REPORTING_LAG_DAYS), and a
+      small number of source rows have implausible dates (negative lag, or
+      >365 days) that are also kept on the assumption.
+    resolution: >
+      Accept known_date as point-in-time-correct where a real, plausible
+      result date exists; where it does not, the assumed 75-day lag is used
+      and the composite is computed on a same-day-as-other-names basis
+      anyway -- known_date_source is available per row and should be checked
+      if a specific rebalance date's ranking looks anomalous.
+    confidence: medium
+    material: true
+
+replication_targets: []
+
+benchmark_templates:
+  - {name: "Equal-weight eligible universe (no value tilt)", template: equal_weight, params: {}, rebalance: annual}
+  - {name: "Inverse-vol eligible universe (no value tilt)", template: inverse_vol, params: {}, rebalance: annual}
+
+data_plan:
+  ideal:
+    - field: "Daily price and market cap for a broad, liquid Indian equity universe"
+      granularity: daily
+      history_from: "2012-01-02"
+      why: >
+        The mechanism needs a genuine stock-level cross-section to rank by
+        value at all -- an index sleeve cannot substitute for this, matching
+        the reasoning the fund's own size-tilt card already established.
+      why_granularity: >
+        Daily, and no finer. Pricing feeds the return series between annual
+        rebalances; nothing intraday is needed since the signal itself is
+        formed on fundamentals, not on intraday price action.
+      why_history: >
+        2012-01-02 is the start of the Accord panel; the fund's hardcoded
+        backtest window (accord_data.BACKTEST_START) begins 2013-03-31,
+        giving over a year of runway before any rebalance is trusted.
+      adjustments: "price and market cap as supplied by Accord Fintech; dividend-adjustment status not independently confirmed"
+      minimum_viable: true
+    - field: "Book value per share and dividends per share, per security, per fiscal year, point-in-time"
+      granularity: quarterly
+      history_from: "2012-01-02"
+      why: >
+        This is what would let the composite actually test the paper's own
+        central claim -- that a composite of imperfectly-correlated value
+        measures (specifically including book-to-market, the paper's most
+        emphasized single measure and the whole of Fama-French's HML) beats
+        any single measure. The two ratios currently available are both
+        earnings-multiples and likely too correlated with each other to
+        deliver the noise-reduction the paper documents.
+      why_granularity: "annual, matching Indian fiscal reporting; more frequent would price a decision this signal does not make"
+      why_history: "as far back as reliable point-in-time publication dates exist"
+      adjustments: "as-reported, joined to a real result-publication date, not just the fiscal-period end"
+      minimum_viable: false
+    - field: "Verified point-in-time index membership (top-500 by market rank), monthly"
+      granularity: monthly
+      history_from: "2012-01-02"
+      why: >
+        Already supplied (Monthly_uni_new.xlsx) -- the same file and loader
+        the size-tilt card already uses. Listed here for completeness of the
+        ideal dataset, not as an open item.
+      why_granularity: "monthly matches the source file's own snapshot frequency"
+      why_history: "same window as the price panel"
+      adjustments: "market_rank field, forward-filled between monthly snapshots"
+      minimum_viable: true
+    - field: "Firm-level profitability (ROE/ROA/ROCE), point-in-time via real publication dates"
+      granularity: quarterly
+      history_from: "2012-01-02"
+      why: >
+        Lets this card test the paper's secondary but material claim that
+        combining value with profitability meaningfully improves the result
+        (Exhibit 1: 60/40 value/profitability Sharpe 0.58 vs 0.46 for value
+        alone). Present locally (profitability_ratios_consol_stdalon_till_march2025.xlsx),
+        not yet joined into this card's signal.
+      why_granularity: "annual, matching Indian disclosure frequency"
+      why_history: "same window as the valuation ratios"
+      adjustments: "as-reported, with the real public announcement date"
+      minimum_viable: false
+    - field: "An Indian overnight or 91-day T-bill rate series, daily"
+      granularity: daily
+      history_from: "2012-01-02"
+      why: >
+        Every Sharpe ratio this card computes is measured against a numeraire;
+        right now that numeraire is a flat 6% constant proxy rather than a
+        real rate.
+      why_granularity: "daily, to match how often a Sharpe ratio here could in principle be recomputed"
+      why_history: "same window as the price panel"
+      adjustments: "annualised decimal; state the day-count convention"
+      minimum_viable: false
+  rejected_alternatives:
+    - option: "Hold NIFTY500 VALUE 50 / NIFTY200 VALUE 30 as the value product directly, no stock-level sort"
+      why_not: >
+        Tests "does the pre-built index beat the benchmark", a genuinely
+        different and easier question than the paper's own mechanism (rank
+        individual stocks by a composite value measure, hold the cheapest
+        slice). Both indices are run as comparators; this card's own
+        composite sort is the actual mechanism test.
+    - option: "Single-measure sort (Adjusted PE alone), no composite"
+      why_not: >
+        Would directly contradict the paper's own central "Fact: value is
+        best measured by a composite" finding by testing only what the paper
+        argues is the inferior approach. Kept as a composite of the two
+        available measures despite the transfer risk that they are highly
+        correlated -- a documented weakness, not a silently abandoned goal.
+    - option: "Monthly rather than annual rebalance"
+      why_not: >
+        Fundamentals (PE, EV/EBIT) only change with each new fiscal year's
+        results; a monthly rebalance on annually-updating data would just
+        add turnover and cost without changing the composite score most
+        months, and would depart further from the paper's own annual
+        convention with no offsetting benefit.
+  granularity_verdict: >
+    Price data DAILY (for return computation between rebalances); fundamentals
+    ANNUAL (matching Indian disclosure frequency and the paper's own annual
+    formation). Neither needs to be finer: there is no intraday or monthly
+    decision this signal makes.
+  optimality_argument: >
+    Real per-security daily price plus the two locally available fundamental
+    value ratios, restricted to a verified top-500 point-in-time universe, is
+    the smallest dataset that can test the paper's actual mechanism
+    (individual-stock cross-sectional value ranking) on this fund's own
+    data today. It is not optimal against the paper's OWN stated preference
+    (a fuller, more diversified composite) -- that would need book value and
+    dividend data this fund does not currently hold, named above and in
+    data_requests.
+  what_would_change_the_answer: >
+    Book value per share and dividends per share would let the composite
+    include measures the paper shows are less correlated with the
+    earnings-multiples already available, directly testing (rather than
+    assuming) whether a composite outperforms a single measure here.
+    Profitability data (already local, not yet joined) could move the verdict
+    toward the paper's stronger "value+profitability" claim if the pure-value
+    version disappoints. Neither is available in this run.
+
+selection:
+  rule: >
+    Annually, at each India-fiscal-year-anchored rebalance: universe = top-500
+    by market rank as of the last known Monthly_uni_new.xlsx snapshot,
+    restricted to Accord-priced names. eligible = universe AND both Adjusted
+    PE and EV/EBIT are known as of the rebalance date (via known_date, real
+    result-publication date preferred over the assumed lag), preferring
+    consolidated over standalone basis. Compute E/P and EBIT/EV, z-score each
+    within eligible, average into one composite score. CHEAP = top 30% by
+    count (equal-weighted, the traded portfolio); EXPENSIVE = bottom 30% by
+    count (equal-weighted, reference only, not traded).
+  explicit_securities: []
+  verified_against: firm_registry
+  as_of: "2026-07-31"
+  why_these: >
+    Not a named list -- the rule above is the model's entire decision: the
+    fiscal-year anchoring, the value ratios used, the composite construction,
+    the tercile cut, the weighting. Nothing past this point is a model
+    judgement call again. Step 05 (a new script mirroring
+    scripts/alquist_2018_india_small_cap_backtest.py) hands this rule to
+    universal_backtester.allocators.CrossSectional, which re-derives the
+    eligible set and the CHEAP/EXPENSIVE terciles fresh at every annual
+    rebalance from ACCORD_STOCK_LEVEL_PRICE_MCAP joined against
+    valuation_ratios_all_till_2025.xlsx and w_publishing_date_data.xlsx,
+    confirmed against ros/data/firm_registry.py. No stock is ever named from
+    memory; every held name on any date should be written out by
+    write_holdings_log() the same way the size-tilt card's script does, to a
+    dedicated holdings CSV -- that is the file to open to see exactly which
+    stocks this card is actually holding on any date, once Step 05 is built.
+
+backtest_plan:
+  sample_start: "2013-03-31"
+  sample_end: "2026-08-31"
+  why_this_window: >
+    HARDCODED (fund convention, matching accord_data.BACKTEST_START/
+    BACKTEST_END and every other script built on this dataset). Gives the
+    fundamentals lag room and the top-500 universe file's own ramp-up after
+    the Accord panel's start (2012-01-02) before any rebalance is trusted.
+  warmup_days: 365
+  why_warmup: >
+    One full fiscal year plus the publication lag, so the first rebalance's
+    composite is built from a real, knowable fiscal year's results rather
+    than a partial or assumed one. Every benchmark uses the same effective
+    start so no run gets a head start.
+  rebalance_rule: >
+    Once per fiscal year, at the first trading day on or after each
+    security's own known_date for its most recent completed fiscal year
+    (not a single fixed calendar date for the whole book -- India's fiscal
+    year end is common, March, but real publication dates spread over
+    several months after it). Signals are shifted by 1 + lag_days before use.
+  weights_rule: >
+    Equal weight across every name in the top 30% of that rebalance's
+    eligible (top-500-universe, priced, both value ratios known) set by
+    composite cheapness z-score, long-only, unlevered.
+  explicit_weights: {}
+  benchmarks:
+    - name: "NIFTY 500"
+      why_this: "The fund's mandate benchmark and the do-nothing alternative."
+    - name: "NIFTY500 VALUE 50"
+      why_this: >
+        The real alternative to building this: an off-the-shelf, already-held
+        value index with zero incremental turnover cost to maintain. If this
+        hand-built composite value tilt does not beat it, the honest
+        recommendation is to buy the index.
+    - name: "NIFTY200 VALUE 30"
+      why_this: >
+        A second off-the-shelf value comparator on a narrower (large/mid-cap)
+        universe, to see whether any premium found is concentrated in the
+        smaller names within the top-500 eligible set (per the paper's own
+        finding that value is weak standalone in large caps).
+    - name: "EXPENSIVE (bottom tercile, same universe and rule)"
+      why_this: >
+        The non-tradable reference leg that turns this into an actual
+        value-spread comparison, comparable in spirit to the paper's own HML,
+        even though only the CHEAP leg is a real, tradable long-only product.
+    - name: "NIFTY500 MOMENTUM 50"
+      why_this: >
+        The paper's own remedy for large-cap value's standalone weakness is
+        pairing it with momentum (Exhibit 6). This benchmark is what makes
+        the incremental-IR check at Step 07 meaningful for that specific
+        claim.
+  must_beat:
+    - "NIFTY 500, on the paired stationary bootstrap, at 5%"
+    - "NIFTY500 VALUE 50, after 30bp round-trip costs -- or the honest recommendation is to buy the index"
+  success_looks_like: >
+    CHEAP beats NIFTY 500 and NIFTY500 VALUE 50 on geometric Sharpe with a
+    paired stationary bootstrap p <= 0.05; deflated Sharpe P(skill) >= 0.95 at
+    the honest trial count; alpha survives a factor-fingerprint check against
+    NIFTY500 VALUE 50, NIFTY200 VALUE 30 and NIFTY500 MOMENTUM 50 with |HAC t|
+    >= 2 (i.e. it is not just relabelled exposure to sleeves the fund already
+    holds); positive incremental IR against the existing book at a realistic
+    sleeve size; and the composite's own two legs (E/P and EBIT/EV z-scores)
+    are not so highly correlated that the "composite" label is misleading.
+  failure_looks_like: >
+    Any of: statistically tied with or worse than NIFTY500 VALUE 50, so the
+    hand-built sort buys nothing over the off-the-shelf index; alpha vanishes
+    against the VALUE 50/VALUE 30/MOMENTUM 50 factor fingerprint, so any
+    excess return is unaccounted factor beta already available for free; the
+    E/P and EBIT/EV composite legs correlate above ~0.9, meaning this is
+    functionally a single-measure sort despite the composite construction; or
+    a verdict that flips materially depending on the consolidated/standalone
+    basis choice.
+  known_failure_modes:
+    - >
+      COMPOSITE IN NAME ONLY: if E/P and EBIT/EV z-scores are highly
+      correlated (both are earnings-multiples), this card tests essentially
+      one value measure, not the paper's diversified composite -- and the
+      paper's own evidence is that a single measure underperforms a genuine
+      composite (Exhibit 3-4).
+    - >
+      NO BOOK-TO-MARKET AT ALL: the paper's single most emphasized measure,
+      and the entirety of Fama-French's HML, is absent from this test.
+    - >
+      LARGE-CAP WEAKNESS APPLIES WITH EXTRA FORCE: per the paper's own
+      Exhibit 5-6, value standalone is weak and statistically insignificant
+      in large caps -- and a long-only book captures only the long leg,
+      losing the spread that makes the paper's own headline numbers larger.
+    - >
+      SHORT HISTORY: ~13 years, with likely fewer than 13 real annual
+      rebalances -- not enough to distinguish a real premium from a lucky
+      draw with any statistical confidence comparable to the paper's 88-year
+      sample.
+
+data_requests:
+  - item: "Book value per share and dividends per share, per security, per fiscal year, point-in-time"
+    why: >
+      This is the ONLY way to test the paper's actual central claim -- that a
+      genuinely diversified composite of value measures (specifically
+      including book-to-market) beats a single measure or a composite of
+      correlated ones. The two ratios currently available (Adjusted PE,
+      EV/EBIT) are both earnings-multiples.
+    unlocks: >
+      A real book-to-market leg (the closest analogue to the paper's HML and
+      its single most emphasized measure) and a dividend-yield leg, both
+      genuinely independent-ish signals to average against the earnings
+      multiples already available -- turning "composite" from an assumption
+      into something measured.
+    without_it: >
+      This card tests a 2-measure, both-earnings-based composite. A weak or
+      null result is consistent with "the specific measures available here
+      are too correlated to deliver a composite's benefit" and should NOT be
+      read as "value does not work in India" -- the paper's own stronger,
+      more diversified version remains untested.
+    priority: high
+    headline: "Book value and dividends per share -- the only route to a genuinely diversified composite"
+    format_hint: "per security, per fiscal year, point-in-time: accord_code, fiscal_year_end, basis, book_value_per_share, dividend_per_share"
+    satisfies: ["Book value per share and dividends per share, per security, per fiscal year, point-in-time"]
+
+  - item: "Join Indian profitability data (already present locally) into a value+profitability combination test"
+    why: >
+      The paper's own Exhibit 1 shows combining value with profitability
+      lifts the Sharpe from 0.46 to 0.58, a material and directly testable
+      secondary claim. The raw data
+      (profitability_ratios_consol_stdalon_till_march2025.xlsx +
+      w_publishing_date_data.xlsx) is present locally; only the join into a
+      combined signal is missing.
+    unlocks: >
+      A test of the paper's stronger, secondary claim -- that value plus
+      profitability outperforms value alone -- as a follow-on to this card,
+      using data the fund already holds.
+    without_it: >
+      Only the pure-value composite is tested here. If it disappoints, that
+      does not rule out a better result once profitability is joined in,
+      exactly as the paper's own narrative predicts for large-cap value
+      standalone weakness.
+    priority: nice_to_have
+    headline: "Join profitability data (already local) to test the paper's value+profitability claim"
+    format_hint: "raw data already available per data/raw/stocks/README.md -- needs code, not new data"
+    satisfies: ["Firm-level profitability (ROE/ROA/ROCE), point-in-time via real publication dates"]
+
+  - item: "An Indian overnight or 91-day T-bill rate series, daily, 2012 onward"
+    why: "Every Sharpe here is measured against a flat 6% constant numeraire."
+    unlocks: "A defensible Sharpe numeraire."
+    without_it: "Declared constant 6% proxy, swept 4-8%."
+    priority: nice_to_have
+    headline: "A real Indian short rate, to replace the flat 6% Sharpe numeraire"
+    format_hint: "two columns: date, annualised_rate (decimal)"
+    satisfies: ["An Indian overnight or 91-day T-bill rate series, daily"]
+
+open_questions:
+  - question: >
+      Is the 2-measure (Adjusted PE, EV/EBIT) composite diversified enough to
+      honestly call itself a "composite" in the paper's sense, or should this
+      card be re-framed as a single earnings-yield sort until book-to-market
+      and dividend data are available?
+    why_it_matters: >
+      The paper's own central claim is that a composite beats any single
+      measure BECAUSE the legs are imperfectly correlated. If E/P and
+      EBIT/EV move together almost perfectly, this card silently tests a
+      single-measure strategy while claiming to test the paper's
+      composite-measure finding.
+    what_i_assumed: >
+      Proceeding with the 2-measure composite as the best achievable version
+      today, with the actual leg correlation to be measured and reported at
+      Step 03/05, not assumed low.
+    headline: "Is a 2-earnings-multiple composite genuinely diversified, or effectively one measure?"
+    ask_of: researcher
+    blocks_run: false
+
+  - question: >
+      Which off-the-shelf comparator should govern the promotion decision --
+      NIFTY500 VALUE 50 (broader, matches the fund's mandate universe) or
+      NIFTY200 VALUE 30 (narrower, large/mid-cap only)?
+    why_it_matters: >
+      The two indices likely have different exposure to the large-cap
+      standalone weakness the paper documents (Exhibit 5-6); beating one but
+      not the other would mean different things for the fund's actual
+      decision.
+    what_i_assumed: >
+      NIFTY500 VALUE 50 governs (it matches the fund's own NIFTY 500 mandate
+      universe most closely); NIFTY200 VALUE 30 is reported alongside as a
+      secondary check.
+    headline: "Which value index governs promotion -- NIFTY500 VALUE 50 or NIFTY200 VALUE 30?"
+    ask_of: pm
+    blocks_run: false
+
+  - question: >
+      Is n_configs_tried = 1 honest here, given the paper's own extensive
+      appendix of alternative value measures, combination weights and
+      sub-period splits?
+    why_it_matters: >
+      The deflated Sharpe rests entirely on this number. The paper itself
+      tries many measures and combinations (Exhibits 1, 3-6) even though this
+      card only implements one of them.
+    what_i_assumed: >
+      1, counting only this card's own single configuration (the 2-measure
+      composite, 30% tercile, annual rebalance). This is likely too low once
+      the paper's own broader search is considered a prior trial on the same
+      family of ideas -- flagged rather than silently accepted.
+    headline: "Is n_configs_tried = 1 honest, given the paper's own broad appendix of value-measure variants?"
+    ask_of: researcher
+    blocks_run: false
+
+n_configs_tried: 1
+
+notes: >
+  CONVENTION (Stage 02b critique resolution): n_configs_tried=1 counts only
+  configurations actually RUN by this pipeline (this one card: 2-measure
+  composite, 30% cut, annual rebalance), not the paper's own extensive
+  exhibit-level search across 6 HML variants, two blend-weighting schemes
+  chosen by an in-sample optimizer, and a large/small-cap split. That
+  broader search shaped WHICH single construction this card commits to and
+  is a real source of researcher degrees of freedom the deflated Sharpe at
+  Step 06 does not currently see -- recorded here explicitly rather than
+  left for a reviewer to assume either way.
+
+  The promotion question is NOT "is the Sharpe good". It is whether a
+  hand-built, individual-stock composite-value tilt beats, after 30bp costs,
+  the two things the fund can already do for free: hold NIFTY 500, or buy the
+  off-the-shelf NIFTY500 VALUE 50 index. Both are run as benchmarks. Per the
+  user's explicit decision 2026-09-28, this is a SINGLE card (long-only
+  adaptation only), matching actual repo practice rather than CLAUDE.md's
+  written but never-executed two-card policy. Step 05 execution (a new
+  script mirroring scripts/alquist_2018_india_small_cap_backtest.py) has not
+  yet been written as of this card's drafting.
+
+convertibility:
+  verdict: convertible_with_data
+  confidence: medium
+  headline: "Runnable today; composite is narrower than the paper's own, no book-to-market leg"
+  what_must_be_true:
+    - >
+      Eligible (top-500-universe, priced, both value ratios known) Indian
+      names must carry enough genuine independent cheapness variation for a
+      30% tercile sort to mean anything -- likely true given ~500 names
+      before fundamentals-availability filtering, but not yet measured
+      exactly for this specific eligible set.
+    - >
+      The 2-measure composite (Adjusted PE, EV/EBIT) must actually behave
+      like a composite -- i.e., the two z-scored legs must not be so highly
+      correlated that this is a single-measure sort in disguise. This is the
+      weakest link (see below).
+    - >
+      The value tilt must survive 30bp round-trip costs on an annual
+      rebalance -- a much lower turnover hurdle than the size-tilt card's
+      monthly rebalance, so this link is more likely to hold.
+    - >
+      A positive result must survive a factor-fingerprint check against
+      already-held sleeves (NIFTY500 VALUE 50, NIFTY200 VALUE 30, NIFTY500
+      MOMENTUM 50) to count as something beyond relabelled existing exposure.
+    - >
+      The long-only version must earn something despite the paper's own
+      evidence that standalone value is weak and statistically insignificant
+      in large caps -- the honest bar here, per the paper's own framing, is
+      real and fingerprint-surviving, not merely a positive raw number.
+    - >
+      CRITIQUE-ELEVATED (Stage 02b): the short leg's absence must not remove
+      most of the paper's economic content. The paper's OWN long-short
+      large-cap Sharpe is only 0.25 (Exhibit 6), and its full-sample
+      large-cap market-adjusted return is not statistically different from
+      zero even WITH the short leg (1.7%/yr, t=1.16, Exhibit 5). If dropping
+      the short leg costs roughly half of an already-thin long-short result
+      -- consistent with this repo's own general finding that a short leg
+      "frequently carries the larger and more reliable half of the spread"
+      -- the long-only remainder in large caps could be close to
+      indistinguishable from noise before any Indian-specific transfer risk
+      is even considered.
+  weakest_link: >
+    CORRECTED at Stage 02b critique: the sixth link, not the second. The
+    first draft named the composite's internal correlation (link 2) as
+    weakest because it is the one with a concrete, boundable fix (acquire
+    book value and dividend data) -- but that made it the easy link to name,
+    not the true weakest one. The paper's own numbers say standalone
+    long-short large-cap value is already a Sharpe-0.25, statistically
+    insignificant effect (Exhibit 5-6); a long-only book keeps only part of
+    even that. This link has no clean fix -- it is a structural property of
+    adapting a long-short factor to a long-only mandate, not a data gap --
+    and is the one this card should be read as most likely to fail on.
+    The composite-correlation risk (link 2) remains real and is still worth
+    the data request below, but it is secondary.
+  decisive_evidence: >
+    In descending order of what they would settle: (1) whether the paper
+    reports leg-level (long-only-vs-short-only) returns anywhere, which would
+    let the actual cost of dropping the short leg be quoted rather than left
+    as an open question -- re-read Exhibits 1-6 specifically for this before
+    the next revision; absent that, run the CHEAP-only leg against the
+    EXPENSIVE-only reference leg in this card's own backtest and treat the
+    spread as the best available Indian-sample estimate. (2) The realised
+    correlation between the E/P and EBIT/EV z-scored legs, which decides
+    whether the (secondary) composite-diversification risk is alive at all --
+    costs nothing, the data is already held. (3) Book value per share and
+    dividends per share, which would let a genuinely diversified composite
+    (including the paper's own most-emphasized measure, book-to-market)
+    actually be built and tested. (4) Joining the already-local profitability
+    data, which would let a null pure-value result be followed by the
+    paper's own stronger value+profitability claim rather than ending the
+    inquiry.
+  if_it_fails: >
+    A null on the pure-value composite is informative either way it resolves:
+    if the two legs turn out highly correlated, it says nothing about value
+    in India, only that this narrow composite was not diversified enough --
+    a data-acquisition finding, not a value-doesn't-work finding. If the legs
+    are genuinely independent-ish and the result is still null, that is
+    closer to the paper's own honest finding that value standalone is weak in
+    large caps, and argues for testing the value+profitability or
+    value+momentum combination next rather than abandoning value entirely.
+  capacity_note: >
+    Unknown, and currently an assumption rather than a finding. Annual
+    rebalancing is naturally low-turnover, which is favourable for capacity,
+    but no traded-value/ADV data has been joined into this card yet to make
+    that a measurement rather than an expectation.
+
+india_notes:
+  - category: data
+    item: >
+      Accord's valuation and profitability files carry both consolidated and
+      standalone bases per security per year, and this card's basis
+      preference (consolidated, falling back to standalone) is a choice made
+      once rather than argued per-firm-structure.
+    why: >
+      Indian conglomerates with large unconsolidated subsidiaries or JVs can
+      show materially different PE/EV-EBIT ratios on each basis, which could
+      change a name's tercile assignment specifically for the kind of
+      complex corporate structures common among Indian large caps.
+    triggered_by: "the strategy's entire signal is built from two per-security fundamental ratios that exist on two different accounting bases"
+    addresses: ["Book value per share and dividends per share, per security, per fiscal year, point-in-time", "trailing fiscal-year Adjusted PE and EV/EBIT, per-security, publication-date-lagged (Accord valuation_ratios_all_till_2025.xlsx)"]
+    evidence_page: 18
+  - category: timing
+    item: >
+      known_date is a real per-security result-publication date where
+      available (median lag 58 days), but falls back to a flat 75-day
+      assumption for unmatched rows, and both real and assumed rows are
+      treated identically once known_date is computed -- there is no flag
+      carried into the ranking itself distinguishing "confidently
+      point-in-time" from "conservatively assumed" names within one
+      rebalance.
+    why: >
+      A rebalance mixing real-dated and assumption-dated names is not
+      uniformly point-in-time even though every individual field passes the
+      lag_days>=1 floor -- the STRENGTH of the point-in-time guarantee varies
+      by name within the same rebalance date.
+    triggered_by: "the composite is computed and ranked across all eligible names simultaneously, at one rebalance date, from a mix of known_date sources"
+    addresses: ["daily price and market cap for a broad, liquid Indian equity universe", "real per-security result-publication date (Accord w_publishing_date_data.xlsx)"]
+    evidence_page: 21
+  - category: validity
+    item: >
+      The eligible universe shrinks twice: first to the top-500 point-in-time
+      names (per the size-tilt card's existing universe restriction), then
+      again to names with BOTH value ratios known as of the rebalance date.
+      The size of this second shrinkage has not yet been measured for this
+      specific card.
+    why: >
+      If fundamentals coverage is sparse in any year, the effective universe
+      for the tercile sort could be materially smaller than 500 names,
+      changing what "top 30%" actually means and potentially concentrating
+      the CHEAP leg in whichever sub-sector happens to have better
+      fundamentals disclosure that year.
+    triggered_by: "the sort requires BOTH Adjusted PE and EV/EBIT to be known, a stricter joint-availability condition than the size-tilt card's price-only requirement"
+    addresses: ["Verified point-in-time index membership (top-500 by market rank), monthly", "monthly point-in-time market-rank universe (Monthly_uni_new.xlsx)"]

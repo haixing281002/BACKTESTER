@@ -35,3 +35,12 @@ data/raw/stocks/*
 data/raw/master/*
 !data/raw/master/.gitkeep
 !data/raw/master/README.md
+
+# Raw data pulled from NSE bhavcopy and Screener.in (ros/data/nse_bhavcopy_download.py,
+# ros/data/screener_fetch.py). Local only: large, and Screener's data is not to be
+# redistributed. The code that fetches it is tracked, the data is not.
+cache/
+scr/
+scr_symbols.txt
+cache_download.log
+scr_fetch.log

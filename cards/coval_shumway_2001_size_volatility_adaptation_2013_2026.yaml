@@ -1,0 +1,837 @@
+card_version: "1.0"
+
+paper:
+  id: coval_shumway_2001_size_volatility_adaptation_2013_2026
+  title: "India adaptation (2013-03-28 to 2026-08-31 comparison window): realized-volatility-managed NIFTY size-segment tilt (from Coval & Shumway 2001, Table VIII)"
+  authors: [Joshua D. Coval, Tyler Shumway]
+  date: "2000-06-01"
+  source_file: docs/papers/coval_shumway_2001_expected_option_returns.pdf
+  source_sha256: "0b624a4badbdd36f"
+
+intent:
+  mode: adaptation
+  parent_card: coval_shumway_2001_size_volatility_adaptation
+  rationale: >
+    The paper's headline mechanism -- sell zero-beta S&P index straddles to
+    harvest a volatility risk premium -- is NOT convertible for this fund (see
+    the parent card): no options, no shorting, and the profitable leg is short
+    by construction. But a SEPARATE, secondary finding in the same paper is
+    made of ordinary equities and needs no options at all: Table VIII / Section
+    III.F regresses CRSP size-decile excess returns on the market and a
+    zero-beta-straddle "volatility risk" factor and finds the volatility-factor
+    loading is monotonic in size -- strongly negative for the smallest decile
+    (-0.033) and mildly positive for the largest (+0.006). Coval and Shumway
+    read this as evidence that part of the equity size premium compensates for
+    volatility-risk exposure: small caps are hurt when volatility rises, large
+    caps are a partial hedge. That claim is about equities, needs no
+    derivatives, and is what this card tests -- adapted, proxied, and with
+    every substitution named below.
+  transferred_mechanism: >
+    A long-only tilt toward NIFTY MIDCAP 150 / NIFTY SMALLCAP 250 against
+    NIFTY 100, scaled toward cash whenever the tilted mix's own trailing
+    realised volatility rises above a target (engine template `vol_target`,
+    already registered for a different paper in this repo). This operationalises
+    the paper's Table VIII reading -- that a small/mid-cap tilt is implicitly a
+    short-volatility-like position -- by cutting the tilt specifically when
+    volatility is rising, which is exactly the state Table VIII says hurts it
+    most. The paper itself never proposes this trading rule; it is this card's
+    own construction, built to make an otherwise purely explanatory regression
+    result testable and falsifiable in a long-only book.
+  broken_assumptions:
+    - >
+      MECHANISM SUBSTITUTED, NOT ADAPTED: the paper's own tested and priced
+      trade is short volatility via index-option straddles. This card does not
+      implement or approximate that trade in any way -- it tests a different,
+      equity-only hypothesis (the size/volatility-loading link in Table VIII)
+      that the paper reports but never itself proposes as something to trade.
+    - >
+      RISK FACTOR SUBSTITUTED: Table VIII's volatility-risk factor is the
+      return on a zero-beta, option-derived S&P straddle -- forward-looking in
+      the sense that option prices embed the market's volatility expectation.
+      This card uses 21-day trailing REALISED volatility of the sleeve mix
+      instead, because the fund holds no Indian options or implied-volatility
+      history. Realised vol is backward-looking and, unlike an option-implied
+      measure, cannot react to volatility ahead of a shock the way the paper's
+      own factor can (its own evidence is largely built around Oct 1987).
+    - >
+      DIFFERENT CROSS-SECTION: Table VIII uses ten CRSP size-DECILE portfolios,
+      reformed monthly from individual stocks. This card uses three static
+      NIFTY size-SEGMENT indices (large/mid/small). Measured on the fund's own
+      held data (2005-04 to 2026-09), these three segments correlate 0.81-0.99
+      pairwise and their annualised vols sit within one point of each other
+      (20.1-21.5%) -- see data_plan.rejected_alternatives. Ten dynamically
+      re-sorted deciles disperse far more than three broad, highly-correlated
+      segment indices; this is a materially lower-power test than the paper's
+      own, and a null result here cannot be read as strongly as a null in
+      Table VIII would be.
+    - >
+      DIFFERENT MARKET AND ERA: the source evidence is US equities, 1986-1995,
+      spanning the October 1987 crash. This card runs 2005-2026 Indian
+      equities, a different market structure, regulatory regime and set of
+      crisis episodes (2008 GFC, 2013 taper tantrum, 2018 IL&FS, 2020 COVID),
+      none of which is the 1987 crash the source paper leans on most heavily.
+    - >
+      RETURN BASIS: NSE factor/segment indices are price-return; dividends are
+      missing from every series. Absolute returns understate throughout and
+      the cash-holding (faithful) variant is flattered relative to the
+      fully-invested (mandate) variant by roughly the dividend yield.
+    - >
+      POINT-IN-TIME: NIFTY MIDCAP 150 / SMALLCAP 250 are backfilled to a base
+      date with methodology fixed later than the backfilled history; the
+      segment definitions were chosen knowing that history.
+
+universe:
+  description: >
+    Three NSE size-segment indices spanning the fund's NIFTY 500 mandate:
+    NIFTY 100 (large), NIFTY MIDCAP 150 (mid), NIFTY SMALLCAP 250 (small).
+    Not a stock-level cross-section -- the mechanism times a fixed tilt across
+    three pre-built streams, it never ranks individual names.
+  asset_class: equity
+  geography: IN
+  assets:
+    - NIFTY 100
+    - NIFTY MIDCAP 150
+    - NIFTY SMALLCAP 250
+  benchmark: NIFTY 500
+  cash_asset: CASH_PROXY_CONSTANT_6PCT
+
+universe_translation:
+  source_universe: >
+    CRSP NYSE + AMEX common stocks, sorted each month into ten market-cap
+    deciles (Table VIII), size decile 1 = smallest.
+  source_breadth: 10
+  source_selection_rule: >
+    Standard CRSP market-capitalisation decile breakpoints, reformed monthly;
+    this is a cross-sectional stock sort, not a fixed asset list.
+  target_universe: "NSE size-segment indices (NIFTY 100 / MIDCAP 150 / SMALLCAP 250)"
+  grade: loose
+  resolution: sleeve_proxy
+  rationale: >
+    A ten-decile, monthly-reformed stock sort has no exact Indian analogue at
+    this fund's data depth. The best available proxy is the three broad
+    NIFTY size-SEGMENT indices the fund already holds a full common history
+    for (2005-04-01 onward): large (NIFTY 100), mid (NIFTY MIDCAP 150), small
+    (NIFTY SMALLCAP 250). `ros.data.universes.propose_universes` was run with
+    needs_cross_section=false, min_names=3, cap_segment='all',
+    must_be_in_mandate=true and ranked "NSE factor sleeves" highest (score
+    50.0) among 24 catalogued Indian universes, ahead of a full NIFTY 500
+    stock-level cross-section (score 40.0) -- because this mechanism needs a
+    handful of pre-built streams to time, not breadth to rank.
+  transfer_risks:
+    - >
+      Measured directly on this fund's data: NIFTY 100 / MIDCAP 150 /
+      SMALLCAP 250 correlate 0.81-0.99 pairwise and have nearly identical
+      annualised volatility (20.1-21.5%) over 2005-04 to 2026-09. A 30/35/35
+      tilted mix of the three has essentially the SAME realised volatility as
+      NIFTY 500 itself (20.12% vs 20.14%). Three broad segment indices simply
+      do not disperse the way ten individually-sorted stock deciles do, so
+      this is a much lower-power version of Table VIII's own test.
+    - >
+      A static segment INDEX is not a re-sorted decile: a stock that grows
+      from small-cap to large-cap moves between CRSP deciles every month,
+      carrying its idiosyncratic history with it. NIFTY MIDCAP 150 /
+      SMALLCAP 250 are themselves periodically reconstituted baskets, so some
+      of this churn is present, but the segment boundaries move far less
+      often than a monthly full re-sort.
+  mechanism_needs:
+    needs_cross_section: false
+    min_names: 3
+    cap_segment: all
+    sector: null
+    min_history_years: 15.0
+    must_be_in_mandate: true
+    notes: >
+      Not a stock-level sort: the mechanism needs 3-4 pre-built size-SEGMENT
+      return streams (large/mid/small[/micro]) spanning a common history, to
+      test whether size-segment returns load differentially on a
+      market-volatility proxy, per Coval & Shumway (2001) Table VIII.
+  alternatives_considered:
+    - "NIFTY 500 constituents, re-sorted into size deciles monthly (closer to the paper's own construction)"
+    - "NIFTY Midcap 150 constituents alone (stock-level, single segment)"
+    - "Adding NIFTY MICROCAP 250 as a fourth, smaller sleeve"
+  why_not_alternatives: >
+    A true stock-level decile re-sort needs constituent-level PIT prices and
+    membership history the fund does not hold (see data_requests) -- it is the
+    right long-run answer and is requested below, not run today. Microcap 250
+    is OUT OF MANDATE for a NIFTY 500 fund (ros.data.universes flags it
+    disqualifying when must_be_in_mandate=true) and is left out of the
+    in-mandate run for that reason, not because it would be uninformative.
+  required_instruments:
+    - NIFTY 100
+    - NIFTY MIDCAP 150
+    - NIFTY SMALLCAP 250
+    - NIFTY 500
+  evidence_page: 34
+
+strategy:
+  signal_name: realized_vol_managed_size_tilt
+  signal_definition: >
+    Hold a fixed strategic mix (30% NIFTY 100, 35% NIFTY MIDCAP 150, 35% NIFTY
+    SMALLCAP 250), then scale the whole mix by min(1, target_vol / sigma_t),
+    where sigma_t is the 21-trading-day trailing realised annualised
+    volatility of THIS mix's own daily return series (primitive
+    `portfolio_trailing_vol`). The residual (1 - scale) sits in cash in the
+    faithful variant and is renormalised back into the three sleeves,
+    pro-rata, in the fully-invested mandate variant. This is a MODEL-DESIGNED
+    trading rule inspired by Table VIII, not a rule the paper itself proposes.
+  inputs_required:
+    - "daily close of NIFTY 100, NIFTY MIDCAP 150, NIFTY SMALLCAP 250"
+    - "daily close of NIFTY 500 (benchmark, and buy-and-hold reference)"
+    - "a cash rate for the un-invested residual (faithful variant only)"
+  cross_sectional: false
+  formation_rule: >
+    No selection step. All three sleeves are always candidates at their fixed
+    30/35/35 relative weights; only the OVERALL scale (equity vs cash) moves,
+    driven by trailing realised volatility of the tilted mix itself.
+  weighting_rule: >
+    w = scale * (0.30, 0.35, 0.35), scale = min(1, target_vol / sigma_t).
+    Long-only, unlevered (scale is capped at 1, so the book de-risks into cash
+    in high-volatility regimes but never levers up in calm ones).
+  holding_period: one month
+  rebalance_frequency: monthly
+  is_long_short: false
+  long_only_adaptation: ""
+  constraints:
+    - "long-only: w >= 0"
+    - "unlevered: scale <= 1"
+    - "target realised vol: 22%, i.e. just above the 30/35/35 mix's measured 20.1% (see backtest_plan)"
+  engine_template: vol_target
+  template_gap: ""
+  confidence: medium
+  evidence_pages: [20, 21, 34]
+
+signal:
+  name: realized_vol_managed_size_tilt
+  template: vol_target
+  lookback_days: 21
+  lag_days: 1
+  description: >
+    lag_days is 1, not 0: NSE index closes publish after the close, so a
+    signal computed on date t cannot be traded at t's own close. lookback_days
+    is 21 trading days (about one calendar month) for the realised-volatility
+    estimate -- long enough to smooth day-to-day noise, short enough to react
+    within the same month the risk-timing decision is acted on at a monthly
+    rebalance. This is a design choice for this card, not something the source
+    paper specifies (it uses an OPTION-implied measure, not a realised-vol
+    lookback at all).
+  params:
+    weights:
+      NIFTY 100: 0.30
+      NIFTY MIDCAP 150: 0.35
+      NIFTY SMALLCAP 250: 0.35
+    target_vol: 0.22
+    max_scale: 1.0
+
+portfolio:
+  rebalance: monthly
+  long_only: true
+  max_gross: 1.0
+  allow_cash: true
+  mandate_allow_cash: false      # the fund is long-only and fully invested
+  target_vol: 0.22
+  start: "2013-03-28"
+  end: "2026-08-31"
+
+costs:
+  # 30bp round trip, not the paper's implicit options bid-ask cost (which is
+  # not comparable at all -- these are cash-equity index sleeves).
+  spread_bps: 30.0
+  cost_model: half_spread
+
+data_requirements:
+  - {name: "NIFTY 100", kind: price, frequency: daily, start: "2005-04-01", mandatory: true, purpose: "large-cap sleeve"}
+  - {name: "NIFTY MIDCAP 150", kind: price, frequency: daily, start: "2005-04-01", mandatory: true, purpose: "mid-cap sleeve"}
+  - {name: "NIFTY SMALLCAP 250", kind: price, frequency: daily, start: "2005-04-01", mandatory: true, purpose: "small-cap sleeve"}
+  - {name: "NIFTY 500", kind: price, frequency: daily, start: "2005-04-01", mandatory: true, purpose: "fund benchmark and do-nothing comparator"}
+  - {name: "NIFTY500 MULTIFACTOR MQVLV 50", kind: price, frequency: daily, mandatory: true, purpose: "off-the-shelf, zero-turnover comparator"}
+  - {name: india_cash_rate, kind: risk_free_rate, frequency: daily, mandatory: true, purpose: "cash accrual in the faithful (cash-holding) variant"}
+
+ambiguities:
+  - field: universe.mapping
+    headline: "Testing an options/CRSP-decile finding on 3 equity index sleeves -- adaptation, not replication"
+    issue: >
+      Table VIII is a stock-level, 10-decile regression against an
+      option-derived risk factor. Mapping it onto 3 static NSE segment
+      indices and a realised-vol proxy is a judgement call, not a translation.
+    resolution: >
+      Proceed as an explicit ADAPTATION of one secondary finding, never scored
+      against the paper's own regression coefficients or its straddle-based
+      Table III/V numbers. See intent.broken_assumptions for every substitution.
+    confidence: medium
+    material: true
+    evidence_page: 34
+
+  - field: signal.params.target_vol
+    headline: "22% vol target, just above the 30/35/35 mix's measured 20.1%, so it binds in stress not continuously"
+    issue: >
+      There is no paper-given target: Coval & Shumway do not propose a
+      volatility-timing rule at all. 20% would bind almost continuously since
+      it sits AT the mix's own realised vol; something well above it (e.g. 30%)
+      would almost never bind and the overlay would do nothing.
+    resolution: >
+      Set to 22%, measured on this fund's own 2005-2026 data as just above the
+      30/35/35 mix's realised 20.1% and NIFTY 500's own 20.1%, so the cap is
+      expected to bind mainly in named stress regimes. Swept 16%-28% as a
+      sensitivity in Step 06.
+    confidence: medium
+    material: true
+
+  - field: signal.lookback_days
+    headline: "21-trading-day realised-vol window: a design choice, not something the paper specifies"
+    issue: >
+      The paper's own risk factor is option-implied, not a trailing realised
+      window of any length. 21 days is chosen for this card by analogy to
+      standard volatility-managed-portfolio practice, not derived from the
+      paper.
+    resolution: >
+      Use 21 trading days as the base case; report sensitivity to the
+      informal choice in open_questions rather than presenting it as
+      paper-derived.
+    confidence: low
+    material: true
+
+  - field: costs.spread_bps
+    headline: "30bp round trip; the paper's own cost basis (option bid-ask) is not comparable"
+    issue: >
+      The source paper's transaction costs are option bid-ask spreads on
+      index straddles -- an entirely different cost structure from rotating a
+      cash-equity size tilt.
+    resolution: >
+      Use this fund's standard 30bp round-trip assumption for Indian
+      factor/segment sleeve rotation. Not comparable to, and not copied from,
+      the source paper.
+    confidence: medium
+    material: true
+
+  - field: universe.cash_asset
+    headline: "No Indian rate series: cash accrues a flat 6%, swept 4-8%. LOW confidence."
+    issue: "No Indian risk-free series in the snapshot."
+    resolution: >
+      Declared constant 6% proxy, recorded as a proxy, swept 4%-8%. Results
+      that flip inside that band are reported as rate-dependent.
+    confidence: low
+    material: true
+
+  - field: data.pit_status
+    headline: "Backfilled segment-index history accepted for mechanism testing only; caps the ladder at ROBUST"
+    issue: >
+      NIFTY MIDCAP 150 / SMALLCAP 250 history is backfilled to a base date
+      with methodology fixed later than much of the backfilled window.
+    resolution: >
+      Accept for mechanism testing only. Caps the ladder at ROBUST: no live
+      claim may rest on backfilled segment-index history.
+    confidence: high
+    material: true
+
+  - field: portfolio.allow_cash
+    headline: "Both variants run; the fully-invested mandate one governs promotion"
+    issue: >
+      The whole mechanism being tested IS de-risking into cash when volatility
+      rises; the fund's actual mandate is long-only and fully invested.
+    resolution: >
+      Run BOTH: the faithful cash-holding variant (does the timing mechanism
+      work at all?) and a fully-invested variant that renormalises the
+      would-be cash residual back into the three sleeves pro-rata (can the
+      fund actually run it?). The mandate variant governs promotion and is
+      expected to show materially LESS protection than the faithful variant --
+      that gap IS the cost of the fully-invested mandate, not a bug.
+    confidence: high
+    material: true
+
+  - field: portfolio.start
+    headline: "User-specified 2013-03-28 to 2026-08-31 window, for comparison against an external backtest"
+    issue: >
+      This is a deliberate SUB-WINDOW of the base card's 2005-2026 sample,
+      requested to reconcile this pipeline's numbers against a backtest
+      already computed elsewhere. It excludes 2008 (GFC) entirely and starts
+      after the sharpest part of 2013's taper-tantrum vol spike, so results
+      here are not comparable to the base card's full-history numbers, and a
+      strategy that depends on catching the 2008 stress episode would look
+      different -- or absent -- in this window.
+    resolution: >
+      Restrict portfolio.start/end and backtest_plan accordingly; the
+      snapshot is built ONLY from this window (no pre-2013-03-28 data is used,
+      including for the volatility warm-up). Reported as its own card, not
+      merged into or compared statistically against the base 2005-2026 card's
+      trial count.
+    confidence: high
+    material: true
+
+replication_targets: []
+
+benchmark_templates:
+  - {name: "Static size tilt (30/35/35, no vol overlay)", template: fixed_weight, params: {weights: {"NIFTY 100": 0.30, "NIFTY MIDCAP 150": 0.35, "NIFTY SMALLCAP 250": 0.35}}, rebalance: monthly}
+  - {name: "Equal-weight size sleeves (1/3 each)", template: equal_weight, params: {}, rebalance: monthly}
+
+data_plan:
+  # Designed from the paper's Table VIII finding, then compared with what the
+  # fund holds -- not the other way round. The mechanism needs a handful of
+  # size-segment return streams plus (ideally) a genuine volatility-risk
+  # factor; it never ranks individual securities.
+  ideal:
+    - field: "Daily closing levels for 3-4 Indian size-SEGMENT indices (large/mid/small[/micro]) spanning a common history"
+      granularity: daily
+      history_from: "2005-04-01"
+      why: >
+        The vol-timing signal needs a daily return series to estimate a
+        21-day trailing realised volatility of the tilted mix; the tilt
+        itself needs one return stream per segment.
+      why_granularity: >
+        Daily, and no finer. A 21-trading-day realised-vol window cannot be
+        formed from weekly or monthly closes, and the rebalance is monthly,
+        so intraday prices would only inform an execution decision this
+        strategy does not make.
+      why_history: >
+        2005-04-01 is the earliest date NIFTY 100, MIDCAP 150 and SMALLCAP 250
+        all exist together in the fund's registry. Starting later would
+        truncate the 2008 drawdown, the closest analogue in the Indian sample
+        to the volatility spikes (including Oct 1987) that motivate the
+        source paper's Table VIII regression.
+      adjustments: "price-return, dividends not reinvested; no survivorship question -- an index does not delist"
+      minimum_viable: true
+    - field: "An India options-implied or realized cross-market volatility index (e.g. India VIX), daily"
+      granularity: daily
+      history_from: "2008-03-01"
+      why: >
+        This is the honest analogue of the paper's ACTUAL risk factor (a
+        zero-beta, option-derived straddle return / implied volatility), not
+        the realised-vol proxy this card is forced to use.
+      why_granularity: "daily, to match the monthly rebalance's decision frequency"
+      why_history: >
+        NSE's India VIX index itself only begins ~2008-03, which is already
+        shorter than the segment-index history -- incorporating it would trade
+        sample length for fidelity to the paper's own risk factor, a real
+        trade-off to weigh rather than assume away.
+      adjustments: "index level, no adjustment beyond a daily close"
+      minimum_viable: false
+    - field: "NIFTY 500 constituent-level PIT prices and membership, sufficient to re-form CRSP-style size deciles monthly"
+      granularity: daily
+      history_from: "2005-04-01"
+      why: >
+        Closer to Table VIII's own construction (10 deciles, monthly re-sort
+        on market cap) than 3 static segment indices, and would materially
+        raise this test's power given the 0.81-0.99 pairwise correlation
+        measured among the 3 segment indices on this fund's own data.
+      why_granularity: "daily prices, monthly re-sort -- matching the paper's own decile construction"
+      why_history: "same window as the segment indices, so the two versions of this test are directly comparable"
+      adjustments: "ISIN-keyed, free-float market cap, corporate actions"
+      minimum_viable: false
+    - field: "NSE-listed index-option (Nifty/BankNifty) daily settlement data at fixed strike buckets"
+      granularity: daily
+      history_from: "n/a -- not requested by this card"
+      why: >
+        This is the instrument the SOURCE PAPER actually studies. Naming it
+        here records, honestly, that no run in THIS pipeline tests the
+        paper's own mechanism -- that is the separate, not-convertible
+        replication card, not this one.
+      why_granularity: "n/a"
+      why_history: "n/a"
+      adjustments: "n/a"
+      minimum_viable: false
+    - field: "Indian overnight or 91-day T-bill rate series, daily, 2005 onward"
+      granularity: daily
+      history_from: "2005-04-01"
+      why: >
+        Two roles: the accrual on the cash residual in the faithful variant,
+        and the numeraire every Sharpe here is measured against.
+      why_granularity: >
+        Daily, to match the accrual. A constant cannot de-risk into an actual
+        rate cycle the way a real series would.
+      why_history: "same window as the segment indices, so the Sharpe is not spliced"
+      adjustments: "annualised decimal; state the day-count convention"
+      minimum_viable: false
+  rejected_alternatives:
+    - option: "Attempt the paper's literal mechanism using NSE index options"
+      why_not: >
+        Not a data problem a workaround fixes -- see the parent replication
+        card. A long-only cash-equity mandate has no analogue to a short
+        straddle position, so buying options data would only support a
+        different, future research question about a derivatives sleeve, not
+        this fund's cash-equity book.
+    - option: "The price-return segment series already held, unchanged"
+      why_not: >
+        It is what this card actually runs on. Dividends are missing from
+        every series, so absolute returns understate throughout and the
+        cash-holding (faithful) variant is flattered relative to the
+        fully-invested (mandate) variant. Listed here so the gap is recorded,
+        not forgotten.
+    - option: "Monthly segment-index closes instead of daily"
+      why_not: >
+        The realised-vol window is 21 TRADING days; monthly data cannot form
+        it at all. Cheaper and unusable.
+    - option: "NIFTY MICROCAP 250 as a fourth sleeve"
+      why_not: >
+        Out of the NIFTY 500 mandate (ros.data.universes flags it
+        disqualifying once must_be_in_mandate=true); would test whether the
+        effect exists at all, not whether this fund could run it, and is a
+        candidate for a SEPARATE out-of-mandate card, not this one.
+  granularity_verdict: >
+    DAILY, and nothing finer. The vol-timing signal is a 21-trading-day
+    rolling realised volatility, traded monthly; weekly data cannot form the
+    window, and intraday answers an execution question this card does not ask.
+  optimality_argument: >
+    Three daily NSE size-segment indices spanning a common 2005-2026 history
+    is the smallest dataset that can ask whether Table VIII's size/volatility-
+    risk-loading pattern shows up, even crudely proxied by realised volatility,
+    in the one part of Coval & Shumway's paper a long-only Indian equity book
+    could ever act on. It is not the paper's own dataset (options, CRSP
+    deciles) and cannot support a genuine replication of Table VIII's
+    coefficients; it is the cheapest honest way to test the ADJACENT,
+    equity-only hypothesis the same table suggests.
+  what_would_change_the_answer: >
+    India VIX or Nifty/BankNifty option-implied volatility would let the
+    timing signal track the paper's own notion of "volatility risk" instead
+    of backward-looking realised volatility, and could move the verdict either
+    way -- particularly around volatility JUMPS realised vol only detects with
+    a lag, which is exactly the kind of event (Oct 1987) the source paper
+    leans on most. Stock-level size deciles, re-formed monthly, would raise
+    power materially by escaping the 0.81-0.99 segment-index correlation this
+    card's own numbers show. A genuine Indian rate series would sharpen the
+    cash-vs-equity comparison in the faithful variant but is unlikely on its
+    own to flip the promotion verdict, which turns on the vol-timing overlay,
+    not on cash accrual.
+
+selection:
+  rule: >
+    No stock-level selection. NIFTY 100, NIFTY MIDCAP 150 and NIFTY SMALLCAP
+    250 are the fixed candidate set at every rebalance; the vol_target overlay
+    only scales the fixed 30/35/35 mix toward cash, it never re-picks
+    constituents or adds/drops a sleeve.
+  explicit_securities:
+    - NIFTY 100
+    - NIFTY MIDCAP 150
+    - NIFTY SMALLCAP 250
+  verified_against: firm_registry
+  as_of: "2026-09-18"
+  why_these: >
+    The three NSE size-segment indices for which the fund holds a full common
+    daily history back to 2005-04-01, confirmed against
+    ros/data/firm_registry.py -- not a list recalled from memory.
+
+backtest_plan:
+  sample_start: "2013-03-28"
+  sample_end: "2026-08-31"
+  why_this_window: >
+    THIS SPECIFIC WINDOW WAS REQUESTED BY THE USER, to check this pipeline's
+    numbers against an external backtest of the same idea already in hand --
+    it is not a window this card would otherwise have chosen. 2013-03-28 is
+    the last NSE trading day on/before the requested 2013-03-31 (31 March
+    2013 was a Sunday, and the following two trading days, Apr 1-2, sit just
+    after); 2026-08-31 is used exactly, since it is itself a trading day in
+    the held workbook. Restricting the snapshot to this window means the
+    signal is built and traded on ONLY this data -- no pre-2013-03-28 history
+    is used even for the 21-day warm-up, which burns into the start of this
+    window rather than borrowing from before it. This materially changes what
+    the test can say: the window excludes the 2008 GFC entirely (the
+    volatility-spike episode the base 2005-2026 card leaned on as the closest
+    Indian analogue to the source paper's October 1987 crash) and begins
+    partway through 2013's own taper-tantrum vol spike already receding. It
+    still includes 2018 (IL&FS) and 2020 (COVID).
+  warmup_days: 26
+  why_warmup: >
+    lookback (21) + 5. The 21-day trailing realised-vol estimate cannot be
+    formed before the window fills, and trading on a partial estimate would
+    silently make burn-in part of the track record. Every benchmark uses the
+    same warmup, and align_runs() truncates every run to a common start so no
+    run gets a head start.
+  rebalance_rule: >
+    Last TRADING day of each calendar month present in the data, never a
+    calendar date that may not trade. Signals are shifted by 1 + lag_days (=2)
+    before use.
+  weights_rule: >
+    w = scale * (0.30, 0.35, 0.35), scale = min(1, 0.22 / sigma_21d). The
+    residual holds cash in the faithful variant and is renormalised pro-rata
+    back into the three sleeves in the fully-invested mandate variant.
+  explicit_weights:
+    NIFTY 100: 0.30
+    NIFTY MIDCAP 150: 0.35
+    NIFTY SMALLCAP 250: 0.35
+  benchmarks:
+    - name: "NIFTY 500"
+      why_this: >
+        The fund's mandate benchmark and the do-nothing alternative. Beating
+        it is necessary and nowhere near sufficient.
+    - name: "NIFTY500 MULTIFACTOR MQVLV 50"
+      why_this: >
+        The real alternative to building this: an off-the-shelf multifactor
+        index with zero turnover and no overlay to maintain. If this strategy
+        does not beat it after 30bp, the honest recommendation is to buy the
+        index.
+    - name: "Static size tilt (30/35/35, no vol overlay)"
+      why_this: >
+        Isolates what the vol-timing overlay itself contributes. Same three
+        sleeves, same relative weights, no volatility scaling. The difference
+        between this and the strategy IS the mechanism's contribution -- and,
+        given the 0.81-0.99 segment correlation measured on this fund's data,
+        that difference may be small.
+    - name: "Equal-weight size sleeves (1/3 each)"
+      why_this: >
+        A simpler static comparator with no size tilt at all, to separate the
+        effect of tilting toward mid/small from the effect of timing that tilt.
+  must_beat:
+    - "NIFTY 500, on the paired stationary bootstrap, at 5%"
+    - "Static size tilt (no overlay), after 30bp round-trip costs -- or the vol-timing overlay buys nothing"
+    - "NIFTY500 MULTIFACTOR MQVLV 50, after 30bp round-trip costs"
+  success_looks_like: >
+    The vol-managed tilt beats the static tilt and NIFTY 500 on geometric
+    Sharpe with a paired stationary bootstrap p <= 0.05 against both; realised
+    max drawdown in 2008/2018/2020 is measurably smaller than the static
+    tilt's; the ranking is stable across the 16-28% target-vol sweep and the
+    4-8% cash-rate sweep; and the faithful (cash-holding) variant's edge over
+    the fully-invested mandate variant is small enough that the fund could
+    plausibly run the mandate version.
+  failure_looks_like: >
+    Any of: statistically indistinguishable from the static tilt, so timing
+    buys nothing beyond a permanent size overweight; loses to NIFTY500
+    MULTIFACTOR MQVLV 50, so the honest answer is to buy the index; the
+    overlay's benefit collapses once cash is renormalised away in the mandate
+    variant (very plausible given the mechanism's core action IS moving to
+    cash); or a verdict that flips inside the target-vol or cash-rate sweep,
+    which would make the result an artefact of an unvalidated knob rather
+    than a finding.
+  known_failure_modes:
+    - >
+      LOW STANDALONE POWER: measured directly on this fund's data, NIFTY 100 /
+      MIDCAP 150 / SMALLCAP 250 correlate 0.81-0.99 pairwise and the 30/35/35
+      mix's realised vol (20.12%) is nearly identical to NIFTY 500's own
+      (20.14%). There may simply be too little independent size-segment
+      variation in this data for a differential volatility-risk loading, of
+      the kind Table VIII finds across ten US stock deciles, to show up at all.
+    - >
+      REALISED-VOL PROXY LAGS A JUMP: a 21-day trailing window only starts
+      rising AFTER a shock begins, whereas the paper's own option-implied
+      factor can move on the day expectations change. A crash-day-one loss is
+      not something this overlay is built to catch.
+    - >
+      MANDATE RENORMALISATION DEFEATS THE MECHANISM: the fully-invested
+      variant puts the would-be cash residual back into the same three
+      sleeves, which is precisely the exposure the overlay was trying to cut.
+      The mandate variant may show materially less (or no) protection even if
+      the faithful variant works.
+    - >
+      TURNOVER FROM SCALE CHANGES: monthly rescaling between full exposure and
+      partial cash is itself turnover, charged at 30bp -- a strategy that
+      whips between full and half exposure every few months could give back
+      any timing benefit to costs.
+
+data_requests:
+  - item: "India VIX (or Nifty/BankNifty option-implied volatility), daily, from inception"
+    why: >
+      This is the honest analogue of the paper's actual risk factor. Using it
+      instead of realised volatility would let the timing signal anticipate
+      rather than merely react to a volatility regime change.
+    unlocks: >
+      A materially more faithful test of the size/volatility-risk-loading
+      hypothesis, and a genuine test of whether the overlay exploits
+      information or just trend-follows its own noisy realised-vol proxy.
+    without_it: >
+      The card runs on 21-day trailing REALISED volatility, which is
+      backward-looking and blind to volatility jumps (the kind of event -- Oct
+      1987 -- the source paper's own evidence leans on most). Any protection
+      this overlay shows is a lower bound on what an implied-vol version could
+      achieve; a null result here does not rule out an implied-vol version
+      working.
+    priority: high
+    headline: "India VIX / options-implied vol, so the signal reacts to risk instead of just realised noise"
+    format_hint: "two columns: date, close (index level or an at-the-money Nifty straddle implied vol)"
+    satisfies: ["An India options-implied or realized cross-market volatility index (e.g. India VIX), daily"]
+
+  - item: "NIFTY 500 constituent-level PIT prices and membership, enough to re-form CRSP-style size deciles monthly"
+    why: >
+      Closer to Table VIII's own construction than three static, highly
+      correlated segment indices.
+    unlocks: >
+      A materially higher-power version of this test: our own numbers show
+      the three-sleeve proxy has very little independent size-segment
+      variation to detect a differential volatility loading with.
+    without_it: >
+      A null result here is at least as consistent with "the three-sleeve
+      proxy has no power" as with "the size/volatility-risk link does not
+      hold in India" -- the two cannot be told apart without this.
+    priority: high
+    headline: "Constituent-level prices, so a null means 'no effect' and not just 'the proxy has no power'"
+    format_hint: "long CSV: date, ISIN, close, free_float_mcap, index_membership_flag"
+    satisfies: ["NIFTY 500 constituent-level PIT prices and membership, sufficient to re-form CRSP-style size deciles monthly"]
+
+  - item: "An Indian overnight or 91-day T-bill rate series, daily, 2005 onward"
+    why: >
+      Every Sharpe here is measured against a numeraire, and the cash leg in
+      the faithful variant currently accrues a flat 6% constant.
+    unlocks: >
+      A defensible Sharpe, and a faithful-variant cash leg that de-risks
+      through an actual rate cycle rather than a straight line.
+    without_it: >
+      Declared constant 6% proxy, swept 4-8%. Every cash-holding result is
+      reported as rate-dependent.
+    priority: high
+    headline: "A real Indian short rate, so the faithful variant's cash leg is not a flat-line assumption"
+    format_hint: "two columns: date, annualised_rate (decimal)"
+    satisfies: ["Indian overnight or 91-day T-bill rate series, daily, 2005 onward"]
+
+open_questions:
+  - question: >
+      Is 30/35/35 the right strategic size tilt, or should the mid/small
+      overweight versus NIFTY 500's own market-cap weights be calibrated to
+      the fund's actual active-risk budget?
+    why_it_matters: >
+      The tilt away from large-cap is what creates ANY exposure to the
+      size/volatility-risk channel this card tests. Too small a tilt may be
+      too weak to detect anything at all, given the 0.81-0.99 segment
+      correlation measured on this data; too large a tilt concentrates active
+      risk the PM may not want regardless of what this card finds.
+    what_i_assumed: >
+      30/35/35, a deliberate overweight of mid/small versus NIFTY 500's own
+      composition, chosen to have SOME tilt to time. Only target_vol is swept
+      in this run, not the mix itself.
+    headline: "Is 30/35/35 the right size tilt, or should it be set from the fund's own active-risk budget?"
+    ask_of: pm
+    blocks_run: false
+
+  - question: >
+      Does mandate_allow_cash=false mean the fully-invested variant should
+      renormalise the would-be cash residual back into the SAME three
+      sleeves (as coded), or into the broader NIFTY 500 benchmark instead?
+    why_it_matters: >
+      Renormalising into the same three sleeves keeps the size tilt but
+      likely defeats the volatility-timing mechanism entirely, since it puts
+      the exposure the overlay was trying to cut right back. Renormalising
+      into NIFTY 500 instead would preserve SOME risk reduction (diluting the
+      size tilt specifically) but is a materially different mandate variant
+      from what this card implements.
+    what_i_assumed: >
+      Renormalise into the same three sleeves pro-rata (the engine's existing
+      mandate-variant behaviour). The mandate variant is therefore expected to
+      show materially less protection than the faithful variant, and that gap
+      is reported as the cost of the fully-invested mandate, not hidden.
+    headline: "Mandate variant renormalises into the same 3 sleeves -- likely defeats the overlay"
+    ask_of: pm
+    blocks_run: false
+
+  - question: >
+      Is n_configs_tried = 1 honest, given target_vol (22%) and lookback
+      (21 days) were both set after looking at this fund's own realised-vol
+      and correlation numbers rather than being specified in advance?
+    why_it_matters: >
+      The deflated Sharpe rests entirely on this number. Choosing target_vol
+      "just above" a level computed from the same sample used to test the
+      strategy is a soft form of the in-sample search the paper itself is
+      careful to flag when IT does something similar (n. 1, paper p.7-8).
+    what_i_assumed: >
+      1, counting only this card's own configuration. Likely understated once
+      the informal target_vol / lookback search is folded in.
+    headline: "Is n_configs_tried=1 honest, given target_vol/lookback were picked from this fund's data?"
+    ask_of: researcher
+    blocks_run: false
+
+n_configs_tried: 1
+
+notes: >
+  The promotion question is NOT "is the Sharpe good". It is whether a
+  volatility-timed size tilt beats, after 30bp costs, the three things the
+  fund can already do for free: hold NIFTY 500, buy the NIFTY500 MULTIFACTOR
+  MQVLV 50 index, or simply hold the SAME size tilt untimed. All three are run
+  as benchmarks/references. Given the 0.81-0.99 pairwise correlation and
+  near-identical volatility measured among the three segment sleeves on this
+  fund's own data, a null result here would not be surprising and would say
+  more about the proxy's power than about whether Coval & Shumway's Table VIII
+  pattern is real.
+
+convertibility:
+  verdict: convertible_with_data
+  confidence: medium
+  headline: "Runs today on held data, but 0.81-0.99 sleeve correlation may leave the overlay little to detect"
+  what_must_be_true:
+    - >
+      The three NSE size-segment sleeves must carry enough INDEPENDENT
+      size-related variation for a differential volatility-risk loading to
+      show up at all. Measured directly: they correlate 0.81-0.99 pairwise and
+      the tilted mix's realised vol (20.1%) is nearly identical to NIFTY 500's
+      own (20.1%). If there is no room here, a null result is the proxy
+      failing, not the hypothesis.
+    - >
+      21-day trailing realised volatility must carry enough of the same
+      information as the paper's option-derived factor for a realised-vol
+      OVERLAY to do anything the paper's own volatility-risk channel would
+      predict. It is a materially cruder, backward-looking substitute.
+    - >
+      The timing benefit must survive 30bp round-trip costs on the scale
+      changes the overlay itself creates, on top of the (smaller) cost of
+      maintaining the static size tilt.
+    - >
+      It must beat the three things the fund can already do for nothing: hold
+      NIFTY 500, buy NIFTY500 MULTIFACTOR MQVLV 50, or hold the SAME size
+      tilt untimed.
+    - >
+      The benefit must survive the fully-invested mandate variant, where the
+      would-be cash residual is renormalised back into the same three
+      sleeves -- plausibly removing most of what the overlay does.
+  weakest_link: >
+    The first one. Table VIII's own power comes from ten individually-sorted
+    stock deciles that genuinely disperse; three broad, 0.81-0.99-correlated
+    Indian segment indices may simply not carry the independent size
+    variation the mechanism needs, in which case every later link is moot
+    regardless of how the overlay is built.
+  decisive_evidence: >
+    In order of what they would settle: (1) NIFTY 500 constituent-level PIT
+    prices, which would let the test re-form actual size deciles and separate
+    "no effect" from "no power in the proxy" -- this is the single biggest
+    lever and costs nothing to reason about, only to obtain. (2) India VIX or
+    Nifty option-implied volatility, which would tell whether the realised-vol
+    proxy is the reason a result is weak or strong. (3) An Indian short-rate
+    series, which sharpens the faithful-variant comparison but is unlikely to
+    flip the headline verdict on its own.
+  if_it_fails: >
+    A null here is still worth having: it would show that Indian NIFTY
+    size-SEGMENT indices (as opposed to individually-sorted stocks) do not
+    carry enough independent size-related variation to make a
+    volatility-timed size tilt work, which is a reusable finding for any
+    future "size premium" proposal built on this fund's existing sleeve set --
+    not just for this paper.
+  capacity_note: >
+    Unknown and currently an assumption. The mechanism trades three broad
+    indices monthly, which is favourable for capacity, but every number here
+    is computed on index series that charge no market impact; a real AUM
+    ceiling needs sleeve-level traded value, which is not requested here
+    because it is not the weakest link.
+
+india_notes:
+  - category: validity
+    item: >
+      NIFTY MIDCAP 150 and SMALLCAP 250's construction rules (free-float
+      methodology, the current 150/250-name convention, semi-annual
+      reconstitution) were set well after 2005 and the backfilled history
+      applies them retroactively.
+    why: >
+      This strategy conditions its ENTIRE signal on the relative realised
+      volatility of these segments; a methodology splice at an undisclosed
+      date inside the backfilled history can look like a genuine change in
+      the segment's risk profile when it is actually a rule change.
+    triggered_by: >
+      the vol-timing overlay treats trailing realised volatility of the
+      size-tilted mix as its only state variable
+    addresses: ["Daily closing levels for 3-4 Indian size-SEGMENT indices (large/mid/small[/micro]) spanning a common history"]
+  - category: execution
+    item: >
+      The tradable wrapper for this tilt is a basket of ETFs/index funds on
+      NIFTY 100, Midcap 150 and Smallcap 250 (or a swap), not the indices
+      themselves; small/mid-cap ETF liquidity and tracking error in India are
+      both worse than large-cap.
+    why: >
+      The backtest trades index LEVELS; a real book trades INSTRUMENTS with
+      tracking error and rebalance impact the index series does not charge,
+      and two of the three sleeves here (mid, small) are the segments where
+      that gap is largest.
+    triggered_by: "two-thirds of the strategic mix (35% + 35%) is mid/small-cap"
+    addresses: ["Daily closing levels for 3-4 Indian size-SEGMENT indices (large/mid/small[/micro]) spanning a common history"]
+  - category: data
+    item: >
+      NSE's India VIX index only begins around 2008-03, which is already
+      shorter than this card's 2005-04 sample start.
+    why: >
+      Bounds how far back a genuinely faithful (implied-vol-based) version of
+      this test could ever be pushed, even with the data purchased -- 2005-08
+      to 2008-03 would have to run on realised vol regardless.
+    triggered_by: >
+      the paper's actual risk factor is option-derived; this card explicitly
+      substitutes realised volatility as a stand-in
+    addresses: ["An India options-implied or realized cross-market volatility index (e.g. India VIX), daily"]
