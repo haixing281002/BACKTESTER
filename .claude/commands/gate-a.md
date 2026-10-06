@@ -3,11 +3,22 @@ description: "Gate A — assemble the human review queue. You do NOT decide."
 argument-hint: "<card.yaml>"
 ---
 
-# GATE A — HUMAN INTERPRETATION CONTROL
+# GATE A — THE CARD, DISPLAYED (informational, not blocking — changed 2026-10-06)
 
-**You do not decide anything here.** Your job is to make a human's five minutes
-count: assemble everything they must personally confirm before a line of strategy
-code runs. Everything up to this point is cheap; everything after is not.
+**You do not decide anything here, and — as of 2026-10-06 — the pipeline does
+not wait here either.** Gate A's job is still to make a human's five minutes
+count: assemble everything they would want to confirm, in case they read it.
+It is no longer the point the chain pauses at. Assemble this, print it, and
+continue straight to Stage 03 — the one and only stop left in this chain is
+Gate B. Nothing about WHAT gets shown changes; only whether anyone waits for
+a response to it.
+
+The one thing that still halts progress here is a real defect, never an
+absent approval: if assembly below finds the card `BLOCKED` (unresolved
+material ambiguities, a missing universe translation, a schema error), fix it
+and redraft — send it back through `/critique-card`/`/draft-card` yourself —
+rather than stopping to ask. A human not having looked yet is never a reason
+to stop; a card that is actually wrong is.
 
 Read the card `$1`, its analysis and critique in `outputs/interpretation/`, and
 the deterministic feasibility verdict.
@@ -65,7 +76,27 @@ decision.
 
 ## Open with the card itself
 
-Three blocks, in this order, before any prose:
+**First, always: the plain-English summary and the local file link.** Neither
+is optional, and both come before anything else this gate prints:
+
+```bash
+python -c "
+import os
+from ros.cards.schema import load_card
+c = load_card('$1')
+print(c.plain_summary())
+print()
+print('CARD FILE:', os.path.abspath('$1'))"
+```
+
+`plain_summary()` is what makes this gate intuitive — a reviewer who never
+reads another line still knows what gets bought, on what signal, how often,
+and why. The absolute path lets them open the exact YAML in their editor
+without hunting for it. Print both even when nobody is waiting on this gate;
+the record is for whoever reads it later, including the human who eventually
+does look.
+
+Then three more blocks, in this order, before any prose:
 
 ```bash
 python -c "
@@ -233,8 +264,9 @@ starts working. Do not calibrate the length against another paper's queue: that
 is not a fact about this paper, and reading another run's artifacts to produce
 it is how somebody else's work leaks into this gate.
 
-End with: *"Nothing above has been decided. A named researcher confirms these
-before Gate A passes."*
+End with: *"Nothing above has been decided — this is a record for whoever
+reads it, not something the pipeline is waiting on. The chain continues to
+Stage 03 now; the next and only stop is Gate B."*
 
 ```bash
 python -m ros.interpretation record --stage gate_a \

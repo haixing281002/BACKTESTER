@@ -18,18 +18,24 @@ Read that as three prohibitions, because that is how it is enforced:
 3. **A model never writes engine code as part of a run.** It selects from nine
    audited allocator templates. If none fits, it writes a specification and a
    human implements it.
-4. **A model never advances to the next stage without being told to.** Every
-   stage in the table below — not just Gate A and Gate B — ends with the
-   model stopping, showing what it produced, and waiting for the operator to
-   say to continue. This applies whether the pipeline is driven through
-   `run_interpret.py`/`run_pipeline.py` or performed in-session by an editor
-   agent following `.claude/commands/*.md`. Finishing Stage 00 and writing
-   "moving to Stage 01" in the same turn is exactly the failure this rule
-   exists to prevent: report the stage's result, then STOP. Gates A and B are
-   where a *decision* gets recorded; this is a narrower, more frequent
-   checkpoint so a paper never runs ahead of the human reading it — a
-   multi-paper session must pause between every single stage of every single
-   paper, no exceptions, no "continuing since you'll probably say yes."
+4. **A model never records a decision at Gate B without being told to — and
+   that is now the ONLY pause in the chain (changed 2026-10-06).** Stages 00
+   through 07, Gate A's assembly included, run in one continuous pass: finish
+   a stage, report what it produced, continue to the next stage in the same
+   turn, all the way to Gate B's briefing. This applies whether the pipeline
+   is driven through `run_interpret.py`/`run_pipeline.py` or performed
+   in-session by an editor agent following `.claude/commands/*.md`. Gate A
+   still gets assembled and displayed in full — the card, a plain-English
+   summary, a local link to the card file, the completeness score — but
+   nothing waits for a response to it; it is a record for whoever reads it,
+   not a blocking step. The one thing that still halts progress before Gate B
+   is a real defect (a card Gate A's own checks mark `BLOCKED`, a genuine data
+   shortfall), never an absent approval — fix a defect and continue yourself,
+   the same way `/critique-card` already works. At Gate B, and only there:
+   report the evidence, print the exact command a human runs to record a
+   decision, and STOP. `decision: PENDING` until a named human actually runs
+   it — that part of the rule is unchanged and is not loosened by anything
+   upstream now running without a pause.
 
 ## Who owns each stage
 
@@ -39,14 +45,20 @@ Read that as three prohibitions, because that is how it is enforced:
 | 01 | Ingest — incl. **universe + strategy** | **LLM owns** | `/ingest` |
 | 02 | Strategy Card | **LLM owns**, code validates | `/draft-card`, `/critique-card` |
 | 02c | Universe translation check | Code checks the LLM's proposal | — |
-| — | **Gate A** | **HUMAN decides** | `/gate-a` |
+| — | **Gate A** | Displayed for a human, non-blocking (changed 2026-10-06) | `/gate-a` |
 | 03 | Data feasibility | Code binds, LLM advises | `/map-data` |
 | 04 | Point-in-time data | Code only | — |
 | 05 | Build + execute | Code owns, LLM picks a template | `/run` |
 | 06 | Research validation | Code computes, LLM critiques | `/critique-results` |
 | 07 | Portfolio validation | Code computes, LLM writes the memo | `/critique-results` |
-| — | **Gate B** | **HUMAN decides** | `/gate-b` |
+| — | **Gate B** | **HUMAN decides — the one stop in the chain** | `/gate-b` |
 | 08 | Strategy library | Code stores, LLM recalls | `/librarian` |
+
+**Gate A is no longer a pause.** It is assembled and shown in full — same
+content as always, including a local link to the card file — but the chain
+does not wait for a response before continuing to Stage 03. **Gate B is the
+only stage that still blocks**, and it blocks completely: `decision: PENDING`
+until a named human runs `run_pipeline.py --decision ...`.
 
 In this editor **you are the model**. The agents in `ros/agents/` are the same
 roles reached through the API; the commands in `.claude/commands/` are those roles

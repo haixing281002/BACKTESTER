@@ -170,7 +170,9 @@ def main() -> int:
     comp = card_completeness(card)
     kw = dict(translation_check=tc, feasibility=feas, india=india,
               completeness=comp)
-    head("GATE A  |  HUMAN INTERPRETATION CONTROL")
+    head("GATE A  |  THE CARD, DISPLAYED  (informational -- see CLAUDE.md)")
+    print(f"    CARD FILE : {os.path.abspath(card_path)}")
+    print()
     para(gate_a_summary(card, ga, extra=extra, **kw), indent="")
     print()
     para(gate_a_document(card, ga, extra=extra, **kw), indent="")
@@ -201,14 +203,22 @@ def main() -> int:
         print(f"        python run_pipeline.py --card {card_path}")
 
     head("NOTHING ABOVE HAS BEEN DECIDED")
-    print("    Gate A produces a checklist. The decision belongs to a named human,")
-    print("    and no part of this script assigns one.")
+    print("    Gate A produces a checklist, for the record. No part of this script")
+    print("    assigns a decision, and -- as of 2026-10-06 -- nothing waits for one")
+    print("    here either: the chain continues to Stage 03 on its own. Gate B is")
+    print("    the only stop; see CLAUDE.md's 4th non-negotiable.")
     print()
     print(f"    Queue for the reviewer : {paths['gate_a']}")
     print(f"    Record the reading     : python -m ros.interpretation record "
           f"--stage gate_a \\")
     print(f"                                 --output {paths['gate_a']} "
           f"--operator \"<name>\" --input {paper.path}")
+
+    head("LOCAL FILES FROM THIS RUN")
+    for label, p in [("paper", paper.path), ("analysis", paths["analysis"]),
+                     ("card", card_path), ("gate A queue", paths["gate_a"])]:
+        exists = "" if os.path.exists(p) else "  (not yet written)"
+        print(f"    {label:<12}: {os.path.abspath(p)}{exists}")
     hr()
     return 0
 

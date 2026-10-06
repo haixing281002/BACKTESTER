@@ -1,82 +1,99 @@
 ---
 name: pipeline-stage-checkpoint
-description: "Enforce the fund's 4th non-negotiable (CLAUDE.md) -- a model never advances to the next pipeline stage without being told to. Use this after completing ANY stage of this repo's pipeline (Stage 00 through Gate B) in-session, whether working through a slash command, run_interpret.py/run_pipeline.py, or a direct scripts/*.py backtest. Also use when reviewing whether a past turn violated this rule."
+description: "Enforce the fund's pipeline-pause rule (CLAUDE.md, changed 2026-10-06) -- the chain from Stage 00 through Stage 07 now runs without pausing for a human; Gate B is the ONE stop. Use this after completing ANY stage of this repo's pipeline (Stage 00 through Gate B) in-session, whether working through a slash command, run_interpret.py/run_pipeline.py, or a direct scripts/*.py backtest. Also use when reviewing whether a past turn violated this rule, in either direction -- pausing where it shouldn't, or reaching Gate B without stopping."
 ---
 
 # Pipeline stage checkpoint
 
-CLAUDE.md's 4th non-negotiable, verbatim:
+**Changed 2026-10-06.** This used to require a pause after every stage,
+Gate A included. It no longer does. CLAUDE.md now reads:
 
-> A model never advances to the next stage without being told to. Every stage
-> in the pipeline table — not just Gate A and Gate B — ends with the model
-> stopping, showing what it produced, and waiting for the operator to say to
-> continue.
+> Up to and including Gate A, nothing asks for approval... After Gate A: still
+> no human intervention, straight through to Gate B.
+
+Gate A still gets assembled and displayed in full — the card, `plain_summary()`,
+a local link to the YAML file, the completeness score, the asks — exactly as
+before. What changed is whether anything WAITS for a response to it. It does
+not. The chain runs from Stage 00 straight through Gate A's display and on
+through Stage 07 in one continuous pass. **Gate B is the only stop.**
 
 This applies whether the pipeline is driven through `run_interpret.py` /
-`run_pipeline.py`, a direct `scripts/*.py` backtest, or performed in-session
-by following `.claude/commands/*.md`. It is a CODE-level rule where code is
-running (see `universal_backtester/checkpoint.py` and `run_pipeline.py`'s own
-`_checkpoint()`), and a CONVERSATION-level rule when a model is doing the
-work itself, in the chat, rather than running a script.
+`run_pipeline.py`, a direct `scripts/*.py` backtest, or performed in-session by
+following `.claude/commands/*.md`.
 
-## What this means in practice, at the code level
+## What still stops the chain — defects, never approvals
 
-Every stage-producing script in this repo already enforces this via the
-shared `checkpoint()` helper:
+The one thing that halts progress before Gate B is a real problem, not a
+missing sign-off:
 
-```python
-from universal_backtester.checkpoint import checkpoint
+- **Gate A reports `BLOCKED`** (unresolved material ambiguities, a missing
+  universe translation, a schema error): fix the card and redraft it
+  yourself — `/critique-card` then `/draft-card` again — the same way you'd
+  iterate on your own work. Do not stop to ask; a human not having looked yet
+  was never the problem, an actually-wrong card is.
+- **Data genuinely is not available** (Stage 03/`/map-data` finds a real
+  shortfall against the registry): report it plainly. This is a procurement
+  fact, not a request for permission, and it is not a reason to fabricate a
+  substitute series to keep moving.
+- **Triage fails** (Stage 00 finds the paper irrelevant): stop working on
+  *this paper*, record why, and move to the next one if there is one.
 
-if not checkpoint("STAGE 2 OF 4 -- BACKTEST EXECUTED", produced, auto_approve=args.auto_approve):
-    return
-```
+None of these are the old "wait for the operator" pause. They are places the
+chain cannot honestly continue, which is a different thing from a place it
+is choosing not to without being told.
 
-`produced` is a running list of every local output file's absolute path
-written so far — printed before the pause, so a human approving stage N can
-actually see what stage N wrote. `--auto-approve` (an argparse flag every
-script and `run_pipeline.py` exposes) skips every pause deliberately, for
-batch runs; a non-interactive run (piped stdin, a subprocess, no tty) skips
-it too but says so explicitly rather than blocking forever.
+## What this means at the code level
 
-**When adding a new stage-producing script**, wire it in the same way: import
-`checkpoint()`, track a `produced: list` from the top of `main()`, append
-every output path as it's written, and call `checkpoint(...)` at each natural
-stage boundary (after data loads, after the backtest runs, after each major
-output group is written, and once more at the very end). See
+Every stage-producing script still carries the shared `checkpoint()` helper
+(`universal_backtester/checkpoint.py`, `run_pipeline.py`'s own
+`_checkpoint()`) — it is not being removed, because a human may still want to
+step through a run manually. But the DEFAULT for a run under this chain is now
+`--auto-approve`: pass it (or the moral equivalent for a script that doesn't
+expose the flag) so the run proceeds stage-to-stage on its own, the way the
+in-session conversation now does. `produced`, the running list of every local
+output file's absolute path, still gets tracked and still gets printed at
+each stage boundary and at the end — the chain not pausing to ask doesn't mean
+it stops showing its work.
+
+**When adding a new stage-producing script**, wire it the same way as before:
+import `checkpoint()`, track `produced: list` from the top of `main()`, append
+every output path as it's written, call `checkpoint(..., auto_approve=True)`
+(or respect a flag that defaults to it) at each natural stage boundary. See
 `scripts/alquist_2018_india_small_cap_backtest.py` or
-`scripts/asness_2015_india_value_longshort_backtest.py` for the full pattern
-across 4-5 stages.
+`scripts/asness_2015_india_value_longshort_backtest.py` for the pattern.
 
-**When adding a check for this**, `tests/test_universal_backtester_checkpoint.py`
-is the reference: it verifies `--auto-approve` and a non-interactive stdin
-both skip cleanly, that "approve"/"yes" continue, that anything else halts,
-and that printed paths are absolute.
+## What this means in a conversation (no code running)
 
-## What this means in practice, in a conversation (no code running)
+When you (the model) are working through Stage 00 through Stage 07 yourself —
+reading a paper, drafting a card, assembling Gate A, running validation —
+finish each stage, report what you produced, and **continue to the next stage
+in the same turn.** This is the opposite of the old rule: "moving to Stage 01"
+in the same turn a stage finished is now the correct behavior, not the failure
+it used to be.
 
-When you (the model) are working through a stage yourself — reading a paper
-for Stage 00/01, drafting a card for Stage 02, assembling Gate A — do not
-write "moving to Stage 01" or "now let's draft the card" and continue in the
-same turn. Instead:
+The one place this reverses is Gate B:
 
-1. Finish the current stage's actual work.
-2. Report what you produced (the verdict, the card section, the gate queue —
-   whatever this stage's output is).
-3. Stop. End the turn. Wait for the operator's next message before starting
-   the next stage.
+1. Finish Stage 07 (portfolio validation) and `/critique-results`.
+2. Assemble the Gate B briefing (`/gate-b`).
+3. **Stop. End the turn.** Print the evidence-supports line and the exact
+   `run_pipeline.py --decision ...` command a human runs. Wait for the
+   operator's next message. Do not record a decision yourself, ever — that
+   remains the one thing no amount of autonomy upstream changes.
 
-This holds even in a multi-paper session, and even when you're confident the
-operator will say yes — "continuing since you'll probably approve" is exactly
-the failure this rule exists to prevent. Gate A and Gate B are where a
-*decision* gets recorded; this is a narrower, more frequent checkpoint so a
-paper never runs ahead of the human reading it.
+## At the end, always print the local file links
+
+Whichever stage you stop at — Gate B in the normal case, or an earlier defect
+that genuinely blocks progress — print the absolute local path to every file
+this run wrote or read: the paper, the analysis JSON, the card YAML, the Gate A
+document (if saved to a file), the report, any charts, any workbook. `produced`
+already tracks this at the code level; surface all of it, not just the last
+file written.
 
 ## Where NOT to over-apply this
 
-This rule is about the **research pipeline's own stages** (00 through Gate B,
-Steps 03-08, and the direct backtest scripts' own internal stages). It is not
-a blanket rule that every reply in this repo must be one sentence long —
-engineering work on the pipeline itself (writing code, fixing a bug, building
-a test, answering a question about the architecture) is not "advancing a
-pipeline stage" and does not require a pause after every file edit. If it's
-ambiguous which regime you're in, ask.
+This rule is about the **research pipeline's own stages** (00 through Gate B).
+It is not a blanket rule that every reply in this repo must run to completion
+unprompted — engineering work on the pipeline itself (writing code, fixing a
+bug, building a test, answering a question about the architecture) is not
+"advancing a pipeline stage" and is unaffected by this skill either way. If
+it's ambiguous which regime you're in, ask.

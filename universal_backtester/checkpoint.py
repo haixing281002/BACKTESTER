@@ -5,6 +5,18 @@ next stage runs. Every stage-producing script in this repo uses the same
 pattern -- see run_pipeline.py's own `_checkpoint()` for the governed-card
 path; this is the same idea for the plain scripts/*.py execution scripts.
 
+NOTE (2026-10-06): run_pipeline.py's own `_checkpoint()` now defaults to NOT
+pausing -- CLAUDE.md's "no human intervention up to Gate B" -- with a new
+`--interactive` flag to opt back into the old pause-every-stage behavior.
+This module's default (`auto_approve=False`, i.e. pause unless the caller's
+own `--auto-approve` flag is passed) was NOT changed to match, because the
+three scripts that call it (alquist/asness/accord_stock_selection) are not
+part of the governed card chain this rule targets -- they are direct,
+manually-invoked backtest scripts. If one of them is wired into the
+autonomous Gate-A-to-Gate-B chain, flip its own `--auto-approve` default the
+same way run_pipeline.py's `--interactive` flag does, rather than changing
+this shared helper's default out from under scripts that still want a pause.
+
 --auto-approve skips every pause deliberately (batch runs, CI). A
 non-interactive run (piped stdin, a subprocess with no tty) skips it too,
 but says so explicitly each time, rather than silently blocking forever on
