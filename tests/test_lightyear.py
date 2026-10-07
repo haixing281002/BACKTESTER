@@ -177,3 +177,21 @@ def test_chart_metrics_count_every_return_including_the_first():
     assert abs(m["cagr"] - ((v[-1] / 100) ** (1 / years) - 1)) < 1e-12
     assert abs(m["vol"] - r.std(ddof=1) * np.sqrt(252)) < 1e-12
     assert abs(m["max_dd"] - (-(v / np.maximum.accumulate(v) - 1).min())) < 1e-12
+
+
+def test_cache_only_runs_cannot_download(monkeypatch):
+    import datetime
+    from ros.data import nse_bhavcopy_download, screener_fetch
+    monkeypatch.setenv("LIGHTYEAR_CACHE_ONLY", "1")
+    with pytest.raises(RuntimeError, match="cached-data-only"):
+        screener_fetch.get("https://www.screener.in/company/TCS/", session=None)
+    with pytest.raises(RuntimeError, match="cached-data-only"):
+        nse_bhavcopy_download.fetch_day(datetime.date(2026, 10, 5), session=None)
+
+
+def test_cache_only_is_the_default_and_reaches_the_prompt(client):
+    from lightyear import jobs, prompts
+    paper = client.get("/api/papers").json()[0]
+    rid = client.post("/api/runs", data={"operator": "Tester", "existing": paper}).json()["id"]
+    assert jobs.load(rid)["cache_only"] is True
+    assert "CACHED DATA ONLY" in jobs._fmt(prompts.PHASE_A, rid)

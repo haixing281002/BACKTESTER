@@ -197,6 +197,7 @@ details{margin-top:6px} summary{cursor:pointer;color:var(--navy);font-weight:600
         <select id="model"><option value="">Your Claude Code default</option><option value="opus">Opus</option><option value="sonnet">Sonnet</option></select></div>
     </div>
     <label class="row" style="color:var(--ink);font-size:13px;margin-top:14px"><input type="checkbox" id="auto" style="width:auto"> Don't wait at Gate A (show the card, keep going; Gate B is still a stop)</label>
+    <label class="row" style="color:var(--ink);font-size:13px;margin-top:6px"><input type="checkbox" id="cacheonly" checked style="width:auto"> Use cached data only (no downloads: faster, and nothing leaves this machine)</label>
     <div class="row" style="margin-top:16px"><button class="primary" id="go" onclick="startRun()">Start run</button><span class="small muted" id="newmsg"></span></div>
   </div>
 </template>
@@ -296,7 +297,7 @@ async function startRun(){
   if(!f && !ex){ $("#newmsg").textContent = "Choose a paper. There is no default paper."; return }
   LS.set("ly_operator", op);
   if(f) fd.append("pdf", f); else fd.append("existing", ex);
-  fd.append("operator", op); fd.append("model", $("#model").value); fd.append("auto_continue", $("#auto").checked);
+  fd.append("operator", op); fd.append("model", $("#model").value); fd.append("auto_continue", $("#auto").checked); fd.append("cache_only", $("#cacheonly").checked);
   $("#go").disabled = true; $("#newmsg").textContent = "Starting…";
   try{ const r = await api("/api/runs", {method:"POST", body:fd}); H.active_run = r.id; USER_TAB = false; TAB = "progress"; await openRun(r.id) }
   catch(e){ $("#newmsg").textContent = e.message; $("#go").disabled = false }
