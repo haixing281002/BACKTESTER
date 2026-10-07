@@ -19,7 +19,8 @@ Hard rules (from CLAUDE.md, restated):
 - Data: NSE bhavcopy and Screener.in only (cached locally in cache/, scr/, data/raw/master/, declared in
   data/raw/MANIFEST.yaml), five years, plus the NIFTY 500 index workbook as the benchmark and a flat 6% hurdle.
   Do not fetch from any other source. Screener rules: public pages only, never log in, >=1.5 s between
-  requests, one session, nothing in parallel. Prefer the cache; fetch only what is missing.
+  requests, one session, nothing in parallel.
+{data_mode}
 - Never run git commit, git push or any git command that changes the repository.
 - Never record a Gate B decision. A named human does that on the Lightyear page.
 - Presentation: strategy against NIFTY 500 only, at most one extra sleeve; comparators in an appendix.

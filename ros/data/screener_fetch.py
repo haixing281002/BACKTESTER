@@ -27,6 +27,9 @@ HEADLINE = ("Market Cap", "Current Price", "High / Low", "Stock P/E", "Book Valu
 
 def get(url, session, extra=None, tries=3):
     """GET with small retry/backoff. Returns the Response (any status for 403/404) or None."""
+    if os.environ.get("LIGHTYEAR_CACHE_ONLY"):
+        raise RuntimeError("cached-data-only run: downloads are disabled (LIGHTYEAR_CACHE_ONLY is set). "
+                           "Use the data already in cache/ and scr/, or start a run without the cache-only option.")
     for k in range(tries):
         try:
             r = session.get(url, headers={**HEADERS, **(extra or {})}, timeout=30)

@@ -30,6 +30,13 @@ STAGE_RE = re.compile(r"LIGHTYEAR-STAGE:\s*([0-9A-Za-z]+)")
 BANNER_RE = re.compile(r"\bSTAGE\s+0?([0-7])\b")                        # script banners: "STAGE 05 -- BUILD"
 LEAD_RE = re.compile(r"^\W{0,4}(?:Stage|Step)\s+0?([0-7])\b", re.M)    # a message that opens "Stage 5 ..."
 RUNNING = ("phase_a", "phase_b", "building", "revising")
+CACHE_ONLY = ("- DATA MODE: CACHED DATA ONLY. Do not download or fetch anything: no bhavcopy download, no Screener fetch,\n"
+              "  no web request of any kind. Use only what is already on disk: cache/ (NSE bhavcopy, Oct 2021 onward),\n"
+              "  scr/ (Screener pages), data/raw/master/ (the built panel and snapshots) and the index workbook.\n"
+              "  If the card needs data that is not on disk, do not fetch it: adapt the card to the cached data if that\n"
+              "  keeps the question honest, otherwise mark the item 'missing' in the data map and Gate A gaps and stop\n"
+              "  with status 'stopped' and the reason.")
+CACHE_FIRST = "- DATA MODE: cache first. Use what is on disk; fetch only what is missing, under the Screener rules above."
 IDS_A = [s for s, _ in prompts.STAGES_A]
 IDS_B = [s for s, _ in prompts.STAGES_B]
 ORDER = IDS_A + IDS_B
@@ -136,12 +143,12 @@ def recover_interrupted():
 
 
 # ------------------------------------------------------------------ creating a run
-def create(pdf_rel, slug, operator, model, auto_continue):
+def create(pdf_rel, slug, operator, model, auto_continue, cache_only=True):
     rid = dt.datetime.now().strftime("%Y%m%d-%H%M%S") + "-" + uuid.uuid4().hex[:4]
     os.makedirs(run_dir(rid), exist_ok=True)
     stages = {sid: "pending" for sid, _ in prompts.STAGES_A + prompts.STAGES_B}
     st = {"id": rid, "slug": slug, "pdf": pdf_rel, "operator": operator, "model": model or "",
-          "auto_continue": bool(auto_continue), "created": now(), "status": "phase_a", "stages": stages,
+          "auto_continue": bool(auto_continue), "cache_only": bool(cache_only), "created": now(), "status": "phase_a", "stages": stages,
           "current_stage": None, "paper_title": None, "phase_a": None, "approval": None, "results": None,
           "decision": None, "error": None, "cost_usd": 0.0, "sessions": []}
     save(st)
@@ -288,6 +295,8 @@ def run_claude(rid, prompt, label, phase_ids):
     if st.get("model"):
         cmd += ["--model", st["model"]]
     env = dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONUTF8="1", LIGHTYEAR_RUN=rid)
+    if st.get("cache_only", True):
+        env["LIGHTYEAR_CACHE_ONLY"] = "1"     # the repo's downloaders refuse to run (see ros/data/*fetch*/download)
     log(rid, "server", f"{label}: starting Claude Code headless ({os.path.basename(claude)}).")
     flags = subprocess.CREATE_NEW_PROCESS_GROUP if sys.platform == "win32" else 0
     proc = subprocess.Popen(cmd, cwd=REPO, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
@@ -361,7 +370,8 @@ def cancel(rid):
 # ------------------------------------------------------------------ phases
 def _fmt(template, rid, **kw):
     st = load(rid)
-    return template.format(operator=st["operator"], pdf=st["pdf"], slug=st["slug"], run_dir=rel(run_dir(rid)), **kw)
+    return template.format(operator=st["operator"], pdf=st["pdf"], slug=st["slug"], run_dir=rel(run_dir(rid)),
+                           data_mode=CACHE_ONLY if st.get("cache_only", True) else CACHE_FIRST, **kw)
 
 
 def _after_phase_a(rid, ok, label):

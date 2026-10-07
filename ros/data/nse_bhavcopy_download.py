@@ -97,6 +97,9 @@ def _read_zip_csv(content: bytes) -> str:
 
 
 def fetch_day(d: date, session: requests.Session) -> Tuple[str, Optional[pd.DataFrame]]:
+    if os.environ.get("LIGHTYEAR_CACHE_ONLY"):
+        raise RuntimeError("cached-data-only run: downloads are disabled (LIGHTYEAR_CACHE_ONLY is set). "
+                           "Use the data already in cache/ and scr/, or start a run without the cache-only option.")
     """('ok', frame) | ('nontrading', None) | ('error', None).
 
     'nontrading' only when BOTH formats answer 404; any 403, 429, timeout or other
