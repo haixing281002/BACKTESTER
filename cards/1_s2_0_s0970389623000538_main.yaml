@@ -1,0 +1,266 @@
+paper:
+  id: 1_s2_0_s0970389623000538_main
+  title: "How much does volatility influence stock market returns? Empirical evidence from India"
+  authors: ["Malvika Saraf", "Parthajit Kayal"]
+  date: "2023"
+  source_file: docs/papers/1_s2_0_s0970389623000538_main.pdf
+  source_sha256: ee6c2cb35539790e9c628b537bd348cf912fa07b82514fea21982bca5dfd39ef
+  url: "https://doi.org/10.1016/j.iimb.2023.05.004"
+
+intent:
+  mode: adaptation
+  rationale: >
+    The paper already studies NIFTY500 stocks, so geography needs no translation.
+    But its own method is NOT a tradable signal: it sorts stocks into risk
+    quintiles using the SAME window as the returns it explains, with no lag and
+    no rebalance cadence. We adapt it into an investable version -- a trailing,
+    lagged risk measure, formed into quintiles, held and rebalanced on a fixed
+    schedule -- and run it on the fund's own cached NSE bhavcopy data (Oct 2021
+    onward), not the paper's 2010-2020 sample, which we do not have. This is
+    therefore an adaptation, not a replication: we can never score our result
+    against the paper's own numbers.
+  transferred_mechanism: >
+    The core idea -- that low-beta/low-variance stocks outperform high-beta/
+    high-variance stocks on a risk-adjusted basis -- is what carries over.
+    Everything about HOW the signal is formed (lag, rebalance cadence,
+    weighting) is our construction, not the paper's, because the paper never
+    specifies a trading rule.
+  broken_assumptions:
+    - "The paper's own sort uses same-period risk and return data (look-ahead by construction); we must use trailing, lagged risk estimates instead, which is a different estimator than the one the paper's quintile counts describe."
+    - "The paper's reported quintile-count statistics (e.g. '85% of low-beta stocks had the highest returns over 7 years') are not themselves a portfolio return, Sharpe, or CAGR -- there is no portfolio-level number in the paper to even aim for."
+    - "Our test period (the fund's cached Oct 2021-Oct 2026 window) does not overlap the paper's 2010-2020 sample at all, including the one crash episode (COVID) the paper calls out explicitly."
+
+universe:
+  description: "NIFTY 500 constituents, point-in-time membership, from the fund's NSE bhavcopy master panel."
+  asset_class: equity
+  geography: India
+  assets: ["NIFTY 500 constituents"]
+  benchmark: "NIFTY 500"
+  cash_asset: null
+
+signal:
+  name: "trailing_low_risk_quintile"
+  template: cross_sectional
+  lookback_days: 252
+  lag_days: 1
+  description: >
+    Rank all NIFTY500 constituents (point-in-time membership) by trailing
+    252-trading-day daily-return variance, lagged at least 1 day. Hold the
+    bottom quintile (lowest variance) equal-weighted, long-only, rebalanced
+    monthly.
+
+portfolio:
+  rebalance: monthly
+  long_only: true
+  max_gross: 1.0
+  allow_cash: false
+  target_vol: null
+  start: "2021-10-04"
+  end: "2026-10-05"
+  mandate_allow_cash: false
+
+costs:
+  spread_bps: 30.0
+  cost_model: half_spread
+  impact_bps_per_pct_adv: null
+  borrow_bps: null
+
+universe_translation:
+  source_universe: "NIFTY500 index constituents (any time during July 2010-June 2020), NSE-listed"
+  source_breadth: 362
+  source_selection_rule: "Any stock that was part of NIFTY500 at any point in the 10-year window and has daily Yahoo Finance history back to mid-2010"
+  target_universe: "NIFTY 500 constituents"
+  grade: exact
+  resolution: needs_data
+  resolution: direct
+  rationale: >
+    The paper's own universe already is the Indian market (NIFTY500 constituents).
+    CLAUDE.md: "if a paper's source universe is already Indian equities, there is
+    no translation to perform." We keep NIFTY500 as both the eligible universe
+    and the benchmark, using the fund's point-in-time master panel rather than
+    the paper's survivorship-filtered 362-name sample.
+  transfer_risks:
+    - "The paper's 362-of-~500+ sample excludes any constituent without a full Yahoo Finance history to 2010, skewing toward older, more established names; our point-in-time master panel does not have this bias but also cannot reach the paper's own window."
+    - "The paper's sort is same-period, not a lagged predictive signal; our card tests a genuinely different (investable) estimator, so a null or a positive result here says nothing definitive about the paper's own same-period finding."
+    - "Cached data starts October 2021, five years, not the paper's 2010-2020 decade -- no overlap at all, including the one crash period (COVID) the paper specifically studies."
+    - "We do not hold dated NIFTY500 constituent lists; the eligible universe is a proxy (top ~500 by trailing 63-day traded value in the bhavcopy master panel), which tilts slightly toward liquid names versus the index's own methodology."
+  required_instruments: ["NIFTY500 constituent daily adjusted close", "NIFTY 500 index level (benchmark)"]
+  evidence_page: 3
+  mechanism_needs:
+    needs_cross_section: true
+    min_names: 100
+    cap_segment: all
+    sector: null
+    min_history_years: 3.0
+    must_be_in_mandate: true
+    notes: "Paper quintile-sorts ~360+ names; NIFTY500's ~500 point-in-time constituents comfortably clears this."
+  alternatives_considered: ["NIFTY 100 (too few names for a clean quintile-5 split on a liquid-only basis)", "NIFTY Total Market (broader than the paper's own universe, not needed since NIFTY500 is an exact match)"]
+  why_not_alternatives: "NIFTY500 is an exact match to the paper's own universe; no reason to widen or narrow it."
+
+strategy:
+  signal_name: "Trailing variance low-risk quintile sort (volatility anomaly)"
+  signal_definition: >
+    As published, the paper computes variance and beta from daily returns over
+    the SAME window as the returns it reports -- not a lagged, tradable signal.
+    For this card we instead compute TRAILING 252-trading-day daily-return
+    variance, lagged 1 trading day, as of each month-end rebalance date, and
+    sort all point-in-time NIFTY500 constituents into 5 quintiles. Quintile 1
+    (lowest trailing variance) is held long-only. This lag-and-rebalance
+    construction is our adaptation, not something the paper itself specifies.
+  inputs_required: ["daily adjusted close for NIFTY500 constituents", "NIFTY 500 index daily close (for point-in-time membership and benchmark)"]
+  cross_sectional: true
+  formation_rule: "Monthly: rank all point-in-time NIFTY500 constituents by trailing 252-day variance (lag 1 day); select the bottom quintile (lowest-variance 20%)."
+  weighting_rule: "Equal-weight within the held quintile. The paper specifies no weighting scheme at all; this is our simplest, most defensible default, not the paper's choice."
+  holding_period: "One month, until the next rebalance"
+  rebalance_frequency: monthly
+  is_long_short: false
+  long_only_adaptation: ""
+  constraints:
+    - "lag_days >= 1 between signal computation and portfolio formation"
+    - "long-only, no leverage, no derivatives"
+    - "universe restricted to point-in-time NIFTY500 membership at each rebalance, not the paper's survivorship-filtered 362 names"
+  engine_template: cross_sectional
+  template_gap: ""
+  confidence: medium
+  evidence_pages: [3, 4, 8]
+
+benchmark_templates:
+  - {name: "Equal-weight, all constituents (no quintile filter)", template: equal_weight, params: {}, rebalance: monthly}
+  - {name: "Hold NIFTY 500 itself", template: fixed_weight, params: {weights: {"NIFTY 500": 1.0}}, rebalance: annual}
+
+data_requirements:
+  - name: NSE_BHAVCOPY_STOCK_PANEL
+    kind: price
+    frequency: daily
+    mandatory: true
+    purpose: "trailing variance computation and forward returns for the stock universe"
+    evidence_page: 3
+  - name: "NIFTY 500"
+    kind: price
+    frequency: daily
+    mandatory: true
+    purpose: "benchmark total-return comparator"
+    evidence_page: 3
+  - name: CASH_PROXY_CONSTANT_6PCT
+    kind: risk_free_rate
+    frequency: daily
+    mandatory: false
+    purpose: "risk-free rate for the Sharpe ratio only; the strategy holds no cash, so this does not affect which names are held"
+    evidence_page: 3
+
+backtest_plan:
+  sample_start: "2021-10-04"
+  sample_end: "2026-10-05"
+  why_this_window: >
+    This is the full span of the fund's cached NSE bhavcopy master panel
+    (Oct 2021-Oct 2026, per DATA MODE: cached data only, five years). The
+    paper's own 2010-2020 window is not reproducible from data on disk.
+  warmup_days: 252
+  why_warmup: "One trailing year of daily returns is needed before the first trailing-variance quintile can be formed; the first ~12 months of the panel are burn-in, not track record."
+  rebalance_rule: "First trading day of each calendar month"
+  weights_rule: "Equal-weight across all names in the held (lowest-variance) quintile"
+  benchmarks:
+    - {name: "NIFTY 500", why_this: "The do-nothing option: what the fund could hold today for zero extra turnover."}
+    - {name: "Equal-weight NIFTY 500 (all constituents, no quintile filter)", why_this: "Isolates whether the low-variance QUINTILE selection itself adds anything beyond equal-weighting the broad universe."}
+  must_beat: ["NIFTY 500 total return, net of the strategy's own 30bp round-trip costs", "Equal-weight NIFTY 500 (all constituents, no quintile filter), net of costs -- isolates whether quintile selection itself adds anything"]
+  success_looks_like: "The low-variance quintile delivers higher risk-adjusted (Sharpe) return than NIFTY 500 and the equal-weight-all-constituents comparator, net of costs, over the full cached window."
+  failure_looks_like: "The low-variance quintile underperforms NIFTY 500 or the equal-weight comparator on a risk-adjusted basis, or only outperforms before costs."
+  known_failure_modes:
+    - "A 5-year window contains no deep multi-year drawdown comparable to the paper's 2010-2020 decade; the paper itself found the anomaly to be weak-to-absent over periods under 3 years, so this test may be underpowered by construction regardless of whether the mechanism is real."
+    - "Same general-market-direction risk: since Oct 2021 began shortly after the COVID recovery, a single regime could dominate the result."
+
+selection:
+  rule: >
+    All stocks flagged in_universe (top ~500 by trailing 63-day traded value)
+    in the fund's bhavcopy master panel at each month-end rebalance date. This
+    is a traded-value proxy for NIFTY500 membership, NOT the index's own
+    dated constituent list -- we do not hold that. It is point-in-time and
+    survivorship-free (delisted names remain in the file with price and
+    traded value until they stop trading), which is the property the paper
+    itself lacks (its 362-name sample excludes anything without pre-2010
+    Yahoo Finance history).
+  explicit_securities: []
+  verified_against: master_universe
+  as_of: "each monthly rebalance date, 2021-10 to 2026-10"
+  why_these: "Point-in-time traded-value ranking avoids the paper's own survivorship bias, at the cost of being a proxy for NIFTY500 membership rather than the index's own list -- see universe_translation.transfer_risks."
+
+data_requests:
+  - item: "NSE bhavcopy history back to 2010 (the paper's own period)"
+    why: "The paper's own evidence says the anomaly needs 3+ years per test window to show up reliably; our cached 5-year panel only supports ~4 years of actual post-warmup track record, non-overlapping with the paper's sample and including no equivalent long bear/bull cycle."
+    unlocks: "A test period long enough, and historically relevant enough, to be a fair shot at confirming or refuting the paper's own finding rather than a shorter, different-regime window."
+    without_it: "Proceed on the 5-year cached window (2021-10 to 2026-10) as the best available test; treat any result as weaker evidence than the paper's own decade-long claim, not as a clean confirmation or refutation."
+    priority: nice_to_have
+    format_hint: "Daily bhavcopy files, 2010-01 to 2021-09, same format as the existing cached panel"
+    evidence_page: 3
+    satisfies: ["decisive_evidence for whether a 3+ year signal window is achievable"]
+    headline: "Longer history would let the test match the paper's own 3+yr requirement; not blocking."
+  - item: "Dated NIFTY500 constituent lists (semi-annual index factsheets)"
+    why: "The card currently proxies NIFTY500 membership with top-500-by-trailing-traded-value from the bhavcopy master, which is a different list from the index's own methodology, especially near the cutoff."
+    unlocks: "Removes the liquidity-tilt proxy risk and lets the universe match the paper's own NIFTY500 constituency exactly."
+    without_it: "Proceed with the traded-value proxy; this tilts the eligible universe slightly toward liquid names versus the actual index, which does not change the sign of a clear result but could matter for a borderline one."
+    priority: nice_to_have
+    format_hint: "Symbol, effective date, in/out flag, from NSE index factsheets"
+    evidence_page: 3
+    satisfies: []
+    headline: "Universe proxies NIFTY500 via traded-value rank, not the index's own list."
+open_questions:
+  - question: "Should the quick-test result (if promising) be followed by a full adaptation card with a formal data_plan and convertibility chain, or is a 5-year, non-overlapping window sufficient evidence either way?"
+    why_it_matters: "The paper itself found the anomaly to require 5+ years to show up reliably; our available cached window is exactly 5 years and does not overlap the paper's own sample at all, so this quick test may be structurally underpowered to confirm OR refute the paper's claim."
+    what_i_assumed: "Proceeding with the 5-year cached window as the best available test, flagging it explicitly as weaker evidence than the paper's own 10-year claim, rather than declaring the paper untestable."
+    ask_of: pm
+    blocks_run: false
+    headline: "5yr cached window may be too short to show the anomaly even if real -- paper needed 5yr+."
+  - question: "Is equal-weighting within the held quintile the right default, or should sizing be inverse-variance (more in line with a 'low-risk' investment thesis)?"
+    why_it_matters: "The paper specifies no weighting scheme at all; equal-weight is the simplest default but may understate the low-risk thesis compared to inverse-variance weighting."
+    what_i_assumed: "Equal-weight, as the simplest, most auditable default for a quick test."
+    ask_of: researcher
+    blocks_run: false
+    headline: "Weighting scheme is our choice, not the paper's -- equal-weight picked for simplicity."
+
+no_further_data_needed: ""
+
+india_notes:
+  - category: data
+    item: "Corporate-action neutralisation in the master panel is a heuristic threshold (daily gross return outside 0.72-1.40x flattened), which can occasionally misclassify a genuine large one-day move as a corporate action artefact in a low-variance-ranked name."
+    why: "A variance-sort signal is directly sensitive to any such neutralisation artefact understating true variance for an affected stock."
+    triggered_by: "Strategy ranks on trailing variance, which the master panel's corporate-action heuristic can distort."
+    addresses: ["strategy.signal_definition"]
+    evidence_page: 3
+
+ambiguities:
+  - field: "strategy.rebalance_frequency"
+    issue: "The paper reports no rebalance cadence or holding period at all -- it is a static descriptive sort over multi-year windows, not a trading rule. A monthly vs. quarterly vs. annual rebalance changes turnover, costs, and how quickly the portfolio reacts to a stock's variance regime shifting -- this is a material, not cosmetic, choice we are making on the paper's behalf."
+    resolution: "Adopt monthly rebalancing as a defensible, commonly-used default for a volatility-based cross-sectional sort; documented here as our own choice, not the paper's."
+    material: true
+    confidence: medium
+    evidence_page: 4
+    headline: "Paper has no rebalance rule at all -- monthly chosen by us, not the paper."
+  - field: "strategy.weighting_rule"
+    issue: "The paper reports no portfolio weighting scheme -- only counts of stocks per quintile. Equal-weight vs. variance-weighted vs. cap-weighted within the held quintile materially changes concentration and realized risk-return."
+    resolution: "Equal-weight within the held quintile, as the simplest default; flagged as an open question for a researcher to revisit if the quick test looks promising."
+    material: true
+    confidence: medium
+    evidence_page: 4
+    headline: "Paper has no weighting rule -- equal-weight chosen by us, not the paper."
+  - field: "signal.lookback_days"
+    issue: "Caught at /critique-card: the 252-day (1-year) trailing variance window used to FORM the signal is not derived from the paper -- the paper's own rolling-horizon results show the anomaly is weak-to-absent under 3 years and 'undoubtedly' present at 5-7 years. A 1-year signal lookback is shorter than the horizon the paper's own evidence says the effect needs, and was chosen only because a 3-5 year trailing window would consume most of the fund's 5-year cached history as warmup, leaving almost no track record left to evaluate."
+    resolution: "Keep 252 days for this quick test (the fund's 5-year cached window cannot support a longer signal lookback without leaving an unusably short test period), but record explicitly that a null result here cannot cleanly distinguish 'the anomaly doesn't transfer to India' from 'our forced 1-year lookback was too short to see it the way the paper's own results require.' A full adaptation card, if this quick test looks promising enough to pursue, should test a longer (3-year) lookback once more cached history exists."
+    material: true
+    confidence: high
+    evidence_page: 10
+    headline: "1yr lookback is shorter than paper's own evidence requires -- forced by data length."
+
+n_configs_tried: 16
+notes: >
+  n_configs_tried = 16: the paper tested 4 primary risk measures (beta,
+  variance, relative beta, relative variance) plus 3 secondary cross-checks
+  (VaR, downside semi-variance, downside beta) = 7 risk-proxy variants, of
+  which 2 (VaR, downside semi-variance) did NOT confirm the anomaly. On top of
+  that, the paper swept 5 explicitly shown time horizons (10y, 7y, 5y, 3y,
+  6mo) plus stated it "cross-checked" 2y/4y/6y/8y windows without showing the
+  numbers -- a further 9 horizon variants, raised during /critique-card
+  because the horizon sweep is what produced the paper's own
+  "long-horizon-works, short-horizon-doesn't" narrative and was originally
+  omitted from this count. 7 + 9 = 16. This card tests only the
+  variance-based measure at a single (forced, shorter-than-ideal) lookback.
+card_version: "1.0"
