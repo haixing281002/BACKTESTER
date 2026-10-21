@@ -472,9 +472,13 @@ function renderGateA(st){
      ${(pa.how_it_works||[]).length?`<h3>How the strategy works</h3><ol class="steps">${pa.how_it_works.map(s=>`<li>${esc(s)}</li>`).join("")}</ol>`:""}
      ${pa.success_looks_like?`<h3>What would count as success</h3><p style="margin:0">${esc(pa.success_looks_like)}</p>`:""}
    </div>
-   ${(pa.sleeves||[]).length?`<div class="card"><h2>The sleeves</h2>
-     <p class="small muted" style="margin-top:0">A sleeve is one separately managed slice of the portfolio. This strategy has ${pa.sleeves.length}.</p>
-     <table class="t"><tr><th>Sleeve</th><th>What it holds</th><th>Stands in for</th><th>How we build it</th></tr>
+   ${(pa.paper_reported||[]).length?`<div class="card"><h2>What the paper itself reported</h2>
+     <p class="small muted" style="margin-top:0">The paper's own numbers, in its own market and period -- not yet compared to our test. The Gate B brief lines this up against what we measured here.</p>
+     <table class="t"><tr><th>Metric</th><th>Paper's value</th><th>Context</th></tr>
+     ${pa.paper_reported.map(p=>`<tr><td><b>${esc(p.metric)}</b></td><td>${esc(p.value)}</td><td class="small muted">${esc(p.note)}</td></tr>`).join("")}</table></div>`:""}
+   ${(pa.sleeves||[]).length?`<div class="card"><h2>${pa.sleeves.length>1?"The strategies / sleeves tested":"The sleeve"}</h2>
+     <p class="small muted" style="margin-top:0">${pa.sleeves.length>1?"This paper's card runs more than one variant -- each one explained separately so none of them is a mystery line on a chart later.":"A sleeve is one separately managed slice of the portfolio."}</p>
+     <table class="t"><tr><th>${pa.sleeves.length>1?"Strategy / sleeve":"Sleeve"}</th><th>What it holds</th><th>Stands in for</th><th>How we build it</th></tr>
      ${pa.sleeves.map(s=>`<tr><td><b>${esc(s.name)}</b></td><td>${esc(s.holds)}</td><td>${esc(s.stands_in_for)}</td><td class="small">${esc(s.how_built)}</td></tr>`).join("")}</table></div>`:""}
    <div class="card"><h2>Universe and data</h2>
      <div class="facts"><div>Paper</div><div>${esc(pa.paper_title)}</div>
@@ -523,6 +527,12 @@ async function reviseA(){
 }
 
 /* ---------------- Results */
+// What the headline book was charged, read from the run's results.json -- never assumed.
+function costTag(r){
+  const bp = r && r.headline_cost_bp;
+  if(bp === null || bp === undefined || bp === "") return "";
+  return Number(bp) === 0 ? " (gross, no trading costs)" : ` (after ${Number(bp)}bp round-trip costs)`;
+}
 let REV_SIG = null;
 function renderResults(st){
   const sig = st.id + st.status + (st.workbook||"") + (st.recalc?.total_formulas||"");
@@ -530,14 +540,17 @@ function renderResults(st){
     RES_SIG = sig; CHARTED = null; REV_SIG = null;
     const r = st.results, rc = st.recalc || {}, sn = r.strategy_name, bn = r.benchmark_name;
     const rcText = rc.status ? `${rc.status==="success"?"✓":"!"} recalculated in LibreOffice · ${rc.total_formulas} formulas · ${rc.total_errors} errors` : (rc.error?`recalc: ${esc(rc.error).slice(0,160)}`:"");
-    const key = `<span class="key"><i style="background:#1f4e79"></i>Strategy: ${esc(sn)} (after costs)</span><span class="key"><i style="background:#d98324"></i>Benchmark: ${esc(bn)} (price index)</span>`;
+    const key = `<span class="key"><i style="background:#1f4e79"></i>Strategy: ${esc(sn)}${costTag(r)}</span><span class="key"><i style="background:#d98324"></i>Benchmark: ${esc(bn)} (price index)</span>`;
     $('[data-p="results"]').innerHTML = `
+      <div class="card" id="pvbcard"><h2>The paper's strategy vs our backtest</h2>
+        <p class="small muted" style="margin-top:0">What the paper's own strategy returned, in its own market and period, next to what we measured running the same mechanism on NSE bhavcopy data. This is the comparison that matters most -- everything else on this page explains it.</p>
+        <table class="t" id="pvbtab"></table></div>
       <div class="card"><div class="row" style="justify-content:space-between"><h2 style="margin:0">Strategy vs benchmark</h2>
         <div class="row">${st.workbook?`<a href="/api/runs/${st.id}/workbook"><button class="primary">⬇ Download Excel</button></a>`:""}
           <button onclick="act('rebuild')" title="Rebuild charts and the workbook from this run's files">Rebuild</button><span class="small muted">${rcText}</span></div></div>
         <p style="margin:8px 0 4px">${key}</p>
         <p class="muted" style="margin:6px 0 14px">${esc(r.headline)}</p>
-        <div class="kpis" id="kpis"></div><div class="small muted">Big number = the strategy. Orange line = NIFTY 500 over exactly the same days. Sharpe against a flat 6% cash rate.</div></div>
+        <div class="kpis" id="kpis"></div><div class="small muted">Big number = the strategy. Orange line = NIFTY 500 over exactly the same days. Sharpe is measured over a flat 6% hurdle rate (a yardstick, not income the strategy earns).</div></div>
       <div id="reviewcard"></div>
       <div class="card"><h2>Positives and negatives</h2>
         <div class="pn"><div class="pos"><h3 style="color:var(--green)">▲ What works</h3><ul id="pos"></ul></div>
@@ -553,10 +566,9 @@ function renderResults(st){
       <div class="card hide" id="sleevecard"><h2 id="sleevetitle">Sleeve</h2><div class="chartsub" id="sleevesub"></div><div class="chart" id="c_sleeve"></div></div>
       <div class="card hide" id="cmpcard"><h2>Appendix: the simpler alternatives it had to beat</h2>
         <div class="chartsub">Growth of 100 for the strategy and each comparator over the same days. Click a name in the legend to hide or show it.</div>
-        <div class="chart" id="c_cmp" style="height:380px"></div><table class="t" id="cmptab" style="margin-top:10px"></table></div>
-      <div class="card"><h2>Validation</h2><table class="t"><tr><th>Measure</th><th>Value</th><th>Source</th></tr>
-        ${(r.validation||[]).map(v=>`<tr><td>${esc(v.label)}</td><td>${typeof v.value==="number"?(v.format==="pct"?pct(v.value,2):v.format==="int"?Math.round(v.value):num(v.value)):esc(v.value)}</td><td class="small muted">${esc(v.source)}</td></tr>`).join("")}</table>
-        ${(r.notes||[]).length?`<h3>Caveats</h3><ul>${r.notes.map(n=>`<li>${esc(n)}</li>`).join("")}</ul>`:""}</div>`;
+        <div class="chart" id="c_cmp" style="height:380px"></div><div id="cmpnote"></div><table class="t" id="cmptab" style="margin-top:10px"></table></div>
+      ${renderValidationBlocks(r.validation||[])}
+      ${(r.notes||[]).length?`<div class="card"><h3 style="margin-top:0">Caveats</h3><ul>${r.notes.map(n=>`<li>${esc(n)}</li>`).join("")}</ul></div>`:""}`;
     if(TAB==="results") drawCharts(true);
   }
   renderReview(st);
@@ -583,23 +595,61 @@ function renderReview(st){
 }
 
 let CH = null;
+const MAX_PN = 5;
 function fillPN(){
   if(!CH || !$("#pos")) return;
   const r = ST.results, rv = ST.review || {}, ob = CH.observations || {positives:[], negatives:[]};
   const li = (t, src) => `<li>${esc(t)}<span class="src">${src}</span></li>`;
-  $("#pos").innerHTML = ob.positives.map(t=>li(t,"measured")).join("") + (r.strengths||[]).map(t=>li(t,"from the tests")).join("")
-    + (rv.strengths||[]).map(t=>li(t,"analyst read")).join("") || `<li>None found.</li>`;
-  $("#neg").innerHTML = ob.negatives.map(t=>li(t,"measured")).join("") + (r.weaknesses||[]).map(t=>li(t,"from the tests")).join("")
-    + (rv.weaknesses||[]).map(t=>li(t,"analyst read")).join("") || `<li>None found.</li>`;
+  // priority order: the analyst's own read first (it already weighed everything), then the run's own tests,
+  // then raw measured observations -- so the 5 shown are the most-considered ones, not just the first computed.
+  const pick = (a,b,c) => [...(a||[]).map(t=>[t,"analyst read"]), ...(b||[]).map(t=>[t,"from the tests"]),
+                           ...(c||[]).map(t=>[t,"measured"])].slice(0, MAX_PN);
+  const pos = pick(rv.strengths, r.strengths, ob.positives), neg = pick(rv.weaknesses, r.weaknesses, ob.negatives);
+  $("#pos").innerHTML = pos.map(([t,s])=>li(t,s)).join("") || `<li>None found.</li>`;
+  $("#neg").innerHTML = neg.map(([t,s])=>li(t,s)).join("") || `<li>None found.</li>`;
 }
 
+const VAL_GROUPS = [["returns_risk","Returns & risk"],["costs_execution","Costs & execution"],
+                     ["robustness","Statistical robustness"],["other","Other"]];
+function valGroup(v){
+  if(v.group) return v.group;
+  const l = (v.label||"").toLowerCase();
+  if(/cagr|return|vol|sharpe|drawdown|deflated/.test(l)) return "returns_risk";
+  if(/cost|turnover|concentrat|slippage|position|weight/.test(l)) return "costs_execution";
+  if(/walk|bootstrap|p-value|signific|fingerprint|stability|confidence/.test(l)) return "robustness";
+  return "other";
+}
+function renderValidationBlocks(rows){
+  if(!rows.length) return "";
+  const vcell = v => typeof v.value==="number" ? (v.format==="pct"?pct(v.value,2):v.format==="int"?Math.round(v.value):num(v.value)) : esc(v.value);
+  const blocks = VAL_GROUPS.map(([k,title]) => [title, rows.filter(v=>valGroup(v)===k)]).filter(([,rs])=>rs.length);
+  return `<div class="grid2">${blocks.map(([title,rs])=>`
+    <div class="card"><h2>${esc(title)}</h2><table class="t"><tr><th>Measure</th><th>Value</th><th>Source</th></tr>
+      ${rs.map(v=>`<tr><td>${esc(v.label)}</td><td>${vcell(v)}</td><td class="small muted">${esc(v.source)}</td></tr>`).join("")}</table></div>`).join("")}</div>`;
+}
+function fillPVB(){
+  if(!$("#pvbtab")) return;
+  const r = ST.results || {}, pf = ST.paper_facts;
+  let rows = r.paper_vs_backtest || [];
+  if(!rows.length && pf && CH){
+    const finding = (pf.facts||[]).find(f=>f.kind==="finding");
+    if(finding) rows = [{metric:"Headline finding", paper_value:finding.text,
+      our_value:`CAGR ${pct(CH.metrics.strategy.cagr)}, Sharpe ${num(CH.metrics.strategy.sharpe)} in our backtest`,
+      why_different:"The paper's own wording, shown as-is -- not yet a number-for-number match."}];
+  }
+  $("#pvbtab").innerHTML = rows.length
+    ? `<tr><th>Metric</th><th>Paper</th><th>Our backtest</th><th>Why different</th></tr>` +
+      rows.map(x=>`<tr><td><b>${esc(x.metric)}</b></td><td>${esc(x.paper_value)}</td><td>${esc(x.our_value)}</td><td class="small muted">${esc(x.why_different||"")}</td></tr>`).join("")
+    : `<tr><td class="small muted">Not available for this run.</td></tr>`;
+}
 async function drawCharts(force){
   if(!ST?.results || (CHARTED===CUR && !force)) return;
   if(!$("#c_growth")) return;
   let c; try{ c = await api(`/api/runs/${CUR}/charts`) }catch(e){ return }
   CHARTED = CUR; CH = c;
   fillPN();
-  const m = c.metrics, K = [["CAGR (a year)","cagr",pct],["Volatility (a year)","vol",pct],["Sharpe vs 6% cash","sharpe",num],["Worst fall from peak","max_dd",pct],["100 became","final",v=>num(v,1)]];
+  fillPVB();
+  const m = c.metrics, K = [["CAGR (a year)","cagr",pct],["Volatility (a year)","vol",pct],["Sharpe (6% hurdle)","sharpe",num],["Worst fall from peak","max_dd",pct],["100 became","final",v=>num(v,1)]];
   $("#kpis").innerHTML = K.map(([l,k,f]) => `<div class="kpi"><div class="l">${l}</div><div class="v">${f(m.strategy[k])}</div><div class="b">${esc(c.names.benchmark)}: ${f(m.benchmark[k])}</div></div>`).join("");
   if(!window.Plotly){ document.querySelectorAll(".chart").forEach(el => el.innerHTML = `<p class="muted small">Chart library did not load.</p>`); return }
   const col = {strategy:"#1f4e79", benchmark:"#d98324", sleeve:"#6a994e"};
@@ -628,10 +678,12 @@ async function drawCharts(force){
     const pal = ["#6a994e","#8e5ea2","#3c8dbc","#c0504d","#7f7f7f","#b8860b"];
     const tr = [line("strategy", c.growth)].concat(c.comparators.names.map((nm,k)=>({x:c.dates, y:c.comparators.growth[nm], name:nm, type:"scatter", mode:"lines", line:{color:pal[k%pal.length], width:1.4, dash:"dot"}})));
     Plotly.newPlot("c_cmp", tr, {...lay(",.0f","Value of 100")}, cfg);
-    const cm = c.comparators.metrics;
-    $("#cmptab").innerHTML = `<tr><th>Series</th><th>CAGR</th><th>Volatility</th><th>Sharpe vs 6%</th><th>Worst fall</th><th>vs strategy CAGR</th></tr>
-      <tr><td><b>Strategy: ${esc(c.names.strategy)}</b></td><td>${pct(m.strategy.cagr)}</td><td>${pct(m.strategy.vol)}</td><td>${num(m.strategy.sharpe)}</td><td>${pct(m.strategy.max_dd)}</td><td>–</td></tr>
-      ${c.comparators.names.map(nm=>{const x=cm[nm], d=x.cagr-m.strategy.cagr; return `<tr><td>${esc(nm)}</td><td>${pct(x.cagr)}</td><td>${pct(x.vol)}</td><td>${num(x.sharpe)}</td><td>${pct(x.max_dd)}</td><td style="color:${d>0?'var(--red)':'var(--green)'}">${d>0?"beat the strategy by ":"behind by "}${pct(Math.abs(d))}</td></tr>`}).join("")}`;
+    const cm = c.comparators.metrics, notes = {}; (ST.results.comparator_notes||[]).forEach(n=>notes[n.name]=n.what_it_is);
+    const missing = c.comparators.names.filter(nm=>!notes[nm]);
+    $("#cmpnote").innerHTML = missing.length ? `<p class="small muted">${missing.length===c.comparators.names.length?"What each of these is wasn't recorded for this run.":`What "${missing.join(', ')}" is wasn't recorded for this run.`}</p>` : "";
+    $("#cmptab").innerHTML = `<tr><th>Series</th><th>What it is</th><th>CAGR</th><th>Volatility</th><th>Sharpe (6% hurdle)</th><th>Worst fall</th><th>vs strategy CAGR</th></tr>
+      <tr><td><b>Strategy: ${esc(c.names.strategy)}</b></td><td class="small muted">The strategy being tested${costTag(ST.results).replace(/^ \((.*)\)$/, ", $1")}.</td><td>${pct(m.strategy.cagr)}</td><td>${pct(m.strategy.vol)}</td><td>${num(m.strategy.sharpe)}</td><td>${pct(m.strategy.max_dd)}</td><td>–</td></tr>
+      ${c.comparators.names.map(nm=>{const x=cm[nm], d=x.cagr-m.strategy.cagr; return `<tr><td>${esc(nm)}</td><td class="small muted">${esc(notes[nm]||"–")}</td><td>${pct(x.cagr)}</td><td>${pct(x.vol)}</td><td>${num(x.sharpe)}</td><td>${pct(x.max_dd)}</td><td style="color:${d>0?'var(--red)':'var(--green)'}">${d>0?"beat the strategy by ":"behind by "}${pct(Math.abs(d))}</td></tr>`}).join("")}`;
   }
 }
 

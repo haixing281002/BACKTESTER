@@ -49,7 +49,7 @@ def observations(df, met, names, hurdle=HURDLE):
     (pos if gap > 0 else neg).append(
         f"Grew {_p(s['cagr'])} a year against {_p(b['cagr'])} for {bn}, {'ahead' if gap > 0 else 'behind'} by {_p(abs(gap))} a year.")
     (pos if s["sharpe"] > b["sharpe"] else neg).append(
-        f"Return per unit of risk (Sharpe over 6% cash) of {s['sharpe']:.2f} against {b['sharpe']:.2f} for {bn}"
+        f"Return per unit of risk (Sharpe over a 6% hurdle) of {s['sharpe']:.2f} against {b['sharpe']:.2f} for {bn}"
         + (": better risk-adjusted." if s["sharpe"] > b["sharpe"] else ": the extra return came with even more extra risk."))
     if s["vol"] < b["vol"]:
         pos.append(f"Smoother ride: yearly volatility {_p(s['vol'])} against {_p(b['vol'])} for {bn}.")

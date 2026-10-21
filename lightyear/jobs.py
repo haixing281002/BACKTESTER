@@ -295,6 +295,14 @@ def run_claude(rid, prompt, label, phase_ids):
     if st.get("model"):
         cmd += ["--model", st["model"]]
     env = dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONUTF8="1", LIGHTYEAR_RUN=rid)
+    if sys.platform == "win32":
+        # PowerShell is blocked by Group Policy on this machine (uv_spawn EUNKNOWN); force Git Bash instead.
+        env["CLAUDE_CODE_GIT_BASH_PATH"] = r"C:\Users\harshil.pahuja\AppData\Local\Programs\Git\usr\bin\bash.exe"
+        env["CLAUDE_CODE_USE_POWERSHELL_TOOL"] = "0"
+    # Put this interpreter first on PATH: Git Bash does not see the Windows Python install, and calling python.exe by
+    # its full path does not match the "Bash(python:*)" allow rule, so every Python call would need an approval.
+    pydir = os.path.dirname(sys.executable)
+    env["PATH"] = os.pathsep.join([pydir, os.path.join(pydir, "Scripts"), env.get("PATH", "")])
     if st.get("cache_only", True):
         env["LIGHTYEAR_CACHE_ONLY"] = "1"     # the repo's downloaders refuse to run (see ros/data/*fetch*/download)
     log(rid, "server", f"{label}: starting Claude Code headless ({os.path.basename(claude)}).")
@@ -472,7 +480,8 @@ def _workbook(rid, res, df, extra, observations, review):
     title = f"{st.get('paper_title') or st['slug']}: India test"
     try:
         workbook.build(rd, res, df, title, xlsx, holdings=extra.get("holdings"), trades=extra.get("trades"),
-                       comparators=extra.get("comparators"), observations=observations, review=review)
+                       comparators=extra.get("comparators"), observations=observations, review=review,
+                       selection=extra.get("selection"))
         update(rid, workbook=os.path.basename(xlsx))
         if os.environ.get("LIGHTYEAR_SKIP_RECALC"):
             return {"error": "recalc skipped (LIGHTYEAR_SKIP_RECALC set)"}

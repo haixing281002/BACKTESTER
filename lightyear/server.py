@@ -209,7 +209,7 @@ def rebuild(rid: str):
         raise HTTPException(409, "Nothing to rebuild yet.")
     _busy_guard()
     keep = st["status"] if st["status"] == "decided" else None
-    def go():
+    def go(_rid=None):            # jobs.start passes the run id through
         jobs.build_outputs(rid, review=False)
         if keep:
             jobs.update(rid, status=keep)

@@ -76,6 +76,164 @@ def _line_chart(title, ws_data, col_s, col_b, last, anchor, ws_target, y_fmt, y_
     ws_target.add_chart(ch, anchor)
 
 
+def _cost_basis(results):
+    """How the strategy column was costed, read from results.json (never assumed)."""
+    bp = results.get("headline_cost_bp")
+    if bp is None:
+        return "strategy as written by the run (cost basis not stated)"
+    return "strategy gross (no trading costs)" if float(bp) == 0 else f"strategy after {float(bp):g}bp round-trip costs"
+
+
+MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+TRADE_HEADERS = {"isin": "ISIN", "signal_date": "Signal date (ranking close)", "execution_date": "Execution date",
+                 "price_date": "Price date (bhavcopy used)", "price": "Price used (Rs)", "price_basis": "Price source",
+                 "shares": "Shares traded", "value_rs": "Trade value (Rs)", "why": "Why"}
+DECISION_FILL = {"BOUGHT": FILL_PASS, "KEPT": PatternFill("solid", fgColor="DDEBF7"), "SOLD": FILL_FAIL,
+                 "SKIPPED": PatternFill("solid", fgColor="FFEB9C"), "NOT NEEDED": PatternFill("solid", fgColor="E7E6E6")}
+
+
+def _monthly_sheet(wb, df, s_name, b_name, has_trades):
+    """Month-by-month returns as formulas over the Returns sheet, plus calendar grids."""
+    ws = wb.create_sheet("Monthly returns")
+    put(ws, "A1", "Month-by-month returns", F_TITLE)
+    put(ws, "A2", "Each month runs from the previous month's last close to this month's last close: the return of the book "
+        "formed at the previous month-end close. The first month is partial (from the start date). Month-end dates are "
+        "inputs (blue); every return, value and count is a formula over the Returns and Trades sheets.", F_NOTE)
+    me = df.groupby([df["date"].dt.year, df["date"].dt.month])["date"].max().sort_values().tolist()
+    cols = ["Month", "Month-end close", "Book held from the close of", f"{s_name} return", f"{b_name} return",
+            "Difference", f"{s_name} value (100 = start)", f"{b_name} value (100 = start)"]
+    if has_trades:
+        cols += ["Names bought at that close", "Names sold at that close"]
+    cols += ["Year", "Month no."]
+    header(ws, 4, cols, height=44)
+    f0, f1 = 5, 4 + len(me)
+    yc, mc = ("K", "L") if has_trades else ("I", "J")
+    for k, d in enumerate(me):
+        i = f0 + k
+        put(ws, f"A{i}", f"{MONTHS[d.month - 1]} {d.year}", F_BASE, border=True)
+        put(ws, f"B{i}", d.to_pydatetime(), F_INPUT, DATE, border=True)
+        put(ws, f"C{i}", "=Start_Date" if k == 0 else f"=B{i-1}", F_LINK if k == 0 else F_BASE, DATE, border=True)
+        put(ws, f"G{i}", f"=INDEX(Val_Strat,MATCH(B{i},Dates,0))", F_LINK, "0.00", border=True)
+        put(ws, f"H{i}", f"=INDEX(Val_Bench,MATCH(B{i},Dates,0))", F_LINK, "0.00", border=True)
+        put(ws, f"D{i}", f"=G{i}/100-1" if k == 0 else f"=G{i}/G{i-1}-1", F_BASE, PCT, border=True)
+        put(ws, f"E{i}", f"=H{i}/100-1" if k == 0 else f"=H{i}/H{i-1}-1", F_BASE, PCT, border=True)
+        put(ws, f"F{i}", f"=D{i}-E{i}", F_BASE, PCT, border=True)
+        if has_trades:
+            put(ws, f"I{i}", f'=COUNTIFS(T_Date,C{i},T_Action,"BUY")', F_LINK, INT, border=True)
+            put(ws, f"J{i}", f'=COUNTIFS(T_Date,C{i},T_Action,"SELL")', F_LINK, INT, border=True)
+        put(ws, f"{yc}{i}", f"=YEAR(B{i})", F_BASE, "0", border=True)
+        put(ws, f"{mc}{i}", f"=MONTH(B{i})", F_BASE, "0", border=True)
+    sign_colour(ws, f"D{f0}:F{f1}")
+    r = f1 + 2
+    put(ws, f"A{r}", "Over all months", F_SUB)
+    stats = [("Months", f"=COUNT(D{f0}:D{f1})", INT), (f"Months {s_name} beat {b_name}", f'=COUNTIF(F{f0}:F{f1},">0")', INT),
+             ("Share of months it beat the index", f"=B{r+2}/B{r+1}", PCT),
+             (f"Best month ({s_name})", f"=MAX(D{f0}:D{f1})", PCT), (f"Worst month ({s_name})", f"=MIN(D{f0}:D{f1})", PCT),
+             (f"Average month ({s_name})", f"=AVERAGE(D{f0}:D{f1})", PCT),
+             (f"Average month ({b_name})", f"=AVERAGE(E{f0}:E{f1})", PCT)]
+    for k, (lab, fml, fmt) in enumerate(stats, start=1):
+        put(ws, f"A{r+k}", lab, F_BASE, border=True)
+        put(ws, f"B{r+k}", fml, F_BASE, fmt, border=True)
+
+    years = sorted({d.year for d in me})
+    gc = 15                                       # calendar grids start in column O
+    L = lambda c: ws.cell(row=1, column=c).column_letter
+    top = 4
+    for title, src, val in ((f"{s_name}: calendar view", "D", "G"), (f"{b_name}: calendar view", "E", "H"),
+                            ("Difference (strategy minus index)", "F", None)):
+        put(ws, f"{L(gc)}{top-1}", title, F_SUB)
+        header(ws, top, ["Year"] + MONTHS + ["Year"], col=gc)
+        for k, y in enumerate(years):
+            i = top + 1 + k
+            put(ws, f"{L(gc)}{i}", y, F_INPUT, "0", border=True)
+            for m in range(1, 13):
+                cell = f"{L(gc + m)}{i}"
+                put(ws, cell, f'=IF(COUNTIFS(${yc}${f0}:${yc}${f1},${L(gc)}{i},${mc}${f0}:${mc}${f1},{m})=0,"",'
+                              f'SUMIFS(${src}${f0}:${src}${f1},${yc}${f0}:${yc}${f1},${L(gc)}{i},${mc}${f0}:${mc}${f1},{m}))',
+                    F_BASE, PCT, border=True)
+            yr = f"{L(gc + 13)}{i}"
+            if val:
+                put(ws, yr, f"=INDEX(${val}${f0}:${val}${f1},MATCH(${L(gc)}{i},${yc}${f0}:${yc}${f1},1))/"
+                            f"IFERROR(INDEX(${val}${f0}:${val}${f1},MATCH(${L(gc)}{i}-1,${yc}${f0}:${yc}${f1},1)),100)-1",
+                    F_BOLD, PCT, border=True)
+            else:
+                put(ws, yr, f"={L(gc + 13)}{top + 1 + k - 2 * (len(years) + 3)}-{L(gc + 13)}{top + 1 + k - (len(years) + 3)}",
+                    F_BOLD, PCT, border=True)
+        sign_colour(ws, f"{L(gc + 1)}{top + 1}:{L(gc + 13)}{top + len(years)}")
+        top += len(years) + 3
+    put(ws, f"{L(gc)}{top}", "Year column = the whole calendar year (first and last years are part-years).", F_NOTE)
+    ws.freeze_panes = "B5"
+    widths(ws, [11, 14, 16, 14, 14, 12, 14, 14] + ([12, 12] if has_trades else []) + [8, 8, 3, 3] + [8] + [8] * 13)
+    return ws
+
+
+def _selection_sheet(wb, sel, n_hold=20):
+    """'Why these stocks': one block per rebalance, from selection.csv written by the run."""
+    s = sel.copy()
+    s["signal_date"] = pd.to_datetime(s["signal_date"])
+    ws = wb.create_sheet("Why these 20")
+    put(ws, "A1", "Why these stocks: every rebalance explained", F_TITLE)
+    put(ws, "A2", "At each month-end close every stock on that day's NIFTY 500 list with 120 days of prices is scored: "
+        "annualised 120-day log-price slope x R-squared, so a steady climb scores higher than a jumpy one. A stock is ruled "
+        "out if it closes below its 100-day average or had a one-day move over the limit (up or down) in the last 120 days. "
+        "Going down the ranking, the first 20 that pass are held at 5% each.", F_NOTE)
+    put(ws, "A3", "BOUGHT = new pick, KEPT = carried over and reset to 5%, SOLD = left the book (with the reason), "
+        "SKIPPED = ranked high enough but failed a filter, NOT NEEDED = eligible just below the 20th pick (first 5 shown). "
+        "Rank = place among all scored list members before the filters. Close = raw NSE bhavcopy CLOSE on the "
+        "execution date, the price every trade used. All values are inputs from selection.csv written by the run; the "
+        "Monthly ledger sheet has the full ~50-name list per month.", F_NOTE)
+    for r in (2, 3):
+        ws.row_dimensions[r].height = 42
+        ws[f"A{r}"].alignment = Alignment(wrap_text=True, vertical="top")
+    ws.merge_cells("A2:N2"); ws.merge_cells("A3:N3")
+    dates = sorted(s["signal_date"].unique())
+    put(ws, "A5", "Jump to a rebalance (click):", F_SUB)
+    idx_rows = {}
+    first_block = 7 + (len(dates) + 5) // 6
+    cols = ["Decision", "Pick no.", "Rank", "Symbol", "Score", "Slope (a year)", "R-squared", "Close vs 100-day avg",
+            "Biggest 1-day move (120 days)", "Date of that move", "Close used (Rs, raw)", "Weight before", "Weight after", "Why"]
+    row = first_block
+    for d in dates:
+        b = s[s["signal_date"] == d]
+        cut = b["rank_of_20th_pick"].dropna()
+        cut = int(cut.iloc[0]) if len(cut) else None
+        nn = b[b["decision"] == "NOT NEEDED"].sort_values("rank").head(5)
+        sk = b[(b["decision"] == "SKIPPED") & ((b["rank"] <= cut) if cut else True)]
+        keep = pd.concat([b[b["decision"].isin(["BOUGHT", "KEPT"])].sort_values("pick_no"),
+                          b[b["decision"].isin(["SOLD", "Not scored"])].sort_values("rank"), sk.sort_values("rank"), nn])
+        nb, nk, ns = (b["decision"] == "BOUGHT").sum(), (b["decision"] == "KEPT").sum(), (b["decision"] == "SOLD").sum()
+        ex = b["execution_date"].iloc[0] if "execution_date" in b else d.date()
+        idx_rows[d] = row
+        put(ws, f"A{row}", f"Rebalance at the close of {pd.Timestamp(d).date()} (trades priced at the {ex} close). "
+            f"Bought {nb}, kept {nk}, sold {ns}" + (f"; the 20th pick was rank {cut}." if cut else "."),
+            F_SUB, fill=PatternFill("solid", fgColor="DDEBF7"))
+        ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=len(cols))
+        header(ws, row + 1, cols, height=32)
+        for k, x in enumerate(keep.itertuples(index=False), start=row + 2):
+            g = lambda c, dflt=None: getattr(x, c, dflt)
+            dec = str(g("decision", ""))
+            put(ws, f"A{k}", dec, F_BOLD, fill=DECISION_FILL.get(dec), border=True)
+            vals = [(g("pick_no"), INT), (g("rank"), INT), (g("symbol"), None), (g("score"), NUM2), (g("annualised_slope"), PCT),
+                    (g("r_squared"), NUM2), (g("pct_vs_100d_avg"), PCT), (g("biggest_move_120d"), PCT),
+                    (g("biggest_move_date"), None), (g("close_raw"), NUM2), (g("weight_before"), PCT), (g("weight_after"), PCT)]
+            for j, (v, fmt) in enumerate(vals, start=2):
+                v = _num_or_text(v)
+                if isinstance(v, float) and v != v:
+                    v = ""
+                put(ws, f"{ws.cell(row=1, column=j).column_letter}{k}", v, F_INPUT, fmt if isinstance(v, float) else None,
+                    border=True)
+            put(ws, f"N{k}", str(g("why", "")), F_BASE, border=True, align=Alignment(wrap_text=True, vertical="top"))
+        row = row + 2 + len(keep) + 2
+    for n, d in enumerate(dates):
+        rr, cc = 6 + n // 6, 1 + 2 * (n % 6)
+        c = ws.cell(row=rr, column=cc, value=str(pd.Timestamp(d).date()))
+        c.hyperlink = f"#'Why these 20'!A{idx_rows[d]}"
+        c.font = F_LINK
+    ws.freeze_panes = ws.cell(row=first_block, column=1)
+    widths(ws, [12, 9, 7, 15, 9, 12, 10, 13, 15, 13, 13, 12, 12, 95])
+    return ws
+
+
 def derive_trades(h):
     """Trades implied by target weights at consecutive rebalances (the book drifts with prices in between)."""
     h = h.copy()
@@ -101,7 +259,7 @@ def derive_trades(h):
 
 
 def build(run_dir, results, df, title, out_path, hurdle=0.06, holdings=None, trades=None, comparators=None,
-          observations=None, review=None):
+          observations=None, review=None, selection=None):
     s_name = results.get("strategy_name") or "Strategy"
     b_name = results.get("benchmark_name") or "NIFTY 500"
     df = df.sort_values("date").reset_index(drop=True)
@@ -140,7 +298,7 @@ def build(run_dir, results, df, title, out_path, hurdle=0.06, holdings=None, tra
     widths(wr, [12, 22, 22, 24, 24, 22, 22])
     drawdown_scale(wr, f"F3:G{last}")
     put(wr, f"A{last + 2}", f"Source: {os.path.relpath(os.path.join(run_dir, 'daily_returns.csv'), REPO)} (written by the run). "
-        "Blue = hardcoded daily returns, strategy net of costs. Black = formulas. Row 2 is the starting point: 100 at the "
+        f"Blue = hardcoded daily returns, {_cost_basis(results)}. Black = formulas. Row 2 is the starting point: 100 at the "
         "close one business day before the first return, so every return counts.", F_NOTE)
     name(wb, "Dates", f"Returns!$A$2:$A${last}")
     name(wb, "Start_Date", "Returns!$A$2")
@@ -340,28 +498,50 @@ def build(run_dir, results, df, title, out_path, hurdle=0.06, holdings=None, tra
         wt = wb.create_sheet("Trades")
         used.add("trades")
         put(wt, "A1", "Every trade", F_TITLE)
-        put(wt, "A2", t_note + " Weights are fractions of capital; shorts negative. Change = after minus before (formula).", F_NOTE)
+        has_px = "price_date" in t.columns
+        put(wt, "A2", t_note + " Weights are fractions of capital; shorts negative. Change = after minus before (formula)."
+            + (" To check a trade: open the NSE bhavcopy for the 'Price date', find the symbol, and compare its CLOSE with "
+               "'Price used'. Trades are done at the same close the ranking used (signal date = execution date), except a "
+               "sale that could not trade that day, which goes at its next traded close." if has_px else ""), F_NOTE)
+        wt.row_dimensions[2].height = 40
+        wt["A2"].alignment = Alignment(wrap_text=True, vertical="top")
         cols = ["date", "symbol", "action", "weight_before", "weight_after"]
         extra = [c for c in t.columns if c not in cols]
-        header(wt, 4, ["Date", "Symbol", "Action", "Weight before", "Weight after", "Change"] + extra)
+        chk = "shares" in extra and "price" in extra
+        header(wt, 4, ["Trade date", "Symbol", "Action", "Weight before", "Weight after", "Change"]
+               + [TRADE_HEADERS.get(c, c) for c in extra] + (["Check: shares x price (Rs)"] if chk else []), height=40)
+        num_fmt = {"price": NUM2, "shares": INT, "value_rs": INT}
         for i, row in enumerate(t.itertuples(index=False), start=5):
             put(wt, f"A{i}", row.date.to_pydatetime(), F_INPUT, DATE)
             put(wt, f"B{i}", str(row.symbol), F_INPUT)
             put(wt, f"C{i}", str(row.action), F_INPUT)
-            put(wt, f"D{i}", float(row.weight_before), F_INPUT, PCT)
-            put(wt, f"E{i}", float(row.weight_after), F_INPUT, PCT)
-            put(wt, f"F{i}", f"=E{i}-D{i}", F_BASE, PCT)
+            for col_l, v in (("D", row.weight_before), ("E", row.weight_after)):
+                v = float(v) if pd.notna(v) else None
+                put(wt, f"{col_l}{i}", v, F_INPUT, PCT)
+            put(wt, f"F{i}", f'=IF(OR(D{i}="",E{i}=""),"",E{i}-D{i})', F_BASE, PCT)
             for k, col in enumerate(extra):
-                v = _num_or_text(getattr(row, col))
-                c = wt.cell(row=i, column=7 + k, value=v)
-                c.font = F_INPUT
+                raw = getattr(row, col)
+                if col.endswith("date") and pd.notna(raw) and str(raw):
+                    v, fmt = pd.Timestamp(raw).to_pydatetime(), DATE
+                else:
+                    v = _num_or_text(raw)
+                    v = "" if isinstance(v, float) and v != v else v
+                    fmt = num_fmt.get(col, NUM2) if isinstance(v, float) else None
+                put(wt, f"{wt.cell(row=i, column=7 + k).column_letter}{i}", v, F_INPUT, fmt)
+            if chk:
+                L = lambda nm: wt.cell(row=1, column=7 + extra.index(nm)).column_letter
+                put(wt, f"{wt.cell(row=1, column=7 + len(extra)).column_letter}{i}",
+                    f'=IF(OR({L("shares")}{i}="",{L("price")}{i}=""),"",{L("shares")}{i}*{L("price")}{i})', F_BASE, INT)
         t1 = 4 + len(t)
         sign_colour(wt, f"F5:F{t1}")
-        wt.freeze_panes = "A5"
-        wt.auto_filter.ref = f"A4:{wt.cell(row=4, column=6 + len(extra)).column_letter}{t1}"
-        put(wt, f"H2", "Total trades", F_BOLD)
-        put(wt, f"I2", f"=COUNTA(B5:B{t1})", F_BASE, INT)
-        widths(wt, [14, 16, 10, 14, 14, 12] + [14] * len(extra))
+        wt.freeze_panes = "D5"
+        wt.auto_filter.ref = f"A4:{wt.cell(row=4, column=6 + len(extra) + (1 if chk else 0)).column_letter}{t1}"
+        put(wt, "H3", "Total trades", F_BOLD)
+        put(wt, "I3", f"=COUNTA(B5:B{t1})", F_BASE, INT)
+        name(wb, "T_Date", f"Trades!$A$5:$A${t1}")
+        name(wb, "T_Action", f"Trades!$C$5:$C${t1}")
+        wide = {"why": 90, "price_basis": 44, "isin": 15}
+        widths(wt, [12, 15, 9, 12, 12, 10] + [wide.get(c, 15) for c in extra] + ([18] if chk else []))
 
     # ---------------------------------------------------------------- Positives & negatives
     wp = wb.create_sheet("Positives & negatives")
@@ -420,7 +600,13 @@ def build(run_dir, results, df, title, out_path, hurdle=0.06, holdings=None, tra
     # ---------------------------------------------------------------- one sheet per table
     for t in results.get("tables", []) or []:
         p = t["csv"] if os.path.isabs(t["csv"]) else os.path.join(REPO, t["csv"])
-        tab = pd.read_csv(p)
+        try:
+            tab = pd.read_csv(p)
+        except pd.errors.EmptyDataError:
+            st = wb.create_sheet(_sheet_title(t.get("title", "Table"), used))
+            put(st, "A1", t.get("title", ""), F_TITLE)
+            put(st, "A2", f"{t['csv']} is empty: nothing to report. {t.get('note', '')}", F_NOTE)
+            continue
         st = wb.create_sheet(_sheet_title(t.get("title", "Table"), used))
         put(st, "A1", t.get("title", ""), F_TITLE)
         put(st, "A2", f"Hardcoded from {t['csv']}. {t.get('note', '')}", F_NOTE)
@@ -442,6 +628,14 @@ def build(run_dir, results, df, title, out_path, hurdle=0.06, holdings=None, tra
                 if isinstance(val, float):
                     c.number_format = fmts[j - 1]
         widths(st, [max(14, min(40, len(str(c)) + 4)) for c in tab.columns])
+
+    # ---------------------------------------------------------------- Monthly returns, Why these 20 (placed up front)
+    wm = _monthly_sheet(wb, df, s_name, b_name, has_trades=("trades" in used))
+    up_front = [wm]
+    if selection is not None and len(selection):
+        up_front.append(_selection_sheet(wb, selection))
+    for k, sh in enumerate(up_front):
+        wb.move_sheet(sh, offset=-(wb.index(sh) - (2 + k)))
 
     # ---------------------------------------------------------------- Notes
     wn = wb.create_sheet("Notes")
