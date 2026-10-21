@@ -1,0 +1,623 @@
+card_version: "1.0"
+
+paper:
+  id: ssrn_1571706
+  title: "India quick test: each July, hold the best-performing stock-picking rule of the last year (from Huang and Huang, 'Real-Time Profitability of Published Anomalies: An Out-of-Sample Test', 2014)"
+  authors: [Jing-Zhi Huang, Zhijian (James) Huang]
+  date: "2014-03-12"
+  source_file: docs/papers/ssrn_1571706.pdf
+  source_sha256: "20e1d19211642c5d51e744acadd72ed486493ddcdaf00cbba32626749bfc7314"
+  url: "https://ssrn.com/abstract=1571706"
+
+intent:
+  mode: adaptation
+  parent_card: ""
+  rationale: >
+    The paper builds 14 well-known stock-picking rules ('anomalies'), such as
+    buying cheap stocks, small stocks, recent winners or low-turnover stocks. Each
+    rule gives a long-only portfolio: the best tenth (decile) of US stocks on that
+    measure, weighted by company size. Every year the investor checks which rule's
+    portfolio did best over the past few years and puts all the money in that one
+    rule for the next year. From 1977 to 2010 this beat the US market by 4.3% to
+    10.6% a year after a 1% trading cost (page 29), and beat simply spreading money
+    over all the rules (3.3% a year, page 28). The claim that matters here is that
+    a rule's recent success carries into the next year. This card asks one question
+    fast: across 13 of the same rules built on the 500 largest NSE stocks, does
+    holding last year's winning rule beat the NIFTY 500 and beat holding all the
+    rules equally, over July 2023 to October 2026? It is a first read, not a
+    financing memo. The paper's US numbers are never a target for this run.
+  transferred_mechanism: >
+    Thirteen anomaly portfolios, each the best decile (about 50 stocks) of the 500
+    largest NSE stocks on one measure, weighted by market cap and rebuilt every
+    July from the accounts for the financial year that ended the previous March.
+    Each July the strategy compares the 13 portfolios' returns over the last 12
+    months and puts 100% of the money into the single best one for the next 12
+    months. The paper's other half, letting a rule in only after it was published,
+    does not change anything here: every rule was published by 2008.
+  broken_assumptions:
+    - >
+      FIVE YEARS, NOT 34. Prices start in October 2021, so anomaly portfolios start
+      in July 2022 and the first pick (with a 1-year look-back) is July 2023. That
+      gives three full yearly picks plus a three-month stub. No statistic from three
+      picks can be significant; the run is a read on direction, backed by a
+      persistence check across all 13 rules.
+    - >
+      THE PUBLICATION FILTER IS INERT. All 14 anomalies were published between 1977
+      and 2008 (page 27). In 2022-2026 every one is already known, so the paper's
+      main safeguard against hindsight does nothing; only the yearly chase is tested.
+    - >
+      13 RULES, NOT 14. Stock issuance needs share counts at past dates, which the
+      permitted sources do not have (Screener gives today's shares only). It is
+      dropped. Accruals are approximated from the cash-flow statement because the
+      balance-sheet detail Sloan's formula needs is not on Screener.
+    - >
+      RESTATED ACCOUNTS. Screener shows the latest restated annual figures, not the
+      numbers as first published. The paper's six-month lag (page 7) becomes a
+      three-month lag here (March year-end, used from July), which is still after
+      the end-May deadline for audited annual results.
+    - >
+      COSTS ARE INDIAN. The paper charges a flat 1% round trip (page 13). This card
+      charges 30bp round trip on actual turnover, and reports 1% as a sensitivity.
+    - >
+      PRICE RETURN ONLY. Bhavcopy has no dividends and the NIFTY 500 workbook is a
+      price index, so both sides miss dividends. This understates the high-yield
+      and value rules most.
+    - >
+      LOOK-BACK IS 1 YEAR, NOT 2. The paper's best-known row uses a 2-year look-back
+      (10.6% a year); the 1-year row is its weakest (4.3%, page 29). Five years of
+      data allow three picks at 1 year but only two at 2 years, so 1 year is the
+      headline and 2 years is reported beside it.
+
+universe:
+  description: >
+    The 500 largest NSE main-board stocks by market cap, chosen each July from the
+    bhavcopy master's point-in-time top 1,000 by trailing traded value, with
+    delisted names kept until they stop trading (sold at cost). Thirteen anomaly
+    portfolios are built inside this set; the strategy holds one of them at a time.
+  asset_class: equity
+  geography: IN
+  assets:
+    - "ANOM_EP (high earnings yield)"
+    - "ANOM_DIVP (high dividend yield)"
+    - "ANOM_SIZE (smallest decile by market cap)"
+    - "ANOM_DE (high debt to market equity)"
+    - "ANOM_MOM (highest prior 12-1 month return)"
+    - "ANOM_CFP (high earnings+depreciation to price)"
+    - "ANOM_BM (high book to market)"
+    - "ANOM_GS (lowest 5-year weighted sales growth)"
+    - "ANOM_ROE (high return on equity)"
+    - "ANOM_VOL (lowest average turnover)"
+    - "ANOM_CI (lowest capex versus its 3-year average)"
+    - "ANOM_ACC (lowest cash-flow accruals, proxy)"
+    - "ANOM_GA (lowest total-asset growth)"
+  benchmark: NIFTY 500
+  cash_asset: ""
+
+universe_translation:
+  source_universe: "CRSP NYSE/AMEX/NASDAQ common stocks; 14 value-weighted long-only decile portfolios with NYSE breakpoints (Kenneth French library and CRSP/Compustat), 1977-2010"
+  source_breadth: 14
+  source_selection_rule: >
+    Each July, for each published anomaly, the best decile (top or bottom, Table 1)
+    on the prior year's characteristic, value-weighted with NYSE-only breakpoints.
+    The investor holds the single anomaly portfolio with the highest past excess
+    return over a 1-10 year training window (pages 7, 9, 12).
+  target_universe: "NSE main-board top 500 by market cap within the bhavcopy top 1,000 by traded value, point in time (stand-in for NIFTY 500 constituents)"
+  grade: close
+  resolution: direct
+  rationale: >
+    The mechanism chooses among anomaly portfolios built from a broad cross-section,
+    value-weighted, with breakpoints that stop micro-caps from dominating. The 500
+    largest NSE main-board stocks by market cap, drawn each July from the bhavcopy
+    master's point-in-time top 1,000 by traded value, is the held stand-in for
+    NIFTY 500 constituents: wide enough for 50-stock deciles, inside the mandate,
+    and it does the job the paper's NYSE breakpoints do by leaving micro-caps out.
+    The official NIFTY 500 membership history is not in the permitted sources, so
+    this is named as a stand-in rather than claimed as the index.
+  transfer_risks:
+    - "Three full yearly picks (July 2023, 2024, 2025) plus a three-month stub; the paper had 34. Any outperformance could be one lucky pick."
+    - "The publication filter, the paper's method contribution, is inert in 2022-2026; only the chase transfers."
+    - "Stock issuance is dropped and accruals are a cash-flow proxy, so the menu is 13 rules, one approximated."
+    - "Fundamentals are Screener's restated latest values, and companies with no Screener page today are missing from the fundamental rules."
+    - "Value-weighted 50-stock deciles are concentrated in India: a few large PSUs, banks or oil companies can dominate the value, leverage and yield portfolios, so two 'different' rules may hold mostly the same stocks."
+    - "The high debt-to-equity rule will be mostly banks and NBFCs, whose leverage is their business model, not distress; the paper kept financials in, so this card does too."
+  mechanism_needs:
+    needs_cross_section: true
+    min_names: 500
+    cap_segment: all
+    sector: null
+    min_history_years: 5.0
+    must_be_in_mandate: true
+    notes: >
+      500 comes from the paper's construction: ten deciles, each wide enough
+      (about 50 names) for a value-weighted portfolio not to be one or two stocks.
+      Five years is the drafter's floor given the data on disk (October 2021 to
+      October 2026); the paper itself needed decades, which is stated as a broken
+      assumption.
+  alternatives_considered:
+    - "NIFTY 500 constituents (catalogued; ranked first by the code, in mandate)"
+    - "NIFTY Midcap 150 constituents (ranked second)"
+    - "NIFTY 200 constituents (ranked third)"
+    - "Top 1,000 by traded value with breakpoints from the top 500 (closest to NYSE breakpoints, partly out of mandate)"
+    - "NSE factor index sleeves (value, momentum, quality, low-vol) as ready-made anomaly portfolios"
+  why_not_alternatives: >
+    Midcap 150 and NIFTY 200 give 15-20 stocks per decile, too few for value-weighted
+    decile portfolios. The top 1,000 with top-500 breakpoints copies NYSE breakpoints
+    most closely, but the small-size and low-turnover deciles would then sit mostly
+    in stocks ranked 500-1,000, outside the mandate. The NSE factor sleeves are
+    outside the two sources this run may use, cover only four or five of the 14
+    rules, and the fund has measured them at 0.74-0.94 correlated with each other.
+  required_instruments:
+    - NSE_BHAVCOPY_STOCK_PANEL
+    - "Screener.in current shares"
+    - "Screener.in annual financials (P&L, balance sheet, cash flow)"
+    - "NIFTY 500"
+  evidence_page: 7
+
+strategy:
+  signal_name: best_past_anomaly_rotation
+  signal_definition: >
+    Step 1, build 13 anomaly portfolios every July. On the last trading day of June,
+    take the 500 largest stocks by market cap among the master's top 1,000 by
+    traded value. For each stock compute 13 measures from the Screener accounts for
+    the financial year that ended the previous March, and from June-end market cap
+    and prices: earnings yield (net profit / market cap); dividend yield (net
+    profit x dividend payout % / market cap); size (market cap); debt to market
+    equity ((total assets - equity capital - reserves) / market cap); momentum
+    (price return from 12 months to 1 month before the rebalance); cash-flow yield
+    ((net profit + depreciation) / market cap); book to market ((equity capital +
+    reserves) / market cap); sales growth (the paper's weighted rank of yearly sales
+    growth over the past five years, weights 5,4,3,2,1 with the latest year
+    heaviest); return on equity (net profit / book equity); turnover (average daily
+    traded value / market cap over the past 12 months); capital investment (this
+    year's capex / average capex of the three prior years - 1, capex = cash from
+    operations - free cash flow); accruals ((net profit - cash from operations) /
+    average total assets); asset growth (total assets / last year's total assets -
+    1). For each measure, sort the 500 into ten equal groups and keep the 'good'
+    group as the paper defines it (Table 1): highest earnings yield, dividend yield,
+    debt to market equity, momentum, cash-flow yield, book to market and ROE; lowest
+    size, sales growth, turnover, capital investment, accruals and asset growth.
+    Stocks with negative book equity are left out of the book-to-market and ROE
+    sorts; stocks with a missing input are left out of that measure only. Step 2,
+    choose one. Each July, compare the 13 portfolios' total returns over the last
+    12 months and hold the single best one for the next 12 months, even if it
+    trailed the market (the paper's investor always stays active, page 13). An
+    exact tie goes to the earlier-published rule. A rule enters the menu only once
+    it has a full 12 months of returns.
+  inputs_required:
+    - "daily corporate-action-neutralised close per stock (bhavcopy master)"
+    - "daily traded value per stock (bhavcopy master)"
+    - "market cap per stock: today's Screener shares x adjusted close"
+    - "annual net profit, depreciation, sales and dividend payout % (Screener profit and loss)"
+    - "annual equity capital, reserves and total assets (Screener balance sheet)"
+    - "annual cash from operations and free cash flow (Screener cash flow)"
+    - "NIFTY 500 daily close (index workbook)"
+  cross_sectional: true
+  formation_rule: >
+    Inside the 500 largest stocks, each rule keeps its best tenth (about 50 stocks).
+    The strategy then holds only the one rule whose portfolio returned the most
+    over the past 12 months.
+  weighting_rule: >
+    Stocks inside the chosen rule's portfolio are held in proportion to their market
+    cap on the rebalance day (as in the paper), with no cap per name. All the money
+    goes into the one chosen portfolio; nothing is kept in cash.
+  holding_period: "12 months, July to June"
+  rebalance_frequency: annual
+  is_long_short: false
+  long_only_adaptation: ""
+  constraints:
+    - "long-only, fully invested, no leverage"
+    - "one rule at a time; the 13 rules use the same 500-stock universe"
+    - "rebalanced once a year in July only; names that delist in the year are sold at cost"
+  engine_template: cross_sectional
+  template_gap: >
+    cross_sectional expresses the selection step: 13 anomaly return streams, score =
+    trailing 12-month total return, n_hold = 1, min_names = 1, rebalanced each July.
+    Building the 13 value-weighted decile portfolios from stock data is a
+    data-preparation step done in a dedicated script (scripts/ssrn_1571706_backtest.py
+    at Stage 05), not an allocator; ros/runner.py cannot build stock-level anomaly
+    portfolios.
+  confidence: medium
+  evidence_pages: [7, 9, 12, 13, 27]
+
+signal:
+  name: best_past_anomaly_rotation
+  template: cross_sectional
+  lookback_days: 252
+  lag_days: 1
+  description: >
+    Applied to the 13 anomaly portfolio return streams, not to stocks: rank them on
+    trailing 252-trading-day return at the last close of June, hold the top one.
+    lag_days 1: the choice is made at the June-end close and traded at the next
+    trading day's close. Fundamentals for the year ended March are used from July,
+    after the end-May deadline for audited annual results.
+  params:
+    n_hold: 1
+    min_names: 1
+    weighting: equal
+    ascending: false
+    training_years: 1
+    decile: 0.10
+    universe_rank_by_mcap: 500
+    decile_weighting: value_weighted
+    rebalance_month: 7
+
+portfolio:
+  rebalance: annual
+  long_only: true
+  max_gross: 1.0
+  allow_cash: false
+  mandate_allow_cash: false
+  start: "2023-07-03"
+  end: "2026-10-05"
+
+costs:
+  spread_bps: 30.0
+  cost_model: half_spread
+
+data_requirements:
+  - {name: NSE_BHAVCOPY_STOCK_PANEL, kind: price, frequency: daily, start: "2021-10-04", mandatory: true, purpose: "closes, traded value and top-1,000 membership for every main-board stock incl. delisted; portfolio returns, momentum, turnover"}
+  - {name: "Screener.in current shares", kind: fundamental, frequency: annual, start: "2026-10-06", mandatory: true, purpose: "today's shares x adjusted close = market cap, for size, value weights and every price ratio; not point in time"}
+  - {name: "Screener.in annual financials (P&L, balance sheet, cash flow)", kind: fundamental, frequency: annual, start: "2016-03-31", mandatory: true, purpose: "the accounting inputs of 11 of the 13 rules; restated, not as first reported"}
+  - {name: "NIFTY 500", kind: price, frequency: daily, start: "2021-10-01", mandatory: true, purpose: "fund benchmark"}
+
+ambiguities:
+  - field: strategy.signal_definition
+    headline: "Momentum: paper's French deciles are monthly; card sorts once a year like the rest"
+    issue: >
+      Momentum, like five other rules, comes from Kenneth French's library (page 27),
+      whose momentum deciles are rebalanced monthly; page 7 says every rule is sorted
+      once a year on last year's value.
+    resolution: >
+      Sort once a year in July on the 12-1 month return and hold for 12 months, the
+      single framework page 7 describes. A monthly-rebalanced momentum is a
+      different, higher-turnover strategy. Report the choice; do not tune it.
+    confidence: medium
+    material: true
+    evidence_page: 7
+  - field: signal.params.training_years
+    headline: "Look-back is 1 year (paper's weakest row); 2 years only gives two picks"
+    issue: >
+      The paper reports look-backs of 1 to 10 years (page 29); the 2-year is the
+      strongest and most cited. Five years of data allow three full picks at 1 year
+      and two at 2 years.
+    resolution: >
+      Headline 1 year, chosen for having the most picks, not for its result (none is
+      computed yet). Report 2 years beside it over July 2024 onward. Count both in
+      n_configs_tried.
+    confidence: high
+    material: true
+    evidence_page: 29
+  - field: universe.assets
+    headline: "Stock issuance dropped and accruals proxied: 13 rules, not 14"
+    issue: >
+      Stock issuance needs five-year share-count changes (page 27); Screener gives
+      only today's shares. Sloan's accrual formula needs current-asset and
+      current-liability detail Screener does not show.
+    resolution: >
+      Drop stock issuance. Measure accruals as (net profit - cash from operations) /
+      average total assets, the cash-flow version, and label it a proxy. The paper's
+      Table 5 says fewer rules gives a weaker result (page 31), so this tilts against
+      the strategy, not for it.
+    confidence: high
+    material: true
+    evidence_page: 27
+  - field: universe.description
+    headline: "NYSE breakpoints become 'top 500 by market cap only'"
+    issue: >
+      The paper sets decile cut-offs using NYSE stocks only, then sorts all stocks
+      (page 7). Copying that literally puts the small-size and low-turnover deciles
+      among stocks ranked 500-1,000, outside the mandate.
+    resolution: >
+      Sort only the 500 largest by market cap, in equal tenths. This keeps every
+      portfolio inside the mandate and, like NYSE breakpoints, keeps micro-caps out.
+    confidence: medium
+    material: true
+    evidence_page: 7
+  - field: universe.assets
+    headline: "Size and turnover rules become mid-cap tilts, not the paper's micro-cap bets"
+    issue: >
+      With NYSE breakpoints the paper's smallest and lowest-turnover deciles hold
+      thousands of micro-caps (page 7). Inside the 500 largest NSE stocks the
+      smallest tenth is stocks ranked about 450-500 (roughly Rs 4,000-10,000 crore
+      in 2022). Size (9.9% before publication) and turnover (12.0% after) are among
+      the paper's strongest rules (page 28).
+    resolution: >
+      Keep the in-mandate version and state that these two rules are much milder
+      here, which makes the menu weaker than the paper's and tilts against the
+      strategy. Do not widen the universe to rescue them.
+    confidence: high
+    material: true
+    evidence_page: 7
+  - field: strategy.signal_definition
+    headline: "Dividend yield set missing for loss-makers and payouts outside 0-100%"
+    issue: >
+      Dividend yield is net profit x Screener's dividend payout % / market cap; for a
+      loss-maker or a payout above 100% that figure is unreliable.
+    resolution: >
+      Leave such a stock out of the dividend-yield rule only.
+    confidence: medium
+    material: false
+    evidence_page: 27
+  - field: signal.lag_days
+    headline: "Accounts for the year ended March are used from July (paper: six months)"
+    issue: >
+      The paper uses fiscal year t-1 from July of year t, about six months after a
+      December year-end (page 7). Indian firms close in March and must file audited
+      results by end-May.
+    resolution: >
+      Use the March year's accounts from the July rebalance, a three-month lag that is
+      after the filing deadline. Prices: choose at the June-end close, trade at the
+      next day's close.
+    confidence: high
+    material: false
+    evidence_page: 7
+  - field: costs.spread_bps
+    headline: "Paper charges 1% a year flat; card charges 30bp on actual turnover"
+    issue: "The paper charges a 1% round trip per year to every rule portfolio (page 13)."
+    resolution: >
+      Charge 30bp round trip on actual trades: full turnover when the rule changes,
+      and the decile rebuild when it stays. Report the paper's flat 1% as a
+      sensitivity and the break-even cost.
+    confidence: high
+    material: true
+    evidence_page: 13
+  - field: strategy.signal_definition
+    headline: "Selection on raw 12-month return, not return over the market"
+    issue: "The paper ranks on past excess return over the market (page 12)."
+    resolution: >
+      Rank on raw total return over the same 12 months. Subtracting the same market
+      return from every rule cannot change their order, so this is identical.
+    confidence: high
+    material: false
+    evidence_page: 12
+  - field: universe.assets
+    headline: "Market cap uses today's share count carried back"
+    issue: >
+      Screener gives today's shares only. Bhavcopy prices are adjusted for splits and
+      bonuses onto today's share basis, so market cap = today's shares x adjusted
+      price is right except where a company issued or bought back shares.
+    resolution: >
+      Accept it and say so; fill the master's missing market caps from the Screener
+      shares snapshot where a share count exists (about 96 of the top 1,000 lack a
+      market cap in the built panel on 2022-07-01, e.g. SBILIFE, BANDHANBNK, ICICIGI).
+    confidence: medium
+    material: true
+    evidence_page: 27
+
+replication_targets: []
+
+data_plan:
+  ideal:
+    - field: "daily total-return close per stock, with delisted names, keyed on ISIN"
+      granularity: daily
+      history_from: "2005-01-01"
+      why: "Returns of each anomaly portfolio, the 12-1 month momentum sort, and selling delisted names at cost on the day they leave."
+      why_granularity: "Monthly closes would do for annual portfolios, but daily is needed to trade at the next close after the June signal and to handle a delisting mid-month; intraday adds nothing to a once-a-year rebalance."
+      why_history: "The mechanism is year-to-year persistence of rule returns, so the number of yearly picks is the sample size; 2005 onward gives about 20 picks and includes 2008 and 2020."
+      adjustments: "Splits, bonuses and demergers neutralised; dividends reinvested (total return); ISIN key so renamed symbols do not splice."
+      minimum_viable: true
+    - field: "annual accounts as first reported, with the announcement date"
+      granularity: quarterly
+      history_from: "2000-03-31"
+      why: "Net profit, depreciation, sales, dividends, book equity, total assets, operating cash flow and capex feed 11 of the 13 rules."
+      why_granularity: "The paper uses annual figures only; quarterly results would only be needed to date availability precisely. Finer than annual for the values themselves is a different (quarterly-rebalanced) strategy."
+      why_history: "Sales growth needs five prior years and capital investment three, so accounts must start about five years before the first portfolio."
+      adjustments: "As first published, not restated; the real filing date so the July rebalance only uses what was public."
+      minimum_viable: true
+    - field: "shares outstanding per stock at each date"
+      granularity: quarterly
+      history_from: "2000-03-31"
+      why: "Market cap for size, value weights and every price ratio, and the five-year issuance rule."
+      why_granularity: "Quarterly shareholding filings are how Indian share counts are published; daily adds nothing for an annual sort."
+      why_history: "Stock issuance needs a five-year change."
+      adjustments: "Adjusted for splits and bonuses so a bonus is not counted as issuance."
+      minimum_viable: false
+    - field: "daily traded value per stock"
+      granularity: daily
+      history_from: "2005-01-01"
+      why: "The turnover rule and the point-in-time liquid universe."
+      why_granularity: "The rule averages over a year; daily is the native publication frequency."
+      why_history: "Same as prices."
+      adjustments: "None beyond matching ISIN."
+      minimum_viable: true
+    - field: "NIFTY 500 total-return index"
+      granularity: daily
+      history_from: "2005-01-01"
+      why: "The fund benchmark."
+      why_granularity: "Daily, to align with the trade dates."
+      why_history: "Same window as the strategy."
+      adjustments: "Total return, to match total-return stock data."
+      minimum_viable: true
+  rejected_alternatives:
+    - option: "NSE factor indices (value, momentum, quality, low volatility) as ready-made anomaly portfolios"
+      why_not: "They cover four or five of the 14 rules, are built with different rules from the paper's deciles, are backfilled before launch, and the fund has measured them at 0.74-0.94 correlated with each other."
+    - option: "Monthly prices only"
+      why_not: "Enough for annual returns, but cannot trade at the next close after the signal or sell a delisting at the right price."
+    - option: "What is held now: bhavcopy Oct 2021-Oct 2026, price return; Screener restated annual accounts; today's share counts"
+      why_not: "Not rejected for this quick test, it is what runs; its shortcomings are three yearly picks, no dividends, restated accounts with no filing dates, and no stock issuance rule."
+  granularity_verdict: "Daily prices and traded value, annual accounts dated by filing: the rebalance is annual, so the binding constraint is years of history, not frequency."
+  optimality_argument: >
+    The paper's claim is that a rule's return in one year predicts its rank the
+    next. The only things that decide that test are how many yearly picks there
+    are and whether each rule portfolio is built from information that was public
+    on the July rebalance date. So the dataset this paper deserves is long (about
+    20 years of Indian prices with delisted names) and honest about timing
+    (accounts as first reported, with filing dates). Finer data buys nothing for a
+    once-a-year strategy; a broader universe would push the size and turnover
+    rules out of the mandate. The held data meets the timing need only roughly
+    and the length need not at all.
+  what_would_change_the_answer: >
+    Longer history is the field that could move the verdict: with three picks a
+    null or a win is close to noise, with twenty it is evidence. As-first-reported
+    accounts and total-return prices change what may be claimed (and slightly
+    favour the value and yield rules) but are unlikely to flip the sign. Share
+    history restores one rule out of 14.
+
+benchmark_templates:
+  - {name: "Equal weight across all eligible anomaly portfolios, rebalanced each July", template: equal_weight, params: {}, rebalance: annual}
+  - {name: "Inverse-volatility weight across the anomaly portfolios, rebalanced each July", template: inverse_vol, params: {}, rebalance: annual}
+
+selection:
+  rule: >
+    Each July, at the last close of June, take the stocks flagged in the bhavcopy
+    master's point-in-time top 1,000 by trailing traded value, keep the 500 largest
+    by market cap (today's Screener shares x adjusted close), and use those 500 for
+    all 13 anomaly sorts. Delisted names stay until they stop trading and are sold at
+    cost. A stock missing an input is left out of that rule only. No explicit list is
+    named.
+  explicit_securities: []
+  why_these: >
+    The rule is the whole decision; the stocks in each rule's decile change every
+    year and are an output of the run, not an input.
+
+backtest_plan:
+  sample_start: "2023-07-03"
+  sample_end: "2026-10-05"
+  why_this_window: >
+    The bhavcopy cache starts on 2021-10-04 and the master's top-1,000 flag on
+    2022-01-03. The first July rebalance with accounts (year ended March 2022) and a
+    full set of prices is 1 July 2022, so the 13 anomaly portfolios have returns from
+    July 2022. A 1-year look-back then makes the first pick at the June 2023 close,
+    traded on 3 July 2023. The end is the last bhavcopy day. The window holds three
+    full July-to-June years (2023-24 rally, 2024-25 correction, 2025-26) and a
+    three-month stub; truncating any year would drop one of only three picks.
+  warmup_days: 252
+  why_warmup: >
+    One year of anomaly portfolio returns (July 2022 to June 2023) is needed before
+    the first pick. Momentum, which needs 12 months of prices before it can be
+    sorted, has its first portfolio in July 2023 and enters the menu in July 2024.
+  rebalance_rule: >
+    Once a year: choose at the close of the last trading day of June, trade at the
+    next trading day's close (lag 1). Both the 13 decile portfolios and the choice
+    among them are rebuilt then. No trading in between except selling a delisted
+    stock at cost.
+  weights_rule: "100% in the one chosen anomaly portfolio, market-cap weighted inside it; long-only, no cash, no leverage."
+  explicit_weights: {}
+  benchmarks:
+    - name: "NIFTY 500"
+      why_this: "The fund benchmark and the do-nothing option. Headline chart and table."
+    - name: "Equal weight across all eligible anomaly portfolios, rebuilt each July"
+      why_this: "The paper's 'average strategy' (page 16). Isolates what choosing the winner adds over owning every rule. Appendix."
+    - name: "The same top-500 universe, market-cap weighted"
+      why_this: "Same stocks, same price-return data, no rule. Separates the strategy from any gap between the stand-in universe and the official index. Appendix."
+    - name: "Last year's WORST rule held instead of the best"
+      why_this: "The paper's own contrarian check (page 13). If the worst does as well as the best, the chase carries no information. Appendix."
+  must_beat:
+    - "NIFTY 500, on total return over July 2023 to October 2026 after 30bp costs"
+    - "The equal-weight average of the anomaly portfolios, or choosing the winner adds nothing"
+    - "Last year's worst rule, or the ranking carries no information"
+  success_looks_like: >
+    After 30bp costs: the strategy beats both NIFTY 500 and the equal-weight anomaly
+    average over the window and in at least two of the three full years; it beats
+    the worst-rule version; and across all 13 rules the rank of a rule's return in
+    one year is positively related to its rank the next year (average yearly rank
+    correlation above zero, checked also at every month-end start with 12-month
+    look-back and look-ahead). The 2-year look-back points the same way. The rank
+    check is a description, not a significance test: the value-type rules share
+    many stocks (overlap reported each July) and month-end starts overlap.
+  failure_looks_like: >
+    Any of: the strategy trails the equal-weight anomaly average; or it trails
+    NIFTY 500; or the worst-rule version does as well; or the year-to-year rank
+    correlation across rules is zero or negative; or the whole gain comes from one
+    of the three years. With three picks, a null means 'no visible persistence in a
+    short window', not that the paper is wrong.
+  known_failure_modes:
+    - "ONE LUCKY PICK: three decisions in total; one good year can make the whole result."
+    - "FACTOR CRASH: chasing the best rule buys it after its run; the 2024-25 correction hit last year's small and momentum winners hardest."
+    - "OVERLAPPING RULES: value, earnings yield, cash-flow yield and dividend yield deciles may hold the same PSU and bank stocks, so the menu is narrower than 13."
+    - "CONCENTRATION: a value-weighted 50-stock decile can put 30-40% in three names."
+    - "RESTATED ACCOUNTS: Screener's restated figures can differ from what was known in July."
+
+data_requests:
+  - item: "A longer bhavcopy history, back to at least 2010, from the same NSE archive"
+    why: "The mechanism is year-to-year persistence of rule returns; five years give three picks and four yearly rank comparisons."
+    unlocks: "Twelve or more yearly picks, the paper's 2- to 5-year look-backs, and a persistence test with real statistical weight."
+    without_it: "Run on October 2021 to October 2026 only: three picks, read as direction, with the monthly-start rank-persistence check as the main evidence. A null cannot reject the paper."
+    priority: high
+    headline: "Five years = three picks; 2010 onward would give twelve and the paper's 2-year look-back"
+    format_hint: "the same daily bhavcopy files cache/ already holds, further back"
+    satisfies: ["daily total-return close per stock, with delisted names, keyed on ISIN"]
+    evidence_page: 29
+  - item: "Point-in-time share counts per stock (from NSE shareholding filings or Screener's quarterly shareholding history)"
+    why: "Stock issuance, the dropped 14th rule, needs five-year share-count changes; market cap would also stop relying on today's shares."
+    unlocks: "The full 14-rule menu and exact historical market caps."
+    without_it: "Drop stock issuance (13 rules) and carry today's shares back; market caps are wrong only for companies that issued or bought back shares."
+    priority: nice_to_have
+    headline: "Past share counts would restore the 14th rule (stock issuance)"
+    format_hint: "security_id, as_of_date, shares_outstanding"
+    satisfies: ["shares outstanding per stock at each date"]
+    evidence_page: 27
+
+open_questions:
+  - question: "Is the convertibility chain needed now, or does the quick-test result decide first?"
+    why_it_matters: "A quick-test card leaves convertibility unwritten; a thin chain would look checked and not be. The data plan is written because Gate A requires it."
+    what_i_assumed: "Convertibility is deferred until the quick test shows whether the chase helps at all, per CLAUDE.md's quick-test default."
+    headline: "Convertibility deferred until the quick test says it is worth the time"
+    ask_of: researcher
+    blocks_run: false
+  - question: "Holding a single 50-stock rule portfolio, value-weighted with no name cap, can put a large share of the fund in a few stocks. Is a per-name cap wanted?"
+    why_it_matters: "A cap changes the portfolio; no cap copies the paper but may breach the fund's concentration limits."
+    what_i_assumed: "No cap in the headline (the paper's construction); an equal-weight decile version reported beside it as a sensitivity."
+    headline: "No per-stock cap inside the chosen decile; equal-weight version as sensitivity"
+    ask_of: pm
+    blocks_run: false
+  - question: "Is n_configs_tried = 16 honest?"
+    why_it_matters: "It feeds the deflated Sharpe."
+    what_i_assumed: "16 is a floor: ten look-back lengths (page 29), five fixed cost levels plus two cost schemes (page 30), long-short versus long-only selection, worst-instead-of-best, and the 14-rule menu revised from the dissertation version (page 6); 16,383 random sub-menus (page 31) are robustness, not trials."
+    headline: "n_configs_tried = 16 is a floor"
+    ask_of: researcher
+    blocks_run: false
+    evidence_page: 29
+
+n_configs_tried: 16
+
+notes: >
+  Quick-test card (CLAUDE.md default 2026-10-06): data_plan and convertibility are
+  deliberately not written. Question: across 13 anomaly portfolios built on the
+  500 largest NSE stocks, does holding last year's best one beat NIFTY 500 and the
+  equal-weight average, after 30bp costs, from July 2023 to October 2026? Data:
+  NSE bhavcopy, Screener.in and the NIFTY 500 workbook only, cached on disk.
+
+india_notes:
+  - category: data
+    item: >
+      Screener's annual accounts are restated latest values and carry no publication
+      date; the July rebalance assumes results for the year ended March were public
+      by end-May.
+    why: >
+      Most listed companies file audited annual results by 30 May, but late filers
+      and later restatements mean some July values were not what investors saw.
+    triggered_by: "'accounting variables for fiscal year t-1 are used to form portfolios from the July of year t' (page 7)"
+    addresses: ["annual net profit, depreciation, sales and dividend payout % (Screener profit and loss)", "annual equity capital, reserves and total assets (Screener balance sheet)", "annual cash from operations and free cash flow (Screener cash flow)"]
+    evidence_page: 7
+  - category: validity
+    item: >
+      Market cap is today's Screener share count times the bonus/split-adjusted
+      close; free float is not used, as in the paper's total market equity.
+    why: >
+      Indian promoter holdings are large, so total-cap weights put more money in
+      PSUs and promoter-held firms than an investable (free-float) weighting would.
+    triggered_by: "value-weighted decile portfolios (page 7)"
+    addresses: ["market cap per stock: today's Screener shares x adjusted close"]
+    evidence_page: 7
+  - category: data
+    item: >
+      Banks and NBFCs report a different balance sheet (deposits, borrowings) and
+      often no free cash flow on Screener.
+    why: >
+      Capital investment and accruals cannot be computed for most lenders, and the
+      debt-to-equity rule will be dominated by them; each rule's coverage must be
+      reported per July.
+    triggered_by: "D/E, CI and accrual rules (page 27)"
+    addresses: []
+    evidence_page: 27
+  - category: data
+    item: >
+      Bhavcopy and the NIFTY 500 workbook are price-return; dividends are missing on
+      both sides.
+    why: >
+      The dividend-yield, value and earnings-yield deciles pay the highest dividends
+      (often PSUs at 4-6%), so those rules are understated and less likely to be picked.
+    triggered_by: "Div/P anomaly (page 27)"
+    addresses: ["daily corporate-action-neutralised close per stock (bhavcopy master)", "NIFTY 500 daily close (index workbook)"]
+    evidence_page: 27
