@@ -13,7 +13,8 @@ PHASE_A_OPTIONAL = {"one_line": "", "how_it_works": [], "sleeves": [], "universe
                     "gaps": [], "success_looks_like": "", "data_verdict": "", "open_questions": [], "files": []}
 RESULTS_KEYS = ["strategy_name", "benchmark_name", "headline", "evidence_supports", "gate_b", "validation", "notes"]
 RESULTS_OPTIONAL = {"strengths": [], "weaknesses": [], "tables": [], "assumptions": [], "files": [],
-                    "sleeve_name": None, "decisive_criterion": "", "gate_b_brief_path": None}
+                    "sleeve_name": None, "decisive_criterion": "", "gate_b_brief_path": None,
+                    "headline_cost_bp": None}
 
 
 class ContractError(Exception):
@@ -93,7 +94,7 @@ def check_results(run_dir):
 
 
 def load_optional(run_dir, dates):
-    """holdings.csv, trades.csv, comparators.csv: optional, checked, and returned as (frames, warnings)."""
+    """holdings.csv, trades.csv, selection.csv, comparators.csv: optional, checked, and returned as (frames, warnings)."""
     out, warn = {}, []
     p = os.path.join(run_dir, "holdings.csv")
     if os.path.exists(p):
@@ -114,6 +115,17 @@ def load_optional(run_dir, dates):
             warn.append(f"trades.csv needs columns {sorted(need)}; has {list(t.columns)}")
         else:
             out["trades"] = t
+    p = os.path.join(run_dir, "selection.csv")
+    if os.path.exists(p):
+        try:
+            sel = pd.read_csv(p)
+            need = {"signal_date", "symbol", "decision", "why"}
+            if need - set(sel.columns):
+                warn.append(f"selection.csv needs columns {sorted(need)}; has {list(sel.columns)}")
+            else:
+                out["selection"] = sel
+        except pd.errors.EmptyDataError:
+            warn.append("selection.csv is empty")
     p = os.path.join(run_dir, "comparators.csv")
     if os.path.exists(p):
         c = pd.read_csv(p, parse_dates=["date"])

@@ -84,13 +84,20 @@ operator reads to approve. Every list item is one or two short sentences.
   "slug": "{slug}",
   "card_path": "cards/{slug}.yaml",       // repo-relative, or null if stopped before a card exists
   "gate_a_path": "outputs/interpretation/{slug}__gate_a_queue.md",
-  "one_line": "<the whole strategy in one sentence, <= 30 words>",
+  "one_line": "<the whole strategy in one sentence, <= 30 words: what is bought, what is sold, on what signal>",
   "plain_summary": "<<= 80 words of plain English: what the paper found and what we will test in India>",
   "how_it_works": ["<3-6 steps: what is bought, what is sold, how often, how much in each, when it moves to cash>"],
+  "paper_reported": [ {{"metric": "<e.g. 'Annual return', 'Sharpe ratio'>", "value": "<as stated in the paper, with its own market/period>",
+                        "note": "<one sentence: sample, period, market -- so it is not compared like-for-like yet>"}} ],
+             // 2-5 of the paper's OWN headline numbers, verbatim from the paper. This is what Gate B will be
+             // measured against, so get the number and its context right. Empty list only if the paper reports
+             // no quantitative result at all.
   "sleeves": [ {{"name": "<sleeve/basket name>", "holds": "<what is in it, with example NSE names and a count>",
                  "stands_in_for": "<what it replaces from the paper, or 'same as paper'>",
                  "how_built": "<how it is built from bhavcopy/Screener, one sentence>"}} ],
              // a 'sleeve' = one separately managed slice of the portfolio. Empty list if the strategy has none.
+             // If the paper itself tests more than one variant/strategy (e.g. several sort signals, several
+             // holding periods), each one is a sleeve here or an "approve" item below -- never left unexplained.
   "universe": "<which Indian stocks, how many, chosen how, point in time or not; two sentences max>",
   "data": [ {{"need": "<data item>", "source": "bhavcopy|screener|nifty500 workbook|flat 6%|none",
               "status": "held|fetch needed|proxy|missing", "note": "<one short sentence>"}} ],
@@ -118,9 +125,12 @@ Stage ids for this phase, in order: 03, 04, 05, 06, 07, GB. Announce each one as
 Do the run the way .claude/commands/paper.md steps 7-9 describe (run.md, critique-results.md, gate-b.md).
 If run_pipeline.py cannot run this card's mechanism (an individual-stock or multi-sleeve card usually needs its
 own script, like scripts/lee_swaminathan_1998_india_backtest.py), write scripts/{slug}_india_backtest.py following
-that example's conventions: causal signals (shift >= 1), costs and borrow applied, look-ahead tripwires, block-
-bootstrap Sharpe interval, deflated Sharpe, walk-forward stability, a cost sensitivity, the factor fingerprint,
-and Gate B criteria computed by ros.governance.gates.gate_b(). Use universal_backtester/clean_charts.py for charts.
+that example's conventions: causal signals (shift >= 1), costs and borrow applied as the approved card states,
+look-ahead tripwires, block-bootstrap Sharpe interval, deflated Sharpe, walk-forward stability, a cost sensitivity,
+the factor fingerprint, and Gate B criteria computed by ros.governance.gates.gate_b().
+COSTS FOLLOW THE CARD: the fund's default is 30bp round trip, but when the approved card or the operator's notes set
+costs to zero, the run is GROSS everywhere: charge nothing, build no cost book, no cost comparator and no cost sweep,
+and write headline_cost_bp = 0. Never add a cost the card removed. Use universal_backtester/clean_charts.py for charts.
 Keep every number in code; never estimate a statistic in prose. If a script runs for more than a couple of
 minutes, run it in the background and keep announcing progress.
 Shell: shell variables such as $? and command substitution are blocked in this session; do checks in python.
@@ -132,13 +142,20 @@ whether simpler comparators (long leg alone, the plain universe) beat the strate
 Then write these hand-off files into {run_dir}/ (the server builds the workbook and interactive charts from them):
 
 1. daily_returns.csv  -- columns: date,strategy,benchmark[,sleeve]. Daily simple returns as fractions, the
-   strategy NET of costs, benchmark = NIFTY 500. One row per trading day of the live period. `sleeve` only if
+   strategy after exactly the card's costs (gross when the card's costs are zero), benchmark = NIFTY 500. One row per trading day of the live period. `sleeve` only if
    one extra sleeve is genuinely important.
 1b. holdings.csv -- REQUIRED for any stock-level strategy: columns date,symbol,leg,weight[,price,...]. One row per
    position per rebalance date: the target weight as a fraction of capital (shorts negative), leg = long|short.
    Every rebalance, every name. Extra columns (the signal values that chose the name) are welcome.
 1c. trades.csv -- optional: date,symbol,action,weight_before,weight_after[,price,...] with action one of
    BUY|SELL|SHORT|COVER|ADD|TRIM|FLIP. If you do not write it, Lightyear derives it from holdings.csv.
+1c2. trades.csv for a stock-level strategy should also carry, so a human can check every fill against the
+   bhavcopy: isin, signal_date (the close the ranking used), execution_date, price_date (the bhavcopy date whose
+   price was used), price, price_basis (e.g. "NSE bhavcopy CLOSE, raw"), shares, value_rs, why (one sentence).
+1c3. selection.csv -- recommended for any ranked selection: one row per name considered at each rebalance with
+   signal_date, symbol, decision (BOUGHT|KEPT|SOLD|SKIPPED|NOT NEEDED), why (one plain sentence with the numbers),
+   and the values that decided it (rank, pick_no, score and its parts, filter values, close_raw, weights,
+   rank_of_20th_pick). The workbook turns it into a "Why these stocks" sheet, one block per rebalance.
 1d. comparators.csv -- REQUIRED when the card names must-beat comparators or the run builds legs/variants:
    date + one column per comparator with its daily net returns as fractions (for example "Long leg only",
    "Equal-weight universe", "Official index"). These go in the workbook's Comparators sheet and an appendix chart.
@@ -147,13 +164,33 @@ Then write these hand-off files into {run_dir}/ (the server builds the workbook 
   "strategy_name": "<short name of the strategy book>",
   "benchmark_name": "NIFTY 500",
   "sleeve_name": null | "<name>",
+  "headline_cost_bp": <round-trip cost in basis points charged in daily_returns.csv's strategy column; 0 = gross>,
   "headline": "<one plain sentence: what this is and what the evidence supports>",
   "evidence_supports": "PROMOTE" | "OBSERVE" | "REJECT",
   "decisive_criterion": "<the Gate B criterion that matters most, named>",
-  "strengths": ["<3-6 positives of THIS strategy, each one sentence with a number from your run>"],
-  "weaknesses": ["<3-6 negatives/risks, each one sentence with a number from your run>"],
+  "strengths": ["<AT MOST 5 positives of THIS strategy, each one sentence with a number from your run. Pick the
+                 5 that matter most for the decision, not every positive you can find.>"],
+  "weaknesses": ["<AT MOST 5 negatives/risks, same rule: the 5 that matter most, each with a number>"],
+  "paper_vs_backtest": [ {{"metric": "<matches a paper_reported metric from phase_a.json where possible>",
+                           "paper_value": "<the paper's own number, from phase_a.json paper_reported>",
+                           "our_value": "<our measured number for the SAME metric, from THIS run>",
+                           "why_different": "<one sentence: market, period, costs, universe -- the real reason
+                                               they differ, or 'in line' if they agree>"}} ],
+             // THE MOST IMPORTANT TABLE IN THE BRIEF: what the paper's own strategy returned (in its own market)
+             // side by side with what we measured running the same mechanism on NSE bhavcopy data. 2-5 rows,
+             // one per metric that both sides report (return, Sharpe, drawdown -- whichever the paper gives).
+             // Never leave this empty if phase_a.json had any paper_reported entries.
   "gate_b": <gate_b(...).to_dict(), unchanged; its decision must be PENDING>,
-  "validation": [{{"label": "...", "value": <number or string>, "format": "pct|num|int|text", "source": "<file or function>"}}],
+  "validation": [{{"label": "...", "value": <number or string>, "format": "pct|num|int|text", "source": "<file or function>",
+                    "group": "returns_risk" | "costs_execution" | "robustness" | "other"}}],
+             // "group" sorts this into one of four blocks on the page instead of one long table -- pick the
+             // closest fit. returns_risk = CAGR/vol/Sharpe/drawdown/deflated Sharpe; costs_execution = turnover,
+             // concentration, slippage, position counts; robustness = walk-forward, bootstrap CI, p-values,
+             // factor fingerprint; other = anything that does not fit the first three.
+  "comparator_notes": [ {{"name": "<must match a column header in comparators.csv exactly>",
+                          "what_it_is": "<one plain sentence: what this comparator actually is and why it's here>"}} ],
+             // one entry per column of comparators.csv, if you wrote one. Never leave a comparator's name
+             // unexplained on the page -- that is the single most confusing part of the results tab otherwise.
   "tables": [{{"title": "<sheet title, <= 28 chars>", "csv": "<repo-relative csv path>", "note": "<source/caveat>"}}],
   "assumptions": [{{"label": "...", "value": <number>, "format": "pct|num|int", "note": "<source>"}}],
   "notes": ["<caveat a reader must see>"],

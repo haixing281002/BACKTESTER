@@ -23,4 +23,61 @@
 # A supplied series may not share a name with one the fund already holds -- that
 # is an error, not an override.
 
-series: []
+master:
+  file: master/bhavcopy_screener_master.csv
+  pit_status: backfilled   # traded value and membership are point in time; shares and market cap are not
+  licence: "NSE bhavcopy public archive and Screener.in public pages; personal research use; not redistributed"
+
+series:
+  - name: NSE_BHAVCOPY_STOCK_PANEL
+    kind: price
+    frequency: daily
+    file: master/bhavcopy_screener_master.csv
+    date_column: date
+    pit_status: backfilled
+    licence: "NSE bhavcopy public archive; personal research use"
+    coverage_note: "raw daily close and traded value for every main-board stock incl. delisted, corporate-action neutralised, top-N by trailing traded value with in_universe flag"
+    caveats:
+      - "Only two sources: NSE bhavcopy and Screener.in. Nothing else enters this panel."
+      - "Shares are today's shares (Screener market cap / price) carried back. Share issuance inside the window is not captured, and Screener is not point-in-time."
+      - "Screener lists only companies that exist today; delisted names have no shares and no turnover (survivorship bias). See coverage_report()."
+      - "Universe is top-1000 by trailing traded value, not by market cap and not an official index."
+      - "Corporate-action neutralisation is a heuristic threshold on daily gross return; a real move outside 0.72 to 1.40 in one day is flattened."
+      - "Prices are raw bhavcopy, price return only, no dividends."
+      - "Free-float fraction is a current promoter-holding snapshot."
+  - name: Screener.in current shares
+    kind: fundamental
+    frequency: annual
+    file: master/screener_shares_snapshot.csv
+    date_column: date
+    pit_status: backfilled
+    licence: "Screener.in public pages; personal research use; not redistributed"
+    coverage_note: "one row per symbol: current market cap / price = shares in crore, promoter holding; a snapshot dated the day of fetch"
+    caveats:
+      - "Restated latest values, not point in time; the date column is the fetch date, not an announcement date."
+      - "Only companies that exist today have a page, so delisted names are missing."
+  - name: Screener.in industry classification
+    kind: fundamental
+    frequency: annual
+    file: master/screener_industry_snapshot.csv
+    date_column: fetch_date
+    pit_status: backfilled
+    licence: "Screener.in public pages; personal research use; not redistributed"
+    coverage_note: "one row per security ever in the top 500 by trailing traded value (2021-10 to 2026-10): Screener's Broad Sector / Sector / Broad Industry / Industry, read from the public company page by scripts/ssrn_962461_fetch_industry.py (no login, one session, >=1.6 s apart)"
+    caveats:
+      - "Today's classification carried back over five years; a company that changed business inside the window is labelled by what it is now."
+      - "Only companies with a Screener page today are labelled; names that delisted or merged and lost their page are in no basket (survivorship)."
+      - "Labels are Screener's (NSE-style four-level industry), not an index provider's sector assignment."
+  - name: Screener.in annual financials (P&L, balance sheet, cash flow)
+    kind: fundamental
+    frequency: annual
+    file: master/screener_annual_financials.csv
+    date_column: fetch_date
+    pit_status: backfilled
+    licence: "Screener.in public pages; personal research use; not redistributed"
+    coverage_note: "long table (fetch_date, symbol, view, statement, field, period, value) flattened from the Screener pages already cached in scr/ (1,555 symbols, fiscal years mostly FY2015-FY2026, plus TTM); built offline by outputs/lightyear/20261007-135736-d92e/scratch/build_screener_annual.py, nothing fetched"
+    caveats:
+      - "Restated latest annual figures, not as first reported; no announcement date. The period column is the fiscal year end, the fetch_date is the day the page was cached."
+      - "Only companies with a Screener page today; delisted and merged names are missing (survivorship)."
+      - "Consolidated view where Screener shows one, else standalone; banks and NBFCs use a different row layout (no free cash flow for most)."
+      - "Rows are Screener's collapsed headline lines (e.g. 'Borrowings', 'Other Assets'); sub-line detail such as current assets is not present."
