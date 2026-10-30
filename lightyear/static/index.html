@@ -546,7 +546,8 @@ function renderResults(st){
         <p class="small muted" style="margin-top:0">What the paper's own strategy returned, in its own market and period, next to what we measured running the same mechanism on NSE bhavcopy data. This is the comparison that matters most -- everything else on this page explains it.</p>
         <table class="t" id="pvbtab"></table></div>
       <div class="card"><div class="row" style="justify-content:space-between"><h2 style="margin:0">Strategy vs benchmark</h2>
-        <div class="row">${st.workbook?`<a href="/api/runs/${st.id}/workbook"><button class="primary">⬇ Download Excel</button></a>`:""}
+        <div class="row">${st.workbook?`<a href="/api/runs/${st.id}/workbook"><button class="primary">⬇ Download Excel</button></a>`
+            :`<span class="small" style="color:var(--red)" title="${esc(st.workbook_error||rc.error||"")}">No Excel yet${st.workbook_error?`: ${esc(st.workbook_error).slice(0,120)}`:""}. Press Rebuild.</span>`}
           <button onclick="act('rebuild')" title="Rebuild charts and the workbook from this run's files">Rebuild</button><span class="small muted">${rcText}</span></div></div>
         <p style="margin:8px 0 4px">${key}</p>
         <p class="muted" style="margin:6px 0 14px">${esc(r.headline)}</p>

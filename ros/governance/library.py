@@ -12,9 +12,9 @@ from __future__ import annotations
 
 import json
 import os
-from dataclasses import dataclass, field, asdict
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from dataclasses import asdict, dataclass, field
+from datetime import UTC, datetime
+from typing import Any
 
 import numpy as np
 
@@ -43,18 +43,18 @@ class LibraryEntry:
     mode: str
     created_utc: str
     card_fingerprint: str
-    snapshot_id: Optional[str] = None
-    content_hash: Optional[str] = None
-    engine_code_hash: Optional[str] = None
-    git_commit: Optional[str] = None
+    snapshot_id: str | None = None
+    content_hash: str | None = None
+    engine_code_hash: str | None = None
+    git_commit: str | None = None
     outcome: str = "UNKNOWN"          # e.g. FAIL_FAST, REJECTED, PROMOTED
-    attained_rung: Optional[str] = None
-    stopped_at: Optional[str] = None
-    headline_metrics: Dict[str, Any] = field(default_factory=dict)
-    factor_fingerprint: Dict[str, float] = field(default_factory=dict)
-    gates: List[Dict[str, Any]] = field(default_factory=list)
-    lessons: List[str] = field(default_factory=list)
-    reuse_notes: List[str] = field(default_factory=list)
+    attained_rung: str | None = None
+    stopped_at: str | None = None
+    headline_metrics: dict[str, Any] = field(default_factory=dict)
+    factor_fingerprint: dict[str, float] = field(default_factory=dict)
+    gates: list[dict[str, Any]] = field(default_factory=list)
+    lessons: list[str] = field(default_factory=list)
+    reuse_notes: list[str] = field(default_factory=list)
     reviewer: str = ""
     # Per-agent-role notes (e.g. "card_drafter", "ambiguity_critic",
     # "data_mapper", "template_matcher", "results_critic", "triage"),
@@ -63,9 +63,9 @@ class LibraryEntry:
     # StrategyLibrary.relevant_precedent(). Written by ros/agents/
     # orchestrator.py (advisory, pre-Gate-B entries) and, where a stage
     # produces one, by run_pipeline.py's governed Step 08 write.
-    stage_notes: Dict[str, List[str]] = field(default_factory=dict)
+    stage_notes: dict[str, list[str]] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
 
@@ -83,7 +83,7 @@ class StrategyLibrary:
             json.dump(entry.to_dict(), fh, indent=2, default=_jsonable)
         return p
 
-    def all(self) -> List[Dict[str, Any]]:
+    def all(self) -> list[dict[str, Any]]:
         out = []
         for f in sorted(os.listdir(self.root)):
             if f.endswith(".json"):
@@ -92,7 +92,7 @@ class StrategyLibrary:
         return out
 
     def find_duplicate_experiment(self, fingerprint: str,
-                                  exclude: Optional[str] = None) -> List[Dict[str, Any]]:
+                                  exclude: str | None = None) -> list[dict[str, Any]]:
         """Has this exact experiment been run before?
 
         Guards the trial count that feeds the deflated Sharpe ratio. Re-running
@@ -102,9 +102,9 @@ class StrategyLibrary:
         return [e for e in self.all()
                 if e.get("card_fingerprint") == fingerprint and e.get("entry_id") != exclude]
 
-    def similar_by_fingerprint(self, fingerprint: Dict[str, float],
+    def similar_by_fingerprint(self, fingerprint: dict[str, float],
                                threshold: float = 0.90,
-                               exclude: Optional[str] = None) -> List[Dict[str, Any]]:
+                               exclude: str | None = None) -> list[dict[str, Any]]:
         """Cosine similarity over factor loadings: find the same bet under a new name.
 
         `exclude` drops one entry_id from the search. The caller writes its own
@@ -137,7 +137,7 @@ class StrategyLibrary:
         return sorted(hits, key=lambda h: -h["cosine"])
 
     def trials_for_family(self, card_id_prefix: str,
-                          exclude_fingerprint: Optional[str] = None) -> int:
+                          exclude_fingerprint: str | None = None) -> int:
         """DISTINCT prior configurations in a family -- the honest n for the DSR.
 
         Counts distinct card fingerprints, not entries. Re-running an identical
@@ -161,9 +161,9 @@ class StrategyLibrary:
     SAME_BET_COSINE = 0.95
 
     def prior_trials(self, card_id_prefix: str,
-                     factor_fingerprint: Optional[Dict[str, float]] = None,
-                     threshold: Optional[float] = None,
-                     exclude_fingerprint: Optional[str] = None) -> Dict[str, Any]:
+                     factor_fingerprint: dict[str, float] | None = None,
+                     threshold: float | None = None,
+                     exclude_fingerprint: str | None = None) -> dict[str, Any]:
         """Distinct prior configurations that count against this run's trial budget.
 
         trials_for_family() alone matched on the card id, so two cards ABOUT THE
@@ -201,9 +201,9 @@ class StrategyLibrary:
             "matches": sorted(hits, key=lambda h: -h["cosine"])[:10],
         }
 
-    def relevant_precedent(self, role: str, factor_fingerprint: Optional[Dict[str, float]] = None,
-                           card_id_prefix: Optional[str] = None, k: int = 5,
-                           threshold: float = 0.75) -> List[Dict[str, Any]]:
+    def relevant_precedent(self, role: str, factor_fingerprint: dict[str, float] | None = None,
+                           card_id_prefix: str | None = None, k: int = 5,
+                           threshold: float = 0.75) -> list[dict[str, Any]]:
         """Past `stage_notes[role]` entries a `ros/agents` Agent of that same
         role can be shown BEFORE it acts -- the read side of the memory loop.
         This is how an agent "gets better with time" in this repo: not by
@@ -234,7 +234,7 @@ class StrategyLibrary:
                 "outcome": e.get("outcome"), "notes": (e.get("stage_notes") or {}).get(role, [])}
                 for e in entries[:k]]
 
-    def summary(self) -> List[Dict[str, Any]]:
+    def summary(self) -> list[dict[str, Any]]:
         return [{"entry_id": e["entry_id"], "card": e.get("card_id"),
                  "mode": e.get("mode"), "outcome": e.get("outcome"),
                  "rung": e.get("attained_rung"), "stopped_at": e.get("stopped_at"),
@@ -242,5 +242,5 @@ class StrategyLibrary:
 
 
 def make_entry_id(card_id: str, fingerprint: str) -> str:
-    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S")
+    stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%S")
     return f"{card_id}__{fingerprint}__{stamp}"

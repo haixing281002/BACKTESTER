@@ -23,10 +23,30 @@ from openpyxl.styles import Alignment
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, REPO)
-from universal_backtester.xlsx_style import (BOX, DATE, F_BASE, F_BOLD, F_INPUT, F_LINK, F_NOTE, F_SUB,  # noqa: E402
-                                             F_TITLE, FILL_KEY, INT, NUM1, NUM2, PCT, PCT2, band,
-                                             drawdown_scale, header, legend, name, pass_fail, put,
-                                             sign_colour, widths)
+from universal_backtester.xlsx_style import (
+    DATE,
+    F_BASE,
+    F_BOLD,
+    F_INPUT,
+    F_LINK,
+    F_NOTE,
+    F_SUB,
+    F_TITLE,
+    FILL_KEY,
+    INT,
+    NUM1,
+    NUM2,
+    PCT,
+    PCT2,
+    drawdown_scale,
+    header,
+    legend,
+    name,
+    pass_fail,
+    put,
+    sign_colour,
+    widths,
+)
 
 OUT = os.path.join(REPO, "outputs")
 SLUG = "lee_swaminathan_1998"
@@ -122,7 +142,7 @@ def main():
         ("Final value (100 = start)", "=INDEX(Val_Strat,ROWS(Val_Strat))", "=INDEX(Val_Bench,ROWS(Val_Bench))", NUM1, True),
         ("CAGR", "=(B11/INDEX(Val_Strat,1))^(1/B9)-1", "=(C11/INDEX(Val_Bench,1))^(1/C9)-1", PCT, True),
         ("Annualised volatility", "=STDEV(Ret_Strat)*SQRT(252)", "=STDEV(Ret_Bench)*SQRT(252)", PCT, False),
-        ("Sharpe vs hurdle", "=(B12-Hurdle)/B13", "=(C12-Hurdle)/C13", NUM2, True),
+        ("Sharpe vs hurdle", "=(AVERAGE(Ret_Strat)*252-Hurdle)/B13", "=(AVERAGE(Ret_Bench)*252-Hurdle)/C13", NUM2, True),
         ("Maximum drawdown", "=-MIN(DD_Strat)", "=-MIN(DD_Bench)", PCT, False),
     ]
     for i, (label, fs, fb, fmt, ex) in enumerate(mrows, start=7):

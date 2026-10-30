@@ -34,8 +34,6 @@ import pandas as pd
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from validate import independent as ind          # the clean-room side
-
 # The engine under test.
 from ros.cards.schema import load_card
 from ros.data.loaders import load_nse_workbook_combined, synthetic_cash_series
@@ -43,6 +41,7 @@ from ros.engine.backtest import Backtester, rebalance_dates
 from ros.engine.prepare import build_signal_inputs
 from ros.engine.templates import build_allocator
 from ros.validation import metrics as M
+from validate import independent as ind  # the clean-room side
 
 XLSX = "data/raw/NSE_Broad_Factor_Indices_Historical_Data.xlsx"
 CARD = "examples/cards/devanathan_2026_india_factor_adaptation.yaml"

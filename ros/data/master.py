@@ -36,9 +36,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
 
-import numpy as np
 import pandas as pd
 
 
@@ -48,7 +46,7 @@ class MasterUniverseError(ValueError):
 
 # Spelling variants, because you will assemble this from several sources and
 # nobody agrees on a name. Matching is case-insensitive and ignores separators.
-ALIASES: Dict[str, List[str]] = {
+ALIASES: dict[str, list[str]] = {
     "date": ["date", "tradedate", "trade_date", "timestamp", "dt", "asof", "as_of"],
     "security_id": ["security_id", "securityid", "secid", "id", "isin",
                     "permno", "entity_id"],
@@ -74,7 +72,7 @@ def _norm(name: str) -> str:
     return "".join(ch for ch in str(name).lower() if ch.isalnum())
 
 
-def _resolve_columns(cols) -> Dict[str, str]:
+def _resolve_columns(cols) -> dict[str, str]:
     """Map canonical field -> the actual column name in the file."""
     lookup = {_norm(c): c for c in cols}
     found = {}
@@ -117,9 +115,9 @@ class MasterDiagnosis:
     alive_at_end: int
     never_left: int
     has_membership: bool
-    fields: List[str] = field(default_factory=list)
-    warnings: List[str] = field(default_factory=list)
-    blockers: List[str] = field(default_factory=list)
+    fields: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
+    blockers: list[str] = field(default_factory=list)
 
     @property
     def survivor_ratio(self) -> float:
@@ -155,20 +153,20 @@ class MasterUniverse:
     """Wide panels the engine consumes, plus the diagnosis of where they came from."""
     prices: pd.DataFrame
     membership: pd.DataFrame
-    adv: Optional[pd.DataFrame] = None
-    free_float_mcap: Optional[pd.DataFrame] = None
-    market_cap: Optional[pd.DataFrame] = None
-    sector: Optional[pd.DataFrame] = None
-    symbols: Optional[pd.DataFrame] = None
-    diagnosis: Optional[MasterDiagnosis] = None
+    adv: pd.DataFrame | None = None
+    free_float_mcap: pd.DataFrame | None = None
+    market_cap: pd.DataFrame | None = None
+    sector: pd.DataFrame | None = None
+    symbols: pd.DataFrame | None = None
+    diagnosis: MasterDiagnosis | None = None
     source: str = ""
 
     @property
-    def securities(self) -> List[str]:
+    def securities(self) -> list[str]:
         return list(self.prices.columns)
 
-    def restrict(self, start: Optional[str] = None,
-                 end: Optional[str] = None) -> "MasterUniverse":
+    def restrict(self, start: str | None = None,
+                 end: str | None = None) -> MasterUniverse:
         """Trim to a date window, dropping securities with no history left."""
         def cut(df):
             if df is None:
@@ -273,7 +271,7 @@ def load_master(path: str, require_membership: bool = True,
 
 
 def diagnose(prices: pd.DataFrame, membership: pd.DataFrame,
-             has_membership: bool, fields: List[str],
+             has_membership: bool, fields: list[str],
              require_membership: bool = True) -> MasterDiagnosis:
     """Everything that decides whether this file can support an honest backtest."""
     n_sec = prices.shape[1]
@@ -329,7 +327,7 @@ def diagnose(prices: pd.DataFrame, membership: pd.DataFrame,
     return d
 
 
-def engine_inputs(mu: MasterUniverse, assets: Optional[List[str]] = None):
+def engine_inputs(mu: MasterUniverse, assets: list[str] | None = None):
     """(prices, membership) ready for Backtester(..., membership=...).
 
     Securities with no price at all are dropped: the engine cannot hold what it

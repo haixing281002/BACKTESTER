@@ -42,8 +42,7 @@ MARKET DATA").
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple
+from dataclasses import dataclass
 
 import numpy as np
 import pandas as pd
@@ -55,7 +54,7 @@ import pandas as pd
 DEFAULT_REDUNDANCY_THRESHOLD = 0.90
 
 
-def returns_frame(price_frame: pd.DataFrame, names: List[str]) -> pd.DataFrame:
+def returns_frame(price_frame: pd.DataFrame, names: list[str]) -> pd.DataFrame:
     """Daily simple returns for the requested columns, aligned and dropna'd.
 
     Rows where ANY requested series is missing are dropped, so the correlation
@@ -71,15 +70,15 @@ def returns_frame(price_frame: pd.DataFrame, names: List[str]) -> pd.DataFrame:
 
 @dataclass
 class DiversificationReport:
-    candidates: List[str]
+    candidates: list[str]
     n_obs: int
     correlation: pd.DataFrame
     pairwise_min: float
     pairwise_mean: float
     pairwise_max: float
-    weakest_pair: Tuple[str, str, float]     # most independent -- the pair worth keeping
-    strongest_pair: Tuple[str, str, float]   # most redundant -- the pair worth cutting
-    near_duplicates: List[Tuple[str, str, float]]
+    weakest_pair: tuple[str, str, float]     # most independent -- the pair worth keeping
+    strongest_pair: tuple[str, str, float]   # most redundant -- the pair worth cutting
+    near_duplicates: list[tuple[str, str, float]]
     redundancy_threshold: float
 
     @property
@@ -116,7 +115,7 @@ class DiversificationReport:
 
 def diversification_report(
     price_frame: pd.DataFrame,
-    candidates: List[str],
+    candidates: list[str],
     redundancy_threshold: float = DEFAULT_REDUNDANCY_THRESHOLD,
 ) -> DiversificationReport:
     """Measure, from real price history, how independent a candidate set is.
@@ -130,7 +129,7 @@ def diversification_report(
     rets = returns_frame(price_frame, candidates)
     corr = rets.corr()
 
-    pairs: List[Tuple[str, str, float]] = []
+    pairs: list[tuple[str, str, float]] = []
     for i, a in enumerate(candidates):
         for b in candidates[i + 1:]:
             pairs.append((a, b, float(corr.loc[a, b])))
@@ -142,7 +141,7 @@ def diversification_report(
                    key=lambda p: -p[2])
 
     return DiversificationReport(
-        candidates=list(candidates), n_obs=int(len(rets)), correlation=corr,
+        candidates=list(candidates), n_obs=len(rets), correlation=corr,
         pairwise_min=float(np.min(vals)), pairwise_mean=float(np.mean(vals)),
         pairwise_max=float(np.max(vals)), weakest_pair=weakest,
         strongest_pair=strongest, near_duplicates=dupes,
@@ -152,10 +151,10 @@ def diversification_report(
 
 def greedy_diverse_subset(
     price_frame: pd.DataFrame,
-    candidates: List[str],
+    candidates: list[str],
     k: int,
-    must_include: Optional[List[str]] = None,
-) -> List[str]:
+    must_include: list[str] | None = None,
+) -> list[str]:
     """The k candidates that minimise pairwise redundancy, chosen greedily.
 
     Starts from `must_include` (or, absent that, the single most negatively/
@@ -176,7 +175,7 @@ def greedy_diverse_subset(
     rets = returns_frame(price_frame, candidates)
     corr = rets.corr()
 
-    chosen: List[str] = list(must_include or [])
+    chosen: list[str] = list(must_include or [])
     if not chosen:
         best_pair, best_r = None, 2.0
         for i, a in enumerate(candidates):

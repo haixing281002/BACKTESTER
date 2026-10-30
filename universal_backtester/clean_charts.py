@@ -19,7 +19,6 @@ Deterministic, matplotlib only, no API step.
 from __future__ import annotations
 
 import os
-from typing import List, Optional
 
 import numpy as np
 import pandas as pd
@@ -51,8 +50,8 @@ def _label_end(ax, s: pd.Series, text: str, color: str, dy: float = 0.0) -> None
 
 def save_clean_charts(strategy: pd.Series, benchmark: pd.Series, outdir: str, tag: str,
                       strategy_name: str = "Strategy", benchmark_name: str = "NIFTY 500",
-                      weights: Optional[pd.DataFrame] = None, sleeve: Optional[pd.Series] = None,
-                      sleeve_name: str = "Comparator", footnote: str = "") -> List[str]:
+                      weights: pd.DataFrame | None = None, sleeve: pd.Series | None = None,
+                      sleeve_name: str = "Comparator", footnote: str = "") -> list[str]:
     """Write the charts and return the paths. `strategy` and `benchmark` are value series on
     comparable dates; they are aligned to their common dates before anything is drawn."""
     plt = _plt()
@@ -65,7 +64,7 @@ def save_clean_charts(strategy: pd.Series, benchmark: pd.Series, outdir: str, ta
         return []
     s100, b100 = 100 * s / s.iloc[0], 100 * b / b.iloc[0]
     span = f"{idx[0].date()} to {idx[-1].date()}"
-    written: List[str] = []
+    written: list[str] = []
 
     def save(fig, view, note=True):
         path = os.path.join(outdir, f"{tag}__{view}.png")

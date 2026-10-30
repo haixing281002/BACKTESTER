@@ -14,7 +14,6 @@ import hashlib
 import os
 import re
 from dataclasses import dataclass
-from typing import List, Optional
 
 # Where papers live. docs/papers/ is the drop folder; docs/ is scanned too
 # because the repo's own examples sit there.
@@ -57,7 +56,7 @@ def describe(path: str) -> Paper:
                  size=os.path.getsize(path))
 
 
-def find_papers(dirs=SEARCH_DIRS) -> List[str]:
+def find_papers(dirs=SEARCH_DIRS) -> list[str]:
     """Every PDF the repo can see, nearest drop folder first, de-duplicated."""
     seen, out = set(), []
     for d in dirs:
@@ -103,7 +102,7 @@ def ask_for_a_paper(reason: str = "") -> str:
     return "\n".join(L)
 
 
-def require_paper(path: Optional[str]) -> Paper:
+def require_paper(path: str | None) -> Paper:
     """Resolve a paper path, or exit with instructions. Never returns a default."""
     if not path:
         raise NoPaperGiven(ask_for_a_paper())

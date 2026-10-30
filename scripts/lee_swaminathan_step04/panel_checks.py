@@ -15,8 +15,12 @@ import pandas as pd
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from ros.data.nse_bhavcopy_ingest import (build_adjusted_prices, combine_cache, dedupe_rows,  # noqa: E402
-                                          link_isins)
+from ros.data.nse_bhavcopy_ingest import (
+    build_adjusted_prices,
+    combine_cache,
+    dedupe_rows,
+    link_isins,
+)
 
 PANEL = "data/raw/master/bhavcopy_screener_panel.csv"
 J_DAYS = 126
@@ -34,13 +38,13 @@ last = p.groupby("security_id")["date"].max()
 end = p["date"].max()
 gone = last[last < end - pd.Timedelta(days=10)]
 ever = set(u["security_id"].unique())
-out["A_entities_stopped_trading_before_end"] = int(len(gone))
+out["A_entities_stopped_trading_before_end"] = len(gone)
 out["A_stopped_trading_and_ever_in_universe"] = int(sum(1 for e in gone.index if e in ever))
 out["A_stopped_by_year"] = {str(y): int(n) for y, n in gone.dt.year.value_counts().sort_index().items()}
 
 # ---------------------------------------------------------------- B. turnover coverage
 have = u["turnover_window"].notna()
-out["B_universe_stock_days"] = int(len(u))
+out["B_universe_stock_days"] = len(u)
 out["B_share_with_turnover"] = round(float(have.mean()), 4)
 by_q = u.assign(q=u["date"].dt.to_period("Q"), h=have).groupby("q")["h"].mean().round(3)
 out["B_share_with_turnover_by_quarter_min_max"] = [float(by_q.min()), float(by_q.max())]
@@ -52,7 +56,7 @@ df = dedupe_rows(combine_cache("cache"))
 links = link_isins(df)
 adj = build_adjusted_prices(df, links)
 ev = adj.ca_events.copy()
-out["C_neutralised_days_total"] = int(len(ev))
+out["C_neutralised_days_total"] = len(ev)
 if len(ev):
     out["C_neutralised_down_lt_0.72"] = int((ev["raw_gross_return"] < 0.72).sum())
     out["C_neutralised_up_gt_1.40"] = int((ev["raw_gross_return"] > 1.40).sum())
@@ -105,7 +109,7 @@ for d in month_end:
                  "R10V3": int((R10 & V3).sum()), "R1V1": int((R1 & V1).sum()),
                  "R10V1_top500": int((R10 & V1 & top500).sum()), "R1V3_top500": int((R1 & V3 & top500).sum())})
 cells = pd.DataFrame(rows)
-out["D_formation_months"] = int(len(cells))
+out["D_formation_months"] = len(cells)
 if len(cells):
     for c in ("eligible", "R10V1", "R1V3", "R10V1_top500", "R1V3_top500"):
         out[f"D_{c}_min_median_max"] = [int(cells[c].min()), float(cells[c].median()), int(cells[c].max())]

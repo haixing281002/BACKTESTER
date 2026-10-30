@@ -26,10 +26,9 @@ from __future__ import annotations
 
 import os
 import sys
-from typing import List
 
 
-def checkpoint(stage_name: str, produced: List[str], auto_approve: bool = False) -> bool:
+def checkpoint(stage_name: str, produced: list[str], auto_approve: bool = False) -> bool:
     """Print `stage_name` and every path in `produced` (as absolute paths),
     then pause for a human's typed approval before the caller continues to
     the next stage. Returns True to continue, False to halt (the caller

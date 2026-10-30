@@ -7,7 +7,9 @@ import pandas as pd
 import pytest
 
 from ros.data.diversification import (
-    diversification_report, greedy_diverse_subset, returns_frame,
+    diversification_report,
+    greedy_diverse_subset,
+    returns_frame,
 )
 
 

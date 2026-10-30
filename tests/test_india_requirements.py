@@ -11,12 +11,20 @@ Half of this file exists because the first draft did exactly that.
 """
 import pytest
 
-from ros.cards.schema import (CostSpec, Intent, MechanismNeeds, Paper,
-                              PortfolioSpec, Signal, StrategyCard,
-                              StrategyReconstruction, Universe,
-                              UniverseTranslation, load_card)
-from ros.india_requirements import (COST, DATA, EXECUTION, TIMING, VALIDITY,
-                                    derive)
+from ros.cards.schema import (
+    CostSpec,
+    Intent,
+    MechanismNeeds,
+    Paper,
+    PortfolioSpec,
+    Signal,
+    StrategyCard,
+    StrategyReconstruction,
+    Universe,
+    UniverseTranslation,
+    load_card,
+)
+from ros.india_requirements import COST, DATA, EXECUTION, TIMING, VALIDITY, derive
 
 
 def _card(**strategy_kw):

@@ -24,8 +24,8 @@ import os
 import subprocess
 import sys
 from dataclasses import asdict, dataclass, field
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from datetime import UTC, datetime
+from typing import Any
 
 # Artifacts (analyses, critiques, briefs) live here; the lineage RECORDS about
 # them live in a subdirectory, so listing records never picks up the artifacts
@@ -59,7 +59,7 @@ def file_sha256(path: str) -> str:
     return h.hexdigest()
 
 
-def _git_commit() -> Optional[str]:
+def _git_commit() -> str | None:
     try:
         return subprocess.check_output(["git", "rev-parse", "HEAD"],
                                        stderr=subprocess.DEVNULL, text=True).strip()
@@ -78,19 +78,19 @@ class InterpretationRecord:
     model: str = ""                  # e.g. claude-opus-5, or "" for a person
     session_ref: str = ""            # Claude Code session URL, or a ticket id
     created_utc: str = ""
-    inputs: List[Dict[str, str]] = field(default_factory=list)
-    schema: Optional[str] = None
-    schema_valid: Optional[bool] = None
+    inputs: list[dict[str, str]] = field(default_factory=list)
+    schema: str | None = None
+    schema_valid: bool | None = None
     notes: str = ""
-    git_commit: Optional[str] = None
+    git_commit: str | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
 
 def record(stage: str, output_path: str, operator: str,
            produced_by: str = "claude-code", model: str = "",
-           session_ref: str = "", inputs: Optional[List[str]] = None,
+           session_ref: str = "", inputs: list[str] | None = None,
            notes: str = "", outdir: str = LINEAGE_DIR) -> str:
     """Write a provenance record for an interpretation artifact.
 
@@ -112,7 +112,7 @@ def record(stage: str, output_path: str, operator: str,
         stage=stage, produced_by=produced_by, operator=operator.strip(),
         output_path=output_path, output_sha256=file_sha256(output_path),
         model=model, session_ref=session_ref,
-        created_utc=datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        created_utc=datetime.now(UTC).isoformat(timespec="seconds"),
         inputs=[{"path": p, "sha256": file_sha256(p)}
                 for p in (inputs or []) if os.path.exists(p)],
         schema=STAGES[stage], notes=notes, git_commit=_git_commit(),
@@ -154,7 +154,7 @@ def validate(path: str, schema_name: str) -> tuple[bool, str]:
         return False, str(e).replace("\n", " ")[:400]
 
 
-def history(outdir: str = LINEAGE_DIR) -> List[Dict[str, Any]]:
+def history(outdir: str = LINEAGE_DIR) -> list[dict[str, Any]]:
     """Every lineage record, oldest first. Non-records are skipped rather than
     assumed: a stray file in the directory must not break the audit trail."""
     if not os.path.isdir(outdir):
@@ -166,7 +166,8 @@ def history(outdir: str = LINEAGE_DIR) -> List[Dict[str, Any]]:
         try:
             with open(os.path.join(outdir, f), encoding="utf-8") as fh:
                 blob = json.load(fh)
-        except Exception:                                        # noqa: BLE001
+        except Exception as e:                                   # noqa: BLE001
+            print(f"WARN interpretation history: {f} unreadable, skipped ({e!r})", file=sys.stderr)
             continue
         if isinstance(blob, dict) and {"stage", "produced_by", "operator"} <= blob.keys():
             out.append(blob)
@@ -222,7 +223,7 @@ def _cli(argv=None) -> int:
     print("-" * 96)
     for r_ in rows:
         print(f"{r_['stage']:<20}{r_['produced_by']:<13}{r_['operator'][:18]:<20}"
-              f"{str(r_.get('schema_valid', '-')):<7}{r_['output_path']}")
+              f"{r_.get('schema_valid', '-')!s:<7}{r_['output_path']}")
     return 0
 
 

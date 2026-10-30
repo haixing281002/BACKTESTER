@@ -20,6 +20,11 @@ Hard rules (from CLAUDE.md, restated):
   data/raw/MANIFEST.yaml), five years, plus the NIFTY 500 index workbook as the benchmark and a flat 6% hurdle.
   Do not fetch from any other source. Screener rules: public pages only, never log in, >=1.5 s between
   requests, one session, nothing in parallel.
+- NIFTY 500 universe: when a card's universe is NIFTY 500 (or a subset of it), membership on each date comes
+  ONLY from the official file data/raw/nifty500/nifty500_membership.csv, loaded with ros.data.nifty500
+  (members_on(d), membership_panel(dates, columns=isins)). Join it to bhavcopy on ISIN. Do not rebuild a
+  NIFTY 500 list, and do not use the master panel's in_universe column (top-N by traded value) or any
+  market-cap proxy in its place. Its README says what it covers; a run past its last date must say so.
 {data_mode}
 - Never run git commit, git push or any git command that changes the repository.
 - Never record a Gate B decision. A named human does that on the Lightyear page.
@@ -155,7 +160,8 @@ Then write these hand-off files into {run_dir}/ (the server builds the workbook 
 1c3. selection.csv -- recommended for any ranked selection: one row per name considered at each rebalance with
    signal_date, symbol, decision (BOUGHT|KEPT|SOLD|SKIPPED|NOT NEEDED), why (one plain sentence with the numbers),
    and the values that decided it (rank, pick_no, score and its parts, filter values, close_raw, weights,
-   rank_of_20th_pick). The workbook turns it into a "Why these stocks" sheet, one block per rebalance.
+   rank_of_last_pick = the rank of the last name the book took). Any book size and any score columns work: the
+   workbook turns it into a "Why these N" sheet, one block per rebalance, showing every column you wrote.
 1d. comparators.csv -- REQUIRED when the card names must-beat comparators or the run builds legs/variants:
    date + one column per comparator with its daily net returns as fractions (for example "Long leg only",
    "Equal-weight universe", "Official index"). These go in the workbook's Comparators sheet and an appendix chart.

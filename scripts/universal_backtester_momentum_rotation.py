@@ -76,13 +76,32 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import numpy as np
 import pandas as pd
 
-from universal_backtester import Backtester, build_allocator, assert_causal, LookaheadError, derive_trade_log
-from universal_backtester.data import load_wide_csv, load_banner_workbook, load_field_only
-from universal_backtester.metrics import metrics_table, render_table
-from universal_backtester.signals import rolling_regression_momentum, sma, max_abs_move_flag, atr, regime_filter
-from universal_backtester.validation import bootstrap_sharpe_ci, deflated_sharpe_from_returns
-from universal_backtester.tearsheet import compute_tearsheet, render_tearsheet
+from universal_backtester import (
+    Backtester,
+    LookaheadError,
+    assert_causal,
+    build_allocator,
+    derive_trade_log,
+)
+from universal_backtester.data import (
+    load_banner_workbook,
+    load_field_only,
+    load_wide_csv,
+)
 from universal_backtester.excel_tearsheet import write_se_return_analytics_workbook
+from universal_backtester.metrics import metrics_table, render_table
+from universal_backtester.signals import (
+    atr,
+    max_abs_move_flag,
+    regime_filter,
+    rolling_regression_momentum,
+    sma,
+)
+from universal_backtester.tearsheet import compute_tearsheet, render_tearsheet
+from universal_backtester.validation import (
+    bootstrap_sharpe_ci,
+    deflated_sharpe_from_returns,
+)
 
 REG_WINDOW = 90
 SMA_WINDOW = 100          # 100-day trend qualifier

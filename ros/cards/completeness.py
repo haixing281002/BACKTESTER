@@ -22,7 +22,6 @@ card what a reviewer will find thin, while it is still cheap to fix.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Callable, List, Optional, Tuple
 
 from ros.cards.schema import audit_data_requests
 
@@ -48,7 +47,7 @@ class Check:
 
 @dataclass
 class Completeness:
-    checks: List[Check] = field(default_factory=list)
+    checks: list[Check] = field(default_factory=list)
 
     @property
     def score(self) -> float:
@@ -57,11 +56,11 @@ class Completeness:
         return got / total if total else 0.0
 
     @property
-    def missing(self) -> List[Check]:
+    def missing(self) -> list[Check]:
         return [c for c in self.checks if not c.passed]
 
     @property
-    def serious(self) -> List[Check]:
+    def serious(self) -> list[Check]:
         return [c for c in self.checks if not c.passed and c.weight >= 3]
 
     def render(self, only_missing: bool = False) -> str:

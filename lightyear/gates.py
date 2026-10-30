@@ -7,7 +7,7 @@ with a number that misses its threshold is a FAIL (advisory), not "not computed"
 """
 import re
 
-NOT_COMPUTED = re.compile(r"no comparison|not computed|n/?a|none|^$", re.I)
+NOT_COMPUTED = re.compile(r"no comparison|not computed|n/?a|none|^$", re.IGNORECASE)
 THR = re.compile(r"^\s*(\|t\|)?\s*(<=|>=|<|>)?\s*(-?\d+(?:\.\d+)?)\s*(%)?\s*$")
 
 

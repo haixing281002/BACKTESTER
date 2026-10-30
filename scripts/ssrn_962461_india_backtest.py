@@ -259,7 +259,7 @@ def daily_from_monthly(states: pd.DataFrame, index: pd.DatetimeIndex) -> pd.Data
 # ---------------------------------------------------------------------------------------------
 # Allocator: the card's per-sleeve switch (template_gap)
 # ---------------------------------------------------------------------------------------------
-from universal_backtester.allocators import Allocator  # noqa: E402
+from universal_backtester.allocators import Allocator
 
 
 class SleeveSwitch(Allocator):
@@ -337,10 +337,15 @@ def main():
     ap.add_argument("--n-boot", type=int, default=2000)
     a = ap.parse_args()
     os.makedirs(OUT, exist_ok=True)
-    from universal_backtester.engine import LookaheadError, assert_causal
-    from universal_backtester.validation import (bootstrap_sharpe_ci, deflated_sharpe_from_returns,
-                                                 oos_stability_summary, sensitivity_verdict, walk_forward_windows)
     from ros.validation.portfolio import factor_fingerprint
+    from universal_backtester.engine import LookaheadError, assert_causal
+    from universal_backtester.validation import (
+        bootstrap_sharpe_ci,
+        deflated_sharpe_from_returns,
+        oos_stability_summary,
+        sensitivity_verdict,
+        walk_forward_windows,
+    )
     res = {}
     half = SPREAD_BPS / 1e4 / 2
 
@@ -372,7 +377,7 @@ def main():
           f"peer table (scripts/ssrn_962461_peer_labels.py; leave-one-out agreement printed there)")
     unl = adv.where(mem)[ever[~labelled.to_numpy()]].mean().sort_values(ascending=False).head(15)
     print("  largest unlabelled names by mean traded value: " + ", ".join(names[s] for s in unl.index))
-    res["industry_coverage"] = {"ever_members": int(len(ever)), "labelled": int(labelled.sum()),
+    res["industry_coverage"] = {"ever_members": len(ever), "labelled": int(labelled.sum()),
                                 "labelled_fetched": n_fetched, "labelled_peer_table": n_peer,
                                 "unlabelled": int((~labelled).sum()), "unlabelled_tv_share_mean": float(tv_share.mean()),
                                 "largest_unlabelled": [names[s] for s in unl.index]}
@@ -409,7 +414,7 @@ def main():
             dg.append(d)
         return lv, pd.concat(dg, ignore_index=True)
 
-    in_sleeve = lambda s: pd.Series(sl.reindex(px.columns).eq(s).to_numpy(), index=px.columns)  # noqa: E731
+    in_sleeve = lambda s: pd.Series(sl.reindex(px.columns).eq(s).to_numpy(), index=px.columns)
     lv_ff, diag_ff = baskets(ffm.loc[cal], in_sleeve, "free-float cap, 20% cap")
     lv_ew, diag_ew = baskets(None, in_sleeve, "equal weight")
     in_any = sl.reindex(px.columns).notna()
@@ -535,7 +540,7 @@ def main():
           f"({len(st_live)} monthly signals x 5 sleeves); months all five off: {int((st_live.sum(axis=1) == 0).sum())}, "
           f"all five on: {int((st_live.sum(axis=1) == 5).sum())}")
     res["switches"] = switches
-    res["n_monthly_signals"] = int(len(st_live))
+    res["n_monthly_signals"] = len(st_live)
     res["months_all_off"] = int((st_live.sum(axis=1) == 0).sum())
     res["months_all_on"] = int((st_live.sum(axis=1) == 5).sum())
     mw = wm.loc[wm.index.isin(tdates)].copy()
@@ -660,7 +665,7 @@ def main():
     print(cost_sw.to_string(index=False, float_format=lambda x: f"{x:.3f}"))
     cost_sw.to_csv(os.path.join(OUT, f"{SLUG}_cost_sweep.csv"), index=False)
     res["cost_sweep"] = cost_sw.to_dict("records")
-    f = lambda c: bundle(levels, sd, tdates, spread=c)["sharpe_minus_bh"]  # noqa: E731
+    f = lambda c: bundle(levels, sd, tdates, spread=c)["sharpe_minus_bh"]
     lo_c, hi_c = 0.0, 2000.0
     if f(lo_c) <= 0:
         be = "none: below Buy & Hold even at zero cost"
@@ -691,8 +696,8 @@ def main():
     if "error" in fp:
         print(f"  factor fingerprint unavailable: {fp['error']}")
     else:
-        print(f"  FACTOR FINGERPRINT vs NIFTY 500 and the Buy & Hold sleeves (the fund's own permitted series; the "
-              f"NSE factor sleeves are outside this run's sources):")
+        print("  FACTOR FINGERPRINT vs NIFTY 500 and the Buy & Hold sleeves (the fund's own permitted series; the "
+              "NSE factor sleeves are outside this run's sources):")
         print(f"    alpha (ann.) {fp['alpha_ann']:.2%}   alpha t (HAC) {fp['alpha_t_hac']:.2f}   R^2 {fp['r_squared']:.2f}   n {fp['n_obs']}")
         print(f"    loadings: {fp['loadings']}")
         print(f"    {fp.get('interpretation', '')}")

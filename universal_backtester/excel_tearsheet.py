@@ -43,14 +43,18 @@ import pandas as pd
 
 try:
     from openpyxl import Workbook
-    from openpyxl.styles import Font, PatternFill, Alignment
+    from openpyxl.styles import Alignment, Font, PatternFill
     from openpyxl.utils import get_column_letter
-    from openpyxl.worksheet.formula import ArrayFormula
     from openpyxl.workbook.properties import CalcProperties
+    from openpyxl.worksheet.formula import ArrayFormula
 except ImportError as e:
     raise ImportError("excel_tearsheet.py needs openpyxl: pip install openpyxl") from e
 
-from universal_backtester.tearsheet import EXTREME_UPPER_PCT, EXTREME_LOWER_PCT, financial_year_label
+from universal_backtester.tearsheet import (
+    EXTREME_LOWER_PCT,
+    EXTREME_UPPER_PCT,
+    financial_year_label,
+)
 
 DEFAULT_RISK_FREE_RATE = 0.05
 DEFAULT_OMEGA_THRESHOLD = 0.01
@@ -517,11 +521,24 @@ def compute_se_return_analytics_rows(
     is_percent) tuples in the same top-to-bottom order as the workbook.
     """
     import numpy as np
+
     from universal_backtester.tearsheet import (
-        financial_year_returns, calendar_year_returns, calendar_year_max_drawdown,
-        capture_breakdown, extreme_capture_breakdown, average_annual_max_drawdown,
-        positive_volatility, negative_volatility, gain_to_pain_ratio as _gain_to_pain,
-        historical_var, historical_cvar, tracking_error as _tracking_error,
+        average_annual_max_drawdown,
+        calendar_year_max_drawdown,
+        calendar_year_returns,
+        capture_breakdown,
+        extreme_capture_breakdown,
+        financial_year_returns,
+        historical_cvar,
+        historical_var,
+        negative_volatility,
+        positive_volatility,
+    )
+    from universal_backtester.tearsheet import (
+        gain_to_pain_ratio as _gain_to_pain,
+    )
+    from universal_backtester.tearsheet import (
+        tracking_error as _tracking_error,
     )
 
     strat_s = pd.Series(strategy_returns.values, index=monthly_dates)

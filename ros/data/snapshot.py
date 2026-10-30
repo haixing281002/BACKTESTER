@@ -17,9 +17,9 @@ import hashlib
 import json
 import os
 import subprocess
-from dataclasses import dataclass, field, asdict
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from dataclasses import asdict, dataclass, field
+from datetime import UTC, datetime
+from typing import Any
 
 import pandas as pd
 
@@ -43,7 +43,7 @@ def frame_hash(df: pd.DataFrame) -> str:
     return h.hexdigest()
 
 
-def code_hash(files: Optional[List[str]] = None, root: str = ".") -> str:
+def code_hash(files: list[str] | None = None, root: str = ".") -> str:
     """Hash of the engine source. If this changes, prior results are not comparable."""
     h = hashlib.sha256()
     for f in sorted(files or _ENGINE_FILES):
@@ -55,7 +55,7 @@ def code_hash(files: Optional[List[str]] = None, root: str = ".") -> str:
     return h.hexdigest()
 
 
-def git_commit(root: str = ".") -> Optional[str]:
+def git_commit(root: str = ".") -> str | None:
     try:
         return subprocess.check_output(
             ["git", "-C", root, "rev-parse", "HEAD"],
@@ -68,8 +68,8 @@ def git_commit(root: str = ".") -> Optional[str]:
 class Transformation:
     step: str
     detail: str
-    rows_before: Optional[int] = None
-    rows_after: Optional[int] = None
+    rows_before: int | None = None
+    rows_after: int | None = None
 
 
 @dataclass
@@ -78,17 +78,17 @@ class Snapshot:
     snapshot_id: str
     created_utc: str
     frame: pd.DataFrame
-    sources: List[Dict[str, Any]] = field(default_factory=list)
-    transformations: List[Transformation] = field(default_factory=list)
+    sources: list[dict[str, Any]] = field(default_factory=list)
+    transformations: list[Transformation] = field(default_factory=list)
     pit_status: str = "unknown"
-    proxies_used: List[Dict[str, str]] = field(default_factory=list)
-    caveats: List[str] = field(default_factory=list)
+    proxies_used: list[dict[str, str]] = field(default_factory=list)
+    caveats: list[str] = field(default_factory=list)
     content_hash: str = ""
     engine_code_hash: str = ""
-    git_commit: Optional[str] = None
+    git_commit: str | None = None
     storage_format: str = "parquet"
 
-    def manifest(self) -> Dict[str, Any]:
+    def manifest(self) -> dict[str, Any]:
         return {
             "snapshot_id": self.snapshot_id,
             "created_utc": self.created_utc,
@@ -138,13 +138,13 @@ class SnapshotBuilder:
     def __init__(self, snapshot_id: str, pit_status: str = "unknown"):
         self.snapshot_id = snapshot_id
         self.pit_status = pit_status
-        self._frame: Optional[pd.DataFrame] = None
-        self.sources: List[Dict[str, Any]] = []
-        self.transformations: List[Transformation] = []
-        self.proxies_used: List[Dict[str, str]] = []
-        self.caveats: List[str] = []
+        self._frame: pd.DataFrame | None = None
+        self.sources: list[dict[str, Any]] = []
+        self.transformations: list[Transformation] = []
+        self.proxies_used: list[dict[str, str]] = []
+        self.caveats: list[str] = []
 
-    def add_source(self, frame: pd.DataFrame, provenance: Dict[str, Any]) -> "SnapshotBuilder":
+    def add_source(self, frame: pd.DataFrame, provenance: dict[str, Any]) -> SnapshotBuilder:
         self.sources.append(provenance)
         if self._frame is None:
             self._frame = frame.copy()
@@ -155,7 +155,7 @@ class SnapshotBuilder:
                 "join_source", provenance.get("path", "?"), before, len(self._frame)))
         return self
 
-    def add_proxy(self, series: pd.Series, proxy_for: str, rationale: str) -> "SnapshotBuilder":
+    def add_proxy(self, series: pd.Series, proxy_for: str, rationale: str) -> SnapshotBuilder:
         """Attach a proxy series. Recorded explicitly -- 'no silent proxy use'."""
         if self._frame is None:
             raise RuntimeError("add a primary source before a proxy")
@@ -165,8 +165,8 @@ class SnapshotBuilder:
         self.transformations.append(Transformation("add_proxy", f"{series.name} <- {proxy_for}"))
         return self
 
-    def restrict(self, start: Optional[str] = None, end: Optional[str] = None,
-                 columns: Optional[List[str]] = None) -> "SnapshotBuilder":
+    def restrict(self, start: str | None = None, end: str | None = None,
+                 columns: list[str] | None = None) -> SnapshotBuilder:
         before = len(self._frame)
         if columns:
             missing = [c for c in columns if c not in self._frame.columns]
@@ -179,7 +179,7 @@ class SnapshotBuilder:
             "restrict", f"start={start} end={end} cols={columns}", before, len(self._frame)))
         return self
 
-    def require_complete(self, columns: List[str]) -> "SnapshotBuilder":
+    def require_complete(self, columns: list[str]) -> SnapshotBuilder:
         """Drop dates where any required column is missing, and say how many.
 
         Done once, up front, so the backtest never silently changes its investable
@@ -195,7 +195,7 @@ class SnapshotBuilder:
                 f"Dropped {before - after} dates lacking complete data for {columns}.")
         return self
 
-    def add_caveat(self, text: str) -> "SnapshotBuilder":
+    def add_caveat(self, text: str) -> SnapshotBuilder:
         self.caveats.append(text)
         return self
 
@@ -205,7 +205,7 @@ class SnapshotBuilder:
         frame = self._frame.sort_index()
         return Snapshot(
             snapshot_id=self.snapshot_id,
-            created_utc=datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            created_utc=datetime.now(UTC).isoformat(timespec="seconds"),
             frame=frame,
             sources=self.sources,
             transformations=self.transformations,

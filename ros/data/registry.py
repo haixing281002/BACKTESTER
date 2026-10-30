@@ -12,8 +12,8 @@ decides whether a result is believable:
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field, asdict
-from typing import Any, Dict, List, Optional
+from dataclasses import asdict, dataclass, field
+from typing import Any
 
 # ONE vocabulary for the field that decides whether a live claim may rest on a
 # series. `restated` is distinct from `backfilled`: the history existed, it was
@@ -44,18 +44,18 @@ class DataCapability:
     name: str
     kind: str
     frequency: str = "daily"
-    start: Optional[str] = None
-    end: Optional[str] = None
+    start: str | None = None
+    end: str | None = None
     pit_status: str = "unknown"
     licence: str = "internal"
     coverage_note: str = ""
-    is_proxy_for: List[str] = field(default_factory=list)
-    caveats: List[str] = field(default_factory=list)
+    is_proxy_for: list[str] = field(default_factory=list)
+    caveats: list[str] = field(default_factory=list)
 
     def __post_init__(self):
         self.pit_status = normalise_pit_status(self.pit_status)
 
-    def validate(self) -> List[str]:
+    def validate(self) -> list[str]:
         if self.pit_status not in PIT_STATUS:
             return [f"{self.name}: pit_status '{self.pit_status}' not in "
                     f"{sorted(PIT_STATUS)} (accepted spellings also include "
@@ -66,34 +66,34 @@ class DataCapability:
 class DataRegistry:
     """Catalogue of series the firm can actually get, with provenance."""
 
-    def __init__(self, capabilities: Optional[List[DataCapability]] = None):
-        self._caps: Dict[str, DataCapability] = {}
+    def __init__(self, capabilities: list[DataCapability] | None = None):
+        self._caps: dict[str, DataCapability] = {}
         for c in capabilities or []:
             self.add(c)
 
-    def add(self, cap: DataCapability) -> "DataRegistry":
+    def add(self, cap: DataCapability) -> DataRegistry:
         errs = cap.validate()
         if errs:
             raise ValueError("; ".join(errs))
         self._caps[cap.name] = cap
         return self
 
-    def get(self, name: str) -> Optional[DataCapability]:
+    def get(self, name: str) -> DataCapability | None:
         return self._caps.get(name)
 
     def has(self, name: str) -> bool:
         return name in self._caps
 
-    def proxies_for(self, name: str) -> List[DataCapability]:
+    def proxies_for(self, name: str) -> list[DataCapability]:
         return [c for c in self._caps.values() if name in c.is_proxy_for]
 
-    def by_kind(self, kind: str) -> List[DataCapability]:
+    def by_kind(self, kind: str) -> list[DataCapability]:
         return [c for c in self._caps.values() if c.kind == kind]
 
-    def names(self) -> List[str]:
+    def names(self) -> list[str]:
         return sorted(self._caps)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {n: asdict(c) for n, c in self._caps.items()}
 
     def __len__(self) -> int:

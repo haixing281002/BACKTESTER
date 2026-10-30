@@ -25,7 +25,7 @@ admission that saves a quarter of misplaced confidence.
 from __future__ import annotations
 
 import os
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import pandas as pd
 import yaml
@@ -74,7 +74,7 @@ _KINDS = {
 }
 
 
-def _validate_entry(e: Dict[str, Any], i: int) -> List[str]:
+def _validate_entry(e: dict[str, Any], i: int) -> list[str]:
     errs = []
     for f in REQUIRED_FIELDS:
         if not e.get(f):
@@ -92,7 +92,7 @@ def _validate_entry(e: Dict[str, Any], i: int) -> List[str]:
     return errs
 
 
-def read_manifest(path: str = MANIFEST) -> List[Dict[str, Any]]:
+def read_manifest(path: str = MANIFEST) -> list[dict[str, Any]]:
     """Parse and validate the supplied-data manifest. Missing file -> []."""
     if not os.path.exists(path):
         return []
@@ -101,7 +101,7 @@ def read_manifest(path: str = MANIFEST) -> List[Dict[str, Any]]:
     entries = blob.get("series") or []
     if not isinstance(entries, list):
         raise ManifestError(f"{path}: 'series' must be a list")
-    errs: List[str] = []
+    errs: list[str] = []
     for i, e in enumerate(entries):
         if not isinstance(e, dict):
             errs.append(f"entry[{i}] is {type(e).__name__}, not a mapping")
@@ -112,7 +112,7 @@ def read_manifest(path: str = MANIFEST) -> List[Dict[str, Any]]:
     return entries
 
 
-def load_series(entry: Dict[str, Any]) -> pd.DataFrame:
+def load_series(entry: dict[str, Any]) -> pd.DataFrame:
     """Read one declared file into a dated frame."""
     path = os.path.join(RAW_DIR, entry["file"])
     date_col = entry.get("date_column", "Date")
@@ -130,14 +130,14 @@ def load_series(entry: Dict[str, Any]) -> pd.DataFrame:
 
 
 def extend_registry(registry: DataRegistry,
-                    path: str = MANIFEST) -> Tuple[DataRegistry, List[str]]:
+                    path: str = MANIFEST) -> tuple[DataRegistry, list[str]]:
     """Add every declared series to `registry`. Returns (registry, added names).
 
     A supplied series that collides with one the fund already holds is an error,
     not an override: silently shadowing the firm's own data with a file someone
     dropped in a folder is exactly how an unauditable result gets made.
     """
-    added: List[str] = []
+    added: list[str] = []
     for e in read_manifest(path):
         name = e["name"]
         if registry.get(name) is not None:
@@ -163,7 +163,7 @@ def extend_registry(registry: DataRegistry,
     return registry, added
 
 
-def read_master_declaration(path: str = MANIFEST) -> Optional[Dict[str, Any]]:
+def read_master_declaration(path: str = MANIFEST) -> dict[str, Any] | None:
     """The manifest's `master:` block, validated, or None.
 
     A master universe is one file carrying many securities, so it does not fit
@@ -204,7 +204,7 @@ def load_declared_master(path: str = MANIFEST, **kw):
     return mu, decl
 
 
-def describe_shortfall(missing: List[str]) -> str:
+def describe_shortfall(missing: list[str]) -> str:
     """The Gate A block: exactly what to supply, and how."""
     if not missing:
         return ""

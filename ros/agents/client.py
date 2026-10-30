@@ -28,8 +28,8 @@ import hashlib
 import json
 import os
 import time
-from dataclasses import dataclass, field, asdict
-from typing import Any, Dict, List, Optional, Type, TypeVar
+from dataclasses import asdict, dataclass, field
+from typing import Any, TypeVar
 
 from pydantic import BaseModel
 
@@ -94,10 +94,10 @@ class CallRecord:
     cache_read_tokens: int = 0
     cache_write_tokens: int = 0
     latency_s: float = 0.0
-    stop_reason: Optional[str] = None
-    request_id: Optional[str] = None
+    stop_reason: str | None = None
+    request_id: str | None = None
     schema_name: str = ""
-    error: Optional[str] = None
+    error: str | None = None
 
     @property
     def cache_hit(self) -> bool:
@@ -107,12 +107,12 @@ class CallRecord:
 @dataclass
 class UsageLedger:
     """Accumulates every call in a run. Attached to the library entry."""
-    calls: List[CallRecord] = field(default_factory=list)
+    calls: list[CallRecord] = field(default_factory=list)
 
     def add(self, rec: CallRecord) -> None:
         self.calls.append(rec)
 
-    def totals(self) -> Dict[str, Any]:
+    def totals(self) -> dict[str, Any]:
         return {
             "n_calls": len(self.calls),
             "input_tokens": sum(c.input_tokens for c in self.calls),
@@ -125,7 +125,7 @@ class UsageLedger:
             "errors": [c.error for c in self.calls if c.error],
         }
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {"totals": self.totals(), "calls": [asdict(c) for c in self.calls]}
 
 
@@ -134,7 +134,7 @@ class Transport:
     tested end to end without credentials, and lets a run be replayed exactly."""
 
     def parse(self, *, model: str, system: Any, messages: Any,
-              output_format: Type[T], agent: str, max_tokens: int,
+              output_format: type[T], agent: str, max_tokens: int,
               effort: str) -> tuple[T, CallRecord]:
         raise NotImplementedError
 
@@ -158,7 +158,7 @@ class AnthropicTransport(Transport):
                          schema_name=output_format.__name__)
         t0 = time.perf_counter()
         try:
-            kwargs: Dict[str, Any] = dict(
+            kwargs: dict[str, Any] = dict(
                 model=model, max_tokens=max_tokens, system=system, messages=messages,
                 output_format=output_format,
             )
@@ -203,7 +203,7 @@ class ReplayTransport(Transport):
     never a silently fabricated answer.
     """
 
-    def __init__(self, fixtures: Dict[str, Dict[str, Any]], strict: bool = True):
+    def __init__(self, fixtures: dict[str, dict[str, Any]], strict: bool = True):
         self.fixtures = fixtures
         self.strict = strict
 
@@ -230,7 +230,7 @@ def _plain(obj):
     return obj
 
 
-def pdf_document_block(path: str, cache: bool = True) -> Dict[str, Any]:
+def pdf_document_block(path: str, cache: bool = True) -> dict[str, Any]:
     """A PDF as a native document block.
 
     This is the whole point of using a model here: Claude reads the rendered
@@ -240,7 +240,7 @@ def pdf_document_block(path: str, cache: bool = True) -> Dict[str, Any]:
     """
     with open(path, "rb") as fh:
         data = base64.standard_b64encode(fh.read()).decode("utf-8")
-    block: Dict[str, Any] = {
+    block: dict[str, Any] = {
         "type": "document",
         "source": {"type": "base64", "media_type": "application/pdf", "data": data},
     }
@@ -251,7 +251,7 @@ def pdf_document_block(path: str, cache: bool = True) -> Dict[str, Any]:
     return block
 
 
-def shared_system(extra: str = "") -> List[Dict[str, Any]]:
+def shared_system(extra: str = "") -> list[dict[str, Any]]:
     """The frozen, cached system prefix every agent shares.
 
     Keep this byte-stable. Appending anything per-agent here would invalidate the
@@ -261,7 +261,7 @@ def shared_system(extra: str = "") -> List[Dict[str, Any]]:
     return [{"type": "text", "text": text, "cache_control": {"type": "ephemeral"}}]
 
 
-def build_transport(mode: str = "auto", fixtures: Optional[Dict[str, Any]] = None) -> Transport:
+def build_transport(mode: str = "auto", fixtures: dict[str, Any] | None = None) -> Transport:
     """`auto` uses live Claude when a credential is resolvable, else replay."""
     if mode == "replay":
         return ReplayTransport(fixtures or {})

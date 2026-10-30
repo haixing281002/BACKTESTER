@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from ros.data.master import (MasterUniverseError, engine_inputs, load_master)
+from ros.data.master import MasterUniverseError, engine_inputs, load_master
 
 DATES = pd.bdate_range("2015-01-01", periods=800)
 

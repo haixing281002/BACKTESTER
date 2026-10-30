@@ -15,7 +15,6 @@ same inputs produce the same PNG bytes.
 from __future__ import annotations
 
 import os
-from typing import Dict, List, Optional
 
 import numpy as np
 import pandas as pd
@@ -31,15 +30,15 @@ def _mpl():
 
 
 def save_backtest_charts(
-    results: Dict[str, "pd.Series"],
+    results: dict[str, pd.Series],
     outdir: str,
     tag: str,
-    benchmark: Optional[pd.Series] = None,
+    benchmark: pd.Series | None = None,
     benchmark_name: str = "Benchmark",
-    weights: Optional[pd.DataFrame] = None,
+    weights: pd.DataFrame | None = None,
     weights_name: str = "",
-    cash_weight: Optional[pd.Series] = None,
-) -> List[str]:
+    cash_weight: pd.Series | None = None,
+) -> list[str]:
     """`results`: {display name -> cumulative value series (base 1.0 or 100)}.
     Every chart is a separate PNG under `outdir`, named `<tag>__<view>.png`.
     Returns the list of file paths actually written -- a chart whose inputs
@@ -56,7 +55,7 @@ def save_backtest_charts(
         return []
 
     os.makedirs(outdir, exist_ok=True)
-    written: List[str] = []
+    written: list[str] = []
     series = {name: s.dropna() for name, s in results.items() if s is not None and len(s.dropna()) > 1}
     if benchmark is not None and len(benchmark.dropna()) > 1:
         series = {**series, benchmark_name: benchmark.dropna()}
@@ -171,15 +170,15 @@ def save_backtest_charts(
 
 
 def save_decile_charts(
-    decile_values: Dict[int, pd.Series],
+    decile_values: dict[int, pd.Series],
     decile_summary: pd.DataFrame,
     outdir: str,
     tag: str,
-    benchmark: Optional[pd.Series] = None,
+    benchmark: pd.Series | None = None,
     benchmark_name: str = "Benchmark",
-    benchmark_cagr: Optional[float] = None,
-    benchmark_sharpe: Optional[float] = None,
-) -> List[str]:
+    benchmark_cagr: float | None = None,
+    benchmark_sharpe: float | None = None,
+) -> list[str]:
     """The NIFTY 500 decile deep-dive picture set -- not just SMALL vs BIG,
     all ten deciles at once, so a monotonic size effect (or the lack of one)
     is visible directly rather than inferred from two numbers.
@@ -198,7 +197,7 @@ def save_decile_charts(
         return []
 
     os.makedirs(outdir, exist_ok=True)
-    written: List[str] = []
+    written: list[str] = []
     cmap = plt.get_cmap("RdYlBu")
     n = len(decile_values)
     colors = {k: cmap(i / max(n - 1, 1)) for i, k in enumerate(sorted(decile_values))}

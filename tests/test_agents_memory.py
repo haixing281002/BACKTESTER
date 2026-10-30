@@ -9,11 +9,8 @@ call), does precedent actually reach the next run, and does the write-back
 stay clearly separate from a real governed Step 08 verdict.
 """
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
-import pytest
-
-from ros.agents import schemas as S
 from ros.agents.analysts import _precedent_block
 from ros.agents.orchestrator import AgenticPipeline
 from ros.governance.library import LibraryEntry, StrategyLibrary, make_entry_id
@@ -30,7 +27,7 @@ def _entry(lib: StrategyLibrary, card_id: str, role: str, notes, outcome="PROMOT
     eid = make_entry_id(card_id, f"fp_{card_id}")
     e = LibraryEntry(
         entry_id=eid, card_id=card_id, mode="adaptation",
-        created_utc=created_utc or datetime.now(timezone.utc).isoformat(),
+        created_utc=created_utc or datetime.now(UTC).isoformat(),
         card_fingerprint=f"fp_{card_id}", outcome=outcome,
         factor_fingerprint=fingerprint or {},
         stage_notes={role: notes})

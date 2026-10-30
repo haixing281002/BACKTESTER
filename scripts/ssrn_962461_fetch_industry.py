@@ -47,7 +47,7 @@ def top500_symbols(master_path: str = MASTER) -> pd.DataFrame:
 
 def parse_labels(page: str) -> dict:
     out = {}
-    for m in re.finditer(r'<a href="/market/[^"]*"[^>]*title="([^"]+)"[^>]*>(.*?)</a>', page, re.S):
+    for m in re.finditer(r'<a href="/market/[^"]*"[^>]*title="([^"]+)"[^>]*>(.*?)</a>', page, re.DOTALL):
         title, text = m.group(1), html.unescape(" ".join(re.sub(r"<[^>]+>", "", m.group(2)).split()))
         if title in LEVELS and title not in out:
             out[title] = text

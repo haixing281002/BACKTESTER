@@ -24,9 +24,32 @@ from openpyxl.chart import LineChart, Reference
 from openpyxl.formatting.rule import CellIsRule
 from openpyxl.styles import Alignment, PatternFill
 
-from universal_backtester.xlsx_style import (DATE, F_BASE, F_BOLD, F_INPUT, F_LINK, F_NOTE, F_SUB, F_TITLE,
-                                             FILL_FAIL, FILL_KEY, FILL_PASS, INT, NUM1, NUM2, PCT, PCT2, drawdown_scale,
-                                             header, legend, name, pass_fail, put, sign_colour, widths)
+from universal_backtester.xlsx_style import (
+    DATE,
+    F_BASE,
+    F_BOLD,
+    F_INPUT,
+    F_LINK,
+    F_NOTE,
+    F_SUB,
+    F_TITLE,
+    FILL_FAIL,
+    FILL_KEY,
+    FILL_PASS,
+    INT,
+    NUM1,
+    NUM2,
+    PCT,
+    PCT2,
+    drawdown_scale,
+    header,
+    legend,
+    name,
+    pass_fail,
+    put,
+    sign_colour,
+    widths,
+)
 
 from . import gates
 from .charts import start_date
@@ -34,7 +57,16 @@ from .paths import REPO
 
 C_STRAT, C_BENCH = "1F4E79", "D98324"
 FMT = {"pct": PCT2, "num": NUM2, "int": INT, "text": None}
-PCT_NAME = re.compile(r"cagr|vol|drawdown|\bdd\b|return|\bret\b|alpha|turnover|weight|%|pct", re.I)
+# A table column is a fraction shown as a percent when one of the WORDS in its name says so. Words, not substrings:
+# "max_dd" must match (a regex \bdd\b does not, '_' being a word character), "shares_before" must not. Turnover is
+# a multiple of the account (10.9x), never a percent; slopes and moves can exceed 500%, so magnitude is not a test.
+PCT_WORDS = {"cagr", "vol", "volatility", "dd", "drawdown", "return", "returns", "ret", "alpha", "weight", "share",
+             "move", "slope", "pct", "percent", "te", "tracking", "yield", "gap"}
+
+
+def _is_pct_column(col):
+    words = set(re.split(r"[^a-z0-9%]+", str(col).lower()))
+    return "%" in str(col) or bool(words & PCT_WORDS)
 FILL_ADV = PatternFill("solid", bgColor="FFEB9C", fgColor="FFEB9C")
 RET_FMT = "0.000%;(0.000%);-"
 
@@ -167,70 +199,96 @@ def _monthly_sheet(wb, df, s_name, b_name, has_trades):
     return ws
 
 
-def _selection_sheet(wb, sel, n_hold=20):
-    """'Why these stocks': one block per rebalance, from selection.csv written by the run."""
+# selection.csv columns the sheet lays out itself; every other column the run wrote is shown as a value column.
+SEL_FIXED = {"signal_date", "execution_date", "price_date", "decision", "pick_no", "rank", "symbol", "isin", "why",
+             "shares_before", "shares_after", "in_nifty500_list"}
+SEL_LABELS = {"score": "Score", "annualised_slope": "Slope (a year)", "r_squared": "R-squared",
+              "pct_vs_100d_avg": "Close vs 100-day avg", "biggest_move_120d": "Biggest 1-day move (120 days)",
+              "biggest_move_date": "Date of that move", "close_raw": "Close used (Rs, raw)",
+              "weight_before": "Weight before", "weight_after": "Weight after"}
+
+
+def _cut_column(cols):
+    """The run's 'rank of the last stock picked' column: rank_of_last_pick, or a name like rank_of_20th_pick."""
+    hits = [c for c in cols if re.fullmatch(r"rank_of_(last|\d+(st|nd|rd|th))_pick", str(c))]
+    return hits[0] if hits else None
+
+
+def selection_holds(sel):
+    """How many names the book holds at a rebalance (the most BOUGHT + KEPT on any one date)."""
+    held = sel[sel["decision"].isin(["BOUGHT", "KEPT"])]
+    return int(held.groupby("signal_date").size().max()) if len(held) else 0
+
+
+def _selection_sheet(wb, sel, rule=None):
+    """'Why these stocks': one block per rebalance, from selection.csv written by the run. Works for any book size
+    and any scoring columns: the value columns are whatever the run wrote beyond the fixed ones."""
     s = sel.copy()
     s["signal_date"] = pd.to_datetime(s["signal_date"])
-    ws = wb.create_sheet("Why these 20")
+    for c in ("rank", "pick_no"):
+        if c not in s.columns:
+            s[c] = float("nan")
+    n_hold = selection_holds(s)
+    cut_col = _cut_column(s.columns)
+    title = f"Why these {n_hold}" if n_hold else "Why these stocks"
+    ws = wb.create_sheet(title)
     put(ws, "A1", "Why these stocks: every rebalance explained", F_TITLE)
-    put(ws, "A2", "At each month-end close every stock on that day's NIFTY 500 list with 120 days of prices is scored: "
-        "annualised 120-day log-price slope x R-squared, so a steady climb scores higher than a jumpy one. A stock is ruled "
-        "out if it closes below its 100-day average or had a one-day move over the limit (up or down) in the last 120 days. "
-        "Going down the ranking, the first 20 that pass are held at 5% each.", F_NOTE)
-    put(ws, "A3", "BOUGHT = new pick, KEPT = carried over and reset to 5%, SOLD = left the book (with the reason), "
-        "SKIPPED = ranked high enough but failed a filter, NOT NEEDED = eligible just below the 20th pick (first 5 shown). "
-        "Rank = place among all scored list members before the filters. Close = raw NSE bhavcopy CLOSE on the "
-        "execution date, the price every trade used. All values are inputs from selection.csv written by the run; the "
-        "Monthly ledger sheet has the full ~50-name list per month.", F_NOTE)
+    put(ws, "A2", (rule or "At each rebalance every eligible stock is scored and ranked; going down the ranking, the "
+                   "names that pass the run's filters are held.") + f" The book holds {n_hold} names.", F_NOTE)
+    put(ws, "A3", "BOUGHT = new pick, KEPT = carried over, SOLD = left the book (with the reason), "
+        "SKIPPED = failed a filter" + (" (shown only if ranked above the last pick)" if cut_col else "")
+        + ", NOT NEEDED = eligible but below the last pick (first 5 shown). Rank = place among all scored names before "
+        "the filters. All values are inputs from selection.csv written by the run.", F_NOTE)
+    vcols = [c for c in s.columns if c not in SEL_FIXED and c != cut_col]
+    cols = ["Decision", "Pick no.", "Rank", "Symbol"] + [SEL_LABELS.get(c, c) for c in vcols] + ["Why"]
+    last = ws.cell(row=1, column=len(cols)).column_letter
     for r in (2, 3):
         ws.row_dimensions[r].height = 42
         ws[f"A{r}"].alignment = Alignment(wrap_text=True, vertical="top")
-    ws.merge_cells("A2:N2"); ws.merge_cells("A3:N3")
+    ws.merge_cells(f"A2:{last}2"); ws.merge_cells(f"A3:{last}3")
     dates = sorted(s["signal_date"].unique())
     put(ws, "A5", "Jump to a rebalance (click):", F_SUB)
     idx_rows = {}
     first_block = 7 + (len(dates) + 5) // 6
-    cols = ["Decision", "Pick no.", "Rank", "Symbol", "Score", "Slope (a year)", "R-squared", "Close vs 100-day avg",
-            "Biggest 1-day move (120 days)", "Date of that move", "Close used (Rs, raw)", "Weight before", "Weight after", "Why"]
     row = first_block
     for d in dates:
         b = s[s["signal_date"] == d]
-        cut = b["rank_of_20th_pick"].dropna()
+        cut = b[cut_col].dropna() if cut_col else pd.Series(dtype=float)
         cut = int(cut.iloc[0]) if len(cut) else None
         nn = b[b["decision"] == "NOT NEEDED"].sort_values("rank").head(5)
         sk = b[(b["decision"] == "SKIPPED") & ((b["rank"] <= cut) if cut else True)]
         keep = pd.concat([b[b["decision"].isin(["BOUGHT", "KEPT"])].sort_values("pick_no"),
                           b[b["decision"].isin(["SOLD", "Not scored"])].sort_values("rank"), sk.sort_values("rank"), nn])
         nb, nk, ns = (b["decision"] == "BOUGHT").sum(), (b["decision"] == "KEPT").sum(), (b["decision"] == "SOLD").sum()
-        ex = b["execution_date"].iloc[0] if "execution_date" in b else d.date()
+        ex = b["execution_date"].iloc[0] if "execution_date" in b else pd.Timestamp(d).date()
         idx_rows[d] = row
         put(ws, f"A{row}", f"Rebalance at the close of {pd.Timestamp(d).date()} (trades priced at the {ex} close). "
-            f"Bought {nb}, kept {nk}, sold {ns}" + (f"; the 20th pick was rank {cut}." if cut else "."),
+            f"Bought {nb}, kept {nk}, sold {ns}" + (f"; the last pick was rank {cut}." if cut else "."),
             F_SUB, fill=PatternFill("solid", fgColor="DDEBF7"))
         ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=len(cols))
         header(ws, row + 1, cols, height=32)
-        for k, x in enumerate(keep.itertuples(index=False), start=row + 2):
-            g = lambda c, dflt=None: getattr(x, c, dflt)
-            dec = str(g("decision", ""))
+        for k, x in enumerate(keep.to_dict("records"), start=row + 2):
+            dec = str(x.get("decision", ""))
             put(ws, f"A{k}", dec, F_BOLD, fill=DECISION_FILL.get(dec), border=True)
-            vals = [(g("pick_no"), INT), (g("rank"), INT), (g("symbol"), None), (g("score"), NUM2), (g("annualised_slope"), PCT),
-                    (g("r_squared"), NUM2), (g("pct_vs_100d_avg"), PCT), (g("biggest_move_120d"), PCT),
-                    (g("biggest_move_date"), None), (g("close_raw"), NUM2), (g("weight_before"), PCT), (g("weight_after"), PCT)]
+            vals = [(x.get("pick_no"), INT), (x.get("rank"), INT), (x.get("symbol"), None)] + \
+                   [(x.get(c), PCT if _is_pct_column(c) else NUM2) for c in vcols]
             for j, (v, fmt) in enumerate(vals, start=2):
                 v = _num_or_text(v)
                 if isinstance(v, float) and v != v:
                     v = ""
                 put(ws, f"{ws.cell(row=1, column=j).column_letter}{k}", v, F_INPUT, fmt if isinstance(v, float) else None,
                     border=True)
-            put(ws, f"N{k}", str(g("why", "")), F_BASE, border=True, align=Alignment(wrap_text=True, vertical="top"))
+            why = x.get("why")
+            put(ws, f"{last}{k}", "" if why is None or why != why else str(why), F_BASE, border=True,
+                align=Alignment(wrap_text=True, vertical="top"))
         row = row + 2 + len(keep) + 2
     for n, d in enumerate(dates):
         rr, cc = 6 + n // 6, 1 + 2 * (n % 6)
         c = ws.cell(row=rr, column=cc, value=str(pd.Timestamp(d).date()))
-        c.hyperlink = f"#'Why these 20'!A{idx_rows[d]}"
+        c.hyperlink = f"#'{title}'!A{idx_rows[d]}"
         c.font = F_LINK
     ws.freeze_panes = ws.cell(row=first_block, column=1)
-    widths(ws, [12, 9, 7, 15, 9, 12, 10, 13, 15, 13, 13, 12, 12, 95])
+    widths(ws, [12, 9, 7, 15] + [12] * len(vcols) + [95])
     return ws
 
 
@@ -259,7 +317,7 @@ def derive_trades(h):
 
 
 def build(run_dir, results, df, title, out_path, hurdle=0.06, holdings=None, trades=None, comparators=None,
-          observations=None, review=None, selection=None):
+          observations=None, review=None, selection=None, selection_rule=None):
     s_name = results.get("strategy_name") or "Strategy"
     b_name = results.get("benchmark_name") or "NIFTY 500"
     df = df.sort_values("date").reset_index(drop=True)
@@ -314,7 +372,8 @@ def build(run_dir, results, df, title, out_path, hurdle=0.06, holdings=None, tra
     put(ws, "A4", "Hurdle rate for Sharpe", F_BOLD)
     put(ws, "B4", hurdle, F_INPUT, PCT, FILL_KEY, border=True,
         comment="Key assumption: flat 6% proxy for the Indian short rate (the repo's convention).")
-    put(ws, "C4", "Flat 6% proxy, the repo's convention. Change it and the Sharpe row updates.", F_NOTE)
+    put(ws, "C4", "Flat 6% proxy, the repo's convention. Sharpe = (mean daily return x 252 - hurdle) / annualised "
+                  "volatility, the same formula as results.json. Change the hurdle and the Sharpe row updates.", F_NOTE)
     name(wb, "Hurdle", "Summary!$B$4")
     header(ws, 6, ["Metric", f"Strategy: {s_name}", f"Benchmark: {b_name}", f"Strategy minus {b_name}"])
     mrows = [
@@ -325,7 +384,7 @@ def build(run_dir, results, df, title, out_path, hurdle=0.06, holdings=None, tra
         ("Final value (100 = start)", "=INDEX(Val_Strat,ROWS(Val_Strat))", "=INDEX(Val_Bench,ROWS(Val_Bench))", NUM1, True, True),
         ("CAGR", "=(B11/100)^(1/B9)-1", "=(C11/100)^(1/C9)-1", PCT, True, False),
         ("Annualised volatility", "=STDEV(Ret_Strat)*SQRT(252)", "=STDEV(Ret_Bench)*SQRT(252)", PCT, True, True),
-        ("Sharpe vs hurdle", "=(B12-Hurdle)/B13", "=(C12-Hurdle)/C13", NUM2, True, False),
+        ("Sharpe vs hurdle", "=(AVERAGE(Ret_Strat)*252-Hurdle)/B13", "=(AVERAGE(Ret_Bench)*252-Hurdle)/C13", NUM2, True, False),
         ("Maximum drawdown", "=-MIN(DD_Strat)", "=-MIN(DD_Bench)", PCT, True, True),
     ]
     for i, (label, fs, fb, fmt, ex, link) in enumerate(mrows, start=7):
@@ -422,7 +481,7 @@ def build(run_dir, results, df, title, out_path, hurdle=0.06, holdings=None, tra
             put(wc, f"A{row}", c, F_BASE, border=True)
             put(wc, f"B{row}", f"=({vc}{d1}/100)^(1/Summary!$B$9)-1", F_LINK, PCT, border=True)
             put(wc, f"C{row}", f"=STDEV({rc}{d0}:{rc}{d1})*SQRT(252)", F_BASE, PCT, border=True)
-            put(wc, f"D{row}", f"=(B{row}-Hurdle)/C{row}", F_LINK, NUM2, border=True)
+            put(wc, f"D{row}", f"=(AVERAGE({rc}{d0}:{rc}{d1})*252-Hurdle)/C{row}", F_LINK, NUM2, border=True)
             put(wc, f"E{row}", f"=-MIN({dc}{d0-1}:{dc}{d1})", F_BASE, PCT, border=True)
             put(wc, f"F{row}", f"=B{row}-Summary!$B$12", F_LINK, PCT, border=True)
         sign_colour(wc, f"F5:F{4 + len(names_c)}")
@@ -435,34 +494,65 @@ def build(run_dir, results, df, title, out_path, hurdle=0.06, holdings=None, tra
         h["date"] = pd.to_datetime(h["date"])
         if "leg" not in h.columns:
             h["leg"] = h["weight"].apply(lambda w: "long" if w > 0 else "short")
-        h = h.sort_values(["date", "leg", "weight"], ascending=[True, True, False]).reset_index(drop=True)
+        # Portfolio rank (1..N): the pick number the run gave each held name in selection.csv, so the sheet reads
+        # 1 to N at every rebalance. It is a lookup of the run's own column, never recomputed here.
+        has_pick = False
+        if selection is not None and {"signal_date", "symbol", "pick_no", "decision"} <= set(selection.columns):
+            sp = selection[selection["decision"].isin(["BOUGHT", "KEPT"])][["signal_date", "symbol", "pick_no"]].copy()
+            sp["date"] = pd.to_datetime(sp["signal_date"])
+            h = h.merge(sp[["date", "symbol", "pick_no"]], on=["date", "symbol"], how="left")
+            has_pick = h["pick_no"].notna().any()
+            if not has_pick:
+                h = h.drop(columns="pick_no")
+        if has_pick:
+            h = h.sort_values(["date", "pick_no", "weight"], ascending=[True, True, False], na_position="last").reset_index(drop=True)
+        else:
+            h = h.sort_values(["date", "leg", "weight"], ascending=[True, True, False]).reset_index(drop=True)
         wh = wb.create_sheet("Holdings")
         used.add("holdings")
-        extra = [c for c in h.columns if c not in ("date", "symbol", "leg", "weight")]
+        lead = ["pick_no"] if has_pick else []
+        extra = [c for c in h.columns if c not in ("date", "symbol", "leg", "weight", *lead)]
+        HOLD_HEADERS = {"pick_no": "Portfolio rank (1 = best held)", "rank": "Rank among all scored list members (before filters)",
+                        "signal_score": "Score (slope x R-squared)", "r_squared": "R-squared", "price": "Close used (Rs, raw)",
+                        "isin": "ISIN"}
         put(wh, "A1", "Every position at every rebalance", F_TITLE)
         put(wh, "A2", "Target weights as a fraction of capital (shorts negative), from holdings.csv written by the run. "
-            "Between rebalances the book drifts with prices.", F_NOTE)
-        header(wh, 4, ["Rebalance date", "Symbol", "Leg", "Target weight"] + extra)
+            "Between rebalances the book drifts with prices."
+            + (f" Portfolio rank = the position the stock was picked in (1 to {selection_holds(selection)}, from selection.csv): the ranking walked "
+               "from the top, skipping names that failed a filter, so rank among all list members can be higher." if has_pick else ""),
+            F_NOTE)
+        if has_pick:
+            wh.row_dimensions[2].height = 30
+            wh["A2"].alignment = Alignment(wrap_text=True, vertical="top")
+            wh.merge_cells("A2:J2")
+        header(wh, 4, ["Rebalance date"] + [HOLD_HEADERS["pick_no"]] * bool(has_pick) + ["Symbol", "Leg", "Target weight"]
+               + [HOLD_HEADERS.get(c, c) for c in extra], height=44)
         h0 = 5
+        off = 1 if has_pick else 0                     # columns after the date shift right by the rank column
+        cS, cL, cW = (chr(ord("B") + off + k) for k in range(3))
+        int_cols = {"rank", "pick_no"}
         for i, row in enumerate(h.itertuples(index=False), start=h0):
             put(wh, f"A{i}", row.date.to_pydatetime(), F_INPUT, DATE)
-            put(wh, f"B{i}", str(row.symbol), F_INPUT)
-            put(wh, f"C{i}", str(row.leg), F_INPUT)
-            put(wh, f"D{i}", float(row.weight), F_INPUT, PCT)
+            if has_pick:
+                pk = row.pick_no
+                put(wh, f"B{i}", int(pk) if pd.notna(pk) else "", F_INPUT, INT, align=Alignment(horizontal="center"))
+            put(wh, f"{cS}{i}", str(row.symbol), F_INPUT)
+            put(wh, f"{cL}{i}", str(row.leg), F_INPUT)
+            put(wh, f"{cW}{i}", float(row.weight), F_INPUT, PCT2)
             for k, col in enumerate(extra):
                 v = _num_or_text(getattr(row, col))
-                c = wh.cell(row=i, column=5 + k, value=v)
+                c = wh.cell(row=i, column=5 + off + k, value=v)
                 c.font = F_INPUT
                 if isinstance(v, float):
-                    c.number_format = NUM2
+                    c.number_format = INT if col in int_cols else NUM2
         h1 = h0 + len(h) - 1
-        sign_colour(wh, f"D{h0}:D{h1}")
-        wh.freeze_panes = "A5"
-        wh.auto_filter.ref = f"A4:{wh.cell(row=4, column=4 + len(extra)).column_letter}{h1}"
-        widths(wh, [14, 16, 9, 14] + [16] * len(extra))
+        sign_colour(wh, f"{cW}{h0}:{cW}{h1}")
+        wh.freeze_panes = wh.cell(row=5, column=3 + off)
+        wh.auto_filter.ref = f"A4:{wh.cell(row=4, column=4 + off + len(extra)).column_letter}{h1}"
+        widths(wh, [14] + [14] * off + [16, 9, 14] + [{"rank": 22, "signal_score": 16}.get(c, 16) for c in extra])
         name(wb, "H_Date", f"Holdings!$A${h0}:$A${h1}")
-        name(wb, "H_Leg", f"Holdings!$C${h0}:$C${h1}")
-        name(wb, "H_Weight", f"Holdings!$D${h0}:$D${h1}")
+        name(wb, "H_Leg", f"Holdings!${cL}${h0}:${cL}${h1}")
+        name(wb, "H_Weight", f"Holdings!${cW}${h0}:${cW}${h1}")
 
         wb2 = wb.create_sheet("Rebalances")
         used.add("rebalances")
@@ -614,8 +704,8 @@ def build(run_dir, results, df, title, out_path, hurdle=0.06, holdings=None, tra
         fmts = []
         for col in tab.columns:
             s = pd.to_numeric(tab[col], errors="coerce").dropna()
-            if PCT_NAME.search(str(col)) and len(s) and (s.abs() <= 5).all():
-                fmts.append(PCT)
+            if _is_pct_column(col) and len(s):
+                fmts.append(PCT2 if (s.abs() < 0.05).all() else PCT)   # small shares need 2 decimals (0.36%, not 0.0%)
             elif len(s) and (s == s.round()).all():
                 fmts.append(INT)
             else:
@@ -629,18 +719,28 @@ def build(run_dir, results, df, title, out_path, hurdle=0.06, holdings=None, tra
                     c.number_format = fmts[j - 1]
         widths(st, [max(14, min(40, len(str(c)) + 4)) for c in tab.columns])
 
-    # ---------------------------------------------------------------- Monthly returns, Why these 20 (placed up front)
+    # ---------------------------------------------------------------- Monthly returns, Why these N (placed up front)
     wm = _monthly_sheet(wb, df, s_name, b_name, has_trades=("trades" in used))
     up_front = [wm]
+    sel_note = None
     if selection is not None and len(selection):
-        up_front.append(_selection_sheet(wb, selection))
+        # An explainer sheet. A selection.csv shaped unlike any run seen so far must cost this one sheet, never the
+        # whole workbook (and with it the page's Download Excel button).
+        n_before = len(wb.worksheets)
+        try:
+            up_front.append(_selection_sheet(wb, selection, rule=selection_rule))
+        except Exception as e:
+            for sh in wb.worksheets[n_before:]:
+                wb.remove(sh)
+            sel_note = (f"The 'Why these stocks' sheet was left out: selection.csv could not be laid out "
+                        f"({type(e).__name__}: {e}).")
     for k, sh in enumerate(up_front):
         wb.move_sheet(sh, offset=-(wb.index(sh) - (2 + k)))
 
     # ---------------------------------------------------------------- Notes
     wn = wb.create_sheet("Notes")
     put(wn, "A1", "Assumptions and caveats", F_TITLE)
-    notes = list(results.get("notes", []) or []) + [
+    notes = list(results.get("notes", []) or []) + ([sel_note] if sel_note else []) + [
         "Data: NSE bhavcopy and Screener.in only, plus the NIFTY 500 index for the benchmark. Screener values are "
         "today's restated figures carried back, not point-in-time.",
         "Gate B is a human decision. Nothing in this workbook assigns one."]

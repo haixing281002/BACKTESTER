@@ -16,7 +16,7 @@ import argparse
 import json
 import os
 import sys
-from typing import Any, Dict, Optional
+from typing import Any
 
 from ros.agents.orchestrator import AgenticPipeline, reconcile_feasibility
 from ros.cards.schema import load_card
@@ -24,7 +24,7 @@ from ros.data.firm_registry import build_firm_registry
 from ros.feasibility import assess
 
 
-def _fixtures(path: Optional[str]) -> Optional[Dict[str, Any]]:
+def _fixtures(path: str | None) -> dict[str, Any] | None:
     return json.load(open(path, encoding="utf-8")) if path else None
 
 
@@ -73,7 +73,7 @@ def main(argv=None) -> int:
         print(f"    [{eq.confidence.value:>6}] {eq.label} (p{eq.evidence_page}) -> governs {eq.governs}")
         print(f"             {eq.plain_statement}")
 
-    print(f"\nSTEP 02  CARD DRAFT + ADVERSARIAL CRITIQUE")
+    print("\nSTEP 02  CARD DRAFT + ADVERSARIAL CRITIQUE")
     print(f"  mode            : {p.mode}")
     print(f"  template chosen : {t.template or 'NONE -- needs a new one'}")
     print(f"  n_configs (paper): {p.n_configs_estimate}")
@@ -93,7 +93,7 @@ def main(argv=None) -> int:
         for x in c.missed_by_first_pass:
             print(f"    ! {x}")
 
-    print(f"\nSTEP 03  DATA MAPPING (advisory) vs DETERMINISTIC GATE (binding)")
+    print("\nSTEP 03  DATA MAPPING (advisory) vs DETERMINISTIC GATE (binding)")
     if res.card_valid:
         card = load_card(res.card_path)
         det = assess(card, build_firm_registry())
@@ -113,7 +113,7 @@ def main(argv=None) -> int:
     for i, q in enumerate(res.human_review_queue, 1):
         print(f"  {i:>2}. {q}")
 
-    print(f"\nMEMORY  |  precedent consulted, notes banked for next time")
+    print("\nMEMORY  |  precedent consulted, notes banked for next time")
     print("  Nothing here changed a threshold or a decision -- it is context an agent read "
           "before acting, and a note the next similar paper's agents can read in turn.")
     if res.stage_notes:
@@ -127,7 +127,7 @@ def main(argv=None) -> int:
               "run_pipeline.py writes after Gate B.")
 
     usage = res.ledger.totals()
-    print(f"\nLLM USAGE")
+    print("\nLLM USAGE")
     print(f"  calls {usage['n_calls']}   in {usage['input_tokens']:,}   "
           f"out {usage['output_tokens']:,}   cache-read {usage['cache_read_tokens']:,}   "
           f"cache-hit-rate {usage['cache_hit_rate']:.0%}")

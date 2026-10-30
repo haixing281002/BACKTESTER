@@ -34,7 +34,9 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from universal_backtester.accord_data import (
-    load_accord_monthly_universe, build_accord_ticker_bridge, write_accord_ticker_bridge_csv,
+    build_accord_ticker_bridge,
+    load_accord_monthly_universe,
+    write_accord_ticker_bridge_csv,
 )
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

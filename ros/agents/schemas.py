@@ -21,7 +21,7 @@ Two conventions run through all of these:
 from __future__ import annotations
 
 from enum import Enum
-from typing import Dict, List, Literal, Optional
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -51,7 +51,7 @@ class TriageVerdict(BaseModel):
     requires_derivatives: bool
     requires_intraday_data: bool
     one_line_summary: str
-    reject_reason: Optional[str] = Field(
+    reject_reason: str | None = Field(
         default=None, description="If not relevant, the single clearest reason. Null otherwise.")
     confidence: Confidence
 
@@ -107,7 +107,7 @@ class UniverseTranslationFinding(BaseModel):
     source_universe: str = Field(
         description="As the paper CONSTRUCTS it, not as its abstract summarises "
                     "it: 'S&P 500 ex-financials, NYSE breakpoints', not 'US stocks'")
-    source_breadth: Optional[int] = Field(
+    source_breadth: int | None = Field(
         default=None, description="How many securities the paper's universe holds")
     source_selection_rule: str = Field(
         description="How the paper picks from its universe, or 'none' if fixed")
@@ -117,12 +117,12 @@ class UniverseTranslationFinding(BaseModel):
     grade: str = Field(description="exact / close / loose / none")
     rationale: str = Field(description="Why this target, and what drove the choice "
                                        "when several were available")
-    transfer_risks: List[str] = Field(
+    transfer_risks: list[str] = Field(
         description="What breaks in THIS translation specifically. The generic "
                     "India caveats attach automatically -- do not repeat them.")
-    required_instruments: List[str] = Field(
+    required_instruments: list[str] = Field(
         description="What a faithful test needs, in the fund's vocabulary")
-    evidence_page: Optional[int] = None
+    evidence_page: int | None = None
     confidence: Confidence
 
 
@@ -133,7 +133,7 @@ class StrategyReconstructionFinding(BaseModel):
     signal_definition: str = Field(
         description="Every window, lag and skip. How ties break. What happens to "
                     "missing data. Vagueness here is an Ambiguity, not a guess.")
-    inputs_required: List[str] = Field(
+    inputs_required: list[str] = Field(
         description="Data fields consumed, specifically: 'daily adjusted close', "
                     "'as-reported EPS with publication date'")
     cross_sectional: bool = Field(
@@ -152,7 +152,7 @@ class StrategyReconstructionFinding(BaseModel):
                     "plausibly cost -- the short leg often carries the larger half "
                     "of the spread, so this is not a haircut, it can remove most "
                     "of the result.")
-    constraints: List[str]
+    constraints: list[str]
     engine_template: str = Field(
         description="A template from ros.engine.templates.list_templates(), or "
                     "NEEDS_NEW_TEMPLATE. Do not force a bad fit.")
@@ -161,7 +161,7 @@ class StrategyReconstructionFinding(BaseModel):
         description="REQUIRED when engine_template is NEEDS_NEW_TEMPLATE: a spec "
                     "a human can implement from -- inputs, outputs, constraints, "
                     "objective")
-    evidence_pages: List[int]
+    evidence_pages: list[int]
     confidence: Confidence
 
 
@@ -189,8 +189,8 @@ class DataSpecFinding(BaseModel):
 
 
 class DataPlanFinding(BaseModel):
-    ideal: List[DataSpecFinding]
-    rejected_alternatives: List[Dict[str, str]] = Field(
+    ideal: list[DataSpecFinding]
+    rejected_alternatives: list[dict[str, str]] = Field(
         description="each {option, why_not}. A dataset with no rejected "
                     "alternative was not designed, it was assumed")
     granularity_verdict: str
@@ -205,7 +205,7 @@ class DataPlanFinding(BaseModel):
 class SecuritySelectionFinding(BaseModel):
     rule: str = Field(description="always required; a named list without a rule "
                                   "cannot be re-derived on another date")
-    explicit_securities: List[str] = Field(
+    explicit_securities: list[str] = Field(
         default_factory=list,
         description="optional and dangerous. Naming stocks from memory produces a "
                     "plausible unverifiable list, which is WORSE than no list "
@@ -227,72 +227,72 @@ class BacktestPlanFinding(BaseModel):
     why_this_window: str = Field(
         description="an unargued sample is the easiest place to pick a period "
                     "that flatters the result")
-    warmup_days: Optional[int] = None
+    warmup_days: int | None = None
     why_warmup: str = ""
     rebalance_rule: str
     weights_rule: str
-    explicit_weights: Dict[str, float] = Field(default_factory=dict)
-    benchmarks: List[Dict[str, str]] = Field(
+    explicit_weights: dict[str, float] = Field(default_factory=dict)
+    benchmarks: list[dict[str, str]] = Field(
         description="each {name, why_this}. Name the do-nothing option, the "
                     "off-the-shelf product that would replace this for zero "
                     "turnover, and a stripped-down version isolating the machinery")
-    must_beat: List[str] = Field(
+    must_beat: list[str] = Field(
         description="named BEFORE the run, so the bar cannot move afterwards")
     success_looks_like: str
     failure_looks_like: str = Field(
         description="mandatory. A plan that cannot fail is not a test")
-    known_failure_modes: List[str]
+    known_failure_modes: list[str]
 
 
 class PaperAnalysis(BaseModel):
     """What Step 01 produces instead of a bag of regex hits."""
     title: str
-    authors: List[str]
-    year: Optional[int] = None
-    code_url: Optional[str] = Field(default=None, description="Open-source replication code, if the paper publishes any")
+    authors: list[str]
+    year: int | None = None
+    code_url: str | None = Field(default=None, description="Open-source replication code, if the paper publishes any")
 
     universe_description: str
     asset_class: str
     geography: str
-    assets_studied: List[str]
+    assets_studied: list[str]
     benchmark: str
 
     core_mechanism: str = Field(
         description="What actually generates the excess return, in two sentences. "
                     "Not the abstract -- the mechanism.")
     rebalance_frequency: str
-    lookback_days: Optional[int] = None
-    implementation_lag_days: Optional[int] = Field(
+    lookback_days: int | None = None
+    implementation_lag_days: int | None = Field(
         default=None, description="Lag the PAPER assumes, not what we would need")
-    costs_assumed_bps: Optional[float] = None
+    costs_assumed_bps: float | None = None
     long_only: bool
     uses_leverage: bool
     holds_cash: bool = Field(description="Does the strategy hold cash as part of its mechanism?")
 
-    sample_start: Optional[str] = None
-    sample_end: Optional[str] = None
+    sample_start: str | None = None
+    sample_end: str | None = None
 
     # Stage 01's two heaviest outputs. See .claude/commands/ingest.md.
-    universe_translation: Optional[UniverseTranslationFinding] = None
-    strategy: Optional[StrategyReconstructionFinding] = None
+    universe_translation: UniverseTranslationFinding | None = None
+    strategy: StrategyReconstructionFinding | None = None
     # Stage 02's deliverable. See .claude/commands/draft-card.md.
-    data_plan: Optional[DataPlanFinding] = None
-    selection: Optional[SecuritySelectionFinding] = None
-    backtest_plan: Optional[BacktestPlanFinding] = None
+    data_plan: DataPlanFinding | None = None
+    selection: SecuritySelectionFinding | None = None
+    backtest_plan: BacktestPlanFinding | None = None
 
-    data_requirements: List[DataRequirementFinding]
-    reported_results: List[ReportedResult]
-    equations: List[EquationFinding]
+    data_requirements: list[DataRequirementFinding]
+    reported_results: list[ReportedResult]
+    equations: list[EquationFinding]
 
-    accounting_bases_present: List[str] = Field(
+    accounting_bases_present: list[str] = Field(
         description="Every distinct basis the paper reports results on. More than one means "
                     "naive target harvesting produces an unfalsifiable replication test.")
-    hyperparameters_selected_in_sample: List[str] = Field(
+    hyperparameters_selected_in_sample: list[str] = Field(
         description="Any parameter the paper admits choosing by searching the full sample. "
                     "These inflate the trial budget for the deflated Sharpe ratio.")
 
     overall_confidence: Confidence
-    extraction_concerns: List[str] = Field(
+    extraction_concerns: list[str] = Field(
         description="Anything that made reading this document unreliable: scanned pages, "
                     "figures-only results, ambiguous notation.")
 
@@ -307,12 +307,12 @@ class AmbiguityFinding(BaseModel):
     proposed_resolution: str
     materiality: Materiality
     confidence: Confidence
-    evidence_page: Optional[int] = None
+    evidence_page: int | None = None
 
 
 class AmbiguityReport(BaseModel):
-    findings: List[AmbiguityFinding]
-    missed_by_first_pass: List[str] = Field(
+    findings: list[AmbiguityFinding]
+    missed_by_first_pass: list[str] = Field(
         description="Fields the drafting agent recorded as unambiguous that are not.")
 
 
@@ -321,15 +321,15 @@ class CardProposal(BaseModel):
     and a human signs it off at Gate A."""
     card_yaml: str = Field(description="Complete Strategy Card YAML, schema-conformant")
     mode: Literal["replication", "adaptation"]
-    transferred_mechanism: Optional[str] = Field(
+    transferred_mechanism: str | None = Field(
         default=None, description="Required for adaptation cards: what actually carries over")
-    broken_assumptions: List[str] = Field(
+    broken_assumptions: list[str] = Field(
         default_factory=list,
         description="Assumptions the source paper relies on that do not hold in our setting")
     template_choice_reasoning: str
     n_configs_estimate: int = Field(
         description="Honest count of configurations the PAPER tried, including sweeps in appendices")
-    open_questions_for_human: List[str]
+    open_questions_for_human: list[str]
 
 
 # ---------------------------------------------------------------------------
@@ -338,16 +338,16 @@ class CardProposal(BaseModel):
 class RequirementMatch(BaseModel):
     requirement: str
     match_type: Literal["exact", "proxy", "none"]
-    matched_series: Optional[str] = None
+    matched_series: str | None = None
     reasoning: str
-    proxy_risk: Optional[str] = Field(
+    proxy_risk: str | None = Field(
         default=None, description="If a proxy: what economic claim changes by substituting it")
     confidence: Confidence
 
 
 class FeasibilityMapping(BaseModel):
-    matches: List[RequirementMatch]
-    procurement_suggestions: List[str] = Field(
+    matches: list[RequirementMatch]
+    procurement_suggestions: list[str] = Field(
         description="What to buy or license to unblock this paper, most valuable first")
 
 
@@ -355,11 +355,11 @@ class FeasibilityMapping(BaseModel):
 # Step 05 -- TEMPLATE SELECTION. The model picks; it does not write engine code.
 # ---------------------------------------------------------------------------
 class TemplateMatch(BaseModel):
-    template: Optional[str] = Field(
+    template: str | None = Field(
         description="Name of a REGISTERED template, or null if none fits")
     reasoning: str
     param_mapping: str = Field(description="YAML fragment for signal.params")
-    missing_capability: Optional[str] = Field(
+    missing_capability: str | None = Field(
         default=None,
         description="If no template fits: precisely what an allocator would need to do. "
                     "A human writes it; the model does not.")
@@ -384,7 +384,7 @@ class ResultsCritique(BaseModel):
     and says 'that means no timing information', which is a pattern-recognition
     task, not a numerical one.
     """
-    findings: List[CritiqueFinding]
+    findings: list[CritiqueFinding]
     headline_verdict: Literal["result_is_credible", "result_is_fragile", "result_is_not_real"]
     one_paragraph_summary: str
 
@@ -400,6 +400,6 @@ class PriorWorkHit(BaseModel):
 
 
 class LibrarianAnswer(BaseModel):
-    hits: List[PriorWorkHit]
+    hits: list[PriorWorkHit]
     recommendation: Literal["proceed", "proceed_with_narrower_question", "do_not_run"]
     reasoning: str

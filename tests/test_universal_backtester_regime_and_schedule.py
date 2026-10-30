@@ -6,7 +6,6 @@ of approximating around them.
 """
 import numpy as np
 import pandas as pd
-import pytest
 
 from universal_backtester import Backtester, build_allocator
 from universal_backtester.engine import rebalance_dates

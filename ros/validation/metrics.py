@@ -10,8 +10,8 @@ one it is replicating; the engine always computes both.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, asdict
-from typing import Any, Dict, Optional
+from dataclasses import asdict, dataclass
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -45,7 +45,7 @@ def compounded_cash_cagr(rf_daily: pd.Series, index: pd.DatetimeIndex,
 
 
 def sharpe_geometric(value: pd.Series, returns: pd.Series,
-                     rf_daily: Optional[pd.Series] = None, ann: int = ANN) -> float:
+                     rf_daily: pd.Series | None = None, ann: int = ANN) -> float:
     """Paper definition: (CAGR - compounded cash CAGR) / annualised vol."""
     v = ann_vol(returns, ann)
     if not np.isfinite(v) or v == 0:
@@ -54,7 +54,7 @@ def sharpe_geometric(value: pd.Series, returns: pd.Series,
     return float((cagr(value, ann) - rf_cagr) / v)
 
 
-def sharpe_conventional(returns: pd.Series, rf_daily: Optional[pd.Series] = None,
+def sharpe_conventional(returns: pd.Series, rf_daily: pd.Series | None = None,
                         ann: int = ANN) -> float:
     """Conventional definition: arithmetic mean excess return / std, annualised."""
     r = returns.dropna()
@@ -151,11 +151,11 @@ class Metrics:
     start: str = ""
     end: str = ""
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
 
-def compute_metrics(result, rf_daily: Optional[pd.Series] = None,
+def compute_metrics(result, rf_daily: pd.Series | None = None,
                     ann: int = ANN) -> Metrics:
     v, r = result.value, result.returns
     return Metrics(
@@ -171,12 +171,12 @@ def compute_metrics(result, rf_daily: Optional[pd.Series] = None,
         cvar_95_monthly=cvar(r, 0.05, ann),
         vol_consistency=vol_consistency(r, ann),
         hit_rate_monthly=hit_rate_monthly(r),
-        n_obs=int(len(v)),
+        n_obs=len(v),
         start=str(v.index[0].date()), end=str(v.index[-1].date()),
     )
 
 
-def metrics_table(results, rf_daily: Optional[pd.Series] = None) -> pd.DataFrame:
+def metrics_table(results, rf_daily: pd.Series | None = None) -> pd.DataFrame:
     rows = [compute_metrics(r, rf_daily).to_dict() for r in results]
     df = pd.DataFrame(rows).set_index("name")
     return df

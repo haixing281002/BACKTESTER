@@ -40,13 +40,17 @@ LIMITS THAT TRAVEL WITH EVERY NUMBER (they are written into the manifest stanza)
 from __future__ import annotations
 
 import os
-from typing import Dict, Iterable, List, Optional
+import sys
+from collections.abc import Iterable
 
 import numpy as np
 import pandas as pd
 
 from ros.data.nse_bhavcopy_ingest import (
-    build_adjusted_prices, dedupe_rows, link_isins, point_in_time_universe,
+    build_adjusted_prices,
+    dedupe_rows,
+    link_isins,
+    point_in_time_universe,
 )
 from ros.data.screener_parse import load, row
 
@@ -78,7 +82,8 @@ def screener_shares(scr_dir: str, symbols: Iterable[str]) -> pd.DataFrame:
             continue
         try:
             secs, meta = load(scr_dir, sym)
-        except Exception:
+        except Exception as e:                                    # noqa: BLE001
+            print(f"WARN screener panel: {sym} page unreadable, symbol skipped ({e!r})", file=sys.stderr)
             continue
         mcap, px = meta.get("mcap_cr"), meta.get("price")
         shares = mcap / px if (mcap and px and px > 0) else np.nan
@@ -92,8 +97,8 @@ def screener_shares(scr_dir: str, symbols: Iterable[str]) -> pd.DataFrame:
             eq = row(secs["balance-sheet"][0], ["Equity Capital"])
             vals = [v for v in eq.values() if v is not None]
             ec = vals[-1] if vals else np.nan
-        except Exception:
-            pass
+        except Exception as e:                                    # noqa: BLE001
+            print(f"WARN screener panel: {sym} equity capital missing, shares_ec left NaN ({e!r})", file=sys.stderr)
         shares_ec = ec / face if (face and not np.isnan(ec) and face > 0) else np.nan
         promo = np.nan
         try:
@@ -101,8 +106,8 @@ def screener_shares(scr_dir: str, symbols: Iterable[str]) -> pd.DataFrame:
             r = row(sh, ["Promoters"])
             vals = [v for v in r.values() if v is not None]
             promo = vals[-1] if vals else np.nan
-        except Exception:
-            pass
+        except Exception as e:                                    # noqa: BLE001
+            print(f"WARN screener panel: {sym} promoter holding missing, free float left NaN ({e!r})", file=sys.stderr)
         rows.append({"symbol": sym, "shares_cr": shares, "promoter_pct": promo,
                      "free_float_frac": (1 - promo / 100) if not np.isnan(promo) else np.nan,
                      "shares_ec_cr": shares_ec,
@@ -112,7 +117,7 @@ def screener_shares(scr_dir: str, symbols: Iterable[str]) -> pd.DataFrame:
     return pd.DataFrame(rows, columns=cols)
 
 
-def universe_symbols(df: pd.DataFrame, top_n: int = 500, **kw) -> List[str]:
+def universe_symbols(df: pd.DataFrame, top_n: int = 500, **kw) -> list[str]:
     """Latest symbol of every entity that was in the point-in-time top-N at any date.
     This is the list to hand to the Screener fetch."""
     df = dedupe_rows(df)
@@ -170,7 +175,7 @@ def build_turnover_panel(df: pd.DataFrame, shares: pd.DataFrame, top_n: int = 50
     return out.sort_values(["date", "security_id"]).reset_index(drop=True)
 
 
-def coverage_report(panel: pd.DataFrame) -> Dict[str, float]:
+def coverage_report(panel: pd.DataFrame) -> dict[str, float]:
     """How much of the point-in-time universe has a usable turnover value.
     The gap is the survivorship bias: names Screener does not list have no shares."""
     u = panel[panel["in_universe"] == 1]
@@ -180,7 +185,7 @@ def coverage_report(panel: pd.DataFrame) -> Dict[str, float]:
     ents_all = u["security_id"].nunique()
     ents_have = u.loc[have, "security_id"].nunique()
     return {
-        "universe_stock_days": int(len(u)),
+        "universe_stock_days": len(u),
         "stock_days_with_turnover": int(have.sum()),
         "share_of_universe_stock_days_with_turnover": float(have.mean()),
         "entities_ever_in_universe": int(ents_all),

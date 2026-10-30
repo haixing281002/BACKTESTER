@@ -1,10 +1,15 @@
-import sys, json
+import json
+import sys
+
 import numpy as np
 import pandas as pd
 
 sys.path.insert(0, ".")
-from universal_backtester.accord_data import (load_accord_monthly_universe, get_top_n_universe,
-                                              load_accord_daily_price_mcap)
+from universal_backtester.accord_data import (
+    get_top_n_universe,
+    load_accord_daily_price_mcap,
+    load_accord_monthly_universe,
+)
 
 U = "data/raw/stocks/Monthly_uni_new.xlsx"
 D = "data/raw/stocks/prices_marketcap_data_till_03082026.csv"

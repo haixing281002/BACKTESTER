@@ -10,15 +10,18 @@ would catch a bug before it reaches real data.
 """
 import os
 
-import numpy as np
 import pandas as pd
 import pytest
 
-from ros.data.nse_bhavcopy_ingest import (
-    build_adjusted_prices, build_master_csv, combine_cache, dedupe_rows,
-    link_isins, point_in_time_universe,
-)
 from ros.data.master import load_master
+from ros.data.nse_bhavcopy_ingest import (
+    build_adjusted_prices,
+    build_master_csv,
+    combine_cache,
+    dedupe_rows,
+    link_isins,
+    point_in_time_universe,
+)
 
 
 def _row(date, symbol, isin, close, prev, val=1_00_00_000, series="EQ", qty=10_000, trades=500):

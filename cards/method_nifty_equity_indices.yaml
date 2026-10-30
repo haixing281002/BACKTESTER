@@ -1,0 +1,588 @@
+card_version: "1.0"
+
+paper:
+  id: method_nifty_equity_indices
+  title: "Methodology Document for Equity Indices (September 2026)"
+  authors: [NSE Indices Limited]
+  date: "2026-09-01"
+  source_file: docs/papers/method_nifty_equity_indices.pdf
+  source_sha256: "ce478bdd24fb5fb7973fe3e23768469e835c0861db00b9a3c4aa50201f716cef"
+
+intent:
+  mode: adaptation
+  parent_card: ""
+  rationale: >
+    The document is NSE's index rulebook, not a research paper. It reports no returns, so
+    there is nothing to replicate. This card rebuilds ONE of its rule sets, the Nifty500
+    Momentum 50 (PDF pages 205-208), from NSE daily prices and the official NIFTY 500
+    membership, and asks a quick question: twice a year, buy the 50 NIFTY 500 stocks whose
+    price rose most over the last 6 and 12 months for each unit of their own volatility,
+    weight them by free-float size leaned toward the stronger scores, hold for six months,
+    and pay 30bp a round trip. Does that beat NIFTY 500 from December 2022 to September
+    2026? SCOPE IS FIXED BY THE OPERATOR (Gate A note, 2026-10-22, Harshil Pahuja): only the
+    Nifty500 Momentum 50 rule set from the document is in scope, both its constituents (the
+    50 stocks the rules pick at each review) and its backtest, with the universe built from
+    the official NIFTY 500 membership upward. No other index in the document is tested or
+    offered as an alternative. The rebuild is checked against NSE's own published Momentum 50
+    index level, which is in the fund's workbook. It is a first read on about 3.7 years and 8
+    portfolios, not a financing memo.
+  transferred_mechanism: >
+    At the close on the last trading day of May and of November, take the stocks that are
+    NIFTY 500 members that day (official file, joined to bhavcopy on ISIN). Drop those with
+    under 1 year of trading in bhavcopy, the bottom 10% by 6-month average daily traded
+    value, the bottom 10% by turnover ratio, and non-members that hit a price band on 20% or
+    more of the last 6 months' trading days. Score each remaining stock: its 12-month and
+    6-month price returns, each divided by its annualised 1-year volatility, turned into
+    z-scores, averaged 50/50 and normalised (1+Z if Z>=0, else 1/(1-Z)). Keep current
+    holdings ranked in the top 75, force in non-holdings ranked in the top 25, and fill to
+    50 from the top. Weight each by free-float market cap times score, capped at the lower
+    of 5% and 5 times its plain free-float weight. Trade at the close on the last trading
+    day of June and December, then let weights drift for six months. Long only, fully
+    invested.
+  broken_assumptions:
+    - >
+      FREE FLOAT IS A PROXY. NSE weights by its own free-float factor (IWF), which removes
+      promoter, government, FDI, private equity, strategic and locked-in holdings (PDF page
+      319). The rebuild uses price x share count x (1 - promoter holding): today's Screener
+      share count scaled back by annual Equity Capital (split/bonus-neutral), and promoter
+      holding from Screener's shareholding tables as last published before each cut-off; a
+      company with no promoter row counts as 100% free float. Free float is overstated where large non-promoter blocks exist, which moves
+      weights but not which 50 stocks are chosen.
+    - >
+      TWO SCREENS ARE DROPPED OR INFERRED. No promoter-pledge history is on disk, so the
+      20% pledge screen is not applied. F&O status is not on disk, so the price-band screen
+      is applied to every non-member, with band hits inferred from bhavcopy (close at the
+      day's high or low on a move within 0.1 point of a 2/5/10/20% band). Both errors let
+      in a few stocks NSE would exclude.
+    - >
+      3.7 YEARS, NOT 21. The published index starts 1 April 2005 (PDF page 287), much of it
+      back-calculated. Bhavcopy on disk starts 2021-10-04, a 12-month return needs a price
+      13 month-ends back, so the first portfolio is set on 2022-11-30 and bought on
+      2022-12-30. Eight semi-annual portfolios follow to June 2026; the value is tracked to
+      2026-09-18, the last date in the NIFTY 500 workbook.
+    - >
+      COSTS ARE ADDED. The published index pays no trading costs. The rebuild pays 30bp a
+      round trip on every rupee traded, so it should trail the published index even if the
+      rules are reproduced exactly.
+    - >
+      PRICE RETURN ONLY. Bhavcopy has no dividends; the NIFTY 500 and NIFTY500 MOMENTUM 50
+      series in the workbook are price indices too, so the comparison is like for like and
+      understates all three by roughly 1 to 1.5 points a year.
+
+universe:
+  description: >
+    NIFTY 500 members on each review cut-off date, from the official point-in-time file
+    data/raw/nifty500/nifty500_membership.csv (ros.data.nifty500, regular entries only),
+    joined to NSE bhavcopy on ISIN, falling back to the ISIN at the start of the spell and
+    then to that day's symbol where a face-value split changed the ISIN. Delisted and
+    removed names stay in the price history. A holding removed from NIFTY 500 by a merger,
+    delisting or suspension is sold at its last close in the index and replaced; one dropped
+    at a regular NIFTY 500 review stays until the next Momentum review, as the rules say. In
+    mandate.
+  asset_class: equity
+  geography: IN
+  assets:
+    - NSE_BHAVCOPY_STOCK_PANEL
+  benchmark: NIFTY 500
+  cash_asset: null
+
+universe_translation:
+  source_universe: "NIFTY 500 constituents at each June/December review, after the eligibility screens on PDF pages 205-206"
+  source_breadth: 500
+  source_selection_rule: >
+    Eligible = NIFTY 500 member with at least 1 year of listing, under 20% of promoter shares
+    pledged, not in the bottom 10 percentile by 6-month average daily turnover nor by turnover
+    ratio, and (for non-members not in F&O) fewer than 20% of the last 6 months' trading days
+    at a price band. Rank by Normalized Momentum Score; top 50 with a 75/25 rank buffer
+    (PDF pages 205-208).
+  target_universe: "NIFTY 500 constituents"
+  grade: exact
+  # needs_data, as the registry computes: NSE free-float factors are not held (proxied), and the
+  # held price panel and membership file are registered under other names than the universe
+  # table expects (NSE_BHAVCOPY_STOCK_PANEL, nifty500_membership_history).
+  resolution: needs_data
+  rationale: >
+    The source is already Indian equities and already the fund's benchmark universe, so the
+    market is not translated at all; the official membership file gives the exact list on
+    every date. The code's ranking also puts NIFTY 500 first (score 65, against 55 for Midcap
+    150 and 53 for MidSmallcap 400). What is translated is the data: free float, pledges, F&O
+    status and band hits are proxied or dropped (see broken_assumptions).
+  transfer_risks:
+    - "Free-float market cap is proxied by price x current shares x (1 - promoter holding); NSE's IWF also removes government, FDI, PE and locked-in holdings."
+    - "The 20% pledge screen is not applied (no pledge history on disk)."
+    - "The price-band screen is applied to all non-members with inferred band hits, because F&O status is not on disk."
+    - "About 3.7 years and 8 portfolios; a semi-annual strategy gets very few independent bets in that time."
+    - "The published index has no costs and the rebuild pays 30bp, so the gap to the published index mixes rule errors with costs; the gross rebuild is kept in the appendix to separate them."
+  mechanism_needs:
+    needs_cross_section: true
+    min_names: 150
+    cap_segment: all
+    sector: null
+    min_history_years: 5.0
+    must_be_in_mandate: true
+    notes: >
+      The rules pick 50 names with a buffer to rank 75 and a forced-entry band of 25, so
+      the eligible pool must comfortably exceed 75; after the two bottom-10% liquidity cuts
+      about 400 of 500 remain. 150 is the smallest pool where the 75 buffer still means
+      something. The document spans all caps inside NIFTY 500. Five years is a wish: the
+      cache gives about 3.7 years of portfolios.
+  alternatives_considered:
+    - "NIFTY Midcap 150 constituents (ranked second by the code; NSE runs a separate Midcap150 Momentum 50 on it, PDF page 192)"
+    - "NIFTY 200 constituents (NSE's Nifty200 Momentum 30, PDF page 188)"
+  why_not_alternatives: >
+    The Nifty500 Momentum 50 rules name NIFTY 500 as the parent universe (PDF page 205), and
+    the operator's Gate A note limits the work to that one rule set, so the universe is not a
+    free choice here. Midcap 150 and NIFTY 200 are narrower cuts of the same market with
+    their own separate NSE momentum indices; they are recorded only because the code's
+    ranking lists them, and are not tested.
+  required_instruments:
+    - NSE_BHAVCOPY_STOCK_PANEL
+    - nifty500_membership_history
+    - NIFTY 500
+    - NIFTY500 MOMENTUM 50
+  evidence_page: 205
+
+strategy:
+  signal_name: nifty500_momentum50_normalized_momentum_score
+  signal_definition: >
+    At the close of each review cut-off (the last trading day of May and of November), for
+    every eligible stock, using corporate-action-adjusted closes: the 12-month return is the
+    cut-off close divided by the close on the last trading day 12 months earlier, minus 1;
+    the 6-month return uses the last trading day 6 months earlier. Volatility is the standard
+    deviation of daily log returns over the 252 trading days to the cut-off, times the square
+    root of 252. Each return is divided by that volatility (the momentum ratio). Each ratio is
+    turned into a z-score across all eligible stocks (minus the average, divided by the
+    standard deviation). The two z-scores are averaged 50/50. The score is 1 + Z when Z is 0
+    or more, and 1/(1 - Z) when Z is negative, so every score is positive. There is no skip
+    month. A stock needs a close on both look-back dates and at least 200 daily returns in the
+    year to be scored; otherwise it is not ranked. Ties break by higher free-float market cap,
+    then ISIN.
+  inputs_required:
+    - "daily corporate-action-adjusted close per stock, delisted names included, keyed on ISIN (bhavcopy)"
+    - "the bhavcopy-only corporate-action event list (outputs/lightyear/20261021-104144-801e/corporate_action_events.csv), applied to raw closes instead of the master panel's 0.72-1.40 cleaner, so real crashes stay in the 6- and 12-month returns"
+    - "daily traded value per stock (bhavcopy), for the 6-month average daily turnover screen"
+    - "official point-in-time NIFTY 500 membership (data/raw/nifty500/nifty500_membership.csv)"
+    - "free-float market cap per stock at each cut-off: adjusted close x share count at the cut-off (current count scaled by annual Equity Capital, split/bonus-neutral) x (1 - promoter holding last published before the cut-off) (Screener, proxy)"
+    - "daily open/high/low/close and previous close per stock (bhavcopy), to infer price-band hits"
+    - "first trading date per stock in bhavcopy, for the 1-year listing screen"
+    - "NIFTY 500 daily close (benchmark) and NIFTY500 MOMENTUM 50 daily close (reconciliation), from the index workbook"
+  cross_sectional: true
+  formation_rule: >
+    Eligible stocks are NIFTY 500 members on the cut-off date (regular entries) that are
+    still members on the trade date and pass four screens: at least 252 trading days in bhavcopy; not in the bottom 10% of members by
+    average daily traded value over the 6 months to the cut-off; not in the bottom 10% by
+    turnover ratio (that average traded value divided by the 6-month average free-float
+    market cap); and, for stocks not currently held, band hits on fewer than 20% of the last
+    6 months' trading days (a day at both bands counts twice). Rank the eligible stocks by
+    score, best first. Current holdings ranked 1-75 stay. Stocks not held but ranked 1-25 come
+    in, pushing out the lowest-ranked holdings. Holdings ranked below 75, or no longer
+    eligible, leave. Fill any empty places with the best-ranked stocks not held until there
+    are exactly 50. The new portfolio is traded at the close on the last trading day of June
+    or December. Between reviews there is no trading except when a holding leaves NIFTY 500
+    through a merger, delisting or suspension: it is sold at its last close in the index and
+    the money buys the best-ranked eligible stock from the latest review that is not held.
+  weighting_rule: >
+    Each of the 50 gets a raw weight of free-float market cap times score, scaled to 100%.
+    No stock may exceed the lower of 5% and 5 times its plain free-float market-cap weight
+    among the 50; any excess is shared out to the uncapped stocks in proportion to their
+    weights, repeating until no cap binds. Market caps are taken at the cut-off close. Weights
+    are set on the trade date and then drift with prices for six months.
+  holding_period: "six months, until the next June or December rebalance, with weights drifting"
+  rebalance_frequency: "semi-annual: cut-off at the last trading day of May and November, trade at the close on the last trading day of June and December"
+  is_long_short: false
+  long_only_adaptation: ""
+  constraints:
+    - "long only, fully invested, unlevered; cash only for the days between a forced sale and its replacement"
+    - "exactly 50 holdings after each rebalance"
+    - "per-stock cap: lower of 5% and 5 x plain free-float weight"
+    - "signals use data to the cut-off close only; trades happen about a month later, at the close on the last trading day of June or December"
+    - "30bp round-trip cost on every rupee traded, including replacements"
+    - "the SEBI ETF concentration check (quarterly) is not modelled: the document does not reproduce the norms"
+  engine_template: "cross_sectional"
+  template_gap: >
+    The cross_sectional allocator ranks a changing universe and holds a top-k, but it does
+    not apply the 75/25 rank buffer, the free-float-times-score weights with the 5%/5x cap,
+    a cut-off date that differs from the trade date, the four eligibility screens, or a
+    same-day replacement of a stock removed from NIFTY 500. These are plain code in
+    scripts/method_nifty_equity_indices_backtest.py, written at Step 05, run long only
+    through universal_backtester with membership= from ros.data.nifty500.
+  confidence: high
+  evidence_pages: [205, 206, 207, 208, 214, 287, 293, 319]
+
+signal:
+  name: nifty500_momentum50_normalized_momentum_score
+  template: cross_sectional
+  lookback_days: 252
+  lag_days: 1
+  description: >
+    lag_days is 1 at minimum; in practice the trade happens about 21 trading days after the
+    cut-off close, as NSE's calendar implies. lookback_days is the 1-year volatility window;
+    the 12-month return reaches back 13 month-ends. Long only, run through
+    universal_backtester, never a short leg.
+  params:
+    return_windows_months: [12, 6]
+    z_weights: [0.5, 0.5]
+    vol_window_days: 252
+    vol_annualisation: 252
+    min_returns_in_vol_window: 200
+    n_hold: 50
+    buffer_keep_rank: 75
+    forced_entry_rank: 25
+    cap_abs: 0.05
+    cap_multiple_of_ff_weight: 5
+    liquidity_cut_pct: 0.10
+    band_hit_threshold: 0.20
+    band_levels: [0.02, 0.05, 0.10, 0.20]
+    min_listing_days: 252
+    cutoff_months: [5, 11]
+    trade_months: [6, 12]
+    trade_day: last_trading_day
+    sensitivity_trade_day: first_trading_day_after_cutoff
+
+portfolio:
+  # The schema has no semi-annual value. The script checks the calendar at every month-end
+  # and trades only in June and December (strategy.rebalance_frequency, signal.params).
+  rebalance: monthly
+  long_only: true
+  max_gross: 1.0
+  allow_cash: false
+  mandate_allow_cash: false
+  start: "2022-12-30"
+  end: "2026-09-18"
+
+costs:
+  # 30bp round trip: the fund's India floor. The published index charges nothing.
+  # Single-stock rotation at a crowded close costs more, so the run also reports the
+  # breakeven round-trip cost and annual turnover (critique).
+  spread_bps: 30.0
+  cost_model: half_spread
+
+data_requirements:
+  - {name: NSE_BHAVCOPY_STOCK_PANEL, kind: price, frequency: daily, start: "2021-10-04", mandatory: true, purpose: "adjusted closes for returns, volatility and NAV; traded value for the liquidity screens; high/low/close for band hits; first trading date for the listing screen"}
+  - {name: nifty500_membership_history, kind: membership, frequency: daily, start: "2021-10-04", mandatory: true, purpose: "who is eligible on each cut-off date and who leaves NIFTY 500 between reviews (official file, ros.data.nifty500)"}
+  - {name: "Screener.in current shares", kind: fundamental, frequency: annual, start: "2021-10-04", mandatory: true, purpose: "today's share count and promoter holding (declared snapshot), the base of the free-float market-cap proxy used in weights and the turnover-ratio screen"}
+  - {name: "Screener.in annual financials (P&L, balance sheet, cash flow)", kind: fundamental, frequency: annual, start: "2021-03-31", mandatory: false, purpose: "annual Equity Capital, to scale today's share count back to each cut-off so share issues and buybacks show"}
+  - {name: screener_shareholding_history, kind: fundamental, frequency: quarterly, start: "2021-03-31", mandatory: false, purpose: "promoter holding by quarter (from Sep 2023) and by March year-end (2017 on), read from the scr/ page cache; not yet a declared series in MANIFEST.yaml. Without it the declared promoter snapshot is used for every date"}
+  - {name: "NIFTY 500", kind: price, frequency: daily, start: "2022-12-30", mandatory: true, purpose: "fund benchmark (price index); the workbook ends 2026-09-18, which ends the NAV"}
+  - {name: "NIFTY500 MOMENTUM 50", kind: price, frequency: daily, start: "2022-12-30", mandatory: false, purpose: "NSE's published index on these rules, for reconciliation; price index, no costs"}
+
+ambiguities:
+  - field: strategy.rebalance_frequency
+    headline: "Trade date not stated: we trade at end-June/end-December, a month after the cut-off"
+    issue: "The Momentum 50 pages give the data cut-off (last trading day of May and November) and say the rebalance is 'in June and December', but not the effective date."
+    resolution: "Trade at the close on the last trading day of June and December. Run one sensitivity trading at the first close after the cut-off, which shows how much the month's wait costs or gains."
+    confidence: medium
+    material: true
+    evidence_page: 208
+  - field: universe_translation.transfer_risks
+    headline: "Free-float market cap is a proxy: shares x price x (1 - promoter %), from Screener"
+    issue: "NSE weights by its own IWF, which removes many holder categories beyond promoters (PDF page 319). No IWF history is held. A current share count times an adjusted close also misstates past caps for companies that issued or bought back shares since 2022 (critique)."
+    resolution: "Shares at each cut-off = the current Screener share count scaled by the ratio of Equity Capital in the last annual balance sheet published before the cut-off to Equity Capital now, after undoing the same split and bonus factors used on prices (so only real issues and buybacks move it); where Equity Capital is missing, the current count is used and the stock is listed. Promoter holding is the last figure published before the cut-off (quarterly from Sep 2023, March year-ends before that). Report how often the 5% and 5x caps bind, and the stocks whose share count changed by more than 10%."
+    confidence: medium
+    material: true
+    evidence_page: 319
+  - field: strategy.formation_rule
+    headline: "Pledge screen dropped; band screen inferred and applied to all non-members"
+    issue: "No pledge history or F&O list is on disk. NSE also counts band hits from its own price-band records, which bhavcopy does not carry."
+    resolution: "Skip the pledge screen. Count a band hit when the close equals the day's high (or low) and the close-to-close move is within 0.1 point of +/-2, 5, 10 or 20%; apply the 20% test to every stock not currently held. Report how many stocks each screen removes at each review."
+    confidence: medium
+    material: true
+    evidence_page: 206
+  - field: strategy.signal_definition
+    headline: "Volatility annualisation and minimum history are not stated"
+    issue: "The document says 'annualised standard deviation of lognormal daily returns for 1 year' without the factor or the treatment of missing days."
+    resolution: "252 trading days, factor sqrt(252), at least 200 returns needed. The factor cancels in the z-scores, so it changes nothing; the minimum-history rule decides which recent listings are scored."
+    confidence: high
+    material: false
+    evidence_page: 206
+  - field: strategy.formation_rule
+    headline: "Turnover ratio is defined on another index's page; applied here by analogy"
+    issue: "The Momentum 50 pages use 'turnover ratio' without defining it; the Multifactor MQVLv 50 page (PDF 214) defines it as 6-month ADT divided by 6-month average free-float market cap."
+    resolution: "Use that definition."
+    confidence: high
+    material: false
+    evidence_page: 214
+  - field: strategy.weighting_rule
+    headline: "How capped weight is redistributed is not stated"
+    issue: "The cap is the lower of 5% and 5x free-float weight; the document does not say where the excess goes."
+    resolution: "Share excess pro rata among uncapped stocks, iterating until no cap binds (standard practice)."
+    confidence: medium
+    material: false
+    evidence_page: 207
+  - field: portfolio.rebalance
+    headline: "Schema has no semi-annual option: field says monthly, trades happen only June/December"
+    issue: "portfolio.rebalance accepts daily, weekly, monthly, quarterly, annual or calendar_year_end. The rules are semi-annual."
+    resolution: "Set to monthly because the Step 05 script checks the calendar at each month-end; it trades only in June and December (plus forced replacements). The true schedule is in strategy.rebalance_frequency and signal.params (cutoff_months, trade_months). Adding a semi_annual value to the schema is a code change for a human to review."
+    confidence: high
+    material: false
+    evidence_page: 293
+  - field: strategy.formation_rule
+    headline: "Ad hoc replacement when a holding leaves NIFTY 500 between reviews"
+    issue: "The document says an ad hoc reconstitution happens but not how the replacement is chosen or weighted."
+    resolution: "Sell at the last close in NIFTY 500; buy the best-ranked eligible non-holding from the latest review with the proceeds. A stock dropped at a regular NIFTY 500 review stays until the next Momentum review, as stated."
+    confidence: medium
+    material: false
+    evidence_page: 208
+
+data_plan:
+  ideal:
+    - field: "daily close, high, low, previous close and traded value per NSE stock, delisted names included, keyed on ISIN, with split/bonus/demerger factors and real falls kept"
+      granularity: daily
+      history_from: "2013-04-01"
+      why: "The score needs 6- and 12-month returns and a 1-year volatility from daily log returns; the screens need 6-month average traded value and daily band hits; the NAV needs daily prices."
+      why_granularity: "Volatility is defined on daily returns and band hits are daily events, so monthly data cannot form the signal; intraday adds nothing to a rule that trades at one close twice a year."
+      why_history: "From April 2013, when the official NIFTY 500 membership file begins: about 26 semi-annual portfolios through the 2015-16 and 2018-19 mid-cap falls and the 2020 crash and rebound, the setting where momentum is known to fail."
+      adjustments: "Splits, bonuses and demergers removed using a signed-off bhavcopy event list; real one-day crashes kept (the master panel's 0.72-1.40 cleaner would hide them inside the look-back returns); price return."
+      minimum_viable: true
+    - field: "point-in-time NIFTY 500 membership with NSE effective dates"
+      granularity: daily
+      history_from: "2013-04-18"
+      why: "The universe is NIFTY 500 members at each review; holdings leave when they leave the index."
+      why_granularity: "Changes take effect on specific days, including ad hoc removals between reviews, so a month-end list would miss them."
+      why_history: "Same window as prices; the official file starts 2013-04-18."
+      adjustments: "Effective dates, not announcement dates; renamed symbols and ISIN changes followed; demerger placeholders dropped."
+      minimum_viable: true
+    - field: "NSE investible weight factor (IWF) and share count per stock, quarterly, as used by NSE on each date"
+      granularity: quarterly
+      history_from: "2013-04-01"
+      why: "Weights are free-float market cap x score and the cap is 5x free-float weight; the turnover-ratio screen divides by free-float cap."
+      why_granularity: "NSE updates IWFs from quarterly shareholding filings; daily would add nothing, annual would miss changes."
+      why_history: "Same window as prices."
+      adjustments: "IWF as NSE applied it (all excluded holder categories), with the date it took effect."
+      minimum_viable: false
+    - field: "promoter pledge percentage and F&O stock list, by date"
+      granularity: quarterly
+      history_from: "2013-04-01"
+      why: "Two eligibility screens: pledge above 20% excluded; the band screen applies only to non-F&O stocks."
+      why_granularity: "Pledge is disclosed quarterly; the F&O list changes a few times a year."
+      why_history: "Same window as prices."
+      adjustments: "As disclosed, with publication date."
+      minimum_viable: false
+    - field: "NIFTY 500 and NIFTY500 MOMENTUM 50 daily closes"
+      granularity: daily
+      history_from: "2013-04-01"
+      why: "The fund benchmark, and NSE's own index on these rules to check the rebuild against."
+      why_granularity: "Daily, to match the NAV."
+      why_history: "Same window; only the post-launch part of the Momentum 50 series is live."
+      adjustments: "Price indices, matching the price-return rebuild."
+      minimum_viable: true
+  rejected_alternatives:
+    - option: "Use only NSE's published NIFTY500 MOMENTUM 50 series, no rebuild"
+      why_not: "It has no costs, its pre-launch history is back-calculated, and it cannot show turnover, holdings, the trade-date sensitivity or what the machinery adds; it is kept as the reconciliation sleeve instead."
+    - option: "Monthly closes from the master panel"
+      why_not: "Volatility and band hits are defined on daily data, and the master panel's cleaner flattens real crashes."
+    - option: "A top-500-by-traded-value universe"
+      why_not: "The rules name NIFTY 500 and the official membership file is held; a traded-value proxy already favours recently popular (high-momentum) stocks."
+    - option: "What is held now: bhavcopy from 2021-10-04, the official membership, Screener share and promoter data"
+      why_not: "Not rejected, it is what runs. Its shortfalls: 8 portfolios instead of about 26, a promoter-only free-float proxy, no pledge or F&O data."
+  granularity_verdict: "Daily prices are right and necessary; the binding limit is years of history, not frequency."
+  optimality_argument: >
+    The rules define every input on daily NSE data plus index membership and free float, so
+    the right test is a rebuild on NSE's own daily prices inside the official NIFTY 500
+    membership, with NSE's free-float factors, checked against NSE's published index. Longer
+    history is the one addition that changes what can be concluded; IWF, pledge and F&O data
+    make the rebuild closer to NSE's but would not change which way the answer goes.
+  what_would_change_the_answer: >
+    Bhavcopy back to 2013 could change the verdict: 8 portfolios in one rally-and-correction
+    window cannot separate an edge from luck. IWF history, pledge and F&O data change only how
+    closely the rebuild tracks NSE's index, and so what may be claimed about NSE's exact rules.
+
+replication_targets: []
+
+benchmark_templates:
+  - {name: "Rebuild, gross of costs (appendix: separates rule errors from costs when compared with the published index)", template: cross_sectional, params: {cost_bps: 0}, rebalance: monthly}
+  - {name: "Hold NSE's published NIFTY500 MOMENTUM 50 index (the free alternative: what an index fund on these rules gives; the one extra sleeve)", template: fixed_weight, params: {weights: {"NIFTY500 MOMENTUM 50": 1.0}}, rebalance: annual}
+
+selection:
+  rule: >
+    Built from the universe up, at each cut-off (last trading day of May and November, from
+    2022-11-30 to 2026-05-29). Step 1, the universe: the official NIFTY 500 members that day
+    (data/raw/nifty500/nifty500_membership.csv via ros.data.nifty500), joined to bhavcopy on
+    ISIN. Step 2, the eligible pool: those members passing the listing, liquidity,
+    turnover-ratio and band screens. Step 3, the constituents: the 50 ranked by Normalized
+    Momentum Score with the 75/25 buffer, weighted by free-float market cap x score with the
+    5%/5x cap. No stocks are named in advance; the list is re-derived on every date from the
+    membership file and bhavcopy. The run writes all three steps to files for every review:
+    the universe (about 500 rows), the eligible pool with each screen's pass/fail, and the 50
+    constituents with symbol, ISIN, rank, both momentum ratios, score, weight, and whether the
+    stock entered, stayed or left. These lists are the operator's "constituents" deliverable.
+  explicit_securities: []
+  verified_against: master_universe
+  as_of: "2026-10-22"
+  why_these: "The rule is the whole decision; naming stocks from memory would only add an unverifiable list."
+
+backtest_plan:
+  sample_start: "2022-12-30"
+  sample_end: "2026-09-18"
+  why_this_window: >
+    Bhavcopy on disk starts 2021-10-04. The first cut-off with a full 12-month look-back is
+    2022-11-30 (it needs the 2021-11-30 close), so the first portfolio is bought at the
+    2022-12-30 close. Reviews follow every six months to the 2026-05-29 cut-off (bought
+    2026-06-30), eight portfolios in all. The value is tracked to 2026-09-18, the last date
+    in the NIFTY 500 workbook (bhavcopy goes further, but no refresh is possible in
+    cached-data mode). The window holds the 2023-24 mid and small-cap rally and the
+    2024-26 corrections; it holds no deep bear market.
+  warmup_days: 290
+  why_warmup: "About 13 months of prices before the first cut-off: the 12-month return reaches back to the 2021-11-30 close, and the volatility window needs 252 daily returns."
+  rebalance_rule: "Write the universe, eligible pool and 50 constituents (with ranks, scores and weights) for each of the 8 reviews. Report annual one-way turnover and the breakeven round-trip cost alongside the headline. Semi-annual. Rank on data to the last trading day of May/November; trade at the close on the last trading day of June/December. Forced replacements in between when a holding leaves NIFTY 500 by merger, delisting or suspension. Sensitivity: trade at the first close after the cut-off."
+  weights_rule: "Free-float market cap x score, capped at the lower of 5% and 5x plain free-float weight, excess shared pro rata; drift between rebalances; fully invested."
+  explicit_weights: {}
+  benchmarks:
+    - name: "NIFTY 500 (price index)"
+      why_this: "The fund benchmark and the do-nothing choice. The only comparator in the headline table and charts."
+    - name: "NIFTY500 MOMENTUM 50 (NSE's published price index)"
+      why_this: "The off-the-shelf product: an index fund could own this for little cost. It is the one extra sleeve, on its own chart, and tells us whether the rebuild matches the rules."
+    - name: "Rebuild gross of costs (appendix)"
+      why_this: "Compared with the published index it separates rule-reproduction error from the 30bp cost."
+  must_beat:
+    - "NIFTY 500 price index on annualised return, net of 30bp round-trip costs"
+    - "NIFTY 500 on Sharpe ratio: (annualised mean daily return minus the flat 6% hurdle) / annualised daily volatility, arithmetic, sqrt(252), the same formula for both"
+  success_looks_like: >
+    The rebuild, net of costs, returns more than NIFTY 500 over the window and also more per
+    unit of risk, and the gross rebuild tracks NSE's published Momentum 50: daily return
+    correlation above 0.95 and an annual return gap under 2 points. The edge keeps its sign
+    when the trade happens right after the cut-off instead of a month later, and the
+    breakeven round-trip cost (the cost at which the net edge over NIFTY 500 is zero) is
+    60bp or more, twice the floor, since single stocks at a crowded close cost more than 30bp.
+  failure_looks_like: >
+    Any of: no edge over NIFTY 500 after costs; an edge that disappears or flips with the
+    other trade date; a breakeven cost under 60bp (fragile: realistic single-stock costs
+    would remove it); the gross rebuild drifting from the published index by more than 2
+    points a year or correlating below 0.95 (then the rebuild is not testing NSE's rules and
+    no conclusion about them holds); or the result resting on two or three stocks. With 8
+    portfolios over 3.7 years, a gap of a few points a year either way is treated as noise,
+    not as evidence.
+  known_failure_modes:
+    - "SHORT SAMPLE: 8 semi-annual portfolios; momentum has long losing streaks, and a 3.7-year window can sit inside one."
+    - "MOMENTUM CRASHES: momentum tends to lose hardest in sharp market rebounds; the window may not contain one."
+    - "FREE-FLOAT PROXY moves weights and the 5x cap; a stock with large non-promoter locked holdings gets too much weight."
+    - "SCREENS: the dropped pledge screen and inferred band screen let in a few stocks NSE would exclude."
+    - "CROWDED REBALANCE: index funds tracking momentum indices trade at the same close, so fills at that close may be worse than the price used."
+
+data_requests:
+  - item: "NSE bhavcopy back to April 2013 (the start of the official NIFTY 500 membership file)"
+    why: "Eight semi-annual portfolios cannot tell a real momentum edge from luck. The membership file already reaches back to 2013; only prices are missing."
+    unlocks: "About 26 portfolios from June 2014, through the 2015-16 and 2018-19 mid-cap falls and the March 2020 crash and rebound (the classic momentum-crash setting)."
+    without_it: "The run reads one 3.7-year window with no deep bear market. Any edge is reported as a read on that window only, and the published index's longer history (much of it back-calculated) cannot be checked against a rebuild."
+    priority: high
+    satisfies: ["daily corporate-action-adjusted close and traded value per stock, delisted names included, keyed on ISIN"]
+    headline: "8 portfolios is too few; bhavcopy from 2013 would give about 26"
+    format_hint: "the same daily files the bhavcopy downloader writes to cache/, further back"
+  - item: "NSE IWF (free-float factor) history per stock, quarterly"
+    why: "Weights and the 5x cap depend on free float; the proxy removes only promoter holdings."
+    unlocks: "NSE's own weights, so remaining differences from the published index are rule errors, not data errors."
+    without_it: "Free float = 1 - promoter holding from Screener. Weights for PSUs and companies with large FDI or strategic blocks are overstated; the stock list itself is unaffected, and the gross-versus-published comparison shows the size of the effect."
+    priority: nice_to_have
+    satisfies: ["free-float market cap per stock at each cut-off"]
+    headline: "NSE IWF history would replace the free-float proxy (changes weights, not the stock list)"
+    format_hint: "date, isin, iwf"
+  - item: "Promoter pledge percentage and F&O stock list history"
+    why: "Two eligibility screens need them."
+    unlocks: "The full NSE screen set."
+    without_it: "Pledge screen skipped and band screen applied to all non-members; each removes only a handful of stocks a review, and the run reports how many."
+    priority: nice_to_have
+    satisfies: ["promoter pledge percentage per stock", "F&O segment membership per stock"]
+    headline: "Pledge and F&O history would complete two minor screens"
+    format_hint: "date, isin, pledged_pct / date, symbol, in_fo"
+  - item: "NSE's published Nifty500 Momentum 50 constituent lists at each review (from NSE's semi-annual reconstitution press releases or index factsheets)"
+    why: "The operator wants the constituents. Only NSE's index level is on disk, so the rebuilt 50 names can be checked against NSE only indirectly, through how closely the two return series move."
+    unlocks: "A name-by-name overlap count at each review (how many of our 50 NSE also held), the most direct check that the rules are reproduced."
+    without_it: "The rebuilt lists are reported as the rules' output on our data, labelled 'rebuilt, not NSE's official list'. The rebuild is checked only through the gross-of-cost return correlation (above 0.95) and annual gap (under 2 points) against NSE's published index level."
+    priority: nice_to_have
+    satisfies: ["NIFTY 500 daily close (benchmark) and NIFTY500 MOMENTUM 50 daily close (reconciliation), from the index workbook"]
+    headline: "NSE's official Momentum 50 lists would allow a name-by-name check; not on disk, not fetched"
+    format_hint: "review_date, symbol, isin"
+
+open_questions:
+  - question: "The convertibility chain is not written. Write it now or after the quick test?"
+    why_it_matters: "A thin chain would look checked and not be. (The data plan was written at Gate A assembly because Gate A's own check blocks without one; it is argued from the rules, not thin.)"
+    what_i_assumed: "Deferred until the quick-test result says momentum shows up at all, per CLAUDE.md's quick-test default."
+    headline: "Convertibility deferred until the quick test reports"
+    ask_of: researcher
+    blocks_run: false
+  - question: "Is n_configs_tried = 7 honest?"
+    why_it_matters: "The deflated Sharpe depends on how many related rules were in the running."
+    what_i_assumed: "7, kept even though the operator named Momentum 50 directly: the document holds 7 momentum-family rule sets (Nifty200 Momentum 30, Midcap150 Momentum 50, Nifty500 Momentum 50 and four Momentum Quality indices), and NSE published this one knowing how its siblings did. Lowering the count would flatter the deflated Sharpe. The repo's earlier momentum cards (Clenow, Lee-Swaminathan, Chen) are counted by the library, not here. The trade-date sensitivity adds one."
+    headline: "n_configs_tried = 7 momentum rule sets in the document; the library adds earlier momentum cards"
+    ask_of: researcher
+    blocks_run: false
+  - question: "Is NSE's published Momentum 50 the right single extra sleeve on the charts?"
+    why_it_matters: "Presentation allows one extra sleeve; it should be the one that matters."
+    what_i_assumed: "Yes: it is both the off-the-shelf alternative and the check that the rebuild follows NSE's rules."
+    headline: "Show NSE's published Momentum 50 as the one extra sleeve"
+    ask_of: pm
+    blocks_run: false
+
+n_configs_tried: 7
+
+notes: >
+  Quick-test card (CLAUDE.md default 2026-10-06). The source document is NSE's index
+  rulebook, not a research paper; one rule set (Nifty500 Momentum 50) is rebuilt, and per
+  the operator's Gate A note (2026-10-22) it is the only one in scope: constituents and
+  backtest, universe built from the official NIFTY 500 file. Revised at that note: other
+  rule sets removed as alternatives, the equal-weight plain top-50 comparator dropped, the
+  per-review constituent files made an explicit output, and a request for NSE's official
+  lists added. convertibility is deliberately omitted; data_plan was written because Gate
+  A's own check blocks without one. Page numbers are PDF pages (the printed footer
+  number is one lower). Data: NSE bhavcopy, Screener (cached), the official NIFTY 500
+  membership file and the index workbook; cached data only, nothing downloaded.
+
+india_notes:
+  - category: execution
+    item: >
+      Index funds and ETFs on NSE's momentum indices all trade at the same rebalance close,
+      and the incoming names are known from NSE's announcement before that date. Prices of
+      incoming stocks can be pushed up, and outgoing ones down, before and at the close.
+    why: "A rebuild filled at that close assumes no impact; the real fill for a fund doing the same trade is worse."
+    triggered_by: "trade at the semi-annual rebalance close (PDF page 208)"
+    addresses: ["daily corporate-action-adjusted close per stock, delisted names included, keyed on ISIN (bhavcopy)"]
+    evidence_page: 208
+  - category: validity
+    item: >
+      The published NIFTY500 MOMENTUM 50 history starts at a 1 April 2005 base date, but the
+      index was launched much later, so its early history is back-calculated with hindsight
+      about which rules to publish. Only the post-launch part is live.
+    why: "Comparing the rebuild with the published index over 2022-26 is fair; leaning on the index's long history as evidence for momentum in India is not."
+    triggered_by: "base date April 01, 2005 (PDF page 287)"
+    addresses: ["NIFTY 500 daily close (benchmark) and NIFTY500 MOMENTUM 50 daily close (reconciliation), from the index workbook"]
+    evidence_page: 287
+  - category: data
+    item: >
+      Screener's promoter holding is the as-reported quarterly figure, published up to about
+      three weeks after quarter end, and before September 2023 only March year-end figures
+      are on disk. Use the latest figure published before each cut-off.
+    why: "Using a later quarter's free float would leak future information into weights."
+    triggered_by: "weights from free-float market cap (PDF page 207)"
+    addresses: ["free-float market cap per stock at each cut-off: adjusted close x share count at the cut-off (current count scaled by annual Equity Capital, split/bonus-neutral) x (1 - promoter holding last published before the cut-off) (Screener, proxy)"]
+    evidence_page: 207
+  - category: execution
+    item: >
+      Stocks at the top of a momentum ranking are the ones most often at their upper price
+      band on the trade date, when a buy may not fill.
+    why: "Small and mid-cap NSE names carry 5-20% daily bands."
+    triggered_by: "buy the top-ranked stocks at one close (PDF page 208)"
+    addresses: ["daily open/high/low/close and previous close per stock (bhavcopy), to infer price-band hits"]
+    evidence_page: 206
+  - category: data
+    item: >
+      The official NIFTY 500 membership file runs to 2026-10-21, past the end of this run
+      (2026-09-18), so no part of the run is outside its coverage. It matched 125 of 128 NSE
+      snapshots exactly (README). Join on ISIN, then the ISIN at the start of the spell, then
+      the day's symbol: on test dates this finds every regular member in the price panel
+      except TATAMTRDVR (Tata Motors DVR, a separate line until August 2024), which is not in
+      the panel and is left out.
+    why: "Membership decides the universe; a member with no price would quietly shrink it."
+    triggered_by: "stocks forming part of the Nifty 500 at the time of review (PDF page 205)"
+    addresses: ["official point-in-time NIFTY 500 membership (data/raw/nifty500/nifty500_membership.csv)"]
+    evidence_page: 205
+  - category: data
+    item: >
+      The 1-year listing screen is measured from a stock's first day in the bhavcopy cache,
+      which starts 2021-10-04. Every stock trading on that day already has more than a year
+      by the first cut-off (2022-11-30); a stock that moved from the SME or trade-for-trade
+      series to the main board can look newer than it is, so the screen is applied to the
+      main-board EQ/BE history and any member excluded only by this screen is listed.
+    why: "A wrong listing date drops a recently migrated stock that NSE would rank."
+    triggered_by: "minimum listing history of 1 year (PDF page 205)"
+    addresses: ["first trading date per stock in bhavcopy, for the 1-year listing screen"]
+    evidence_page: 205

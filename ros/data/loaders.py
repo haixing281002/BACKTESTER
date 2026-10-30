@@ -8,9 +8,8 @@ from __future__ import annotations
 
 import hashlib
 import re
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
-import numpy as np
 import pandas as pd
 
 
@@ -25,7 +24,7 @@ def file_sha256(path: str) -> str:
 def load_nse_factor_workbook(
     path: str,
     sheet: str | int = 0,
-) -> Tuple[pd.DataFrame, Dict[str, Any]]:
+) -> tuple[pd.DataFrame, dict[str, Any]]:
     """Load an NSE index workbook (factor sleeves or broad-market indices).
 
     Layout handled: a banner row of index names, a row of field names, one
@@ -61,8 +60,8 @@ def load_nse_factor_workbook(
 
     # index names sit on the row above the field row
     name_row = date_row - 1
-    series: Dict[str, pd.Series] = {}
-    field_names: Dict[str, str] = {}
+    series: dict[str, pd.Series] = {}
+    field_names: dict[str, str] = {}
     all_dates = pd.to_datetime(raw.iloc[date_row + 1:, date_col], errors="coerce")
 
     # bound to the contiguous run of valid dates starting right after the
@@ -133,7 +132,7 @@ def load_nse_factor_workbook(
         "path": path,
         "sha256": file_sha256(path),
         "sheet": str(sheet),
-        "n_rows": int(len(df)),
+        "n_rows": len(df),
         "n_series": int(df.shape[1]),
         "date_min": str(df.index.min().date()),
         "date_max": str(df.index.max().date()),
@@ -156,7 +155,7 @@ def load_nse_factor_workbook(
     return df, prov
 
 
-def load_nse_workbook_combined(path: str) -> Tuple[pd.DataFrame, Dict[str, Any]]:
+def load_nse_workbook_combined(path: str) -> tuple[pd.DataFrame, dict[str, Any]]:
     """Load every sheet of an NSE index workbook and combine into one wide frame.
 
     Some exports (e.g. broad-market indices and factor sleeves) split into
@@ -170,9 +169,9 @@ def load_nse_workbook_combined(path: str) -> Tuple[pd.DataFrame, Dict[str, Any]]
     combined into one column.
     """
     sheets = pd.ExcelFile(path).sheet_names
-    frames: List[pd.DataFrame] = []
-    provs: List[Dict[str, Any]] = []
-    seen: Dict[str, str] = {}
+    frames: list[pd.DataFrame] = []
+    provs: list[dict[str, Any]] = []
+    seen: dict[str, str] = {}
     for sheet in sheets:
         df, prov = load_nse_factor_workbook(path, sheet=sheet)
         for col in df.columns:
@@ -191,7 +190,7 @@ def load_nse_workbook_combined(path: str) -> Tuple[pd.DataFrame, Dict[str, Any]]
         "path": path,
         "sha256": file_sha256(path),
         "sheets": [p["sheet"] for p in provs],
-        "n_rows": int(len(combined)),
+        "n_rows": len(combined),
         "n_series": int(combined.shape[1]),
         "date_min": str(combined.index.min().date()),
         "date_max": str(combined.index.max().date()),
@@ -219,7 +218,7 @@ def synthetic_cash_series(
 
 def audit_frame(df: pd.DataFrame) -> pd.DataFrame:
     """Per-series data-quality audit run before any backtest touches the data."""
-    rows: List[Dict[str, Any]] = []
+    rows: list[dict[str, Any]] = []
     for c in df.columns:
         s = df[c].dropna()
         if s.empty:

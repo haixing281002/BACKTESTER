@@ -48,15 +48,21 @@ from __future__ import annotations
 
 import argparse
 import os
-from typing import Dict, Optional
 
 import numpy as np
 import pandas as pd
 
-from universal_backtester.accord_data import (
-    build_accord_ticker_bridge, load_accord_monthly_universe, load_accord_price_panel,
+from ros.data.nse_bhavcopy_ingest import (
+    build_adjusted_prices,
+    combine_cache,
+    dedupe_rows,
+    link_isins,
 )
-from ros.data.nse_bhavcopy_ingest import build_adjusted_prices, combine_cache, dedupe_rows, link_isins
+from universal_backtester.accord_data import (
+    build_accord_ticker_bridge,
+    load_accord_monthly_universe,
+    load_accord_price_panel,
+)
 
 
 def bhavcopy_symbol_map(raw: pd.DataFrame, links) -> pd.Series:
@@ -85,9 +91,9 @@ def reconcile(accord_price: pd.DataFrame, accord_bridge: pd.DataFrame,
     # dropping NaNs column-by-column before zipping silently pairs each
     # symbol with the wrong code once the two columns' lengths diverge.
     known = accord_bridge.dropna(subset=["nse_symbol", "accord_code"])
-    sym_to_code: Dict[str, int] = dict(zip(known["nse_symbol"], known["accord_code"].astype(int)))
+    sym_to_code: dict[str, int] = dict(zip(known["nse_symbol"], known["accord_code"].astype(int)))
     changed = set(accord_bridge.loc[accord_bridge["symbol_ever_changed"], "accord_code"].astype(int))
-    sym_to_ent: Dict[str, str] = {s: e for e, s in nse_symbol.items()}
+    sym_to_ent: dict[str, str] = {s: e for e, s in nse_symbol.items()}
 
     common_symbols = sorted(set(sym_to_code) & set(sym_to_ent))
     rows = []
@@ -166,7 +172,7 @@ def main() -> None:
     n_review = int((report["status"] == "REVIEW").sum()) if n else 0
     n_skip = int((report["status"] == "too_few_common_days").sum()) if n else 0
 
-    print(f"Accord <-> NSE bhavcopy reconciliation")
+    print("Accord <-> NSE bhavcopy reconciliation")
     print(f"  symbols matched on both sides : {n}")
     print(f"  ok                             : {n_ok}")
     print(f"  REVIEW                         : {n_review}")

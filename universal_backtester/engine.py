@@ -15,8 +15,9 @@ Two properties it guarantees, because they are where backtests lie:
 """
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -84,7 +85,7 @@ class BacktestResult:
     costs: pd.Series
     cash_weight: pd.Series
     rebalances: pd.DatetimeIndex
-    meta: Dict[str, Any] = field(default_factory=dict)
+    meta: dict[str, Any] = field(default_factory=dict)
 
     @property
     def cash_drag_days(self) -> int:
@@ -97,13 +98,13 @@ class Backtester:
     def __init__(
         self,
         prices: pd.DataFrame,
-        assets: List[str],
-        rf_daily: Optional[pd.Series] = None,
+        assets: list[str],
+        rf_daily: pd.Series | None = None,
         spread_bps: float = 10.0,
         lag_days: int = 0,
         allow_cash: bool = True,
         ann: int = 252,
-        membership: Optional[pd.DataFrame] = None,
+        membership: pd.DataFrame | None = None,
         allow_short: bool = False,
         max_gross_exposure: float = 1.0,
         short_borrow_bps: float = 0.0,
@@ -166,9 +167,9 @@ class Backtester:
         self,
         allocator: Allocator,
         rebalance: str = "monthly",
-        alpha: Optional[pd.DataFrame] = None,
-        vols: Optional[pd.DataFrame] = None,
-        regime: Optional[pd.Series] = None,
+        alpha: pd.DataFrame | None = None,
+        vols: pd.DataFrame | None = None,
+        regime: pd.Series | None = None,
         rf_horizon_days: int = 21,
         name: str = "strategy",
         warmup: int = 0,
@@ -231,7 +232,7 @@ class Backtester:
         w = np.zeros(self.n)
         first_rebal_done = False
         vals, wts, tos, cst, csh = [], [], [], [], []
-        used_rebals: List[pd.Timestamp] = []
+        used_rebals: list[pd.Timestamp] = []
         stale = 0
         n_forced = 0
         rets_arr = self.returns.to_numpy(dtype=float)

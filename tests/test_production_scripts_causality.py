@@ -17,7 +17,7 @@ import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from universal_backtester.engine import assert_causal, LookaheadError
+from universal_backtester.engine import LookaheadError, assert_causal
 
 
 def _synthetic_prices(n_names=15, n_days=400, seed=1):
@@ -89,7 +89,8 @@ def test_asness_composite_zscore_is_causal_once_shifted():
     dates is exactly the kind of signal a broken merge or an off-by-one on
     known_date could quietly turn into a leak."""
     from scripts.asness_2015_india_value_longshort_backtest import (
-        build_daily_step, zscore_cross_section,
+        build_daily_step,
+        zscore_cross_section,
     )
 
     prices, idx, names = _synthetic_prices(n_names=12, n_days=300)

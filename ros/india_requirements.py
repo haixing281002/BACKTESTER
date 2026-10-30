@@ -26,7 +26,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from typing import Any, List, Optional
+from typing import Any
 
 DATA, TIMING, EXECUTION, COST, VALIDITY = (
     "data", "timing", "execution", "cost", "validity")
@@ -51,27 +51,27 @@ _FUNDAMENTAL = re.compile(
     r"\bearnings\b|\beps\b|\bsales\b|\brevenue\b|\baccruals?\b|"
     r"\bro[ace]\b|\bmargins?\b|\bdebt\b|shareholders?\s*equity|"
     r"cash\s*flow|\bebitda?\b|dividend\s*yield|\bpayout\b|\bvaluation\b|"
-    r"\bfundamentals?\b|balance\s*sheet|\bprofits?\b|\bassets?\b", re.I)
+    r"\bfundamentals?\b|balance\s*sheet|\bprofits?\b|\bassets?\b", re.IGNORECASE)
 _VOLUME = re.compile(
     r"\bvolumes?\b|\bturnover\b|\bliquidity\b|\badv\b|traded\s*value|"
-    r"\bamihud\b|\billiquidity\b", re.I)
+    r"\bamihud\b|\billiquidity\b", re.IGNORECASE)
 _PRICE = re.compile(
     r"\bprices?\b|\bclose\b|\breturns?\b|\bmomentum\b|\breversal\b|"
-    r"\bvolatilit(y|ies)\b|\bbeta\b", re.I)
+    r"\bvolatilit(y|ies)\b|\bbeta\b", re.IGNORECASE)
 _MOMENTUM = re.compile(
-    r"\bmomentum\b|\breversals?\b|\btrend\b|\bbreakout\b|52.?week", re.I)
+    r"\bmomentum\b|\breversals?\b|\btrend\b|\bbreakout\b|52.?week", re.IGNORECASE)
 _CAPWEIGHT = re.compile(
     r"market\s*cap|\bmcap\b|cap.?weight|value.?weight|free.?float|"
-    r"\bsize\s*(sort|factor|decile)", re.I)
+    r"\bsize\s*(sort|factor|decile)", re.IGNORECASE)
 _RISKWEIGHT = re.compile(
-    r"inverse.?vol|risk\s*parity|\bcovariance\b|risk\s*contribution", re.I)
+    r"inverse.?vol|risk\s*parity|\bcovariance\b|risk\s*contribution", re.IGNORECASE)
 # The rules had NO cash rule at all, while CLAUDE.md fixes it as a standing
 # fact of this fund: there is no Indian risk-free series, so an un-invested
 # residual earns a declared constant. A card whose whole mechanism de-risks
 # into cash raised nothing about the series that mechanism runs on.
 _CASH = re.compile(
     r"\bcash\b|risk.?free|\brf\b|\bt.?bills?\b|\brepo\b|\bmibor\b|"
-    r"overnight\s*rate|\bdeposits?\b|\byields?\b", re.I)
+    r"overnight\s*rate|\bdeposits?\b|\byields?\b", re.IGNORECASE)
 
 FAST_REBALANCE = {"daily", "weekly"}
 THIN_SEGMENTS = {"small", "mid_small", "micro"}
@@ -93,7 +93,7 @@ class Requirement:
     # exactly as fallible as the reading. Merging them without saying which is
     # which would let a model's opinion inherit the authority of the floor.
     source: str = RULES
-    evidence_page: Optional[int] = None
+    evidence_page: int | None = None
 
     def render(self, width: int = 88) -> str:
         mark = "MUST" if self.blocking else "note"
@@ -108,7 +108,7 @@ class Requirement:
         return "\n".join(out)
 
 
-def _wrap(text: str, width: int) -> List[str]:
+def _wrap(text: str, width: int) -> list[str]:
     words, lines, cur = " ".join(text.split()).split(" "), [], ""
     for w in words:
         if cur and len(cur) + 1 + len(w) > width:
@@ -123,25 +123,25 @@ def _wrap(text: str, width: int) -> List[str]:
 
 @dataclass
 class IndiaRequirements:
-    requirements: List[Requirement] = field(default_factory=list)
-    matched_on: List[str] = field(default_factory=list)
-    unmatched_inputs: List[str] = field(default_factory=list)
+    requirements: list[Requirement] = field(default_factory=list)
+    matched_on: list[str] = field(default_factory=list)
+    unmatched_inputs: list[str] = field(default_factory=list)
     # Of the inputs the patterns did not recognise, the ones a model note picked
     # up -- and the ones still nobody has looked at. The second list is the
     # point: an unmatched input used to be a line of prose asking a human to be
     # careful, which is not a mechanism.
-    addressed_inputs: List[str] = field(default_factory=list)
-    unaddressed_inputs: List[str] = field(default_factory=list)
+    addressed_inputs: list[str] = field(default_factory=list)
+    unaddressed_inputs: list[str] = field(default_factory=list)
 
-    def of(self, category: str) -> List[Requirement]:
+    def of(self, category: str) -> list[Requirement]:
         return [r for r in self.requirements if r.category == category]
 
     @property
-    def blocking(self) -> List[Requirement]:
+    def blocking(self) -> list[Requirement]:
         return [r for r in self.requirements if r.blocking]
 
     @property
-    def from_model(self) -> List[Requirement]:
+    def from_model(self) -> list[Requirement]:
         return [r for r in self.requirements if r.source == MODEL]
 
     def render(self) -> str:
@@ -191,7 +191,7 @@ class IndiaRequirements:
         return "\n".join(L)
 
 
-def derive(card, translation_check: Optional[Any] = None) -> IndiaRequirements:
+def derive(card, translation_check: Any | None = None) -> IndiaRequirements:
     """Everything this specific strategy needs, in an Indian context."""
     req = IndiaRequirements()
     def add(category, item, why, blocking=True, triggered_by=""):

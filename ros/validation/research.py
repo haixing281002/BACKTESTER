@@ -13,15 +13,21 @@ Contents:
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field, asdict
-from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
+from collections.abc import Callable, Sequence
+from dataclasses import asdict, dataclass
+from typing import Any
 
 import numpy as np
 import pandas as pd
 from scipy import stats
 
 from ros.validation.metrics import (
-    ANN, cagr, ann_vol, max_drawdown, sharpe_geometric, sharpe_conventional)
+    ANN,
+    ann_vol,
+    cagr,
+    max_drawdown,
+    sharpe_geometric,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -40,14 +46,14 @@ class GapRow:
 
 
 def replication_gap(card, metrics_df: pd.DataFrame,
-                    name_map: Optional[Dict[str, str]] = None) -> pd.DataFrame:
+                    name_map: dict[str, str] | None = None) -> pd.DataFrame:
     """Compare our metrics against the card's replication targets.
 
     A replication is REPLICATED only if every mandatory target passes. Partial
     passes are reported, never averaged away into a 'mostly replicated' verdict.
     """
     name_map = name_map or {}
-    rows: List[GapRow] = []
+    rows: list[GapRow] = []
     for t in card.replication_targets:
         ours_name = name_map.get(t.portfolio, t.portfolio)
         if ours_name not in metrics_df.index or t.metric not in metrics_df.columns:
@@ -67,7 +73,7 @@ def replication_gap(card, metrics_df: pd.DataFrame,
 # ---------------------------------------------------------------------------
 # Sub-periods and walk-forward
 # ---------------------------------------------------------------------------
-def subperiod_table(results, rf_daily: Optional[pd.Series] = None,
+def subperiod_table(results, rf_daily: pd.Series | None = None,
                     n_periods: int = 4, metric: str = "sharpe") -> pd.DataFrame:
     """Split the sample into equal calendar blocks and report `metric` in each.
 
@@ -75,9 +81,9 @@ def subperiod_table(results, rf_daily: Optional[pd.Series] = None,
     """
     idx = results[0].value.index
     edges = pd.date_range(idx[0], idx[-1], periods=n_periods + 1)
-    out: Dict[str, Dict[str, float]] = {}
+    out: dict[str, dict[str, float]] = {}
     for res in results:
-        row: Dict[str, float] = {}
+        row: dict[str, float] = {}
         for i in range(n_periods):
             lo, hi = edges[i], edges[i + 1]
             v = res.value.loc[lo:hi]
@@ -104,7 +110,7 @@ def subperiod_table(results, rf_daily: Optional[pd.Series] = None,
 
 
 def walk_forward_split(index: pd.DatetimeIndex, n_folds: int = 4,
-                       min_train_years: float = 5.0) -> List[Tuple[pd.Timestamp, pd.Timestamp]]:
+                       min_train_years: float = 5.0) -> list[tuple[pd.Timestamp, pd.Timestamp]]:
     """Anchored (expanding-window) walk-forward test windows.
 
     Anchored rather than rolling because a strategy whose parameters are refit on
@@ -151,13 +157,13 @@ def _stationary_bootstrap_index(n: int, mean_block: int, rng) -> np.ndarray:
 
 
 def stationary_bootstrap(
-    returns_map: Dict[str, pd.Series],
-    rf_daily: Optional[pd.Series] = None,
+    returns_map: dict[str, pd.Series],
+    rf_daily: pd.Series | None = None,
     n_boot: int = 2000,
     mean_block: int = 21,
     seed: int = 7,
-    baseline: Optional[str] = None,
-) -> Dict[str, Any]:
+    baseline: str | None = None,
+) -> dict[str, Any]:
     """Bootstrap CIs for CAGR / Sharpe / maxDD, plus PAIRED Sharpe differences.
 
     All series are resampled with the SAME index draw in each replication, so the
@@ -208,7 +214,7 @@ def stationary_bootstrap(
             return [float("nan"), float("nan")]
         return [float(np.percentile(a, 2.5)), float(np.percentile(a, 97.5))]
 
-    out: Dict[str, Any] = {
+    out: dict[str, Any] = {
         "n_boot": n_boot, "mean_block": mean_block, "n_obs": n,
         "intervals": {nm: {m: ci(v) for m, v in d.items()} for nm, d in stats_out.items()},
     }
@@ -255,8 +261,8 @@ def expected_max_sharpe(n_trials: int, var_sharpe: float = 1.0) -> float:
 
 
 def deflated_sharpe(returns: pd.Series, n_trials: int,
-                    rf_daily: Optional[pd.Series] = None,
-                    ann: int = ANN, benchmark_sharpe: Optional[float] = None) -> Dict[str, Any]:
+                    rf_daily: pd.Series | None = None,
+                    ann: int = ANN, benchmark_sharpe: float | None = None) -> dict[str, Any]:
     """Probability the observed Sharpe exceeds the selection-adjusted threshold,
     correcting for non-normality (skew and kurtosis) as well as trial count."""
     r = returns.dropna()
@@ -295,7 +301,7 @@ def deflated_sharpe(returns: pd.Series, n_trials: int,
 # Sensitivity
 # ---------------------------------------------------------------------------
 def cost_sensitivity(run_fn: Callable[[float], Any], spreads_bps: Sequence[float],
-                     rf_daily: Optional[pd.Series] = None) -> pd.DataFrame:
+                     rf_daily: pd.Series | None = None) -> pd.DataFrame:
     """Re-run the strategy at several cost assumptions.
 
     `run_fn(spread_bps) -> BacktestResult`. The breakeven cost -- where the edge
@@ -313,7 +319,7 @@ def cost_sensitivity(run_fn: Callable[[float], Any], spreads_bps: Sequence[float
 
 
 def lag_sensitivity(run_fn: Callable[[int], Any], lags: Sequence[int],
-                    rf_daily: Optional[pd.Series] = None) -> pd.DataFrame:
+                    rf_daily: pd.Series | None = None) -> pd.DataFrame:
     """Re-run under increasing implementation lag.
 
     A real signal decays gently. A signal whose Sharpe collapses when you trade

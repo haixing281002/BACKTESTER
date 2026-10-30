@@ -259,13 +259,17 @@ def main():
     ap.add_argument("--handoff", default=os.path.join(OUT, "lightyear", "20261013-144347-3bf7"))
     a = ap.parse_args()
     os.makedirs(OUT, exist_ok=True)
-    from universal_backtester.engine import LookaheadError, assert_causal
-    from universal_backtester.validation import (bootstrap_sharpe_ci, deflated_sharpe_from_returns,
-                                                 oos_stability_summary, walk_forward_windows)
     from ros.validation.portfolio import factor_fingerprint
+    from universal_backtester.engine import LookaheadError, assert_causal
+    from universal_backtester.validation import (
+        bootstrap_sharpe_ci,
+        deflated_sharpe_from_returns,
+        oos_stability_summary,
+        walk_forward_windows,
+    )
     res: dict = {}
     half = SPREAD_BPS / 1e4 / 2
-    pr = lambda *x, **k: print(*x, flush=True, **k)  # noqa: E731
+    pr = lambda *x, **k: print(*x, flush=True, **k)
 
     pr("Card: 1_s2_0_s0970389623000538_main  (AS DRAFTED and approved at Gate A)")
     # ---------------- Stage 04: point-in-time inputs ------------------------------------------
@@ -705,7 +709,7 @@ def main():
     res["gate_b"] = gb.to_dict()
     res["gate_b_inputs"] = {"research": research, "portfolio": portfolio}
     res["oos_windows"] = oos.to_dict("records")
-    res["window"] = {"first_trade": str(first_trade.date()), "end": str(end.date()), "n_daily_returns": int(len(ret_main)), "years": yrs}
+    res["window"] = {"first_trade": str(first_trade.date()), "end": str(end.date()), "n_daily_returns": len(ret_main), "years": yrs}
     json.dump(res, open(os.path.join(OUT, f"{SLUG}_results.json"), "w", encoding="utf-8"), indent=1, default=str)
     pr(f"\nResults written to {OUT} ({SLUG}_*). Gate B is a human decision and is NOT assigned by this script.")
 

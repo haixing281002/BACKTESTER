@@ -8,10 +8,15 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from ros.engine.backtest import Backtester, LookaheadError, assert_causal, rebalance_dates
+from ros.engine.backtest import (
+    Backtester,
+    LookaheadError,
+    assert_causal,
+    rebalance_dates,
+)
 from ros.engine.templates import build_allocator
-from ros.validation.metrics import cagr, max_drawdown, sharpe_conventional
-from ros.validation.research import expected_max_sharpe, _stationary_bootstrap_index
+from ros.validation.metrics import cagr, max_drawdown
+from ros.validation.research import _stationary_bootstrap_index, expected_max_sharpe
 
 
 def _prices(n=800, seed=0, drift=0.0003, vol=0.01, k=3):

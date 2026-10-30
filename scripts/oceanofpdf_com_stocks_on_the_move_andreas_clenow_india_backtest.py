@@ -1,11 +1,11 @@
 """Steps 04 to 07 for cards/oceanofpdf_com_stocks_on_the_move_andreas_clenow.yaml (Gate A rerun 2, 2026-10-16).
 
 Clenow's "Stocks on the Move" ranking, held as a plain monthly top-20, 5% each, long only, GROSS (0bp everywhere).
-Data: NSE bhavcopy from cache/ (nothing fetched), the corporate-action event list and the OFFICIAL NSE NIFTY 500
-membership file in the run folder, and the NIFTY 500 workbook for the benchmark.
+Data: NSE bhavcopy from cache/ (nothing fetched), the corporate-action event list in the run folder, the OFFICIAL
+NSE NIFTY 500 membership file data/raw/nifty500/nifty500_membership.csv, and the NIFTY 500 workbook for the benchmark.
 
 MAIN       last trading day of each month d: score every list member (point-in-time OFFICIAL NIFTY 500, see
-           nifty500_pit_official.csv) on d's close by exp(slope*250)-1 times R^2 of an OLS fit of ln(adj close) on day
+           data/raw/nifty500/nifty500_membership.csv) on d's close by exp(slope*250)-1 times R^2 of an OLS fit of ln(adj close) on day
            number over 120 trading days; rule out close < 100-day average and any one-day move > 15% in the last
            120 days; hold the first 20 left walking down the full ranking, 5% each, whole shares, Rs 10 crore start.
            EVERY trade is at THAT SAME close d; the new book earns returns from d+1. No position earns a return on or
@@ -32,29 +32,42 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import numpy as np
 import pandas as pd
 
+from ros.validation.portfolio import factor_fingerprint
 from universal_backtester.data import load_banner_workbook
 from universal_backtester.metrics import ann_vol as _ann_vol
 from universal_backtester.metrics import cagr as _cagr
 from universal_backtester.metrics import max_drawdown as _mdd
 from universal_backtester.validation import (
-    bootstrap_sharpe_ci, deflated_sharpe_from_returns, oos_stability_summary, walk_forward_windows,
+    bootstrap_sharpe_ci,
+    deflated_sharpe_from_returns,
+    oos_stability_summary,
+    walk_forward_windows,
 )
-from ros.validation.portfolio import factor_fingerprint
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CACHE = os.path.join(REPO, "cache")
 INDEX_PATH = os.path.join(REPO, "data", "raw", "NSE_Broad_Factor_Indices_Historical_Data.xlsx")
 CARD = os.path.join(REPO, "cards", "oceanofpdf_com_stocks_on_the_move_andreas_clenow.yaml")
-RUN = os.path.join(REPO, "outputs", "lightyear", "20261016-102923-bdc1")
-EVENTS = os.path.join(RUN, "corporate_action_events.csv")
-# HARDCODED (operator, rerun 3): the OFFICIAL NSE NIFTY 500 membership, rebuilt from NSE's archived
-# ind_nifty500list.csv files plus every NSE Indices press release that changed NIFTY 500 (semi-annual reviews
-# and ad-hoc replacements), each applied from the effective date NSE states. A list change effective on a
-# month-end day is already in force at that day's close, so that rebalance ranks the NEW list.
-# The Accord proxy (nifty500_pit_accord.csv) is no longer used.
-PIT = os.path.join(RUN, "nifty500_pit_official.csv")
+# The run folder the hand-off files go to. CLENOW_RUN selects it; the default is the run that holds the published
+# results (20261021-104144-801e, a rerun of 20261016-102923-bdc1). A run folder without scratch/all_raw.pkl rebuilds
+# the panel from cache/, which is deterministic, so the numbers do not depend on which folder is chosen.
+RUN = os.environ.get("CLENOW_RUN", os.path.join(REPO, "outputs", "lightyear", "20261021-104144-801e"))
+# The signed-off corporate-action list (operator, 2026-10-21), kept under data/processed/ as a declared input
+# rather than read from a gitignored run folder. CA_EVENTS overrides it; its sha256 goes into manifest.json.
+EVENTS = os.environ.get("CA_EVENTS", os.path.join(REPO, "data", "processed", "corporate_actions",
+                                                  "corporate_action_events_20261021.csv"))
+# HARDCODED (operator, 2026-10-21): the repo's official NIFTY 500 membership file,
+# data/raw/nifty500/nifty500_membership.csv, read through ros.data.nifty500. Rebuilt from NSE's month-end
+# constituent files, IndexInclExcl.xls and every NSE Indices press release, checked against 128 NSE snapshots.
+# A change effective on a month-end day is already in force at that day's close, so that rebalance ranks the
+# NEW list. Replaces the run-folder file nifty500_pit_official.csv used by rerun 3 (and the Accord proxy before it).
+from ros.data import nifty500 as N500
+
 SCRATCH = os.path.join(RUN, "scratch")
-OUT = os.path.join(REPO, "outputs")
+# The bhavcopy panel cache (all_raw.pkl). CLENOW_PANEL_CACHE lets a rerun reuse the original run's cache so
+# the prices are identical and only the universe changes.
+PANEL_CACHE = os.environ.get("CLENOW_PANEL_CACHE", os.path.join(SCRATCH, "all_raw.pkl"))
+OUT = os.environ.get("CLENOW_OUT", os.path.join(REPO, "outputs"))   # summary tables and charts; a rerun keeps its own
 SLUG = "oceanofpdf_com_stocks_on_the_move_andreas_clenow"
 
 FIRST_SIGNAL = pd.Timestamp("2022-04-29")
@@ -73,7 +86,7 @@ NAMES = {}
 
 # ------------------------------------------------------------------ data (step 04) ------------------------
 def build_panel():
-    pk = os.path.join(SCRATCH, "all_raw.pkl")
+    pk = PANEL_CACHE
     if os.path.exists(pk):
         raw = pd.read_pickle(pk)
     else:
@@ -127,15 +140,19 @@ class Membership:
     """Point-in-time OFFICIAL NIFTY 500: the list in effect on a date, as ISIN roots present in the panel."""
 
     def __init__(self, root, columns):
-        p = pd.read_csv(PIT, parse_dates=["list_date", "effective_from", "effective_to"])
-        p["ID"] = p["isin"].map(root)
+        m = N500.load_membership()                       # regular members only (no demerger placeholders)
+        cuts = [d for d in N500.change_dates(m) if d >= N500.FIRST_DATE] + [pd.Timestamp("2099-12-31")]
         self.periods = []
         self.missing = 0
         cols = set(columns)
-        for (lf, ef, et), g in p.groupby(["list_date", "effective_from", "effective_to"]):
-            ids = [i for i in g["ID"].unique() if i in cols]
-            self.missing += g["ID"].nunique() - len(ids)
-            self.periods.append((ef, et, pd.Index(ids), lf))
+        for ef, nxt in zip(cuts[:-1], cuts[1:]):
+            g = N500.members_on(ef, m)
+            g_ids = pd.Index(g["isin"].map(root).unique())
+            ids = [i for i in g_ids if i in cols]
+            if nxt > FIRST_SIGNAL - pd.Timedelta(days=40):
+                self.missing += len(g_ids) - len(ids)
+            # (effective_from, effective_to inclusive, members, the date this list took effect)
+            self.periods.append((ef, nxt - pd.Timedelta(days=1), pd.Index(ids), ef))
         self.periods.sort(key=lambda x: x[0])
 
     def on(self, d):
@@ -360,7 +377,7 @@ def simulate(adj, rawpx, val20, mem, sigdates, firstpos, jump=JUMP):
             nav_after = cash + sum(val_of(j, t) for j in units)
             w_after = {j: val_of(j, t) / nav_after for j in units}
             shares_after = {j: units[j] * row[j] / rrow[j] if not np.isnan(rrow[j]) else np.nan for j in units}
-            n_elig = int(len(elig))
+            n_elig = len(elig)
             reason = ""
             if len(target) < N_HOLD:
                 a = int((sg["below_ma"] & ~sg["jump"]).sum()); b = int((sg["jump"] & ~sg["below_ma"]).sum()); both = int((sg["jump"] & sg["below_ma"]).sum())
@@ -374,7 +391,7 @@ def simulate(adj, rawpx, val20, mem, sigdates, firstpos, jump=JUMP):
                 v20 = val20.iloc[t, j]
                 liq[cols[j]] = (float(units[j] * row[j] / 1e7 / v20) if (v20 and not np.isnan(v20) and v20 > 0) else np.nan)
             recs.append({"signal_date": d, "fill_date": d, "list_date": mem.list_date(d),
-                         "n_members": int(len(members)), "n_ranked": int(len(sg)), "n_eligible": n_elig,
+                         "n_members": len(members), "n_ranked": len(sg), "n_eligible": n_elig,
                          "n_below_ma": int(sg["below_ma"].sum()), "n_jump": int(sg["jump"].sum()),
                          "target": [cols[j] for j in target], "skipped_untradeable": skipped,
                          "elig_order": list(elig.index[:N_HOLD + len(skipped) + 5]),
@@ -445,9 +462,13 @@ def ew_universe(adj, mem, sigdates):
 
 
 def stats(v, r, label, rf_annual=RF_ANNUAL):
+    # Sharpe is (mean daily return x 252 - hurdle) / (daily std x sqrt 252): the one definition every Lightyear
+    # script and the workbook use. Until 2026-10-28 this script used (CAGR - hurdle) / vol, which gave a
+    # different number under the same label.
     c, vol = _cagr(v), _ann_vol(r)
-    return {"name": label, "cagr": float(c), "vol": float(vol), "sharpe_over_hurdle": float((c - rf_annual) / vol) if vol > 0 else float("nan"),
-            "max_dd": float(_mdd(v)), "total_return": float(v.iloc[-1] / v.iloc[0] - 1.0), "n_days": int(len(r)),
+    sharpe = float((r.mean() * 252 - rf_annual) / (r.std() * math.sqrt(252))) if vol > 0 else float("nan")
+    return {"name": label, "cagr": float(c), "vol": float(vol), "sharpe_over_hurdle": sharpe,
+            "max_dd": float(_mdd(v)), "total_return": float(v.iloc[-1] / v.iloc[0] - 1.0), "n_days": len(r),
             "start": str(v.index[0].date()), "end": str(v.index[-1].date())}
 
 
@@ -668,7 +689,7 @@ def main():
     lg = pd.DataFrame([{k: v for k, v in r.items() if k in ("signal_date", "fill_date", "list_date", "n_members", "n_ranked", "n_eligible", "n_below_ma",
                                                            "n_jump", "n_held", "empty_slots", "reason", "max_weight", "cash_weight", "nav")} for r in recs])
     lg.to_csv(os.path.join(OUT, f"{SLUG}_rebalance_log.csv"), index=False)
-    res["breadth"] = {"rebalances": int(len(lg)), "min_held": int(lg["n_held"].min()), "months_below_20": int((lg["n_held"] < N_HOLD).sum()),
+    res["breadth"] = {"rebalances": len(lg), "min_held": int(lg["n_held"].min()), "months_below_20": int((lg["n_held"] < N_HOLD).sum()),
                       "months_below_5": int((lg["n_held"] < 5).sum()), "max_single_weight": float(lg["max_weight"].max()),
                       "months_over_25pct": int((lg["max_weight"] > 0.25).sum()), "avg_eligible": float(lg["n_eligible"].mean()),
                       "min_eligible": int(lg["n_eligible"].min()), "avg_ranked": float(lg["n_ranked"].mean()),
@@ -967,6 +988,18 @@ def main():
             print("charts:", res["charts"])
         except Exception as e:
             print("charts skipped:", repr(e))
+    # ---------------- lineage: what exactly this run read, with hashes ----------------
+    from ros.data.lineage import write_run_manifest
+    res["manifest"] = os.path.relpath(write_run_manifest(
+        a.handoff, __file__,
+        inputs={"card": CARD, "corporate_action_events": EVENTS, "nifty500_membership": N500.MEMBERSHIP_CSV,
+                "index_workbook": INDEX_PATH, "bhavcopy_cache": CACHE},
+        params={"first_signal": str(FIRST_SIGNAL.date()), "sample_end": str(SAMPLE_END.date()), "window": WINDOW, "ma": MA,
+                "jump": JUMP, "n_hold": N_HOLD, "cost_bp_round_trip": 0.0, "rf_annual": RF_ANNUAL,
+                "n_trials_card": N_CONFIGS_CARD, "n_trials_used": n_wide,
+                "sharpe_definition": "(mean daily return x 252 - rf_annual) / (daily std x sqrt 252)"},
+        outputs=("daily_returns.csv", "comparators.csv", "holdings.csv", "trades.csv", "selection.csv")), REPO)
+    print("manifest:", res["manifest"])
     json.dump(res, open(os.path.join(OUT, f"{SLUG}_results.json"), "w", encoding="utf-8"), indent=1, default=str)
     print("\nDone. Gate B decision is not assigned by this script.")
 

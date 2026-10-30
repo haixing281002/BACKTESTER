@@ -13,11 +13,9 @@ MORE skilful than the evidence supports. It fails in the flattering direction,
 which is why it survived unnoticed.
 """
 import ast
-import io
 import os
 
 from ros.governance.library import LibraryEntry, StrategyLibrary, make_entry_id
-
 
 MOMENTUM = {"MOMENTUM 30": 0.82, "QUALITY 30": 0.11, "LOW VOL 30": -0.06,
             "VALUE 50": 0.04}
@@ -159,7 +157,7 @@ def _call_lines(tree, attr):
 
 
 def test_the_pipeline_asks_for_the_union_budget():
-    tree = ast.parse(io.open(_PIPELINE, encoding="utf-8").read())
+    tree = ast.parse(open(_PIPELINE, encoding="utf-8").read())
     assert _call_lines(tree, "prior_trials"), (
         "run_pipeline.py must use prior_trials(); trials_for_family() alone "
         "counts a renamed re-run of the same bet as zero.")
@@ -169,7 +167,7 @@ def test_the_pipeline_asks_for_the_union_budget():
 
 
 def test_the_fingerprint_is_computed_before_the_budget_needs_it():
-    tree = ast.parse(io.open(_PIPELINE, encoding="utf-8").read())
+    tree = ast.parse(open(_PIPELINE, encoding="utf-8").read())
     fp = _call_lines(tree, "factor_fingerprint")
     budget = _call_lines(tree, "prior_trials")
     dsr = _call_lines(tree, "deflated_sharpe")
@@ -183,5 +181,5 @@ def test_the_fingerprint_is_computed_before_the_budget_needs_it():
 
 def test_the_fingerprint_is_computed_once():
     """Two calls would mean two objects that can silently disagree."""
-    tree = ast.parse(io.open(_PIPELINE, encoding="utf-8").read())
+    tree = ast.parse(open(_PIPELINE, encoding="utf-8").read())
     assert len(_call_lines(tree, "factor_fingerprint")) == 1

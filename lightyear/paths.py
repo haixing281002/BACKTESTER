@@ -1,5 +1,6 @@
 """Where Lightyear reads and writes. Everything a run produces lives under outputs/lightyear/<run_id>/."""
 import glob
+import json
 import os
 import re
 import shutil
@@ -49,3 +50,25 @@ def find_claude() -> str:
             return tuple(int(x) for x in m.groups()) if m else (0, 0, 0)
         return max(hits, key=ver)
     raise FileNotFoundError("Claude Code CLI not found. Install it, or set LIGHTYEAR_CLAUDE to claude.exe's full path.")
+
+
+def git_bash():
+    """Git Bash for the headless session on Windows (PowerShell can be blocked by policy). Looks at
+    $CLAUDE_CODE_GIT_BASH_PATH, then the same key in ~/.claude/settings.json's env block, then bash on PATH when it
+    belongs to a Git install, then the usual install folders. Returns None when nothing exists; never a guess."""
+    cands = [os.environ.get("CLAUDE_CODE_GIT_BASH_PATH")]
+    try:
+        with open(os.path.expanduser(os.path.join("~", ".claude", "settings.json")), encoding="utf-8") as fh:
+            cands.append((json.load(fh).get("env") or {}).get("CLAUDE_CODE_GIT_BASH_PATH"))
+    except (OSError, ValueError):
+        pass
+    on_path = shutil.which("bash")
+    if on_path and "git" in on_path.lower():
+        cands.append(on_path)
+    for base in (os.environ.get("LOCALAPPDATA"), os.environ.get("ProgramFiles"), os.environ.get("ProgramFiles(x86)")):
+        if base:
+            cands += [os.path.join(base, "Programs", "Git", "bin", "bash.exe"), os.path.join(base, "Git", "bin", "bash.exe")]
+    for c in cands:
+        if c and os.path.isfile(c):
+            return c
+    return None

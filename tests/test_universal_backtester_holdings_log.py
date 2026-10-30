@@ -3,11 +3,9 @@ rule actually pick" -- read directly off a BacktestResult's own weights
 and rebalance dates, not reconstructed or summarized away."""
 import os
 from dataclasses import dataclass, field
-from typing import Any, Dict
+from typing import Any
 
-import numpy as np
 import pandas as pd
-import pytest
 
 from universal_backtester.data import write_holdings_log
 
@@ -22,7 +20,7 @@ class _FakeResult:
     turnover: pd.Series = None
     costs: pd.Series = None
     cash_weight: pd.Series = None
-    meta: Dict[str, Any] = field(default_factory=dict)
+    meta: dict[str, Any] = field(default_factory=dict)
 
 
 def _make_result():

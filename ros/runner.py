@@ -6,11 +6,9 @@ params, and benchmarks by its benchmark_templates list.
 """
 from __future__ import annotations
 
-import os
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any
 
-import numpy as np
 import pandas as pd
 
 from ros.cards.schema import StrategyCard
@@ -21,7 +19,7 @@ from ros.engine.prepare import build_signal_inputs, strategic_vector
 from ros.engine.templates import build_allocator
 
 
-def _resolve_params(params: Dict[str, Any], assets: List[str]) -> Dict[str, Any]:
+def _resolve_params(params: dict[str, Any], assets: list[str]) -> dict[str, Any]:
     """Expand card shorthands ('equal') into concrete allocator arguments."""
     out = dict(params or {})
     for key in ("weights", "strategic_weights"):
@@ -58,19 +56,19 @@ def buy_and_hold(prices: pd.Series, name: str) -> BacktestResult:
 class RunSet:
     """Everything one card produced: the strategy, its variants, its benchmarks."""
     primary: BacktestResult
-    mandate: Optional[BacktestResult]
-    benchmarks: List[BacktestResult] = field(default_factory=list)
-    references: List[BacktestResult] = field(default_factory=list)
-    inputs: Dict[str, Any] = field(default_factory=dict)
+    mandate: BacktestResult | None
+    benchmarks: list[BacktestResult] = field(default_factory=list)
+    references: list[BacktestResult] = field(default_factory=list)
+    inputs: dict[str, Any] = field(default_factory=dict)
     n_configs_run: int = 0
 
-    def all_results(self) -> List[BacktestResult]:
+    def all_results(self) -> list[BacktestResult]:
         out = [self.primary]
         if self.mandate is not None:
             out.append(self.mandate)
         return out + self.benchmarks + self.references
 
-    def by_name(self, name: str) -> Optional[BacktestResult]:
+    def by_name(self, name: str) -> BacktestResult | None:
         return next((r for r in self.all_results() if r.name == name), None)
 
 
@@ -78,10 +76,10 @@ def execute_card(
     card: StrategyCard,
     snapshot: Snapshot,
     cash_rate: float = 0.06,
-    reference_assets: Optional[List[str]] = None,
-    spread_bps_override: Optional[float] = None,
-    lag_override: Optional[int] = None,
-    warmup_days: Optional[int] = None,
+    reference_assets: list[str] | None = None,
+    spread_bps_override: float | None = None,
+    lag_override: int | None = None,
+    warmup_days: int | None = None,
 ) -> RunSet:
     """Step 05 -- build and execute every portfolio the card defines."""
     assets = list(card.universe.assets)
@@ -108,7 +106,7 @@ def execute_card(
         return Backtester(prices=prices, assets=assets, rf_daily=rf,
                           spread_bps=spread_bps, lag_days=lag_days, allow_cash=allow_cash)
 
-    def run_one(template: str, params: Dict[str, Any], name: str, rebalance: str,
+    def run_one(template: str, params: dict[str, Any], name: str, rebalance: str,
                 allow_cash: bool, spread_bps: float = None, lag_days: int = None) -> BacktestResult:
         alloc = build_allocator(template, assets, **_resolve_params(params, assets))
         bt = make_engine(allow_cash,
@@ -138,7 +136,7 @@ def execute_card(
                           allow_cash=card.portfolio.mandate_allow_cash)
         n_run += 1
 
-    benchmarks: List[BacktestResult] = []
+    benchmarks: list[BacktestResult] = []
     for spec in card.benchmark_templates:
         benchmarks.append(run_one(
             spec["template"], spec.get("params", {}), name=spec["name"],
@@ -157,7 +155,7 @@ def execute_card(
                   n_configs_run=n_run)
 
 
-def align_runs(runset: RunSet, start: Optional[pd.Timestamp] = None) -> RunSet:
+def align_runs(runset: RunSet, start: pd.Timestamp | None = None) -> RunSet:
     """Truncate every result to a COMMON start date and rebase NAV to 1.0.
 
     Without this the comparison is rigged. A momentum-alpha strategy cannot

@@ -22,8 +22,9 @@ Two properties the engine guarantees, because they are where backtests lie:
 """
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional, Sequence
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -66,7 +67,7 @@ class BacktestResult:
     costs: pd.Series                 # per-day cost in NAV fraction
     cash_weight: pd.Series
     rebalances: pd.DatetimeIndex
-    meta: Dict[str, Any] = field(default_factory=dict)
+    meta: dict[str, Any] = field(default_factory=dict)
 
     @property
     def cash_drag_days(self) -> int:
@@ -79,13 +80,13 @@ class Backtester:
     def __init__(
         self,
         prices: pd.DataFrame,
-        assets: List[str],
-        rf_daily: Optional[pd.Series] = None,
+        assets: list[str],
+        rf_daily: pd.Series | None = None,
         spread_bps: float = 5.0,
         lag_days: int = 0,
         allow_cash: bool = True,
         ann: int = 252,
-        membership: Optional[pd.DataFrame] = None,
+        membership: pd.DataFrame | None = None,
     ):
         missing = [a for a in assets if a not in prices.columns]
         if missing:
@@ -136,11 +137,11 @@ class Backtester:
         self,
         allocator: Allocator,
         rebalance: str = "monthly",
-        sigma_bench: Optional[pd.Series] = None,
-        alpha: Optional[pd.DataFrame] = None,
-        cov: Optional[Dict[pd.Timestamp, np.ndarray]] = None,
-        cov_cols: Optional[List[str]] = None,
-        vols: Optional[pd.DataFrame] = None,
+        sigma_bench: pd.Series | None = None,
+        alpha: pd.DataFrame | None = None,
+        cov: dict[pd.Timestamp, np.ndarray] | None = None,
+        cov_cols: list[str] | None = None,
+        vols: pd.DataFrame | None = None,
         rf_horizon_days: int = 21,
         name: str = "strategy",
         warmup: int = 0,
@@ -188,7 +189,7 @@ class Backtester:
         first_rebal_done = False
 
         vals, wts, tos, cst, csh = [], [], [], [], []
-        used_rebals: List[pd.Timestamp] = []
+        used_rebals: list[pd.Timestamp] = []
         stale = 0            # held names marked flat because they did not trade
         n_forced = 0         # positions sold because they left the universe
         rets_arr = self.returns.to_numpy(dtype=float)

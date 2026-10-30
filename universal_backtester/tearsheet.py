@@ -18,19 +18,20 @@ caveat attached.
 from __future__ import annotations
 
 from collections import OrderedDict
-from dataclasses import dataclass, asdict
-from typing import Any, Dict, Optional
+from dataclasses import asdict, dataclass
+from typing import Any
 
 import numpy as np
 import pandas as pd
 
-from universal_backtester.metrics import cagr, ann_vol, drawdown_series, max_drawdown, sharpe as _sharpe
+from universal_backtester.metrics import ann_vol, cagr, max_drawdown
+from universal_backtester.metrics import sharpe as _sharpe
 
 ANN = 252
 MONTHLY = 12
 
 
-def _rf_cagr(rf_daily: Optional[pd.Series], index: pd.DatetimeIndex, ann: int = ANN) -> float:
+def _rf_cagr(rf_daily: pd.Series | None, index: pd.DatetimeIndex, ann: int = ANN) -> float:
     if rf_daily is None:
         return 0.0
     rf = rf_daily.reindex(index).fillna(0.0)
@@ -97,7 +98,7 @@ def adjusted_beta(returns: pd.Series, bench_returns: pd.Series) -> float:
 
 
 def treynor_ratio(value: pd.Series, returns: pd.Series, bench_returns: pd.Series,
-                  rf_daily: Optional[pd.Series] = None, ann: int = ANN) -> float:
+                  rf_daily: pd.Series | None = None, ann: int = ANN) -> float:
     b = beta(returns, bench_returns)
     if not np.isfinite(b) or b == 0:
         return float("nan")
@@ -106,7 +107,7 @@ def treynor_ratio(value: pd.Series, returns: pd.Series, bench_returns: pd.Series
 
 
 def alpha_adj_beta(value: pd.Series, returns: pd.Series, bench_value: pd.Series,
-                   bench_returns: pd.Series, rf_daily: Optional[pd.Series] = None,
+                   bench_returns: pd.Series, rf_daily: pd.Series | None = None,
                    ann: int = ANN) -> float:
     """Jensen's alpha using the Bloomberg-adjusted beta:
     alpha = portfolio_CAGR - [rf + adj_beta * (benchmark_CAGR - rf)]."""
@@ -134,7 +135,7 @@ def downside_deviation(returns: pd.Series, mar: float = 0.0, ann: int = ANN) -> 
 
 
 def sortino_ratio(returns: pd.Series, mar: float = 0.0, ann: int = ANN,
-                  rf_daily: Optional[pd.Series] = None) -> float:
+                  rf_daily: pd.Series | None = None) -> float:
     r = returns.dropna()
     excess = r - (rf_daily.reindex(r.index).fillna(0.0) if rf_daily is not None else 0.0)
     dd = downside_deviation(excess, mar=mar, ann=ann)
@@ -255,7 +256,7 @@ def extreme_capture_ratio(returns: pd.Series, bench_returns: pd.Series,
 
 def extreme_capture_breakdown(returns: pd.Series, bench_returns: pd.Series,
                               upper_pct: float = EXTREME_UPPER_PCT,
-                              lower_pct: float = EXTREME_LOWER_PCT) -> Dict[str, float]:
+                              lower_pct: float = EXTREME_LOWER_PCT) -> dict[str, float]:
     """The five rows the reference workbook's "Extreme Capture Ratio"
     section actually shows, for both the strategy and the benchmark."""
     mr, mb = _monthly_pair(returns, bench_returns)
@@ -271,7 +272,7 @@ def extreme_capture_breakdown(returns: pd.Series, bench_returns: pd.Series,
     }
 
 
-def capture_breakdown(returns: pd.Series, bench_returns: pd.Series) -> Dict[str, float]:
+def capture_breakdown(returns: pd.Series, bench_returns: pd.Series) -> dict[str, float]:
     """The five rows of the reference workbook's regular "Capture Ratio"
     section (not the extreme one)."""
     mr, mb = _monthly_pair(returns, bench_returns)
@@ -291,7 +292,7 @@ def financial_year_label(dt: pd.Timestamp) -> str:
     return f"FY{y % 100:02d}"
 
 
-def financial_year_returns(returns: pd.Series) -> "OrderedDict[str, float]":
+def financial_year_returns(returns: pd.Series) -> OrderedDict[str, float]:
     """Compounded return per Indian financial year (Apr-Mar), from MONTHLY
     returns -- matches the reference workbook's "Financial Year
     Performance" table exactly (verified against its real numbers)."""
@@ -304,7 +305,7 @@ def financial_year_returns(returns: pd.Series) -> "OrderedDict[str, float]":
     return out
 
 
-def calendar_year_returns(returns: pd.Series) -> "OrderedDict[str, float]":
+def calendar_year_returns(returns: pd.Series) -> OrderedDict[str, float]:
     """Compounded return per calendar year, from MONTHLY returns."""
     mr, _ = _monthly_pair(returns, returns)
     out = OrderedDict()
@@ -313,7 +314,7 @@ def calendar_year_returns(returns: pd.Series) -> "OrderedDict[str, float]":
     return out
 
 
-def calendar_year_max_drawdown(returns: pd.Series) -> "OrderedDict[str, float]":
+def calendar_year_max_drawdown(returns: pd.Series) -> OrderedDict[str, float]:
     """Worst peak-to-trough drawdown WITHIN each calendar year, with the
     running peak reset to the year's first NAV point (not the whole-
     history running peak) -- verified against the reference workbook's
@@ -382,7 +383,7 @@ class Tearsheet:
     cvar_95: float
     cvar_99: float
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
 
@@ -432,7 +433,7 @@ _RATIO_FIELDS = {"upside_capture", "downside_capture", "capture_ratio",
                  "ex_upside_capture", "ex_downside_capture", "extreme_capture_ratio"}
 
 
-def compute_tearsheet(result, bench_close: pd.Series, rf_daily: Optional[pd.Series] = None,
+def compute_tearsheet(result, bench_close: pd.Series, rf_daily: pd.Series | None = None,
                       ann: int = ANN) -> Tearsheet:
     """`result` is a BacktestResult (or anything with .value and .returns).
     `bench_close` is the benchmark's raw price series -- returns and an

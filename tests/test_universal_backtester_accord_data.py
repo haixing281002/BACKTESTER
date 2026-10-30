@@ -14,10 +14,17 @@ import pandas as pd
 import pytest
 
 from universal_backtester.accord_data import (
-    load_accord_price_panel, load_accord_fundamentals, load_accord_monthly_universe,
-    load_publishing_dates, get_top_n_universe, restrict_to_priced_universe,
-    diagnose_accord_dataset, load_accord_daily_price_mcap, DEFAULT_REPORTING_LAG_DAYS,
-    build_accord_ticker_bridge, write_accord_ticker_bridge_csv,
+    DEFAULT_REPORTING_LAG_DAYS,
+    build_accord_ticker_bridge,
+    diagnose_accord_dataset,
+    get_top_n_universe,
+    load_accord_daily_price_mcap,
+    load_accord_fundamentals,
+    load_accord_monthly_universe,
+    load_accord_price_panel,
+    load_publishing_dates,
+    restrict_to_priced_universe,
+    write_accord_ticker_bridge_csv,
 )
 
 REAL_PRICE = "data/raw/stocks/price_data_till_03aug2026.xlsx"
@@ -370,7 +377,7 @@ def test_ticker_bridge_flags_a_symbol_that_changed_and_names_the_prior_one():
     bridge, _ = build_accord_ticker_bridge(_bridge_input())
     row = bridge.set_index("accord_code").loc[3]
     assert row["nse_symbol"] == "GAMMANEW"
-    assert row["symbol_ever_changed"] is True or row["symbol_ever_changed"] == True  # noqa: E712
+    assert row["symbol_ever_changed"] is True or row["symbol_ever_changed"] == True
     assert "GAMMAOLD" in row["prior_symbols"]
 
 

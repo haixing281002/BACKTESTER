@@ -17,7 +17,6 @@ Needs the optional `formulas` package:  python -m pip install formulas
 from __future__ import annotations
 
 import warnings
-from typing import Dict, Optional, Tuple
 
 import numpy as np
 
@@ -30,15 +29,15 @@ METRIC_ROWS = {
 MAX_DIFF_ROW = 13
 
 
-def evaluate(path: str) -> Dict[str, float]:
+def evaluate(path: str) -> dict[str, float]:
     """Return the Metrics sheet as {label: computed value}."""
-    import formulas                                   # optional dependency
+    import formulas  # optional dependency
 
     warnings.filterwarnings("ignore")
     sol = formulas.ExcelModel().loads(path).finish().calculate()
 
     base = path.replace("\\", "/").rsplit("/", 1)[-1]
-    out: Dict[str, float] = {}
+    out: dict[str, float] = {}
     for row, label in list(METRIC_ROWS.items()) + [(MAX_DIFF_ROW, "max_nav_diff")]:
         cell = sol.get(f"'[{base}]METRICS'!B{row}")
         if cell is None:
@@ -50,8 +49,8 @@ def evaluate(path: str) -> Dict[str, float]:
     return out
 
 
-def compare(path: str, engine: Dict[str, float],
-            tol: float = 1e-9) -> Tuple[bool, list]:
+def compare(path: str, engine: dict[str, float],
+            tol: float = 1e-9) -> tuple[bool, list]:
     """Compare evaluated Excel formulas against the engine's own numbers.
 
     Returns (all_ok, rows) where each row is (label, excel, engine, diff, ok).
@@ -74,7 +73,7 @@ def compare(path: str, engine: Dict[str, float],
     return ok_all, rows
 
 
-def available() -> Optional[str]:
+def available() -> str | None:
     """None if the evaluator is installed, otherwise why it is not."""
     try:
         import formulas  # noqa: F401

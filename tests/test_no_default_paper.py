@@ -19,8 +19,14 @@ import sys
 
 import pytest
 
-from ros.papers import (NoPaperGiven, artifact_paths, ask_for_a_paper,
-                        find_papers, require_paper, slugify)
+from ros.papers import (
+    NoPaperGiven,
+    artifact_paths,
+    ask_for_a_paper,
+    find_papers,
+    require_paper,
+    slugify,
+)
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 EXAMPLE = str(ROOT / "docs/devanathan_2026_simple_dynamic_sbg.pdf")
@@ -271,7 +277,7 @@ def test_outputs_ships_with_no_run_artifacts():
     stray = [t for t in tracked if t not in allowed]
     assert not stray, (
         "outputs/ is tracking run artifacts. A committed library makes a fresh "
-        f"clone inherit another paper's trial count:\n  " + "\n  ".join(stray))
+        "clone inherit another paper's trial count:\n  " + "\n  ".join(stray))
 
 
 def test_the_strategy_library_starts_empty_on_a_fresh_clone():

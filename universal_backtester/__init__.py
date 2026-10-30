@@ -11,15 +11,36 @@ the strategy without letting a signal trade the bar that produced it.
 
 See examples/momentum_rotation.py for a full worked strategy.
 """
-from universal_backtester.engine import Backtester, BacktestResult, LookaheadError, assert_causal
-from universal_backtester.allocators import Allocator, AllocatorContext, build_allocator, list_allocators
+from universal_backtester.allocators import (
+    Allocator,
+    AllocatorContext,
+    build_allocator,
+    list_allocators,
+)
+from universal_backtester.engine import (
+    Backtester,
+    BacktestResult,
+    LookaheadError,
+    assert_causal,
+)
 from universal_backtester.reporting import derive_trade_log
-from universal_backtester.validation import bootstrap_sharpe_ci, deflated_sharpe_from_returns
+from universal_backtester.validation import (
+    bootstrap_sharpe_ci,
+    deflated_sharpe_from_returns,
+)
 
 __all__ = [
-    "Backtester", "BacktestResult", "LookaheadError", "assert_causal",
-    "Allocator", "AllocatorContext", "build_allocator", "list_allocators",
-    "derive_trade_log", "bootstrap_sharpe_ci", "deflated_sharpe_from_returns",
+    "Allocator",
+    "AllocatorContext",
+    "BacktestResult",
+    "Backtester",
+    "LookaheadError",
+    "assert_causal",
+    "bootstrap_sharpe_ci",
+    "build_allocator",
+    "deflated_sharpe_from_returns",
+    "derive_trade_log",
+    "list_allocators",
 ]
 
 __version__ = "0.1.0"

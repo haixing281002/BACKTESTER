@@ -21,12 +21,18 @@ import requests
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from ros.data.bhavcopy_screener_panel import (  # noqa: E402
-    assert_sources, build_turnover_panel, coverage_report, manifest_stanza, screener_shares,
-    shares_snapshot_frame, to_master_frame, universe_symbols,
+from ros.data.bhavcopy_screener_panel import (
+    assert_sources,
+    build_turnover_panel,
+    coverage_report,
+    manifest_stanza,
+    screener_shares,
+    shares_snapshot_frame,
+    to_master_frame,
+    universe_symbols,
 )
-from ros.data.nse_bhavcopy_ingest import combine_cache  # noqa: E402
-from ros.data.screener_fetch import fetch_symbol  # noqa: E402
+from ros.data.nse_bhavcopy_ingest import combine_cache
+from ros.data.screener_fetch import fetch_symbol
 
 
 def cmd_symbols(a):

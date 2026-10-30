@@ -1,8 +1,8 @@
 """Performance metrics computed from a BacktestResult."""
 from __future__ import annotations
 
-from dataclasses import dataclass, asdict
-from typing import Any, Dict, Optional
+from dataclasses import asdict, dataclass
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -25,7 +25,7 @@ def ann_vol(returns: pd.Series, ann: int = ANN) -> float:
     return float(r.std(ddof=1) * np.sqrt(ann)) if len(r) > 2 else float("nan")
 
 
-def sharpe(value: pd.Series, returns: pd.Series, rf_daily: Optional[pd.Series] = None,
+def sharpe(value: pd.Series, returns: pd.Series, rf_daily: pd.Series | None = None,
            ann: int = ANN) -> float:
     """Arithmetic-mean-excess-return / std, annualised (the conventional definition)."""
     r = returns.dropna()
@@ -62,11 +62,11 @@ class Metrics:
     start: str = ""
     end: str = ""
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
 
-def compute_metrics(result, rf_daily: Optional[pd.Series] = None, ann: int = ANN) -> Metrics:
+def compute_metrics(result, rf_daily: pd.Series | None = None, ann: int = ANN) -> Metrics:
     v, r = result.value, result.returns
     return Metrics(
         name=result.name,
@@ -75,12 +75,12 @@ def compute_metrics(result, rf_daily: Optional[pd.Series] = None, ann: int = ANN
         sharpe=sharpe(v, r, rf_daily, ann),
         max_dd=max_drawdown(v),
         turnover=ann_turnover(result.turnover, ann),
-        n_obs=int(len(v)),
+        n_obs=len(v),
         start=str(v.index[0].date()), end=str(v.index[-1].date()),
     )
 
 
-def metrics_table(results, rf_daily: Optional[pd.Series] = None) -> pd.DataFrame:
+def metrics_table(results, rf_daily: pd.Series | None = None) -> pd.DataFrame:
     rows = [compute_metrics(r, rf_daily).to_dict() for r in results]
     return pd.DataFrame(rows).set_index("name")
 

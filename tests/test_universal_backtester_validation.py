@@ -3,15 +3,18 @@
 The hand-rolled inverse-normal (_norm_ppf) is checked against known
 textbook values first, since everything else depends on it being right.
 """
-import math
 
 import numpy as np
 import pandas as pd
 import pytest
 
 from universal_backtester.validation import (
-    _norm_cdf, _norm_ppf, bootstrap_sharpe_ci, deflated_sharpe_ratio,
-    deflated_sharpe_from_returns, expected_max_sharpe,
+    _norm_cdf,
+    _norm_ppf,
+    bootstrap_sharpe_ci,
+    deflated_sharpe_from_returns,
+    deflated_sharpe_ratio,
+    expected_max_sharpe,
 )
 
 
