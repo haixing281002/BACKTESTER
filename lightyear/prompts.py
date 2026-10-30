@@ -24,8 +24,9 @@ Hard rules (from CLAUDE.md, restated):
        NSE symbol bridge; ace.trading_calendar() the NSE calendar (the file's own dates, never weekdays).
     2. Index membership: the NIFTY 500 holdings workbook (ros.data.nifty500). members_on(d) and
        membership_panel(dates, columns=isins) for NIFTY 500 and, with index=..., for NIFTY 50 / NEXT 50 / 100 /
-       MIDCAP 150 / SMALLCAP 250. Quarterly snapshots; call staleness(end_date) and report its message when the
-       run extends past the last snapshot. Never rebuild an index list from market cap or anything else.
+       MIDCAP 150 / SMALLCAP 250. Quarterly snapshots. HOUSE RULE: every backtest ends on or before
+       nifty500.backtest_end_limit() (the day before the first NSE review the file has not seen; 2026-09-29 with
+       the current file). State the end date you used. Never rebuild an index list from market cap or anything else.
     3. Index levels: data/raw/NSE_Broad_Factor_Indices_Historical_Data.xlsx (ros.data.loaders) for the NIFTY 500
        benchmark and the factor sleeves; plus a flat 6% hurdle.
   Key every security by ISIN. Join prices to membership on ISIN. Returns are price returns (no dividends): say so.

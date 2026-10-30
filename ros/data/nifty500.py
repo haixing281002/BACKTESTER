@@ -322,6 +322,13 @@ def next_review_after(d) -> pd.Timestamp:
     return next(c for c in cands if c > d)
 
 
+def backtest_end_limit(path: str | None = None, **kw) -> pd.Timestamp:
+    """The last calendar day a backtest may end on without crossing an NSE review the file has not seen:
+    the day before the first review after the last snapshot (house rule, 2026-10-30). With the workbook's
+    2026-05-31 snapshot that is 2026-09-29; an update CSV moves it forward."""
+    return next_review_after(snapshot_dates(path, **kw).max()) - pd.Timedelta(days=1)
+
+
 def staleness(end_date, path: str | None = None, **kw) -> dict[str, Any]:
     """Whether membership is carried forward across an NSE review the file has not seen.
 
@@ -339,7 +346,7 @@ def staleness(end_date, path: str | None = None, **kw) -> dict[str, Any]:
            f"Membership is current: the last snapshot {last.date()} is after the latest NSE review effective before "
            f"{end.date()}.")
     return {"last_snapshot": str(last.date()), "next_review": str(nxt.date()), "end_date": str(end.date()),
-            "stale": bool(stale), "message": msg}
+            "backtest_end_limit": str((nxt - pd.Timedelta(days=1)).date()), "stale": bool(stale), "message": msg}
 
 
 def provenance(path: str | None = None, **kw) -> dict[str, Any]:

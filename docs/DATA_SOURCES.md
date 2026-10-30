@@ -99,6 +99,10 @@ end-September); the intermediate quarter-ends normally repeat the list.
   names, Smallcap 250 shows 141-178). Treat sub-index membership before then
   as incomplete; NIFTY 500 itself is complete.
 
+**House rule (2026-10-30): a backtest ends on or before `nifty500.backtest_end_limit()`**, the day
+before the first NSE review the file has not seen (2026-09-29 with the current file), so the
+carried-forward window never enters a result.
+
 **Staleness and updates.** The last snapshot is 2026-05-31. NSE's next review
 was effective 2026-09-30, so any run that extends past that date is using the
 May list for the post-review period. `nifty500.staleness(end_date)` says so

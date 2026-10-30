@@ -89,7 +89,8 @@ def test_staleness_knows_the_nse_review_calendar(world):
     s = n.staleness("2024-09-15")
     assert s["last_snapshot"] == "2024-03-31" and s["next_review"] == "2024-09-30" and not s["stale"]
     s = n.staleness("2024-10-01")
-    assert s["stale"] and "2024-09-30.csv" in s["message"]
+    assert s["stale"] and "2024-09-30.csv" in s["message"] and s["backtest_end_limit"] == "2024-09-29"
+    assert n.backtest_end_limit() == pd.Timestamp("2024-09-29")
     assert n.next_review_after("2026-05-31") == pd.Timestamp("2026-09-30")
     assert n.next_review_after("2026-09-30") == pd.Timestamp("2027-03-31")
 
@@ -138,3 +139,4 @@ def test_live_workbook_matches_what_the_module_documents():
     assert 245 <= len(n.members_on("2024-03-28", index="NIFTY LARGEMIDCAP 250")) <= 255
     assert 395 <= len(n.members_on("2024-03-28", index="NIFTY MIDSMALLCAP 400")) <= 405
     assert n.staleness("2026-10-24")["next_review"] == "2026-09-30"
+    assert n.backtest_end_limit() == pd.Timestamp("2026-09-29")
