@@ -4,11 +4,12 @@ in-sample parameter fitting, as opposed to selection across many trials.
 """
 import numpy as np
 import pandas as pd
-import pytest
 
 from universal_backtester.validation import (
-    oos_stability_summary, parameter_sensitivity_sweep,
-    sensitivity_verdict, walk_forward_windows,
+    oos_stability_summary,
+    parameter_sensitivity_sweep,
+    sensitivity_verdict,
+    walk_forward_windows,
 )
 
 

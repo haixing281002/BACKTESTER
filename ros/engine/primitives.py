@@ -9,12 +9,12 @@ and each one is a few lines that a reviewer can read in full.
 """
 from __future__ import annotations
 
-from typing import Callable, Dict
+from collections.abc import Callable
 
 import numpy as np
 import pandas as pd
 
-_REGISTRY: Dict[str, Callable] = {}
+_REGISTRY: dict[str, Callable] = {}
 
 
 def primitive(name: str):

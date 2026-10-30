@@ -3,11 +3,13 @@ write_decile_membership_log -- the full NIFTY 500 decile deep-dive, not
 just the top/bottom decile pair."""
 import numpy as np
 import pandas as pd
-import pytest
 
 from universal_backtester.decile_analysis import (
-    compute_decile_membership, run_decile_backtests, summarize_deciles,
-    write_decile_membership_log, write_decile_summary_workbook,
+    compute_decile_membership,
+    run_decile_backtests,
+    summarize_deciles,
+    write_decile_membership_log,
+    write_decile_summary_workbook,
 )
 
 

@@ -99,6 +99,7 @@ def main() -> int:
     if have_data:
         try:
             import glob
+
             from ros.cards.schema import load_card
             # Self-test against an EXAMPLE, never against the user's own cards.
             # This used to glob cards/*.yaml and load the first alphabetically,

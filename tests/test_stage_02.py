@@ -12,8 +12,13 @@ than no list, because it looks checked and a reviewer skips it.
 import pytest
 
 from ros.cards.completeness import assess as card_completeness
-from ros.cards.schema import (BacktestPlan, DataPlan, DataSpec,
-                              SecuritySelection, load_card)
+from ros.cards.schema import (
+    BacktestPlan,
+    DataPlan,
+    DataSpec,
+    SecuritySelection,
+    load_card,
+)
 from ros.governance.gates import gate_a
 
 EXEMPLAR = "examples/cards/devanathan_2026_india_factor_adaptation.yaml"
@@ -278,8 +283,13 @@ def test_the_plan_block_degrades_rather_than_crashing():
 # "strategy" reconstructed from prose that describes none, and every stage
 # after it treats that reconstruction as real.
 # ---------------------------------------------------------------------------
-from ros.cards.extract import (NOT_A_PAPER, PAPER, classify_document,
-                               extract_document, parse_text_tables)
+from ros.cards.extract import (
+    NOT_A_PAPER,
+    PAPER,
+    classify_document,
+    extract_document,
+    parse_text_tables,
+)
 
 REAL_PAPER = "docs/devanathan_2026_simple_dynamic_sbg.pdf"
 A_DECK = "docs/ai_research_operating_system.pdf"
@@ -315,6 +325,7 @@ def test_the_screen_needs_more_than_one_signal():
     """A theory paper has no tables; a short note is still a paper. One signal
     alone would reject real work, which is worse than the problem."""
     import inspect
+
     from ros.cards import extract
     src = inspect.getsource(extract.classify_document)
     assert "len(reasons) >= 3" in src
@@ -338,4 +349,5 @@ def test_run_interpret_surfaces_the_verdict_before_interpreting():
 
 
 import pathlib
+
 ROOT_DIR = pathlib.Path(__file__).resolve().parent.parent

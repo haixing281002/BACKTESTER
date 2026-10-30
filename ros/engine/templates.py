@@ -10,13 +10,14 @@ only the pre-computed causal inputs the backtester hands them.
 """
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any
 
 import numpy as np
 import pandas as pd
 
-_TEMPLATES: Dict[str, Callable[..., "Allocator"]] = {}
+_TEMPLATES: dict[str, Callable[..., Allocator]] = {}
 
 
 def template(name: str):
@@ -29,13 +30,13 @@ def template(name: str):
     return deco
 
 
-def build_allocator(name: str, assets: List[str], **params) -> "Allocator":
+def build_allocator(name: str, assets: list[str], **params) -> Allocator:
     if name not in _TEMPLATES:
         raise KeyError(f"unknown template '{name}'. Registered: {sorted(_TEMPLATES)}")
     return _TEMPLATES[name](assets=assets, **params)
 
 
-def list_templates() -> List[str]:
+def list_templates() -> list[str]:
     return sorted(_TEMPLATES)
 
 
@@ -44,24 +45,24 @@ class AllocatorContext:
     """Everything an allocator may look at on a rebalance date."""
     date: pd.Timestamp
     current_weights: np.ndarray       # drifted risky weights, pre-trade
-    sigma_bench: Optional[float]      # trailing vol of the strategic mix
-    cov: Optional[np.ndarray]         # annualised covariance matrix
-    alpha: Optional[np.ndarray]       # expected return over the rebalance horizon
+    sigma_bench: float | None      # trailing vol of the strategic mix
+    cov: np.ndarray | None         # annualised covariance matrix
+    alpha: np.ndarray | None       # expected return over the rebalance horizon
     rf_period: float = 0.0            # risk-free return over the rebalance horizon
     # Cross-sectional fields. A 500-name universe cannot use `cov`: a 500x500
     # rolling covariance is gigabytes of matrices a ranking allocator never
     # reads. Cross-sectional templates get per-asset vols and an eligibility
     # mask instead. Both are already lag-shifted by the time they arrive here.
-    eligible: Optional[np.ndarray] = None   # bool: investable, as known on this date
-    vols: Optional[np.ndarray] = None       # per-asset trailing vol, annualised
-    extras: Dict[str, Any] = None
+    eligible: np.ndarray | None = None   # bool: investable, as known on this date
+    vols: np.ndarray | None = None       # per-asset trailing vol, annualised
+    extras: dict[str, Any] = None
 
 
 class Allocator:
     template_name = "abstract"
     requires: tuple = ()               # context fields that must be non-None
 
-    def __init__(self, assets: List[str], **params):
+    def __init__(self, assets: list[str], **params):
         self.assets = list(assets)
         self.n = len(assets)
         self.params = params
@@ -72,11 +73,11 @@ class Allocator:
     def target_weights(self, ctx: AllocatorContext) -> np.ndarray:
         raise NotImplementedError
 
-    def describe(self) -> Dict[str, Any]:
+    def describe(self) -> dict[str, Any]:
         return {"template": self.template_name, "assets": self.assets, "params": self.params}
 
 
-def _as_vector(weights, assets: List[str]) -> np.ndarray:
+def _as_vector(weights, assets: list[str]) -> np.ndarray:
     """Accept a dict {asset: w} or a list, return an ndarray aligned to `assets`."""
     if isinstance(weights, dict):
         missing = [a for a in assets if a not in weights]
@@ -202,7 +203,7 @@ class MarkowitzL1(Allocator):
 
         return np.clip(np.asarray(w.value, dtype=float), 0.0, None)
 
-    def diagnostics(self) -> Dict[str, Any]:
+    def diagnostics(self) -> dict[str, Any]:
         return {"solves": self._solve_count, "solver_failures": self._fail_count}
 
 
@@ -269,7 +270,7 @@ class EqualRiskContribution(Allocator):
         w = w / w.sum()
         return _scale_to_vol(w, Sigma, self.target_vol)
 
-    def diagnostics(self) -> Dict[str, Any]:
+    def diagnostics(self) -> dict[str, Any]:
         return {"solver_failures": getattr(self, "_failures", 0),
                 "inaccurate_solves": getattr(self, "_inaccurate", 0)}
 
@@ -317,7 +318,7 @@ class EqualWeight(Allocator):
         return _scale_to_vol(w, ctx.cov, self.target_vol)
 
 
-def _scale_to_vol(w: np.ndarray, cov, target_vol: Optional[float]) -> np.ndarray:
+def _scale_to_vol(w: np.ndarray, cov, target_vol: float | None) -> np.ndarray:
     """Dilute a unit-gross portfolio with cash to hit a vol target. Never levers."""
     if target_vol is None or cov is None:
         return w
@@ -420,7 +421,7 @@ class CrossSectional(Allocator):
         self.ascending = bool(ascending)
         self.min_names = int(min_names)
         self._skipped = 0
-        self._held: List[int] = []
+        self._held: list[int] = []
 
     def target_weights(self, ctx: AllocatorContext) -> np.ndarray:
         score = np.asarray(ctx.alpha, dtype=float)
@@ -474,6 +475,6 @@ class CrossSectional(Allocator):
                 w = w / tot
         return w
 
-    def diagnostics(self) -> Dict[str, Any]:
+    def diagnostics(self) -> dict[str, Any]:
         return {"rebalances_skipped_thin_universe": self._skipped,
                 "mean_names_held": (float(np.mean(self._held)) if self._held else 0.0)}

@@ -29,6 +29,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import numpy as np
 import pandas as pd
 
+from ros.validation.portfolio import factor_fingerprint
 from universal_backtester.allocators import build_allocator
 from universal_backtester.data import load_banner_workbook, write_holdings_log
 from universal_backtester.engine import Backtester, LookaheadError, assert_causal
@@ -37,10 +38,13 @@ from universal_backtester.metrics import cagr as _cagr
 from universal_backtester.metrics import max_drawdown as _mdd
 from universal_backtester.tearsheet import compute_tearsheet, render_tearsheet
 from universal_backtester.validation import (
-    bootstrap_sharpe_ci, deflated_sharpe_from_returns, oos_stability_summary,
-    parameter_sensitivity_sweep, sensitivity_verdict, walk_forward_windows,
+    bootstrap_sharpe_ci,
+    deflated_sharpe_from_returns,
+    oos_stability_summary,
+    parameter_sensitivity_sweep,
+    sensitivity_verdict,
+    walk_forward_windows,
 )
-from ros.validation.portfolio import factor_fingerprint
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PANEL = os.path.join(REPO, "data", "raw", "master", "bhavcopy_screener_panel.csv")
@@ -110,7 +114,7 @@ def main():
     os.makedirs(OUT, exist_ok=True)
     res_json = {}
 
-    print(f"Card: lee_swaminathan_1998_price_momentum_trading_volume  (AS DRAFTED, nothing changed)")
+    print("Card: lee_swaminathan_1998_price_momentum_trading_volume  (AS DRAFTED, nothing changed)")
     p = pd.read_csv(a.panel, parse_dates=["date"])
     ever = sorted(p.loc[p["in_universe"] == 1, "security_id"].unique())
     p = p[p["security_id"].isin(ever)]
@@ -368,7 +372,7 @@ def main():
     print(gb.render())
     res_json["gate_b"] = gb.to_dict()
     res_json["gate_b_inputs"] = {"research": research, "portfolio": portfolio}
-    pd.DataFrame({**{k: r for k, (_, r) in live.items()}, **{"NIFTY 500": nret}}).to_csv(
+    pd.DataFrame({**{k: r for k, (_, r) in live.items()}, "NIFTY 500": nret}).to_csv(
         os.path.join(OUT, f"{SLUG}_daily_returns.csv"))
 
     out_json = os.path.join(OUT, f"{SLUG}_results.json")

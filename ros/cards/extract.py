@@ -14,8 +14,8 @@ from __future__ import annotations
 
 import hashlib
 import re
-from dataclasses import dataclass, field, asdict
-from typing import Any, Dict, List, Optional, Tuple
+from dataclasses import asdict, dataclass, field
+from typing import Any
 
 # Keep the REAL import failure. pdfplumber pulls in pdfminer.six, which pulls
 # in cryptography, which needs a working cffi -- and on a fresh install that
@@ -39,7 +39,7 @@ class PageEvidence:
     text: str
     n_chars: int
     n_tables: int
-    tables: List[List[List[Optional[str]]]] = field(default_factory=list)
+    tables: list[list[list[str | None]]] = field(default_factory=list)
     math_density: float = 0.0    # fraction of lines that look like broken math
     reversed_text: bool = False  # rotated axis labels detected -> figure page
 
@@ -60,9 +60,9 @@ class ExtractionQuality:
     n_empty_pages: int
     n_table_pages: int
     mean_math_density: float
-    reversed_pages: List[int]
+    reversed_pages: list[int]
     is_scanned: bool
-    warnings: List[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
 
     @property
     def usable(self) -> bool:
@@ -73,10 +73,10 @@ class ExtractionQuality:
 class Document:
     path: str
     sha256: str
-    pages: List[PageEvidence]
-    hits: List[Hit]
+    pages: list[PageEvidence]
+    hits: list[Hit]
     quality: ExtractionQuality
-    numeric_tables: List[Dict[str, Any]] = field(default_factory=list)
+    numeric_tables: list[dict[str, Any]] = field(default_factory=list)
 
     def text(self) -> str:
         return "\n".join(p.text for p in self.pages)
@@ -84,10 +84,10 @@ class Document:
     def page_text(self, page: int) -> str:
         return self.pages[page - 1].text
 
-    def hits_of(self, kind: str) -> List[Hit]:
+    def hits_of(self, kind: str) -> list[Hit]:
         return [h for h in self.hits if h.kind == kind]
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         d = asdict(self)
         # page text is bulky; keep it out of the JSON manifest
         for p in d["pages"]:
@@ -99,7 +99,7 @@ class Document:
 # --------------------------------------------------------------------------
 # Heuristic scanners. Each returns page-anchored candidates -- never decisions.
 # --------------------------------------------------------------------------
-_SCANNERS: Dict[str, str] = {
+_SCANNERS: dict[str, str] = {
     # rebalance cadence
     "rebalance": r"\b(rebalanc\w+)\s+(daily|weekly|monthly|quarterly|annually|semi-annually)\b"
                  r"|\b(daily|weekly|monthly|quarterly|annual|annually)\s+rebalanc\w+",
@@ -162,7 +162,7 @@ def _math_density(text: str) -> float:
     return sum(1 for l in lines if _MATH_PAT.search(l)) / len(lines)
 
 
-def _numeric_table(tbl: List[List[Optional[str]]]) -> bool:
+def _numeric_table(tbl: list[list[str | None]]) -> bool:
     """A table worth keeping as a replication target: >=2 rows, >=2 numeric cells
     per row on average."""
     if not tbl or len(tbl) < 2:
@@ -179,7 +179,7 @@ def _numeric_table(tbl: List[List[Optional[str]]]) -> bool:
     return cells > 0 and num / cells > 0.35
 
 
-def extract_document(path: str, max_pages: Optional[int] = None) -> Document:
+def extract_document(path: str, max_pages: int | None = None) -> Document:
     """Parse a PDF into page-anchored evidence plus an extraction-quality report."""
     if pdfplumber is None:
         raise RuntimeError(
@@ -193,8 +193,8 @@ def extract_document(path: str, max_pages: Optional[int] = None) -> Document:
             "    python -m pip install --upgrade --force-reinstall pdfminer.six pdfplumber\n"
             "Then check: python -c \"import pdfplumber; print(pdfplumber.__version__)\"")
 
-    pages: List[PageEvidence] = []
-    numeric_tables: List[Dict[str, Any]] = []
+    pages: list[PageEvidence] = []
+    numeric_tables: list[dict[str, Any]] = []
 
     with pdfplumber.open(path) as pdf:
         page_iter = pdf.pages[:max_pages] if max_pages else pdf.pages
@@ -241,7 +241,7 @@ def extract_document(path: str, max_pages: Optional[int] = None) -> Document:
         quality.warnings.append(f"{empty} page(s) produced almost no text (figures/images).")
 
     # run scanners
-    hits: List[Hit] = []
+    hits: list[Hit] = []
     for kind, pat in _SCANNERS.items():
         rx = re.compile(pat, re.IGNORECASE)
         for p in pages:
@@ -272,7 +272,7 @@ def summarize(doc: Document, top: int = 6) -> str:
         out.append("  EXTRACTION WARNINGS:")
         out += [f"    ! {w}" for w in q.warnings]
     out.append("  CANDIDATE FIELDS (page-anchored, for human confirmation):")
-    seen: Dict[str, List[Tuple[str, int]]] = {}
+    seen: dict[str, list[tuple[str, int]]] = {}
     for h in doc.hits:
         seen.setdefault(h.kind, [])
         if len(seen[h.kind]) < top and (h.value, h.page) not in seen[h.kind]:
@@ -300,7 +300,7 @@ _NUM = re.compile(r"^[-+]?\(?\d{1,3}(?:,\d{3})*(?:\.\d+)?\)?%?$")
 _CAPTION = re.compile(r"^Table\s+(\d+|[A-Z]\d*)\s*[:.]\s*(.*)", re.IGNORECASE)
 
 
-def _tokenize_row(line: str) -> Optional[Tuple[str, List[float]]]:
+def _tokenize_row(line: str) -> tuple[str, list[float]] | None:
     """Split 'Simple Markowitz 10.4% 9.3% 0.91' -> ('Simple Markowitz', [10.4, 9.3, 0.91]).
 
     Percent signs are stripped and the value divided by 100, so a table reports
@@ -310,7 +310,7 @@ def _tokenize_row(line: str) -> Optional[Tuple[str, List[float]]]:
     if len(toks) < 3:
         return None
     # walk from the right while tokens are numeric
-    vals: List[float] = []
+    vals: list[float] = []
     i = len(toks)
     while i > 0 and _NUM.match(toks[i - 1]):
         t = toks[i - 1]
@@ -338,20 +338,20 @@ def _tokenize_row(line: str) -> Optional[Tuple[str, List[float]]]:
     return label, vals
 
 
-def parse_text_tables(doc: "Document", min_rows: int = 2) -> List[Dict[str, Any]]:
+def parse_text_tables(doc: Document, min_rows: int = 2) -> list[dict[str, Any]]:
     """Recover numeric tables from text layout, anchored to their 'Table N:' caption.
 
     Returns dicts: {page, table_id, caption, header, rows: {label: [values]}}.
     Generic across papers -- nothing here knows about this particular paper.
     """
-    found: List[Dict[str, Any]] = []
+    found: list[dict[str, Any]] = []
 
     for p in doc.pages:
         if p.reversed_text:
             continue  # figure page: numbers here are axis ticks, not results
         lines = [l.rstrip() for l in p.text.splitlines()]
-        blocks: List[Tuple[int, int, List[Tuple[str, List[float]]]]] = []
-        cur: List[Tuple[str, List[float]]] = []
+        blocks: list[tuple[int, int, list[tuple[str, list[float]]]]] = []
+        cur: list[tuple[str, list[float]]] = []
         start = 0
         for idx, line in enumerate(lines):
             parsed = _tokenize_row(line)
@@ -380,7 +380,7 @@ def parse_text_tables(doc: "Document", min_rows: int = 2) -> List[Dict[str, Any]
                     break
 
             caption, table_id = "", None
-            for fwd in range(0, 6):
+            for fwd in range(6):
                 j = end + fwd
                 if j < len(lines):
                     m = _CAPTION.match(lines[j].strip())
@@ -408,9 +408,9 @@ def parse_text_tables(doc: "Document", min_rows: int = 2) -> List[Dict[str, Any]
 
 
 def propose_replication_targets(
-    tables: List[Dict[str, Any]],
-    metric_aliases: Optional[Dict[str, List[str]]] = None,
-) -> List[Dict[str, Any]]:
+    tables: list[dict[str, Any]],
+    metric_aliases: dict[str, list[str]] | None = None,
+) -> list[dict[str, Any]]:
     """Turn parsed tables into candidate replication targets.
 
     Matches header words to canonical metric names so the same code works for any
@@ -425,14 +425,14 @@ def propose_replication_targets(
         "mean_dd": ["mean dd", "meandd", "mean drawdown", "average drawdown"],
         "turnover": ["turnover"],
     }
-    proposals: List[Dict[str, Any]] = []
+    proposals: list[dict[str, Any]] = []
     for t in tables:
         header = (t.get("header") or "").lower()
         if not header:
             continue
         # map each header word-group to a column index
         hdr_tokens = header.split()
-        cols: List[Optional[str]] = []
+        cols: list[str | None] = []
         i = 0
         while i < len(hdr_tokens):
             matched = None
@@ -467,7 +467,7 @@ def propose_replication_targets(
     return proposals
 
 
-def detect_target_conflicts(proposals: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def detect_target_conflicts(proposals: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Find (portfolio, metric) pairs that appear with different values.
 
     This is not a parser bug -- it is the paper reporting the same metric under
@@ -525,9 +525,9 @@ class DocumentShape:
     n_chars: int
     n_tables: int
     math_density: float
-    markers_found: List[str] = field(default_factory=list)
+    markers_found: list[str] = field(default_factory=list)
     verdict: str = UNCLEAR
-    reasons: List[str] = field(default_factory=list)
+    reasons: list[str] = field(default_factory=list)
 
     @property
     def looks_like_a_paper(self) -> bool:
@@ -536,7 +536,7 @@ class DocumentShape:
     def render(self) -> str:
         L = [f"    pages {self.n_pages}   chars {self.n_chars:,}   "
              f"numeric tables {self.n_tables}   math density {self.math_density:.1%}",
-             f"    paper markers: "
+             "    paper markers: "
              + (", ".join(self.markers_found[:8]) if self.markers_found else "NONE")]
         if self.verdict == NOT_A_PAPER:
             L += ["", "    THIS DOES NOT LOOK LIKE A RESEARCH PAPER.", ""]
@@ -558,7 +558,7 @@ class DocumentShape:
         return "\n".join(L)
 
 
-def classify_document(doc: "Document", n_tables: int = 0) -> DocumentShape:
+def classify_document(doc: Document, n_tables: int = 0) -> DocumentShape:
     """Structural verdict on whether `doc` is a research paper."""
     text = " ".join(p.text or "" for p in doc.pages).lower()
     found = [m for m in PAPER_MARKERS if m in text]

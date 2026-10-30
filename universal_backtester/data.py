@@ -7,7 +7,7 @@ from __future__ import annotations
 import hashlib
 import os
 import re
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
 
 import pandas as pd
 
@@ -20,7 +20,7 @@ def file_sha256(path: str) -> str:
     return h.hexdigest()
 
 
-def load_wide_csv(path: str, date_col: str = "Date") -> Tuple[pd.DataFrame, Dict[str, Any]]:
+def load_wide_csv(path: str, date_col: str = "Date") -> tuple[pd.DataFrame, dict[str, Any]]:
     """Load a plain wide CSV: one date column, one column per asset's price."""
     df = pd.read_csv(path)
     df[date_col] = pd.to_datetime(df[date_col])
@@ -28,13 +28,13 @@ def load_wide_csv(path: str, date_col: str = "Date") -> Tuple[pd.DataFrame, Dict
     df.index.name = "date"
     prov = {
         "loader": "load_wide_csv", "path": path, "sha256": file_sha256(path),
-        "n_rows": int(len(df)), "n_series": int(df.shape[1]),
+        "n_rows": len(df), "n_series": int(df.shape[1]),
         "date_min": str(df.index.min().date()), "date_max": str(df.index.max().date()),
     }
     return df, prov
 
 
-def load_banner_workbook(path: str, sheet="Sheet1") -> Tuple[pd.DataFrame, Dict[str, Any]]:
+def load_banner_workbook(path: str, sheet="Sheet1") -> tuple[pd.DataFrame, dict[str, Any]]:
     """Load a workbook laid out as: a banner row of series names, a row of
     field names (one of which is 'Date'), a shared date column, and blank
     spacer columns between series blocks. Common export format for index /
@@ -64,7 +64,7 @@ def load_banner_workbook(path: str, sheet="Sheet1") -> Tuple[pd.DataFrame, Dict[
     dates = pd.to_datetime(raw.iloc[date_row + 1:, date_col], errors="coerce")
 
     # group columns into contiguous blocks under each name
-    blocks: Dict[str, list] = {}
+    blocks: dict[str, list] = {}
     current_name = None
     for c in range(raw.shape[1]):
         if c == date_col:
@@ -87,7 +87,7 @@ def load_banner_workbook(path: str, sheet="Sheet1") -> Tuple[pd.DataFrame, Dict[
             continue
         blocks[current_name].append((fld.strip(), vals))
 
-    series: Dict[str, pd.Series] = {}
+    series: dict[str, pd.Series] = {}
     for name, fields in blocks.items():
         # A duplicate field label under the same name (e.g. two genuine
         # "Close" columns) is a data-layout surprise, not something to
@@ -114,7 +114,7 @@ def load_banner_workbook(path: str, sheet="Sheet1") -> Tuple[pd.DataFrame, Dict[
 
     prov = {
         "loader": "load_banner_workbook", "path": path, "sha256": file_sha256(path),
-        "sheet": str(sheet), "n_rows": int(len(df)), "n_series": int(df.shape[1]),
+        "sheet": str(sheet), "n_rows": len(df), "n_series": int(df.shape[1]),
         "date_min": str(df.index.min().date()), "date_max": str(df.index.max().date()),
         "series": {
             name: {
@@ -130,7 +130,7 @@ def load_banner_workbook(path: str, sheet="Sheet1") -> Tuple[pd.DataFrame, Dict[
 _KNOWN_FIELDS = ("Open", "High", "Low", "Close", "PE", "PB")
 
 
-def load_field_only(path: str, field: str = "Close", sheets=None) -> Tuple[pd.DataFrame, Dict[str, Any]]:
+def load_field_only(path: str, field: str = "Close", sheets=None) -> tuple[pd.DataFrame, dict[str, Any]]:
     """Load one or more sheets of a `load_banner_workbook`-shaped file, keep
     only each series' `field` column (default "Close"), and return one
     column per series named plainly (no " Close"/" High"/... suffix) -- one
@@ -175,12 +175,12 @@ def load_field_only(path: str, field: str = "Close", sheets=None) -> Tuple[pd.Da
     return merged, prov
 
 
-def load_close_only(path: str, sheets=None) -> Tuple[pd.DataFrame, Dict[str, Any]]:
+def load_close_only(path: str, sheets=None) -> tuple[pd.DataFrame, dict[str, Any]]:
     """Backward-compatible alias: `load_field_only(path, field="Close", ...)`."""
     return load_field_only(path, field="Close", sheets=sheets)
 
 
-def load_stock_universe(path: str, id_col: str = None) -> Tuple[Dict[str, pd.DataFrame], Dict[str, Any]]:
+def load_stock_universe(path: str, id_col: str = None) -> tuple[dict[str, pd.DataFrame], dict[str, Any]]:
     """Load an individual-stock price file in either of the two common
     shapes and return {'close': df, 'high': df, 'low': df, 'volume': df}
     (whichever fields the file actually has -- 'close' is always required,
@@ -226,7 +226,7 @@ def load_stock_universe(path: str, id_col: str = None) -> Tuple[Dict[str, pd.Dat
         # LONG/TIDY shape
         raw[date_col] = pd.to_datetime(raw[date_col], errors="coerce")
         raw = raw.dropna(subset=[date_col])
-        out: Dict[str, pd.DataFrame] = {}
+        out: dict[str, pd.DataFrame] = {}
         for field, col in available_fields.items():
             pivot = raw.pivot_table(index=date_col, columns=detected_id, values=col, aggfunc="last")
             pivot.index.name = "date"
@@ -257,7 +257,7 @@ def load_stock_universe(path: str, id_col: str = None) -> Tuple[Dict[str, pd.Dat
     return {"close": close, "high": None, "low": None, "volume": None}, prov
 
 
-def write_holdings_log(path: str, result, name_lookup: Optional[dict] = None,
+def write_holdings_log(path: str, result, name_lookup: dict | None = None,
                        start=None, end=None) -> pd.DataFrame:
     """The actual answer to "which stocks did the AI pick": a long-format
     CSV, one row per (rebalance date, held asset, weight), read directly off

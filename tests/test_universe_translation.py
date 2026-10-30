@@ -6,14 +6,25 @@ places where a wrong answer must be caught rather than absorbed.
 """
 import pytest
 
-from ros.cards.schema import (CardValidationError, StrategyReconstruction,
-                              UniverseTranslation, load_card)
+from ros.cards.schema import (
+    CardValidationError,
+    StrategyReconstruction,
+    UniverseTranslation,
+    load_card,
+)
 from ros.data.firm_registry import build_firm_registry
 from ros.data.intake import ManifestError, describe_shortfall, manifest_stanza
-from ros.data.universes import (DIRECT, GRADES, INFEASIBLE, NEEDS_DATA,
-                                SLEEVE_PROXY, canonical_source,
-                                check_translation, known_sources,
-                                translations_for)
+from ros.data.universes import (
+    DIRECT,
+    GRADES,
+    INFEASIBLE,
+    NEEDS_DATA,
+    SLEEVE_PROXY,
+    canonical_source,
+    check_translation,
+    known_sources,
+    translations_for,
+)
 from ros.governance.gates import gate_a
 
 CARD = "examples/cards/devanathan_2026_india_factor_adaptation.yaml"
@@ -258,7 +269,6 @@ def test_a_membership_series_is_offered_the_right_kind():
 def test_supplied_data_may_not_shadow_the_firms_own(tmp_path, registry):
     """A dropped file silently overriding a firm feed is how an unauditable
     result gets made."""
-    import os
     from ros.data import intake
     m = tmp_path / "MANIFEST.yaml"
     csv = tmp_path / "x.csv"
@@ -305,8 +315,12 @@ def test_a_manifest_missing_the_honesty_fields_is_refused(tmp_path, registry):
 # without justification -- the fit is recomputed by code and shown at Gate A.
 # ---------------------------------------------------------------------------
 from ros.cards.schema import MechanismNeeds
-from ros.data.universes import (INDIAN_UNIVERSES, MechanismRequirements,
-                                propose_universes, score_universe)
+from ros.data.universes import (
+    INDIAN_UNIVERSES,
+    MechanismRequirements,
+    propose_universes,
+    score_universe,
+)
 
 
 def test_the_catalogue_spans_the_indian_market():
@@ -583,8 +597,8 @@ def test_at_a_glance_surfaces_unresolved_ambiguities():
 # needed to do it justice: what the model would ask the fund for, and what the
 # paper does not settle. Both are easy to leave empty, so both are checked.
 # ---------------------------------------------------------------------------
-from ros.cards.schema import DataRequest, OpenQuestion
 from ros.cards.completeness import assess as card_completeness
+from ros.cards.schema import DataRequest, OpenQuestion
 
 EXEMPLAR = "examples/cards/devanathan_2026_india_factor_adaptation.yaml"
 
@@ -677,7 +691,6 @@ def test_a_fallback_less_request_never_reaches_gate_a_at_all(registry, tmp_path)
     real run. Assert the real contract instead: the schema stops it upstream.
     """
     import yaml
-    from ros.cards.schema import CardValidationError
     blob = yaml.safe_load(open(EXEMPLAR, encoding="utf-8"))
     blob["data_requests"][0]["without_it"] = ""
     bad = tmp_path / "bad.yaml"
@@ -736,8 +749,15 @@ def test_the_exemplar_scores_near_full():
 
 def test_a_card_that_merely_validates_scores_badly():
     """The whole point: the schema cannot tell six cited ambiguities from none."""
-    from ros.cards.schema import (CostSpec, Intent, Paper, PortfolioSpec,
-                                  Signal, StrategyCard, Universe)
+    from ros.cards.schema import (
+        CostSpec,
+        Intent,
+        Paper,
+        PortfolioSpec,
+        Signal,
+        StrategyCard,
+        Universe,
+    )
     bare = StrategyCard(
         paper=Paper(id="x", title="x"),
         intent=Intent(mode="adaptation", transferred_mechanism="m"),

@@ -10,10 +10,9 @@ benchmark_templates, and data from the firm registry + snapshot.
 from __future__ import annotations
 
 import argparse
-import json
 import os
 import sys
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -31,28 +30,37 @@ for _stream in (sys.stdout, sys.stderr):
     except (AttributeError, ValueError):  # already detached, or not a TextIO
         pass
 
-from ros.cards.extract import (
-    detect_target_conflicts, extract_document, parse_text_tables,
-    propose_replication_targets, summarize)
 from ros.cards.completeness import assess as card_completeness
+from ros.cards.extract import (
+    detect_target_conflicts,
+    extract_document,
+    parse_text_tables,
+    propose_replication_targets,
+)
 from ros.cards.schema import load_card
 from ros.data.firm_registry import build_firm_registry
 from ros.data.intake import MANIFEST, describe_shortfall, extend_registry
-from ros.data.universes import check_translation
 from ros.data.loaders import audit_frame, load_nse_workbook_combined
 from ros.data.snapshot import SnapshotBuilder
+from ros.data.universes import check_translation
 from ros.engine.backtest import LookaheadError, assert_causal
 from ros.feasibility import UNAVAILABLE, assess
 from ros.governance.gates import (
-    Criterion, evaluate_ladder, extraction_facts, gate_a,
-    gate_a_document, gate_a_summary, gate_b, render_ladder)
+    Criterion,
+    evaluate_ladder,
+    extraction_facts,
+    gate_a,
+    gate_a_document,
+    gate_a_summary,
+    gate_b,
+    render_ladder,
+)
 from ros.governance.library import LibraryEntry, StrategyLibrary, make_entry_id
 from ros.india_requirements import derive as derive_india_requirements
 from ros.runner import align_runs, execute_card
 from ros.validation import portfolio as pv
 from ros.validation import research as rv
-from ros.validation.metrics import (
-    ANN, metrics_table, render_table, sharpe_geometric)
+from ros.validation.metrics import metrics_table, render_table, sharpe_geometric
 
 pd.set_option("display.width", 220)
 pd.set_option("display.max_columns", 40)
@@ -62,7 +70,7 @@ class Report:
     """Accumulates the run's narrative so it can be printed and saved together."""
 
     def __init__(self):
-        self.lines: List[str] = []
+        self.lines: list[str] = []
         self._flushed = 0
 
     def flush(self) -> None:
@@ -137,7 +145,7 @@ def main(argv=None) -> int:
     R = Report()
     card = load_card(args.card)
     os.makedirs(args.outdir, exist_ok=True)
-    produced: List[str] = [args.card]   # absolute local paths, shown at every checkpoint below
+    produced: list[str] = [args.card]   # absolute local paths, shown at every checkpoint below
 
     R.h(f"AI RESEARCH OPERATING SYSTEM  |  card: {card.paper.id}")
     R.p(f"  title  : {card.paper.title}")
@@ -341,7 +349,7 @@ def main(argv=None) -> int:
 
     # ---------------- STEP 06 : RESEARCH VALIDATION ----------------------
     R.h("STEP 06  |  RESEARCH VALIDATION")
-    research: Dict[str, Any] = {}
+    research: dict[str, Any] = {}
     primary = runset.mandate if runset.mandate is not None else runset.primary
     R.p(f"  Strategy under test: {primary.name}")
     R.p("  (the mandate-compliant variant governs the decision where one exists)")
@@ -479,7 +487,9 @@ def main(argv=None) -> int:
             break
         pr = dict(base_params); pr["target_vol"] = tv
         res = run_one(card.signal.template, pr, f"tv{tv}", card.portfolio.rebalance, allow_cash)
-        from ros.validation.metrics import cagr as _c, ann_vol as _v, max_drawdown as _m
+        from ros.validation.metrics import ann_vol as _v
+        from ros.validation.metrics import cagr as _c
+        from ros.validation.metrics import max_drawdown as _m
         sweep_rows.append({"target_vol": tv, "cagr": _c(res.value), "vol": _v(res.returns),
                            "sharpe": sharpe_geometric(res.value, res.returns, rf),
                            "max_dd": _m(res.value)})
@@ -509,7 +519,7 @@ def main(argv=None) -> int:
 
     # ---------------- STEP 07 : PORTFOLIO VALIDATION ---------------------
     R.h("STEP 07  |  PORTFOLIO VALIDATION")
-    port: Dict[str, Any] = {}
+    port: dict[str, Any] = {}
     bench_name = card.universe.benchmark
     bench = runset.by_name(bench_name)
     book = runset.by_name(args.book)
@@ -638,7 +648,7 @@ def main(argv=None) -> int:
         R.p("  NO DECISION HAS BEEN MADE. The pipeline scored the evidence and stopped.")
         R.p("  A named human records the call by re-running with, for example:")
         R.p(f"    python run_pipeline.py --card {args.card} \\")
-        R.p(f"        --decision REJECT --decided-by \"N. Ganesh\" --rationale \"...\"")
+        R.p("        --decision REJECT --decided-by \"N. Ganesh\" --rationale \"...\"")
 
     eid = make_entry_id(card.paper.id, card.fingerprint())
     entry = LibraryEntry(
@@ -708,9 +718,9 @@ def main(argv=None) -> int:
     return 0
 
 
-def _build_ladder(card, research, port, tbl, primary, runset, fp) -> Dict[str, List[Criterion]]:
+def _build_ladder(card, research, port, tbl, primary, runset, fp) -> dict[str, list[Criterion]]:
     """Criteria for each rung. Ordered, strict, evidence-bearing."""
-    rungs: Dict[str, List[Criterion]] = {}
+    rungs: dict[str, list[Criterion]] = {}
 
     if card.intent.mode == "replication":
         pr = research.get("replication_pass_rate", 0.0)
@@ -768,7 +778,7 @@ def _build_ladder(card, research, port, tbl, primary, runset, fp) -> Dict[str, L
     return rungs
 
 
-def _lessons(card, research, port, tbl, primary, lad) -> List[str]:
+def _lessons(card, research, port, tbl, primary, lad) -> list[str]:
     out = [f"Stopped at {lad['stopped_at'] or 'completion'}; attained {lad['attained_rung'] or 'nothing'}."]
     if port.get("max_corr_to_book") is not None:
         out.append(f"Max correlation to an already-available alternative: "
@@ -839,7 +849,7 @@ def _finish(R: Report, args, card):
 
 
 def _checkpoint(R: Report, args, card, stage_name: str,
-                produced: Optional[List[str]] = None) -> Optional[int]:
+                produced: list[str] | None = None) -> int | None:
     """Show `stage_name` ALONE, now, and pause for a human's typed approval
     before the NEXT stage runs -- not bundled into one end-of-run dump where
     "approving" any one stage would be meaningless because everything after

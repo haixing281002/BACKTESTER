@@ -17,8 +17,8 @@ Verdicts:
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field, asdict
-from typing import Any, Dict, List, Optional
+from dataclasses import asdict, dataclass, field
+from typing import Any
 
 from ros.cards.schema import StrategyCard
 from ros.data.registry import DataRegistry
@@ -33,9 +33,9 @@ class Resolution:
     kind: str
     mandatory: bool
     status: str
-    resolved_to: Optional[str] = None
+    resolved_to: str | None = None
     reason: str = ""
-    caveats: List[str] = field(default_factory=list)
+    caveats: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -43,22 +43,22 @@ class FeasibilityReport:
     card_id: str
     mode: str
     verdict: str
-    resolutions: List[Resolution]
-    blocking: List[str] = field(default_factory=list)
-    signoff_required: List[str] = field(default_factory=list)
-    notes: List[str] = field(default_factory=list)
+    resolutions: list[Resolution]
+    blocking: list[str] = field(default_factory=list)
+    signoff_required: list[str] = field(default_factory=list)
+    notes: list[str] = field(default_factory=list)
 
     @property
     def can_proceed(self) -> bool:
         return self.verdict in (GO, GO_WITH_PROXY)
 
-    def counts(self) -> Dict[str, int]:
-        out: Dict[str, int] = {}
+    def counts(self) -> dict[str, int]:
+        out: dict[str, int] = {}
         for r in self.resolutions:
             out[r.status] = out.get(r.status, 0) + 1
         return out
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "card_id": self.card_id, "mode": self.mode, "verdict": self.verdict,
             "counts": self.counts(),
@@ -97,10 +97,10 @@ class FeasibilityReport:
 def assess(card: StrategyCard, registry: DataRegistry,
            allow_backfilled: bool = True) -> FeasibilityReport:
     """Resolve every data requirement on the card against the registry."""
-    resolutions: List[Resolution] = []
-    blocking: List[str] = []
-    signoff: List[str] = []
-    notes: List[str] = []
+    resolutions: list[Resolution] = []
+    blocking: list[str] = []
+    signoff: list[str] = []
+    notes: list[str] = []
 
     for req in card.data_requirements:
         cap = registry.get(req.name)

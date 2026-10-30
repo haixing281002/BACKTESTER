@@ -26,13 +26,13 @@ from __future__ import annotations
 import json
 import os
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from datetime import UTC, datetime
+from typing import Any
 
 from ros.agents import analysts as A
 from ros.agents import schemas as S
 from ros.agents.client import Transport, UsageLedger, build_transport
-from ros.cards.schema import CardValidationError, StrategyCard, load_card
+from ros.cards.schema import CardValidationError, load_card
 from ros.data.firm_registry import build_firm_registry
 from ros.engine.primitives import list_primitives
 from ros.engine.templates import list_templates
@@ -62,24 +62,24 @@ equal_weight              1/N"""
 @dataclass
 class AgenticResult:
     """Everything the agent layer produced, all of it advisory."""
-    triage: Optional[S.TriageVerdict] = None
-    analysis: Optional[S.PaperAnalysis] = None
-    proposal: Optional[S.CardProposal] = None
-    critique: Optional[S.AmbiguityReport] = None
-    data_mapping: Optional[S.FeasibilityMapping] = None
-    template_match: Optional[S.TemplateMatch] = None
-    results_critique: Optional[S.ResultsCritique] = None
-    librarian: Optional[S.LibrarianAnswer] = None
-    card_path: Optional[str] = None
+    triage: S.TriageVerdict | None = None
+    analysis: S.PaperAnalysis | None = None
+    proposal: S.CardProposal | None = None
+    critique: S.AmbiguityReport | None = None
+    data_mapping: S.FeasibilityMapping | None = None
+    template_match: S.TemplateMatch | None = None
+    results_critique: S.ResultsCritique | None = None
+    librarian: S.LibrarianAnswer | None = None
+    card_path: str | None = None
     card_valid: bool = False
-    card_errors: List[str] = field(default_factory=list)
-    human_review_queue: List[str] = field(default_factory=list)
-    ledger: Optional[UsageLedger] = None
-    stage_notes: Dict[str, List[str]] = field(default_factory=dict)
-    library_entry_path: Optional[str] = None
+    card_errors: list[str] = field(default_factory=list)
+    human_review_queue: list[str] = field(default_factory=list)
+    ledger: UsageLedger | None = None
+    stage_notes: dict[str, list[str]] = field(default_factory=dict)
+    library_entry_path: str | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
-        out: Dict[str, Any] = {}
+    def to_dict(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
         for k in ("triage", "analysis", "proposal", "critique", "data_mapping",
                   "template_match", "results_critique", "librarian"):
             v = getattr(self, k)
@@ -99,9 +99,9 @@ class AgenticResult:
 class AgenticPipeline:
     """Runs the interpretation half of the pipeline. Computation stays elsewhere."""
 
-    def __init__(self, transport: Optional[Transport] = None, mode: str = "auto",
-                 fixtures: Optional[Dict[str, Any]] = None,
-                 library: Optional[StrategyLibrary] = None):
+    def __init__(self, transport: Transport | None = None, mode: str = "auto",
+                 fixtures: dict[str, Any] | None = None,
+                 library: StrategyLibrary | None = None):
         self.ledger = UsageLedger()
         self.transport = transport or build_transport(mode, fixtures)
         self.registry = build_firm_registry()
@@ -116,7 +116,7 @@ class AgenticPipeline:
     def _agent(self, cls):
         return cls(self.transport, self.ledger)
 
-    def _precedent(self, role: str, card_id_prefix: Optional[str] = None) -> List[Dict[str, Any]]:
+    def _precedent(self, role: str, card_id_prefix: str | None = None) -> list[dict[str, Any]]:
         return self.library.relevant_precedent(role, card_id_prefix=card_id_prefix)
 
     # ------------------------------------------------------------------
@@ -151,21 +151,21 @@ class AgenticPipeline:
             self.registry.to_dict(),
             precedent=self._precedent("data_mapper"))
 
-    def match_template(self, analysis: S.PaperAnalysis, assets: List[str]) -> S.TemplateMatch:
+    def match_template(self, analysis: S.PaperAnalysis, assets: list[str]) -> S.TemplateMatch:
         return self._agent(A.TemplateMatcherAgent).run(
             analysis, list_templates(), TEMPLATE_DOCS, assets,
             precedent=self._precedent("template_matcher"))
 
-    def critique_results(self, diagnostics: Dict[str, Any], card_summary: str) -> S.ResultsCritique:
+    def critique_results(self, diagnostics: dict[str, Any], card_summary: str) -> S.ResultsCritique:
         return self._agent(A.ResultsCriticAgent).run(
             diagnostics, card_summary, precedent=self._precedent("results_critic"))
 
-    def consult_library(self, question: str, summaries: List[Dict[str, Any]]) -> S.LibrarianAnswer:
+    def consult_library(self, question: str, summaries: list[dict[str, Any]]) -> S.LibrarianAnswer:
         return self._agent(A.LibrarianAgent).run(question, summaries)
 
     # ------------------------------------------------------------------
     def run_interpretation(self, pdf_path: str, mode: str, out_dir: str,
-                           card_name: Optional[str] = None) -> AgenticResult:
+                           card_name: str | None = None) -> AgenticResult:
         """Steps 01-03 end to end: paper in, validated card proposal out.
 
         Stops at Gate A by design. The deterministic pipeline takes it from there.
@@ -200,14 +200,14 @@ class AgenticPipeline:
 
     # ------------------------------------------------------------------
     @staticmethod
-    def _extract_stage_notes(res: AgenticResult) -> Dict[str, List[str]]:
+    def _extract_stage_notes(res: AgenticResult) -> dict[str, list[str]]:
         """Deterministic extraction from the agents' own structured output --
         no extra model call, no freeform summarisation. This is the "code
         computes" half of the loop: the MODEL already produced findings as
         Pydantic fields; turning the material ones into short precedent
         strings is plain Python, same discipline as everywhere else in this
         repo that a model's structured output feeds a report."""
-        notes: Dict[str, List[str]] = {}
+        notes: dict[str, list[str]] = {}
 
         if res.critique:
             card_drafter_notes = (
@@ -244,7 +244,7 @@ class AgenticPipeline:
 
         return notes
 
-    def _bank_precedent(self, res: AgenticResult) -> Optional[str]:
+    def _bank_precedent(self, res: AgenticResult) -> str | None:
         """Writes a PRELIMINARY library entry (outcome="AGENTIC_DRAFT") so the
         NEXT similar paper's agents get today's stage_notes as precedent --
         even though this run stops at Gate A and has no governed Step 08
@@ -261,7 +261,7 @@ class AgenticPipeline:
         eid = make_entry_id(card.paper.id, card.fingerprint())
         entry = LibraryEntry(
             entry_id=eid, card_id=card.paper.id, mode=card.intent.mode,
-            created_utc=datetime.now(timezone.utc).isoformat(),
+            created_utc=datetime.now(UTC).isoformat(),
             card_fingerprint=card.fingerprint(),
             outcome="AGENTIC_DRAFT",
             stage_notes=res.stage_notes,
@@ -271,14 +271,14 @@ class AgenticPipeline:
 
     # ------------------------------------------------------------------
     @staticmethod
-    def _build_review_queue(res: AgenticResult) -> List[str]:
+    def _build_review_queue(res: AgenticResult) -> list[str]:
         """What a human must look at before Gate A can pass.
 
         Routing by the model's own calibration is the point: a low-confidence
         material field costs one minute of human attention, and a
         high-confidence wrong field costs a quarter.
         """
-        q: List[str] = []
+        q: list[str] = []
 
         if res.analysis:
             if res.analysis.overall_confidence != S.Confidence.high:
@@ -332,7 +332,7 @@ def _slug(text: str, n: int = 48) -> str:
     return keep.strip("_")[:n] or "untitled"
 
 
-def reconcile_feasibility(deterministic, mapping: Optional[S.FeasibilityMapping]) -> Dict[str, Any]:
+def reconcile_feasibility(deterministic, mapping: S.FeasibilityMapping | None) -> dict[str, Any]:
     """Compare the deterministic verdict with the model's advice.
 
     Agreement is reassuring. Disagreement is the interesting case and is

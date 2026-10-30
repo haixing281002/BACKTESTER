@@ -3,9 +3,7 @@ import json
 import os
 import shutil
 from contextlib import asynccontextmanager
-from typing import Optional
 
-import yaml
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
@@ -13,6 +11,7 @@ from pydantic import BaseModel
 
 from . import __version__, gates, jobs, prompts, workbook
 from .paths import PAPERS, REPO, STATIC, find_claude, run_dir, slugify
+
 
 def _code_fingerprint():
     """Modification times of Lightyear's Python files. If they change while the server runs, the page says
@@ -65,7 +64,7 @@ def index():
 def health():
     try:
         claude = find_claude()
-    except FileNotFoundError as e:
+    except FileNotFoundError:
         claude = None
     lo = os.path.exists(os.path.expanduser(r"~\LibreOffice\program\soffice.exe")) or bool(os.environ.get("SOFFICE"))
     changed = [f for f, t in _code_fingerprint().items() if _BOOT_CODE.get(f) != t]
@@ -86,7 +85,7 @@ def runs():
 
 @app.post("/api/runs")
 async def new_run(operator: str = Form(...), model: str = Form(""), auto_continue: bool = Form(False), cache_only: bool = Form(True),
-                  existing: str = Form(""), pdf: Optional[UploadFile] = File(None)):
+                  existing: str = Form(""), pdf: UploadFile | None = File(None)):
     _busy_guard()
     if not operator.strip():
         raise HTTPException(400, "Operator name is required.")

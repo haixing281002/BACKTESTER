@@ -15,17 +15,35 @@ import os
 import pytest
 
 from ros.cards.completeness import assess as card_completeness
-from ros.cards.schema import (BLOCK, DECIDE, GROUPS, GUESS, Convertibility,
-                              CostSpec, Fact, IndiaNote, Intent, Paper,
-                              PortfolioSpec, Signal, StrategyCard, Universe,
-                              audit_data_requests, load_card,
-                              reconcile_data_plan)
+from ros.cards.schema import (
+    BLOCK,
+    DECIDE,
+    GROUPS,
+    GUESS,
+    Convertibility,
+    CostSpec,
+    Intent,
+    Paper,
+    PortfolioSpec,
+    Signal,
+    StrategyCard,
+    Universe,
+    audit_data_requests,
+    load_card,
+    reconcile_data_plan,
+)
 from ros.data.firm_registry import build_firm_registry
 from ros.data.universes import check_translation
 from ros.feasibility import assess as feasibility_assess
-from ros.governance.gates import (Criterion, GateResult, code_facts,
-                                  extraction_facts, gate_a, gate_a_document,
-                                  gate_a_summary)
+from ros.governance.gates import (
+    Criterion,
+    GateResult,
+    code_facts,
+    extraction_facts,
+    gate_a,
+    gate_a_document,
+    gate_a_summary,
+)
 from ros.india_requirements import derive as derive_india
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

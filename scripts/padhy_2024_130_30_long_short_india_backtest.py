@@ -38,17 +38,25 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import numpy as np
 import pandas as pd
 
-from universal_backtester.allocators import Allocator, AllocatorContext, _cap_and_redistribute
+from ros.validation.portfolio import factor_fingerprint
+from universal_backtester.allocators import (
+    Allocator,
+    AllocatorContext,
+    _cap_and_redistribute,
+)
 from universal_backtester.data import load_banner_workbook
 from universal_backtester.engine import Backtester, LookaheadError, assert_causal
 from universal_backtester.metrics import ann_vol as _ann_vol
 from universal_backtester.metrics import cagr as _cagr
 from universal_backtester.metrics import max_drawdown as _mdd
 from universal_backtester.validation import (
-    bootstrap_sharpe_ci, deflated_sharpe_from_returns, oos_stability_summary,
-    parameter_sensitivity_sweep, sensitivity_verdict, walk_forward_windows,
+    bootstrap_sharpe_ci,
+    deflated_sharpe_from_returns,
+    oos_stability_summary,
+    parameter_sensitivity_sweep,
+    sensitivity_verdict,
+    walk_forward_windows,
 )
-from ros.validation.portfolio import factor_fingerprint
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MASTER = os.path.join(REPO, "data", "raw", "master", "bhavcopy_screener_master.csv")
@@ -487,7 +495,7 @@ def main():
            "corr_equal_weight_vs_official": float(lv["Equal-weight rebuilt Momentum 50"][1].corr(mom_r)),
            "tracking_error_index_weighted": float((lv["Index-weighted rebuilt 50 (fidelity check)"][1] - mom_r).std() * np.sqrt(252))}
     fid["passes_0_95"] = fid["corr_index_weighted_vs_official"] >= 0.95
-    print(f"\nFIDELITY of the rebuilt 50 (card bar: daily-return correlation >= 0.95 with the official index):")
+    print("\nFIDELITY of the rebuilt 50 (card bar: daily-return correlation >= 0.95 with the official index):")
     print(f"  index-weighted rebuilt 50 vs NIFTY500 MOMENTUM 50: corr {fid['corr_index_weighted_vs_official']:.3f}, "
           f"tracking error {fid['tracking_error_index_weighted']:.2%} a year -> "
           f"{'result may be called on the index companies' if fid['passes_0_95'] else 'LABEL AS MOMENTUM LOOKALIKE'}")
@@ -515,7 +523,7 @@ def main():
     print(hy.drop(columns=["hold_to"]).to_string(index=False, float_format=lambda x: f"{x:.3f}"))
     hy.to_csv(os.path.join(OUT, f"{SLUG}_half_years.csv"), index=False)
     formed = hy[hy["formed_130_30"]]
-    hy_sum = {"n_formed": int(len(formed)), "n_half_years": int(len(hy)),
+    hy_sum = {"n_formed": len(formed), "n_half_years": len(hy),
               "formed_beats_momentum50": int((formed["book_minus_momentum50"] > 0).sum()),
               "mean_short_minus_momentum50_formed": float(formed["short_minus_momentum50"].mean()) if len(formed) else None,
               "chained_book_formed_only": float((1 + formed["book"]).prod() - 1) if len(formed) else None,

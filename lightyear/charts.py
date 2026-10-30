@@ -33,7 +33,7 @@ def metrics(r: pd.Series, dates: pd.Series, hurdle=HURDLE):
     dd = v / np.maximum.accumulate(v) - 1
     return {"final": final, "cagr": cagr, "vol": vol,
             "sharpe": (cagr - hurdle) / vol if vol else float("nan"),
-            "max_dd": float(-dd.min()), "years": years, "days": int(len(r))}
+            "max_dd": float(-dd.min()), "years": years, "days": len(r)}
 
 
 def _p(x):

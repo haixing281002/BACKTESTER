@@ -1,0 +1,1676 @@
+effective_date,action,symbol,isin,company_name,entry_type,source
+2013-06-11,IN,DBCORP,INE950I01011,D.B.Corp Ltd.,regular,IndexInclExcl.xls: D.B.Corp Ltd.
+2013-06-11,IN,INFRATEL,INE121J01017,Indus Towers Ltd.,regular,IndexInclExcl.xls: Bharti Infratel Ltd.
+2013-06-11,OUT,FUTUREVENT,INE220J01017,Future Ventures India Ltd.,regular,IndexInclExcl.xls: Future Consumer Enterprise Ltd. (renamed)
+2013-06-11,OUT,JSWISPAT,INE136A01022,JSW ISPAT Steel Ltd.,regular,IndexInclExcl.xls: JSW ISPAT Steel Ltd.
+2013-06-21,IN,3IINFOTECH,INE748C01020,3i Infotech Ltd. COMPUTERS -,regular,IndexInclExcl.xls: 3i Infotech Ltd.
+2013-06-21,OUT,KSOILS,INE727D01022,K.S. Oils Ltd.,regular,IndexInclExcl.xls: K.S. Oils Ltd.
+2013-07-17,IN,20MICRONS,INE144J01027,20 Microns Ltd,regular,IndexInclExcl.xls: 20 Microns Ltd
+2013-07-17,IN,INFINITE,INE486J01014,Infinite Computer Solutions (India) Ltd,regular,IndexInclExcl.xls: Infinite Computer Solutions (India) Ltd
+2013-07-17,OUT,CENTURYPLY,INE348B01021,Century Plyboards (India) Ltd.,regular,IndexInclExcl.xls: Century Plyboards (India) Ltd.
+2013-07-17,OUT,JINDALPOLY,INE197D01010,Jindal Poly Films Ltd.,regular,IndexInclExcl.xls: Jindal Poly Films Ltd.
+2013-07-30,RENAME,JSWHL,INE824G01012,JSW Holdings Ltd.,regular,JINDALSWHL -> JSWHL: NSE symbolchange.csv
+2013-08-07,IN,WIPRO,INE075A01022,Wipro Ltd.,regular,IndexInclExcl.xls: Wipro Ltd.
+2013-08-07,OUT,SUJANATOW,INE333I01028,Sujana Towers Ltd.,regular,IndexInclExcl.xls: Sujana Towers Ltd.-old
+2013-09-02,RENAME,DRDATSONS,INE928K01013,Dr. Datsons Labs Ltd.,regular,AANJANEYA -> DRDATSONS: NSE symbolchange.csv
+2013-09-19,RENAME,NAVNETEDUL,INE060A01024,Navneet Education Ltd.,regular,NAVNETPUBL -> NAVNETEDUL: NSE symbolchange.csv
+2013-09-27,IN,ESSDEE,INE825H01017,Ess Dee Aluminium Ltd.,regular,IndexInclExcl.xls: Ess Dee Aluminium Ltd.
+2013-09-27,IN,JKLAKSHMI,INE786A01032,JK Lakshmi Cement Ltd.,regular,IndexInclExcl.xls: JK Lakshmi Cement Ltd.
+2013-09-27,IN,KKCL,INE401H01017,Kewal Kiran Clothing Ltd.,regular,IndexInclExcl.xls: Kewal Kiran Clothing Ltd.
+2013-09-27,IN,KOLTEPATIL,INE094I01018,Kolte-Patil Developers Ltd.,regular,IndexInclExcl.xls: Kolte-Patil Developers Ltd.
+2013-09-27,IN,KSCL,INE455I01011,Kaveri Seed Company Ltd.,regular,IndexInclExcl.xls: Kaveri Seed Company Ltd.
+2013-09-27,IN,MAGMA,INE511C01022,Poonawalla Fincorp Ltd.,regular,IndexInclExcl.xls: Magma Fincorp Ltd.
+2013-09-27,IN,MAHSCOOTER,INE288A01013,Maharashtra Scooters Ltd.,regular,IndexInclExcl.xls: Maharashtra Scooters Ltd.
+2013-09-27,IN,MANINDS,INE993A01026,Man Industries (India) Ltd.,regular,IndexInclExcl.xls: Man Industries (India) Ltd.
+2013-09-27,IN,MHRIL,INE998I01010,Mahindra Holidays & Resorts India Ltd.,regular,IndexInclExcl.xls: Mahindra Holidays & Resorts India Ltd.
+2013-09-27,IN,MMTC,INE123F01029,MMTC Ltd.,regular,IndexInclExcl.xls: MMTC Ltd.
+2013-09-27,IN,MTEDUCARE,INE472M01018,MT Educare Ltd.,regular,IndexInclExcl.xls: MT Educare Ltd.
+2013-09-27,IN,RASOYPR,INE904G01038,Rasoya Proteins Ltd.,regular,IndexInclExcl.xls: Rasoya Proteins Ltd.
+2013-09-27,IN,VTL,INE825A01012,Vardhman Textiles Ltd.,regular,IndexInclExcl.xls: Vardhman Textiles Ltd.
+2013-09-27,OUT,20MICRONS,INE144J01027,20 Microns Ltd,regular,IndexInclExcl.xls: 20 Microns Ltd
+2013-09-27,OUT,3IINFOTECH,INE748C01020,3i Infotech Ltd. COMPUTERS -,regular,IndexInclExcl.xls: 3i Infotech Ltd.
+2013-09-27,OUT,ARSHIYA,INE968D01022,Arshiya International Ltd.,regular,IndexInclExcl.xls: Arshiya International Ltd.
+2013-09-27,OUT,AUTOIND,INE718H01014,Autoline Industries Ltd.,regular,IndexInclExcl.xls: Autoline Industries Ltd.
+2013-09-27,OUT,BANARISUG,INE459A01010,Bannari Amman Sugars Ltd.,regular,IndexInclExcl.xls: Bannari Amman Sugars Ltd.
+2013-09-27,OUT,DISHTV,INE836F01026,Dish TV India Ltd.,regular,IndexInclExcl.xls: Dish TV India Ltd.
+2013-09-27,OUT,GEODESIC,INE371D01029,Geodesic Ltd.,regular,IndexInclExcl.xls: Geodesic Ltd.
+2013-09-27,OUT,JETAIRWAYS,INE802G01018,Jet Airways (India) Ltd.,regular,IndexInclExcl.xls: Jet Airways (India) Ltd.
+2013-09-27,OUT,KEMROCK,INE990B01012,Kemrock Industries and Exports Ltd.,regular,IndexInclExcl.xls: Kemrock Industries and Exports Ltd.
+2013-09-27,OUT,ONELIFECAP,INE912L01015,Onelife Capital Advisors Ltd.,regular,IndexInclExcl.xls: Onelife Capital Advisors Ltd.
+2013-09-27,OUT,RAMKY,INE874I01013,Ramky Infra Ltd.,regular,IndexInclExcl.xls: Ramky Infra Ltd.
+2013-09-27,OUT,SPARC,INE232I01014,Sun Pharma Advanced Research Company Ltd.,regular,IndexInclExcl.xls: Sun Pharma Advanced Research Company Ltd.
+2013-09-27,OUT,VARUNSHIP,INE702A01013,Varun Shipping Co. Ltd.,regular,IndexInclExcl.xls: Varun Shipping Co. Ltd.
+2013-09-30,RENAME,RAMCOCEM,INE331A01037,The Ramco Cements Ltd.,regular,MADRASCEM -> RAMCOCEM: NSE symbolchange.csv
+2013-10-04,RENAME,SSLT,INE205A01025,Vedanta Ltd.,regular,SESAGOA -> SSLT: NSE symbolchange.csv
+2013-10-23,RENAME,UPL,INE628A01036,UPL Ltd.,regular,UNIPHOS -> UPL: NSE symbolchange.csv
+2013-11-01,IN,NDTV,INE155G01029,NDTV Ltd.,regular,IndexInclExcl.xls: NDTV Ltd.
+2013-11-01,OUT,MARICO,INE196A01026,Marico Ltd.,regular,IndexInclExcl.xls: Marico Ltd.
+2013-11-18,IN,FRL,INE623B01027,Future Retail Ltd.,regular,IndexInclExcl.xls: Future Retail Ltd.
+2013-11-18,IN,RAJTV,INE952H01019,Raj Television Network Ltd.,regular,IndexInclExcl.xls: Raj Television Network Ltd.
+2013-11-18,OUT,FKONCO,INE575G01010,Fresenius Kabi Oncology Ltd.,regular,IndexInclExcl.xls: Fresenius Kabi Oncology Ltd.
+2013-11-18,OUT,WELCORP,INE191B01025,Welspun Corp Ltd.,regular,IndexInclExcl.xls: Welspun Corp Ltd.
+2013-11-27,RENAME,VAKRANGEE,INE051B01021,Vakrangee Ltd.,regular,VAKRANSOFT -> VAKRANGEE: NSE symbolchange.csv
+2014-01-15,RENAME,DCBBANK,INE503A01015,DCB Bank Ltd.,regular,DCB -> DCBBANK: NSE symbolchange.csv
+2014-02-28,IN,JYOTHYLAB,INE668F01031,Jyothy Labs Ltd.,regular,IndexInclExcl.xls: Jyothy Laboratories Ltd.
+2014-02-28,OUT,CASTROL,INE172A01019,Castrol (India) Ltd.,regular,IndexInclExcl.xls: Castrol (India) Ltd.
+2014-03-13,RENAME,DCMSHRIRAM,INE499A01024,DCM Shriram Ltd.,regular,DCMSRMCONS -> DCMSHRIRAM: NSE symbolchange.csv
+2014-03-13,RENAME,IIFL,INE530B01024,IIFL Finance Ltd.,regular,INDIAINFO -> IIFL: NSE symbolchange.csv
+2014-03-28,IN,BAJAJCORP,INE933K01021,Bajaj Consumer Care Ltd.,regular,IndexInclExcl.xls: Bajaj Corp Ltd.
+2014-03-28,IN,CARERATING,INE752H01013,CARE Ratings Ltd.,regular,IndexInclExcl.xls: CARE Ltd.
+2014-03-28,IN,IBULHSGFIN,INE148I01020,Sammaan Capital Ltd.,regular,IndexInclExcl.xls: Indiabulls Housing Finance Ltd.
+2014-03-28,IN,INOXLEISUR,INE312H01016,Inox Leisure Ltd.,regular,IndexInclExcl.xls: Inox Leisure Ltd.
+2014-03-28,IN,JUSTDIAL,INE599M01018,Justdial Ltd.,regular,IndexInclExcl.xls: Justdial Ltd.
+2014-03-28,IN,MAHINDUGIN,INE850A01010,Mahindra Ugine Steel Co. Ltd.,regular,IndexInclExcl.xls: Mahindra Ugine Steel Co. Ltd.
+2014-03-28,IN,NBCC,INE095N01015,NBCC (India) Ltd.,regular,IndexInclExcl.xls: National Buildings Construction Corporation Ltd.
+2014-03-28,IN,PFS,INE560K01014,PTC India Fin Serv Ltd.,regular,IndexInclExcl.xls: PTC India Fin Serv Ltd.
+2014-03-28,IN,PIIND,INE603J01030,PI Industries Ltd.,regular,IndexInclExcl.xls: PI Industries Ltd.
+2014-03-28,IN,SONASTEER,INE643A01035,Sona Koyo Steering Systems Ltd.,regular,IndexInclExcl.xls: Sona Koyo Steering Systems Ltd.
+2014-03-28,IN,SPARC,INE232I01014,Sun Pharma Advanced Research Company Ltd.,regular,IndexInclExcl.xls: Sun Pharma Advanced Research Company Ltd.
+2014-03-28,IN,TRIDENT,INE064C01014,Trident Ltd.,regular,IndexInclExcl.xls: Trident Ltd.
+2014-03-28,IN,VAIBHAVGBL,INE884A01019,Vaibhav Global Ltd.,regular,IndexInclExcl.xls: Vaibhav Global Ltd.
+2014-03-28,OUT,BRFL,INE589G01011,Bombay Rayon Fashions Ltd.,regular,IndexInclExcl.xls: Bombay Rayon Fashions Ltd.
+2014-03-28,OUT,DRDATSONS,INE928K01013,Dr. Datsons Labs Ltd.,regular,IndexInclExcl.xls: Dr. Datsons Labs Ltd.
+2014-03-28,OUT,DYNAMATECH,INE221B01012,Dynamatic Technologies Ltd.,regular,IndexInclExcl.xls: Dynamatic Technologies Ltd.
+2014-03-28,OUT,ESSAROIL,INE011A01019,Essar Oil Ltd.,regular,IndexInclExcl.xls: Essar Oil Ltd.
+2014-03-28,OUT,INNOIND,INE549I01011,Innoventive Industries Ltd.,regular,IndexInclExcl.xls: Innoventive Industries Ltd.
+2014-03-28,OUT,KGL,INE299C01024,Karuturi Global Ltd.,regular,IndexInclExcl.xls: Karuturi Global Ltd.
+2014-03-28,OUT,MTNL,INE153A01019,Mahanagar Telephone Nigam Ltd.,regular,IndexInclExcl.xls: Mahanagar Telephone Nigam Ltd.
+2014-03-28,OUT,NDTV,INE155G01029,NDTV Ltd.,regular,IndexInclExcl.xls: NDTV Ltd.
+2014-03-28,OUT,PSL,INE474B01017,PSL Ltd.,regular,IndexInclExcl.xls: PSL Ltd.
+2014-03-28,OUT,SHREEASHTA,INE538H01024,Shree Ashtavinayak Cine Vision Ltd.,regular,IndexInclExcl.xls: Shree Ashtavinayak Cine Vision Ltd.
+2014-03-28,OUT,TULIP,INE122H01027,Tulip Telecom Ltd.,regular,IndexInclExcl.xls: Tulip Telecom Ltd.
+2014-03-28,OUT,UBHOLDINGS,INE696A01025,United Breweries (Holdings) Ltd.,regular,IndexInclExcl.xls: United Breweries (Holdings) Ltd.
+2014-03-28,OUT,ZODIACLOTH,INE206B01013,Zodiac Clothing Co. Ltd.,regular,IndexInclExcl.xls: Zodiac Clothing Co. Ltd.
+2014-05-12,IN,MARICO,INE196A01026,Marico Ltd.,regular,IndexInclExcl.xls: Marico Ltd.
+2014-05-12,OUT,WYETH,INE378A01012,Wyeth Ltd.,regular,IndexInclExcl.xls: Wyeth Ltd.
+2014-05-22,RENAME,CYIENT,INE136B01020,Cyient Ltd.,regular,INFOTECENT -> CYIENT: NSE symbolchange.csv
+2014-06-30,IN,RAIN,INE855B01025,Rain Industries Ltd,regular,IndexInclExcl.xls: Rain Industries Ltd
+2014-06-30,OUT,MAHINDUGIN,INE850A01010,Mahindra Ugine Steel Co. Ltd.,regular,IndexInclExcl.xls: Mahindra Ugine Steel Co. Ltd.
+2014-07-28,IN,CASTROLIND,INE172A01027,Castrol India Ltd.,regular,IndexInclExcl.xls: Castrol India Ltd.
+2014-07-28,OUT,MANINDS,INE993A01026,Man Industries (India) Ltd.,regular,IndexInclExcl.xls: Man Industries (India) Ltd.
+2014-09-19,IN,AJANTPHARM,INE031B01031,Ajanta Pharmaceuticals Ltd.,regular,IndexInclExcl.xls: Ajanta Pharmaceuticals Ltd.
+2014-09-19,IN,APARINDS,INE372A01015,Apar Industries Ltd.,regular,IndexInclExcl.xls: Apar Industries Ltd.
+2014-09-19,IN,APLLTD,INE901L01018,Alembic Pharmaceuticals Ltd.,regular,IndexInclExcl.xls: Alembic Pharmaceuticals Ltd.
+2014-09-19,IN,ASHOKA,INE442H01029,Ashoka Buildcon Ltd.,regular,IndexInclExcl.xls: Ashoka Buildcon Ltd.
+2014-09-19,IN,ASTRAL,INE006I01038,Astral Ltd.,regular,IndexInclExcl.xls: Astral Poly Technik Ltd.
+2014-09-19,IN,CENTURYPLY,INE348B01021,Century Plyboards (India) Ltd.,regular,IndexInclExcl.xls: Century Plyboards (India) Ltd.
+2014-09-19,IN,KITEX,INE602G01020,Kitex Garments Ltd.,regular,IndexInclExcl.xls: Kitex Garments Ltd.
+2014-09-19,IN,NITINFIRE,INE489H01020,Nitin Fire Protection Industries Ltd.,regular,IndexInclExcl.xls: Nitin Fire Protection Industries Ltd.
+2014-09-19,IN,NOCIL,INE163A01018,NOCIL Ltd.,regular,IndexInclExcl.xls: NOCIL Ltd.
+2014-09-19,IN,RATNAMANI,INE703B01027,Ratnamani Metals & Tubes Ltd.,regular,IndexInclExcl.xls: Ratnamani Metals & Tubes Ltd.
+2014-09-19,IN,REPCOHOME,INE612J01015,Repco Home Finance Ltd.,regular,IndexInclExcl.xls: Repco Home Finance Ltd.
+2014-09-19,IN,TVTODAY,INE038F01029,TV Today Network Ltd.,regular,IndexInclExcl.xls: TV Today Network Ltd.
+2014-09-19,IN,WABAG,INE956G01038,Va Tech Wabag Ltd.,regular,IndexInclExcl.xls: Va Tech Wabag Ltd.
+2014-09-19,IN,WELCORP,INE191B01025,Welspun Corp Ltd.,regular,IndexInclExcl.xls: Welspun Corp Ltd.
+2014-09-19,IN,WHEELS,INE715A01015,Wheels India Ltd.,regular,IndexInclExcl.xls: Wheels India Ltd.
+2014-09-19,OUT,ADANIPOWER,INE814H01011,Adani Power Ltd.,regular,IndexInclExcl.xls: Adani Power Ltd.
+2014-09-19,OUT,APTECHT,INE266F01018,Aptech Ltd.,regular,IndexInclExcl.xls: Aptech Ltd.
+2014-09-19,OUT,COREEDUTEC,INE247G01024,CORE Education & Technologies Ltd.,regular,IndexInclExcl.xls: CORE Education & Technologies Ltd.
+2014-09-19,OUT,ERAINFRA,INE039E01020,Era Infra Engineering Ltd.,regular,IndexInclExcl.xls: Era Infra Engineering Ltd.
+2014-09-19,OUT,GTOFFSHORE,INE892H01017,GOL Offshore Ltd.,regular,IndexInclExcl.xls: GOL Offshore Ltd.
+2014-09-19,OUT,INDIAGLYCO,INE560A01015,India Glycols Ltd.,regular,IndexInclExcl.xls: India Glycols Ltd.
+2014-09-19,OUT,INDRAMEDCO,INE681B01017,Indraprastha Medical Corporation Ltd.,regular,IndexInclExcl.xls: Indraprastha Medical Corporation Ltd.
+2014-09-19,OUT,INFINITE,INE486J01014,Infinite Computer Solutions (India) Ltd,regular,IndexInclExcl.xls: Infinite Computer Solutions (India) Ltd
+2014-09-19,OUT,MANINFRA,INE949H01023,Man Infraconstruction Ltd.,regular,IndexInclExcl.xls: Man Infraconstruction Ltd.
+2014-09-19,OUT,MCDOWELL-N,INE854D01016,United Spirits Ltd.,regular,IndexInclExcl.xls: United Spirits Ltd.
+2014-09-19,OUT,ORBITCORP,INE628H01015,Orbit Corporation Ltd.,regular,IndexInclExcl.xls: Orbit Corporation Ltd.
+2014-09-19,OUT,POLARIS,INE763A01023,Polaris Financial Technology Ltd.,regular,IndexInclExcl.xls: Polaris Financial Technology Ltd.
+2014-09-19,OUT,SKUMARSYNF,INE772A01016,S. Kumars Nationwide Ltd.,regular,IndexInclExcl.xls: S. Kumars Nationwide Ltd.
+2014-09-19,OUT,TINPLATE,INE422C01014,Tinplate Company of India Ltd.,regular,IndexInclExcl.xls: Tinplate Company of India Ltd.
+2014-09-19,OUT,WSTCSTPAPR,INE976A01021,West Coast Paper Mills Ltd.,regular,IndexInclExcl.xls: West Coast Paper Mills Ltd.
+2014-11-20,RENAME,RTNPOWER,INE399K01017,RattanIndia Power Ltd.,regular,IBPOW -> RTNPOWER: NSE symbolchange.csv
+2014-11-28,IN,TI,INE133E01013,Tilaknagar Industries Ltd.,regular,IndexInclExcl.xls: Tilaknagar Industries Ltd.
+2014-11-28,OUT,RANBAXY,INE015A01028,Ranbaxy Laboratories Ltd.,regular,IndexInclExcl.xls: Ranbaxy Laboratories Ltd.
+2015-02-02,IN,DYNAMATECH,INE221B01012,Dynamatic Technologies Ltd.,regular,IndexInclExcl.xls: Dynamatic Technologies Ltd.
+2015-02-02,IN,LAOPALA,INE059D01020,La Opala RG Ltd.,regular,IndexInclExcl.xls: La Opala RG Ltd.
+2015-02-02,IN,MBLINFRA,INE912H01013,MBL Infrastructures Ltd.,regular,IndexInclExcl.xls: MBL Infrastructures Ltd.
+2015-02-02,OUT,ARVIND,INE034A01011,Arvind Ltd.,regular,IndexInclExcl.xls: Arvind Ltd.
+2015-02-02,OUT,GUJRATGAS,INE374A01029,Gujarat Gas Co. Ltd.,regular,IndexInclExcl.xls: Gujarat Gas Co. Ltd.
+2015-02-02,OUT,INGVYSYABK,INE166A01011,ING Vysya Bank Ltd.,regular,IndexInclExcl.xls: ING Vysya Bank Ltd.
+2015-03-24,IN,ITDCEM,INE686A01018,Cemindia Projects Ltd.,regular,IndexInclExcl.xls: ITD Cementation India Ltd.
+2015-03-24,OUT,BALKRISIND,INE787D01026,Balkrishna Industries Ltd.,regular,IndexInclExcl.xls: Balkrishna Industries Ltd.
+2015-03-27,IN,FCEL,INE220J01025,Future Consumer Ltd.,regular,IndexInclExcl.xls: Future Consumer Enterprise Ltd.
+2015-03-27,IN,GULFOILLUB,INE635Q01029,Gulf Oil Lubricants India Ltd.,regular,IndexInclExcl.xls: Gulf Oil Lubricants India Ltd.
+2015-03-27,IN,IFBIND,INE559A01017,IFB Industries Ltd.,regular,IndexInclExcl.xls: IFB Industries Ltd.
+2015-03-27,IN,JKCEMENT,INE823G01014,J.K. Cement Ltd.,regular,IndexInclExcl.xls: J.K. Cement Ltd.
+2015-03-27,IN,KNRCON,INE634I01011,KNR Constructions Ltd.,regular,IndexInclExcl.xls: KNR Constructions Ltd.
+2015-03-27,IN,KPRMILL,INE930H01015,K.P.R. Mill Ltd.,regular,IndexInclExcl.xls: K.P.R. Mill Ltd.
+2015-03-27,IN,LGBBROSLTD,INE337A01034,LG Balakrishnan & Bros Ltd.,regular,IndexInclExcl.xls: LG Balakrishnan & Bros Ltd.
+2015-03-27,IN,MARKSANS,INE750C01026,Marksans Pharma Ltd.,regular,IndexInclExcl.xls: Marksans Pharma Ltd.
+2015-03-27,IN,MAYURUNIQ,INE040D01038,Mayur Uniquoters Ltd.,regular,IndexInclExcl.xls: Mayur Uniquoters Ltd.
+2015-03-27,IN,MCDOWELL-N,INE854D01016,United Spirits Ltd.,regular,IndexInclExcl.xls: United Spirits Ltd.
+2015-03-27,IN,MUNJALSHOW,INE577A01027,Munjal Showa Ltd.,regular,IndexInclExcl.xls: Munjal Showa Ltd.
+2015-03-27,IN,NDTV,INE155G01029,NDTV Ltd.,regular,IndexInclExcl.xls: NDTV Ltd.
+2015-03-27,IN,PENIND,INE932A01024,Pennar Industries Ltd.,regular,IndexInclExcl.xls: Pennar Industries Ltd.
+2015-03-27,IN,SUVEN,INE495B01038,Suven Life Sciences Ltd.,regular,IndexInclExcl.xls: Suven Life Sciences Ltd.
+2015-03-27,IN,VINATIORGA,INE410B01029,Vinati Organics Ltd.,regular,IndexInclExcl.xls: Vinati Organics Ltd.
+2015-03-27,OUT,CMC,INE314A01017,CMC Ltd.,regular,IndexInclExcl.xls: CMC Ltd.
+2015-03-27,OUT,DCW,INE500A01029,DCW Ltd.,regular,IndexInclExcl.xls: DCW Ltd.
+2015-03-27,OUT,EDUCOMP,INE216H01027,Educomp Solutions Ltd.,regular,IndexInclExcl.xls: Educomp Solutions Ltd.
+2015-03-27,OUT,ELDERPHARM,INE975A01015,Elder Pharmaceuticals Ltd.,regular,IndexInclExcl.xls: Elder Pharmaceuticals Ltd.
+2015-03-27,OUT,HUBTOWN,INE703H01016,Hubtown Ltd.,regular,IndexInclExcl.xls: Hubtown Ltd.
+2015-03-27,OUT,IL&FSENGG,INE369I01014,IL&FS Engineering and Construction Company Ltd.,regular,IndexInclExcl.xls: IL&FS Engineering and Construction Company Ltd.
+2015-03-27,OUT,IMFA,INE919H01018,Indian Metals & Ferro Alloys Ltd.,regular,IndexInclExcl.xls: Indian Metals & Ferro Alloys Ltd.
+2015-03-27,OUT,LOVABLE,INE597L01014,Lovable Lingerie Ltd.,regular,IndexInclExcl.xls: Lovable Lingerie Ltd.
+2015-03-27,OUT,MASTEK,INE759A01021,Mastek Ltd.,regular,IndexInclExcl.xls: Mastek Ltd.
+2015-03-27,OUT,PFOCUS,INE367G01038,Prime Focus Ltd.,regular,IndexInclExcl.xls: Prime Focus Ltd
+2015-03-27,OUT,RAJTV,INE952H01027,Raj Television Network Ltd.,regular,IndexInclExcl.xls: Raj Television Network Ltd.
+2015-03-27,OUT,REIAGROLTD,INE385B01031,Rei Agro Ltd.,regular,IndexInclExcl.xls: Rei Agro Ltd.
+2015-03-27,OUT,SHASUNPHAR,INE317A01028,Shasun Pharmaceuticals Ltd.,regular,IndexInclExcl.xls: Shasun Pharmaceuticals Ltd.
+2015-03-27,OUT,TI,INE133E01013,Tilaknagar Industries Ltd.,regular,IndexInclExcl.xls: Tilaknagar Industries Ltd.
+2015-03-27,OUT,VENKEYS,INE398A01010,Venky's (India) Ltd.,regular,IndexInclExcl.xls: Venky's (India) Ltd.
+2015-04-01,RENAME,IBVENTURES,INE274G01010,Dhani Services Ltd.,regular,IBSEC -> IBVENTURES: NSE symbolchange.csv
+2015-05-07,RENAME,VEDL,INE205A01025,Vedanta Ltd.,regular,SSLT -> VEDL: NSE symbolchange.csv
+2015-05-29,IN,NATCOPHARM,INE987B01018,NATCO Pharma Ltd.,regular,IndexInclExcl.xls: NATCO Pharma Ltd.
+2015-05-29,IN,VIVIDHA,INE370E01029,Visagar Polytex Ltd.,regular,IndexInclExcl.xls: Visagar Polytex Ltd.
+2015-05-29,OUT,ADANIENT,INE423A01024,Adani Enterprises Ltd.,regular,IndexInclExcl.xls: Adani Enterprises Ltd.
+2015-05-29,OUT,IDFC,INE043D01016,IDFC Ltd.,regular,IndexInclExcl.xls: IDFC Ltd.
+2015-06-11,RENAME,CASTEXTECH,INE068D01021,Amtek India Ltd.,regular,AMTEKINDIA -> CASTEXTECH: NSE symbolchange.csv
+2015-06-15,IN,CEATLTD,INE482A01020,Ceat Ltd.,regular,IndexInclExcl.xls: Ceat Ltd.
+2015-06-15,OUT,JSL,INE220G01021,Jindal Stainless Ltd.,regular,IndexInclExcl.xls: Jindal Stainless Ltd.
+2015-09-28,IN,ADANIPOWER,INE814H01011,Adani Power Ltd.,regular,IndexInclExcl.xls: Adani Power Ltd.
+2015-09-28,IN,ADLABS,INE172N01012,Adlabs Entertainment Ltd.,regular,IndexInclExcl.xls: Adlabs Entertainment Ltd.
+2015-09-28,IN,BALKRISIND,INE787D01026,Balkrishna Industries Ltd.,regular,IndexInclExcl.xls: Balkrishna Industries Ltd.
+2015-09-28,IN,CAMLINFINE,INE052I01032,Camlin Fine Sciences Ltd. CHEMICALS -,regular,IndexInclExcl.xls: Camlin Fine Sciences Ltd.
+2015-09-28,IN,EVEREADY,INE128A01029,Eveready Industries India Ltd.,regular,IndexInclExcl.xls: Eveready Industries India Ltd.
+2015-09-28,IN,FLFL,INE452O01016,Future Lifestyle Fashions Ltd.,regular,IndexInclExcl.xls: Future Lifestyle Fashions Ltd.
+2015-09-28,IN,IL&FSENGG,INE369I01014,IL&FS Engineering and Construction Company Ltd.,regular,IndexInclExcl.xls: IL&FS Engineering and Construction Company Ltd.
+2015-09-28,IN,INOXWIND,INE066P01011,Inox Wind Ltd.,regular,IndexInclExcl.xls: Inox Wind Ltd.
+2015-09-28,IN,KRBL,INE001B01026,KRBL Ltd.,regular,IndexInclExcl.xls: KRBL Ltd.
+2015-09-28,IN,METALFORGE,INE425A01011,Metalyst Forgings Ltd.,regular,IndexInclExcl.xls: Metalyst Forgings Ltd.
+2015-09-28,IN,ORIENTCEM,INE876N01018,Orient Cement Ltd.,regular,IndexInclExcl.xls: Orient Cement Ltd.
+2015-09-28,IN,RICOAUTO,INE209B01025,Rico Auto Industries Ltd.,regular,IndexInclExcl.xls: Rico Auto Industries Ltd.
+2015-09-28,IN,SITICABLE,INE965H01011,Siti Cable Network Ltd. MEDIA &,regular,IndexInclExcl.xls: Siti Cable Network Ltd.
+2015-09-28,IN,SRIPIPES,INE943C01027,Srikalahasthi Pipes Ltd.,regular,IndexInclExcl.xls: Srikalahasthi Pipes Ltd.
+2015-09-28,IN,SYMPHONY,INE225D01027,Symphony Ltd.,regular,IndexInclExcl.xls: Symphony Ltd.
+2015-09-28,IN,VRLLOG,INE366I01010,VRL Logistics Ltd.,regular,IndexInclExcl.xls: VRL Logistics Ltd.
+2015-09-28,OUT,ANSALAPI,INE436A01026,Ansal Properties & Infrastructure Ltd.,regular,IndexInclExcl.xls: Ansal Properties & Infrastructure Ltd.
+2015-09-28,OUT,BGRENERGY,INE661I01014,BGR Energy Systems Ltd,regular,IndexInclExcl.xls: BGR Energy Systems Ltd
+2015-09-28,OUT,CROMPGREAV,INE067A01029,CG Power and Industrial Solutions Ltd.,regular,IndexInclExcl.xls: Crompton Greaves Ltd.
+2015-09-28,OUT,GAMMONIND,INE259B01020,Gammon India Ltd.,regular,IndexInclExcl.xls: Gammon India Ltd.
+2015-09-28,OUT,GUJNRECOKE,INE110D01013,Gujarat NRE Coke Ltd.,regular,IndexInclExcl.xls: Gujarat NRE Coke Ltd.
+2015-09-28,OUT,HINDOILEXP,INE345A01011,Hindustan Oil Exploration Co. Ltd.,regular,IndexInclExcl.xls: Hindustan Oil Exploration Co. Ltd.
+2015-09-28,OUT,HOTELEELA,INE102A01024,Hotel Leela Venture Ltd.,regular,IndexInclExcl.xls: Hotel Leela Venture Ltd.
+2015-09-28,OUT,IFBIND,INE559A01017,IFB Industries Ltd.,regular,IndexInclExcl.xls: IFB Industries Ltd.
+2015-09-28,OUT,KESORAMIND,INE087A01019,Kesoram Industries Ltd.,regular,IndexInclExcl.xls: Kesoram Industries Ltd.
+2015-09-28,OUT,MANGCHEFER,INE558B01017,Mangalore Chemicals & Fertilizers Ltd.,regular,IndexInclExcl.xls: Mangalore Chemicals & Fertilizers Ltd.
+2015-09-28,OUT,MAX,INE180A01020,Max Financial Services Ltd.,regular,IndexInclExcl.xls: Max India Ltd.
+2015-09-28,OUT,MONNETISPA,INE743C01013,Monnet Ispat and Energy Ltd.,regular,IndexInclExcl.xls: Monnet Ispat and Energy Ltd.
+2015-09-28,OUT,ORCHIDCHEM,INE191A01019,Orchid Chemicals & Pharmaceuticals Ltd.,regular,IndexInclExcl.xls: Orchid Chemicals & Pharmaceuticals Ltd.
+2015-09-28,OUT,RAMCOIND,INE614A01028,Ramco Industries Ltd.,regular,IndexInclExcl.xls: Ramco Industries Ltd.
+2015-09-28,OUT,RASOYPR,INE904G01038,Rasoya Proteins Ltd.,regular,IndexInclExcl.xls: Rasoya Proteins Ltd.
+2015-09-28,OUT,RTNPOWER,INE399K01017,RattanIndia Power Ltd.,regular,IndexInclExcl.xls: RattanIndia Power Ltd.
+2015-10-19,IN,PNCINFRA,INE195J01011,PNC Infratech Ltd.,regular,IndexInclExcl.xls: PNC Infratech Ltd.
+2015-10-19,OUT,ABIRLANUVO,INE069A01017,Aditya Birla Nuvo Ltd.,regular,IndexInclExcl.xls: Aditya Birla Nuvo Ltd.
+2015-12-14,IN,ARVIND,INE034A01011,Arvind Ltd.,regular,IndexInclExcl.xls: Arvind Ltd
+2015-12-14,IN,GAYAPROJ,INE336H01015,Gayatri Projects Ltd.,regular,IndexInclExcl.xls: Gayatri Projects Ltd.
+2015-12-14,OUT,FRL,INE623B01027,Future Retail Ltd.,regular,IndexInclExcl.xls: Future Retail Ltd.
+2015-12-14,OUT,MANDHANA,INE087J01010,Mandhana Industries Ltd.,regular,IndexInclExcl.xls: Mandhana Industries Ltd.
+2016-01-18,IN,SCHNEIDER,INE839M01018,Schneider Electric Infrastructure Ltd.,regular,IndexInclExcl.xls: Schneider Electric Infrastructure Ltd.
+2016-01-18,OUT,STRTECH,INE089C01029,Sterlite Technologies Ltd.,regular,IndexInclExcl.xls: Sterlite Technologies Ltd.
+2016-03-18,RENAME,RDEL,INE542F01012,Reliance Naval and Engineering Ltd.,regular,PIPAVAVDOC -> RDEL: NSE symbolchange.csv
+2016-04-01,IN,8KMILES,INE650K01013,8K Miles Soft Services Ltd.,regular,IndexInclExcl.xls: 8K Miles Soft Services Ltd.
+2016-04-01,IN,AARTIDRUGS,INE767A01016,Aarti Drugs Ltd.,regular,IndexInclExcl.xls: Aarti Drugs Ltd.
+2016-04-01,IN,ABFRL,INE647O01011,Aditya Birla Fashion and Retail Ltd.,regular,IndexInclExcl.xls: Aditya Birla Fashion and Retail Ltd.
+2016-04-01,IN,ADANIENT,INE423A01024,Adani Enterprises Ltd.,regular,IndexInclExcl.xls: Adani Enterprises Ltd.
+2016-04-01,IN,ADANITRANS,INE931S01010,Adani Energy Solutions Ltd.,regular,IndexInclExcl.xls: Adani Transmission Ltd.
+2016-04-01,IN,AEGISCHEM,INE208C01025,Aegis Logistics Ltd.,regular,IndexInclExcl.xls: Aegis Logistics Ltd.
+2016-04-01,IN,AHLUCONT,INE758C01029,Ahluwalia Contracts (India) Ltd.,regular,IndexInclExcl.xls: Ahluwalia Contracts (India) Ltd.
+2016-04-01,IN,ASHIANA,INE365D01021,Ashiana Housing Ltd.,regular,IndexInclExcl.xls: Ashiana Housing Ltd.
+2016-04-01,IN,AVANTIFEED,INE871C01020,Avanti Feeds Ltd.,regular,IndexInclExcl.xls: Avanti Feeds Ltd.
+2016-04-01,IN,BGRENERGY,INE661I01014,BGR Energy Systems Ltd,regular,IndexInclExcl.xls: BGR Energy Systems Ltd
+2016-04-01,IN,BLISSGVS,INE416D01022,Bliss GVS Pharma Ltd.,regular,IndexInclExcl.xls: Bliss GVS Pharma Ltd.
+2016-04-01,IN,BRFL,INE589G01011,Bombay Rayon Fashions Ltd.,regular,IndexInclExcl.xls: Bombay Rayon Fashions Ltd.
+2016-04-01,IN,CAPLIPOINT,INE475E01018,Caplin Point Laboratories Ltd.,regular,IndexInclExcl.xls: Caplin Point Laboratories Ltd.
+2016-04-01,IN,CCL,INE421D01022,CCL Products (I) Ltd.,regular,IndexInclExcl.xls: CCL Products (I) Ltd.
+2016-04-01,IN,CERA,INE739E01017,Cera Sanitaryware Ltd,regular,IndexInclExcl.xls: Cera Sanitaryware Ltd
+2016-04-01,IN,DALMIABHA,INE439L01019,Dalmia Bharat Ltd.,regular,IndexInclExcl.xls: Dalmia Bharat Ltd.
+2016-04-01,IN,DHANUKA,INE435G01025,Dhanuka Agritech Ltd.,regular,IndexInclExcl.xls: Dhanuka Agritech Ltd.
+2016-04-01,IN,DISHTV,INE836F01026,Dish TV India Ltd.,regular,IndexInclExcl.xls: Dish TV India Ltd.
+2016-04-01,IN,GLOBOFFS,INE446C01013,Global Offshore Services Ltd.,regular,IndexInclExcl.xls: Global Offshore Services Ltd.
+2016-04-01,IN,GRANULES,INE101D01020,Granules India Ltd.,regular,IndexInclExcl.xls: Granules India Ltd.
+2016-04-01,IN,GREENPLY,INE461C01038,Greenply Industries Ltd.,regular,IndexInclExcl.xls: Greenply Industries Ltd.
+2016-04-01,IN,GRINDWELL,INE536A01023,Grindwell Norton Ltd.,regular,IndexInclExcl.xls: Grindwell Norton Ltd.
+2016-04-01,IN,GUJGASLTD,INE844O01022,Gujarat Gas Ltd.,regular,IndexInclExcl.xls: Gujarat Gas Ltd.
+2016-04-01,IN,HEIDELBERG,INE578A01017,HeidelbergCement India Ltd.,regular,IndexInclExcl.xls: HeidelbergCement India Ltd.
+2016-04-01,IN,HITACHIHOM,INE782A01015,Johnson Controls - Hitachi Air Conditioning India Ltd.,regular,IndexInclExcl.xls: Hitachi Home & Life Solutions (India) Ltd.
+2016-04-01,IN,HMT,INE262A01018,HMT Ltd. AUTOMOBILES - 4,regular,IndexInclExcl.xls: HMT Ltd.
+2016-04-01,IN,HMVL,INE871K01015,Hindustan Media Vent Ltd.,regular,IndexInclExcl.xls: Hindustan Media Vent Ltd.
+2016-04-01,IN,HOTELEELA,INE102A01024,Hotel Leela Venture Ltd.,regular,IndexInclExcl.xls: Hotel Leela Venture Ltd.
+2016-04-01,IN,ICIL,INE483B01018,Indo Count Industries Ltd.,regular,IndexInclExcl.xls: Indo Count Industries Ltd.
+2016-04-01,IN,IDFC,INE043D01016,IDFC Ltd.,regular,IndexInclExcl.xls: IDFC Ltd.
+2016-04-01,IN,IFBIND,INE559A01017,IFB Industries Ltd.,regular,IndexInclExcl.xls: IFB Industries Ltd.
+2016-04-01,IN,IGARASHI,INE188B01013,Igarashi Motors India Ltd.,regular,IndexInclExcl.xls: Igarashi Motors India Ltd.
+2016-04-01,IN,INDOCO,INE873D01024,Indoco Remedies Ltd.,regular,IndexInclExcl.xls: Indoco Remedies Ltd.
+2016-04-01,IN,INEOSSTYRO,INE189B01011,INEOS Styrolution India Ltd.,regular,IndexInclExcl.xls: Styrolution ABS (India) Ltd. (renamed)
+2016-04-01,IN,INTELLECT,INE306R01017,Intellect Design Arena Ltd.,regular,IndexInclExcl.xls: Intellect Design Arena Ltd.
+2016-04-01,IN,IPAPPM,INE435A01028,International Paper APPM Ltd.,regular,IndexInclExcl.xls: International Paper APPM Ltd.
+2016-04-01,IN,JETAIRWAYS,INE802G01018,Jet Airways (India) Ltd.,regular,IndexInclExcl.xls: Jet Airways (India) Ltd.
+2016-04-01,IN,JINDALPOLY,INE197D01010,Jindal Poly Films Ltd.,regular,IndexInclExcl.xls: Jindal Poly Films Ltd.
+2016-04-01,IN,JMTAUTOLTD,INE988E01028,JMT Auto Ltd.,regular,IndexInclExcl.xls: JMT Auto Ltd.
+2016-04-01,IN,KESORAMIND,INE087A01019,Kesoram Industries Ltd.,regular,IndexInclExcl.xls: Kesoram Industries Ltd.
+2016-04-01,IN,KIRLOSENG,INE146L01010,Kirloskar Oil Eng Ltd.,regular,IndexInclExcl.xls: Kirloskar Oil Eng Ltd.
+2016-04-01,IN,KWALITY,INE775B01025,Kwality Ltd.,regular,IndexInclExcl.xls: Kwality Ltd.
+2016-04-01,IN,MAHINDCIE,INE536H01010,CIE Automotive India Ltd.,regular,IndexInclExcl.xls: Mahindra CIE Automotive Ltd.
+2016-04-01,IN,MANAPPURAM,INE522D01027,Manappuram Finance Ltd.,regular,IndexInclExcl.xls: Manappuram Finance Ltd.
+2016-04-01,IN,MANPASAND,INE122R01018,Manpasand Beverages Ltd.,regular,IndexInclExcl.xls: Manpasand Beverages Ltd.
+2016-04-01,IN,MINDACORP,INE842C01021,Minda Corporation Ltd.,regular,IndexInclExcl.xls: Minda Corporation Ltd.
+2016-04-01,IN,MTNL,INE153A01019,Mahanagar Telephone Nigam Ltd.,regular,IndexInclExcl.xls: Mahanagar Telephone Nigam Ltd.
+2016-04-01,IN,NAVKARCORP,INE278M01019,Navkar Corporation Ltd.,regular,IndexInclExcl.xls: Navkar Corporation Ltd.
+2016-04-01,IN,PCJEWELLER,INE785M01013,PC Jeweller Ltd.,regular,IndexInclExcl.xls: PC Jeweller Ltd.
+2016-04-01,IN,POLARIS,INE763A01023,Polaris Financial Technology Ltd.,regular,IndexInclExcl.xls: Polaris Consulting & Services Ltd.
+2016-04-01,IN,RAMCOSYS,INE246B01019,Ramco Systems Ltd. COMPUTERS -,regular,IndexInclExcl.xls: Ramco Systems Ltd.
+2016-04-01,IN,RELAXO,INE131B01039,Relaxo Footwears Ltd.,regular,IndexInclExcl.xls: Relaxo Footwears Ltd.
+2016-04-01,IN,RKFORGE,INE399G01015,Ramkrishna Forgings Ltd.,regular,IndexInclExcl.xls: Ramkrishna Forgings Ltd.
+2016-04-01,IN,RTNPOWER,INE399K01017,RattanIndia Power Ltd.,regular,IndexInclExcl.xls: RattanIndia Power Ltd.
+2016-04-01,IN,SADBHIN,INE764L01010,Sadbhav Infrastructure Project Ltd.,regular,IndexInclExcl.xls: Sadbhav Infrastructure Project Ltd.
+2016-04-01,IN,SHARDACROP,INE221J01015,Sharda Cropchem Ltd.,regular,IndexInclExcl.xls: Sharda Cropchem Ltd.
+2016-04-01,IN,SHILPAMED,INE790G01031,Shilpa Medicare Ltd.,regular,IndexInclExcl.xls: Shilpa Medicare Ltd.
+2016-04-01,IN,SJVN,INE002L01015,SJVN Ltd.,regular,IndexInclExcl.xls: SJVN Ltd.
+2016-04-01,IN,SMLISUZU,INE294B01019,SML Isuzu Ltd. AUTOMOBILES - 4,regular,IndexInclExcl.xls: SML Isuzu Ltd.
+2016-04-01,IN,SNOWMAN,INE734N01019,Snowman Logistics Ltd.,regular,IndexInclExcl.xls: Snowman Logistics Ltd.
+2016-04-01,IN,SOLARINDS,INE343H01011,Solar Industries India Ltd.,regular,IndexInclExcl.xls: Solar Industries India Ltd.
+2016-04-01,IN,SOMANYCERA,INE355A01028,Somany Ceramics Ltd.,regular,IndexInclExcl.xls: Somany Ceramics Ltd.
+2016-04-01,IN,STCINDIA,INE655A01013,State Trading Corporation of IndiaLtd.,regular,IndexInclExcl.xls: State Trading Corporation of India Ltd.
+2016-04-01,IN,SYNGENE,INE398R01022,Syngene International Ltd.,regular,IndexInclExcl.xls: Syngene International Ltd.
+2016-04-01,IN,TAKE,INE142I01023,Take Solutions Ltd.,regular,IndexInclExcl.xls: Take Solutions Ltd.
+2016-04-01,IN,TATAMTRDVR,IN9155A01020,Tata Motors Ltd DVR,regular,IndexInclExcl.xls: Tata Motors Ltd DVR
+2016-04-01,IN,TEXRAIL,INE621L01012,Texmaco Rail & Eng. Ltd.,regular,IndexInclExcl.xls: Texmaco Rail & Eng. Ltd.
+2016-04-01,IN,TIDEWATER,INE484C01022,Tide Water Oil (India) Ltd.,regular,IndexInclExcl.xls: Tide Water Oil (India) Ltd.
+2016-04-01,IN,TIMKEN,INE325A01013,Timken India Ltd.,regular,IndexInclExcl.xls: Timken India Ltd.
+2016-04-01,IN,TRITURBINE,INE152M01016,Triveni Turbine Ltd.,regular,IndexInclExcl.xls: Triveni Turbine Ltd.
+2016-04-01,IN,TTML,INE517B01013,Tata Teleservices (Maharashtra) Ltd.,regular,IndexInclExcl.xls: Tata Teleservices (Maharashtra) Ltd.
+2016-04-01,IN,TVSSRICHAK,INE421C01016,TVS Srichakra Ltd.,regular,IndexInclExcl.xls: TVS Srichakra Ltd.
+2016-04-01,IN,VGUARD,INE951I01019,V-Guard Industries Ltd.,regular,IndexInclExcl.xls: V-Guard Industries Ltd.
+2016-04-01,IN,WONDERLA,INE066O01014,Wonderla Holidays Ltd.,regular,IndexInclExcl.xls: Wonderla Holidays Ltd.
+2016-04-01,IN,ZEELEARN,INE565L01011,Zee Learn Ltd.,regular,IndexInclExcl.xls: Zee Learn Ltd.
+2016-04-01,OUT,ADLABS,INE172N01012,Adlabs Entertainment Ltd.,regular,IndexInclExcl.xls: Adlabs Entertainment Ltd.
+2016-04-01,OUT,ASAHIINDIA,INE439A01020,Asahi India Glass Ltd.,regular,IndexInclExcl.xls: Asahi India Glass Ltd.
+2016-04-01,OUT,ATFL,INE209A01019,Agro Tech Foods Ltd.,regular,IndexInclExcl.xls: Agro Tech Foods Ltd.
+2016-04-01,OUT,AUTOAXLES,INE449A01011,Automotive Axles Ltd.,regular,IndexInclExcl.xls: Automotive Axles Ltd.
+2016-04-01,OUT,BINDALAGRO,INE143A01010,Oswal Chemicals & Fertilizers Ltd.,regular,IndexInclExcl.xls: Oswal Chemicals & Fertilizers Ltd.
+2016-04-01,OUT,CAMLINFINE,INE052I01032,Camlin Fine Sciences Ltd. CHEMICALS -,regular,IndexInclExcl.xls: Camlin Fine Sciences Ltd.
+2016-04-01,OUT,CARBORUNIV,INE120A01034,Carborundum Universal Ltd.,regular,IndexInclExcl.xls: Carborundum Universal Ltd.
+2016-04-01,OUT,CENTENKA,INE485A01015,Century Enka Ltd.,regular,IndexInclExcl.xls: Century Enka Ltd.
+2016-04-01,OUT,DHANBANK,INE680A01011,Dhanlaxmi Bank Ltd.,regular,IndexInclExcl.xls: Dhanlaxmi Bank Ltd.
+2016-04-01,OUT,ENIL,INE265F01028,Entertainment Network India Ltd.,regular,IndexInclExcl.xls: Entertainment Network India Ltd.
+2016-04-01,OUT,ESABINDIA,INE284A01012,ESAB India Ltd.,regular,IndexInclExcl.xls: ESAB India Ltd.
+2016-04-01,OUT,FLEXITUFF,INE060J01017,Flexituff International Ltd.,regular,IndexInclExcl.xls: Flexituff International Ltd.
+2016-04-01,OUT,FMGOETZE,INE529A01010,Federal-Mogul Goetze (India) Ltd.,regular,IndexInclExcl.xls: Federal-Mogul Goetze (India) Ltd.
+2016-04-01,OUT,GABRIEL,INE524A01029,Gabriel India Ltd.,regular,IndexInclExcl.xls: Gabriel India Ltd.
+2016-04-01,OUT,GAMMNINFRA,INE181G01025,Gammon Infrastructure Projects Ltd.,regular,IndexInclExcl.xls: Gammon Infrastructure Projects Ltd.
+2016-04-01,OUT,GEOJITBNPP,INE007B01023,Geojit BNP Paribas Financial Services Ltd.,regular,IndexInclExcl.xls: Geojit BNP Paribas Financial Services Ltd.
+2016-04-01,OUT,GEOMETRIC,INE797A01021,Geometric Ltd.,regular,IndexInclExcl.xls: Geometric Ltd.
+2016-04-01,OUT,GHCL,INE539A01019,GHCL Ltd.,regular,IndexInclExcl.xls: GHCL Ltd.
+2016-04-01,OUT,GIPCL,INE162A01010,Gujarat Industries Power Co. Ltd.,regular,IndexInclExcl.xls: Gujarat Industries Power Co. Ltd.
+2016-04-01,OUT,GITANJALI,INE346H01014,Gitanjali Gems Ltd.,regular,IndexInclExcl.xls: Gitanjali Gems Ltd.
+2016-04-01,OUT,GNFC,INE113A01013,Gujarat Narmada Valley Fertilizers and Chemicals Ltd.,regular,IndexInclExcl.xls: Gujarat Narmada Valley Fertilizers and Chemicals Ltd.
+2016-04-01,OUT,GRAPHITE,INE371A01025,Graphite India Ltd.,regular,IndexInclExcl.xls: Graphite India Ltd.
+2016-04-01,OUT,GTLINFRA,INE221H01019,GTL Infrastructure Ltd.,regular,IndexInclExcl.xls: GTL Infrastructure Ltd.
+2016-04-01,OUT,GUJALKALI,INE186A01019,Gujarat Alkalies & Chemicals Ltd.,regular,IndexInclExcl.xls: Gujarat Alkalies & Chemicals Ltd.
+2016-04-01,OUT,HEG,INE545A01016,HEG Advanced Materials Ltd.,regular,IndexInclExcl.xls: H.E.G. Ltd.
+2016-04-01,OUT,HERITGFOOD,INE978A01019,Heritage Foods Ltd.,regular,IndexInclExcl.xls: Heritage Foods Ltd.
+2016-04-01,OUT,IBVENTURES,INE274G01010,Dhani Services Ltd.,regular,IndexInclExcl.xls: Indiabulls Ventures Ltd.
+2016-04-01,OUT,IL&FSENGG,INE369I01014,IL&FS Engineering and Construction Company Ltd.,regular,IndexInclExcl.xls: IL&FS Engineering and Construction Company Ltd.
+2016-04-01,OUT,ITDCEM,INE686A01026,Cemindia Projects Ltd.,regular,IndexInclExcl.xls: ITD Cementation India Ltd.
+2016-04-01,OUT,IVRCLINFRA,INE875A01025,IVRCL Ltd.,regular,IndexInclExcl.xls: IVRCL Ltd.
+2016-04-01,OUT,JYOTISTRUC,INE197A01024,Jyoti Structures Ltd.,regular,IndexInclExcl.xls: Jyoti Structures Ltd.
+2016-04-01,OUT,KCP,INE805C01028,KCP Ltd.,regular,IndexInclExcl.xls: KCP Ltd.
+2016-04-01,OUT,KKCL,INE401H01017,Kewal Kiran Clothing Ltd.,regular,IndexInclExcl.xls: Kewal Kiran Clothing Ltd.
+2016-04-01,OUT,KNRCON,INE634I01011,KNR Constructions Ltd.,regular,IndexInclExcl.xls: KNR Constructions Ltd.
+2016-04-01,OUT,KSBPUMPS,INE999A01015,KSB Ltd.,regular,IndexInclExcl.xls: KSB Pumps Ltd.
+2016-04-01,OUT,LGBBROSLTD,INE337A01034,LG Balakrishnan & Bros Ltd.,regular,IndexInclExcl.xls: LG Balakrishnan & Bros Ltd.
+2016-04-01,OUT,LINDEINDIA,INE473A01011,Linde India Ltd.,regular,IndexInclExcl.xls: Linde India Ltd.
+2016-04-01,OUT,MAHSCOOTER,INE288A01013,Maharashtra Scooters Ltd.,regular,IndexInclExcl.xls: Maharashtra Scooters Ltd.
+2016-04-01,OUT,MAHSEAMLES,INE271B01025,Maharashtra Seamless Ltd.,regular,IndexInclExcl.xls: Maharashtra Seamless Ltd.
+2016-04-01,OUT,MBLINFRA,INE912H01013,MBL Infrastructures Ltd.,regular,IndexInclExcl.xls: MBL Infrastructures Ltd.
+2016-04-01,OUT,MERCATOR,INE934B01028,Mercator Ltd.,regular,IndexInclExcl.xls: Mercator Ltd.
+2016-04-01,OUT,METALFORGE,INE425A01011,Metalyst Forgings Ltd.,regular,IndexInclExcl.xls: Metalyst Forgings Ltd.
+2016-04-01,OUT,MTEDUCARE,INE472M01018,MT Educare Ltd.,regular,IndexInclExcl.xls: MT Educare Ltd.
+2016-04-01,OUT,MUNJALSHOW,INE577A01027,Munjal Showa Ltd.,regular,IndexInclExcl.xls: Munjal Showa Ltd.
+2016-04-01,OUT,NAVNETEDUL,INE060A01024,Navneet Education Ltd.,regular,IndexInclExcl.xls: Navneet Education Ltd.
+2016-04-01,OUT,NBVENTURES,INE725A01022,Nava Bharat Ventures Ltd.,regular,IndexInclExcl.xls: Nava Bharat Ventures Ltd.
+2016-04-01,OUT,NDTV,INE155G01029,NDTV Ltd.,regular,IndexInclExcl.xls: NDTV Ltd.
+2016-04-01,OUT,NIITLTD,INE161A01038,NIIT Ltd.,regular,IndexInclExcl.xls: NIIT Ltd.
+2016-04-01,OUT,NOCIL,INE163A01018,NOCIL Ltd.,regular,IndexInclExcl.xls: NOCIL Ltd.
+2016-04-01,OUT,NOIDATOLL,INE781B01015,Noida-Toll Bridge Co. Ltd.,regular,IndexInclExcl.xls: Noida-Toll Bridge Co. Ltd.
+2016-04-01,OUT,OPTOCIRCUI,INE808B01016,Opto Circuits (I) Ltd.,regular,IndexInclExcl.xls: Opto Circuits (I) Ltd.
+2016-04-01,OUT,PATELENG,INE244B01030,Patel Engineering Ltd.,regular,IndexInclExcl.xls: Patel Engineering Ltd.
+2016-04-01,OUT,PENIND,INE932A01024,Pennar Industries Ltd.,regular,IndexInclExcl.xls: Pennar Industries Ltd.
+2016-04-01,OUT,PENINLAND,INE138A01028,Peninsula Land Ltd.,regular,IndexInclExcl.xls: Peninsula Land Ltd.
+2016-04-01,OUT,PRAKASH,INE603A01013,Prakash Industries Ltd.,regular,IndexInclExcl.xls: Prakash Industries Ltd.
+2016-04-01,OUT,RELIGARE,INE621H01010,Religare Enterprises Ltd.,regular,IndexInclExcl.xls: Religare Enterprises Ltd.
+2016-04-01,OUT,RICOAUTO,INE209B01025,Rico Auto Industries Ltd.,regular,IndexInclExcl.xls: Rico Auto Industries Ltd.
+2016-04-01,OUT,SBT,INE654A01024,State Bank of Travancore,regular,IndexInclExcl.xls: State Bank of Travancore
+2016-04-01,OUT,SEINV,INE420C01042,S.E. Investments Ltd.,regular,IndexInclExcl.xls: S.E. Investments Ltd.
+2016-04-01,OUT,SHANTIGEAR,INE631A01022,Shanthi Gears Ltd.,regular,IndexInclExcl.xls: Shanthi Gears Ltd.
+2016-04-01,OUT,SHRENUJ,INE633A01028,Shrenuj & Co. Ltd.,regular,IndexInclExcl.xls: Shrenuj & Co. Ltd.
+2016-04-01,OUT,SONASTEER,INE643A01035,Sona Koyo Steering Systems Ltd.,regular,IndexInclExcl.xls: Sona Koyo Steering Systems Ltd.
+2016-04-01,OUT,SRIPIPES,INE943C01027,Srikalahasthi Pipes Ltd.,regular,IndexInclExcl.xls: Srikalahasthi Pipes Ltd.
+2016-04-01,OUT,SUPPETRO,INE663A01017,Supreme Petrochem Ltd.,regular,IndexInclExcl.xls: Supreme Petrochem Ltd.
+2016-04-01,OUT,SUPREMEINF,INE550H01011,Supreme Infrastructure India Ltd.,regular,IndexInclExcl.xls: Supreme Infrastructure India Ltd.
+2016-04-01,OUT,SWARAJENG,INE277A01016,Swaraj Engines Ltd.,regular,IndexInclExcl.xls: Swaraj Engines Ltd.
+2016-04-01,OUT,TATAINVEST,INE672A01018,Tata Investment Corporation Ltd.,regular,IndexInclExcl.xls: Tata Investment Corporation Ltd.
+2016-04-01,OUT,TDPOWERSYS,INE419M01019,TD Power Systems Ltd.,regular,IndexInclExcl.xls: TD Power Systems Ltd.
+2016-04-01,OUT,USHAMART,INE228A01035,Usha Martin Ltd.,regular,IndexInclExcl.xls: Usha Martin Ltd.
+2016-04-01,OUT,UTTAMSTL,INE699A01011,Uttam Galva Steels Ltd.,regular,IndexInclExcl.xls: Uttam Galva Steels Ltd.
+2016-04-01,OUT,VESUVIUS,INE386A01015,Vesuvius India Ltd.,regular,IndexInclExcl.xls: Vesuvius India Ltd.
+2016-04-01,OUT,VIVIDHA,INE370E01029,Visagar Polytex Ltd.,regular,IndexInclExcl.xls: Visagar Polytex Ltd.
+2016-04-01,OUT,WHEELS,INE715A01015,Wheels India Ltd.,regular,IndexInclExcl.xls: Wheels India Ltd.
+2016-04-29,IN,SHK,INE500L01026,S H Kelkar and Company Ltd.,regular,IndexInclExcl.xls: S H Kelkar and Company Ltd.
+2016-04-29,OUT,ADVANTA,INE517H01028,Advanta Ltd.,regular,IndexInclExcl.xls: Advanta Ltd.
+2016-04-29,OUT,JINDALSAW,INE324A01024,Jindal Saw Ltd.,regular,IndexInclExcl.xls: Jindal Saw Ltd.
+2016-07-01,RENAME,BHARATFIN,INE180K01011,Bharat Financial Inclusion Ltd.,regular,SKSMICRO -> BHARATFIN: NSE symbolchange.csv
+2016-08-04,RENAME,NLCINDIA,INE589A01014,NLC India Ltd.,regular,NEYVELILIG -> NLCINDIA: NSE symbolchange.csv
+2016-08-17,RENAME,SITINET,INE965H01011,Siti Networks Ltd. MEDIA &,regular,SITICABLE -> SITINET: NSE symbolchange.csv
+2016-09-12,RENAME,JCHAC,INE782A01015,Johnson Controls - Hitachi Air Conditioning India Ltd.,regular,HITACHIHOM -> JCHAC: NSE symbolchange.csv
+2016-09-14,RENAME,GEPIL,INE878A01011,GE Power India Ltd.,regular,AIL -> GEPIL: NSE symbolchange.csv
+2016-09-14,RENAME,GET&D,INE200A01026,GE Vernova T&D India Ltd.,regular,ALSTOMT&D -> GET&D: NSE symbolchange.csv
+2016-09-30,IN,ABIRLANUVO,INE069A01017,Aditya Birla Nuvo Ltd.,regular,IndexInclExcl.xls: Aditya Birla Nuvo Ltd.
+2016-09-30,IN,ALKEM,INE540L01014,Alkem Laboratories Ltd.,regular,IndexInclExcl.xls: Alkem Laboratories Ltd.
+2016-09-30,IN,APLAPOLLO,INE702C01019,APL Apollo Tubes Ltd.,regular,IndexInclExcl.xls: APL Apollo Tubes Ltd.
+2016-09-30,IN,CARBORUNIV,INE120A01034,Carborundum Universal Ltd.,regular,IndexInclExcl.xls: Carborundum Universal Ltd.
+2016-09-30,IN,COFFEEDAY,INE335K01011,Coffee Day Enterprises Ltd.,regular,IndexInclExcl.xls: Coffee Day Enterprises Ltd.
+2016-09-30,IN,CROMPGREAV,INE067A01029,CG Power and Industrial Solutions Ltd.,regular,IndexInclExcl.xls: Crompton Greaves Ltd.
+2016-09-30,IN,EQUITAS,INE988K01017,Equitas Holdings Ltd.,regular,IndexInclExcl.xls: Equitas Holdings Ltd.
+2016-09-30,IN,IDFCBANK,INE092T01019,IDFC First Bank Ltd.,regular,IndexInclExcl.xls: IDFC Bank Ltd.
+2016-09-30,IN,INDIGO,INE646L01027,InterGlobe Aviation Ltd.,regular,IndexInclExcl.xls: InterGlobe Aviation Ltd.
+2016-09-30,IN,INFIBEAM,INE483S01012,Infibeam Avenues Ltd.,regular,IndexInclExcl.xls: Infibeam Incorporation Ltd.
+2016-09-30,IN,ITDCEM,INE686A01026,Cemindia Projects Ltd.,regular,IndexInclExcl.xls: ITD Cementation India Ltd.
+2016-09-30,IN,KSBPUMPS,INE999A01015,KSB Ltd.,regular,IndexInclExcl.xls: KSB Pumps Ltd.
+2016-09-30,IN,LALPATHLAB,INE600L01024,Dr. Lal Path Labs Ltd.,regular,IndexInclExcl.xls: Dr. Lal Path Labs Ltd.
+2016-09-30,IN,LINDEINDIA,INE473A01011,Linde India Ltd.,regular,IndexInclExcl.xls: Linde India Ltd.
+2016-09-30,IN,MFSL,INE180A01020,Max Financial Services Ltd.,regular,IndexInclExcl.xls: Max Financial Services Ltd.
+2016-09-30,IN,MYSOREBANK,INE651A01020,State Bank of Mysore,regular,IndexInclExcl.xls: State Bank of Mysore
+2016-09-30,IN,NAVINFLUOR,INE048G01018,Navin Fluorine International Ltd.,regular,IndexInclExcl.xls: Navin Fluorine International Ltd.
+2016-09-30,IN,NH,INE410P01011,Narayana Hrudayalaya Ltd.,regular,IndexInclExcl.xls: Narayana Hrudayalaya Ltd.
+2016-09-30,IN,NILKAMAL,INE310A01015,Nilkamal Ltd.,regular,IndexInclExcl.xls: Nilkamal Ltd.
+2016-09-30,IN,OCL,INE290B01025,OCL India Ltd.,regular,IndexInclExcl.xls: OCL India Ltd.
+2016-09-30,IN,RELIGARE,INE621H01010,Religare Enterprises Ltd.,regular,IndexInclExcl.xls: Religare Enterprises Ltd.
+2016-09-30,IN,SBT,INE654A01024,State Bank of Travancore,regular,IndexInclExcl.xls: State Bank of Travancore
+2016-09-30,IN,SEQUENT,INE807F01027,Sequent Scientific Ltd.,regular,IndexInclExcl.xls: Sequent Scientific Ltd.
+2016-09-30,IN,SFCL,INE935O01010,Star Ferro & Cement Ltd.,regular,IndexInclExcl.xls: Star Ferro & Cement Ltd.
+2016-09-30,IN,SUPRAJIT,INE399C01030,Suprajit Engineering Ltd.,regular,IndexInclExcl.xls: Suprajit Engineering Ltd.
+2016-09-30,OUT,AARTIDRUGS,INE767A01016,Aarti Drugs Ltd.,regular,IndexInclExcl.xls: Aarti Drugs Ltd.
+2016-09-30,OUT,ABGSHIP,INE067H01016,ABG Shipyard Ltd.,regular,IndexInclExcl.xls: ABG Shipyard Ltd.
+2016-09-30,OUT,ASHIANA,INE365D01021,Ashiana Housing Ltd.,regular,IndexInclExcl.xls: Ashiana Housing Ltd.
+2016-09-30,OUT,CASTEXTECH,INE068D01021,Amtek India Ltd.,regular,IndexInclExcl.xls: Castex Technologies Ltd.
+2016-09-30,OUT,CLNINDIA,INE492A01029,Clariant Chemicals (India) Ltd.,regular,IndexInclExcl.xls: Clariant Chemicals (India) Ltd.
+2016-09-30,OUT,ELECTCAST,INE086A01029,Electrosteel Castings Ltd.,regular,IndexInclExcl.xls: Electrosteel Castings Ltd.
+2016-09-30,OUT,ELGIEQUIP,INE285A01027,Elgi Equipments Ltd.,regular,IndexInclExcl.xls: Elgi Equipments Ltd.
+2016-09-30,OUT,ESSDEE,INE825H01017,Ess Dee Aluminium Ltd.,regular,IndexInclExcl.xls: Ess Dee Aluminium Ltd.
+2016-09-30,OUT,FINANTECH,INE111B01023,Financial Technologies (India) Ltd.,regular,IndexInclExcl.xls: Financial Technologies (India) Ltd.
+2016-09-30,OUT,GLOBOFFS,INE446C01013,Global Offshore Services Ltd.,regular,IndexInclExcl.xls: Global Offshore Services Ltd.
+2016-09-30,OUT,HMT,INE262A01018,HMT Ltd. AUTOMOBILES - 4,regular,IndexInclExcl.xls: HMT Ltd.
+2016-09-30,OUT,HOTELEELA,INE102A01024,Hotel Leela Venture Ltd.,regular,IndexInclExcl.xls: Hotel Leela Venture Ltd.
+2016-09-30,OUT,IFBIND,INE559A01017,IFB Industries Ltd.,regular,IndexInclExcl.xls: IFB Industries Ltd.
+2016-09-30,OUT,INEOSSTYRO,INE189B01011,INEOS Styrolution India Ltd.,regular,IndexInclExcl.xls: INEOS Styrolution India Ltd.
+2016-09-30,OUT,KIRLOSENG,INE146L01010,Kirloskar Oil Eng Ltd.,regular,IndexInclExcl.xls: Kirloskar Oil Eng Ltd.
+2016-09-30,OUT,KSK,INE143H01015,KSK Energy Ventures Ltd,regular,IndexInclExcl.xls: KSK Energy Ventures Ltd
+2016-09-30,OUT,MINDACORP,INE842C01021,Minda Corporation Ltd.,regular,IndexInclExcl.xls: Minda Corporation Ltd.
+2016-09-30,OUT,PARSVNATH,INE561H01026,Parsvnath Developer Ltd.,regular,IndexInclExcl.xls: Parsvnath Developer Ltd.
+2016-09-30,OUT,PURVA,INE323I01011,Puravankara Projects Ltd.,regular,IndexInclExcl.xls: Puravankara Projects Ltd.
+2016-09-30,OUT,RATNAMANI,INE703B01027,Ratnamani Metals & Tubes Ltd.,regular,IndexInclExcl.xls: Ratnamani Metals & Tubes Ltd.
+2016-09-30,OUT,SADBHIN,INE764L01010,Sadbhav Infrastructure Project Ltd.,regular,IndexInclExcl.xls: Sadbhav Infrastructure Project Ltd.
+2016-09-30,OUT,TBZ,INE760L01018,Tribhovandas Bhimji Zaveri Ltd.,regular,IndexInclExcl.xls: Tribhovandas Bhimji Zaveri Ltd.
+2016-09-30,OUT,TREEHOUSE,INE040M01013,Tree House Education & Accessories Ltd.,regular,IndexInclExcl.xls: Tree House Education & Accessories Ltd.
+2016-09-30,OUT,TTML,INE517B01013,Tata Teleservices (Maharashtra) Ltd.,regular,IndexInclExcl.xls: Tata Teleservices (Maharashtra) Ltd.
+2016-09-30,OUT,VAIBHAVGBL,INE884A01019,Vaibhav Global Ltd.,regular,IndexInclExcl.xls: Vaibhav Global Ltd.
+2016-10-25,RENAME,FCONSUMER,INE220J01025,Future Consumer Ltd.,regular,FCEL -> FCONSUMER: NSE symbolchange.csv
+2016-11-15,IN,CROMPTON,INE299U01018,Crompton Greaves Consumer Electricals Ltd.,regular,IndexInclExcl.xls: Crompton Greaves Consumer Electricals Ltd.
+2016-11-15,OUT,CAIRN,INE910H01017,Cairn India Ltd.,regular,IndexInclExcl.xls: Cairn India Ltd.
+2017-01-23,IN,ADVENZYMES,INE837H01012,Advanced Enzyme Tech Ltd.,regular,IndexInclExcl.xls: Advanced Enzyme Tech Ltd.
+2017-01-23,IN,ASAHIINDIA,INE439A01020,Asahi India Glass Ltd.,regular,IndexInclExcl.xls: Asahi India Glass Ltd.
+2017-01-23,IN,RBLBANK,INE976G01028,RBL Bank Ltd.,regular,IndexInclExcl.xls: RBL Bank Ltd.
+2017-01-23,IN,UJJIVAN,INE334L01012,Ujjivan Financial Services Ltd.,regular,IndexInclExcl.xls: Ujjivan Financial Services Ltd.
+2017-01-23,OUT,DISHMAN,INE353G01020,Dishman Pharmaceuticals & Chemicals Ltd.,regular,IndexInclExcl.xls: Dishman Pharmaceuticals & Chemicals Ltd.
+2017-01-23,OUT,MFSL,INE180A01020,Max Financial Services Ltd.,regular,IndexInclExcl.xls: Max Financial Services Ltd.
+2017-01-23,OUT,OCL,INE290B01025,OCL India Ltd.,regular,IndexInclExcl.xls: OCL India Ltd.
+2017-01-23,OUT,SFCL,INE935O01010,Star Ferro & Cement Ltd.,regular,IndexInclExcl.xls: Star Ferro & Cement Ltd.
+2017-03-08,RENAME,CGPOWER,INE067A01029,CG Power and Industrial Solutions Ltd.,regular,CROMPGREAV -> CGPOWER: NSE symbolchange.csv
+2017-03-16,IN,FRETAIL,INE752P01024,Future Retail Ltd.,regular,IndexInclExcl.xls: Future Retail Ltd.
+2017-03-16,IN,MAXINDIA,INE153U01017,Max India Ltd.,regular,IndexInclExcl.xls: Max India Ltd.
+2017-03-16,IN,MGL,INE002S01010,Mahanagar Gas Ltd.,regular,IndexInclExcl.xls: Mahanagar Gas Ltd.
+2017-03-16,OUT,MYSOREBANK,INE651A01020,State Bank of Mysore,regular,IndexInclExcl.xls: State Bank of Mysore
+2017-03-16,OUT,SBBJ,INE648A01026,State Bank of Bikaner & Jaipur Ltd.,regular,IndexInclExcl.xls: State Bank of Bikaner & Jaipur Ltd.
+2017-03-16,OUT,SBT,INE654A01024,State Bank of Travancore,regular,IndexInclExcl.xls: State Bank of Travancore
+2017-03-31,IN,DBL,INE917M01012,Dilip Buildcon Ltd.,regular,IndexInclExcl.xls: Dilip Buildcon Ltd.
+2017-03-31,IN,ENDURANCE,INE913H01037,Endurance Technologies Ltd.,regular,IndexInclExcl.xls: Endurance Technologies Ltd.
+2017-03-31,IN,FMGOETZE,INE529A01010,Federal-Mogul Goetze (India) Ltd.,regular,IndexInclExcl.xls: Federal-Mogul Goetze (India) Ltd.
+2017-03-31,IN,GHCL,INE539A01019,GHCL Ltd.,regular,IndexInclExcl.xls: GHCL Ltd.
+2017-03-31,IN,GNFC,INE113A01013,Gujarat Narmada Valley Fertilizers and Chemicals Ltd.,regular,IndexInclExcl.xls: Gujarat Narmada Valley Fertilizers and Chemicals Ltd.
+2017-03-31,IN,GUJALKALI,INE186A01019,Gujarat Alkalies & Chemicals Ltd.,regular,IndexInclExcl.xls: Gujarat Alkalies & Chemicals Ltd.
+2017-03-31,IN,ICICIPRULI,INE726G01019,ICICI Prudential Life Insurance Company Ltd.,regular,IndexInclExcl.xls: ICICI Prudential Life Insurance Company Ltd.
+2017-03-31,IN,KNRCON,INE634I01029,KNR Constructions Ltd.,regular,IndexInclExcl.xls: KNR Constructions Ltd.
+2017-03-31,IN,LTI,INE214T01019,LTM Ltd.,regular,IndexInclExcl.xls: Larsen & Toubro Infotech Ltd.
+2017-03-31,IN,LTTS,INE010V01017,L&T Technology Services Ltd.,regular,IndexInclExcl.xls: L&T Technology Services Ltd.
+2017-03-31,IN,MINDACORP,INE842C01021,Minda Corporation Ltd.,regular,IndexInclExcl.xls: Minda Corporation Ltd.
+2017-03-31,IN,MINDAIND,INE405E01023,UNO Minda Ltd.,regular,IndexInclExcl.xls: Minda Corporation Ltd.
+2017-03-31,IN,NAVNETEDUL,INE060A01024,Navneet Education Ltd.,regular,IndexInclExcl.xls: Navneet Education Ltd.
+2017-03-31,IN,NBVENTURES,INE725A01022,Nava Bharat Ventures Ltd.,regular,IndexInclExcl.xls: Nava Bharat Ventures Ltd.
+2017-03-31,IN,PARAGMILK,INE883N01014,Parag Milk Foods Ltd.,regular,IndexInclExcl.xls: Parag Milk Foods Ltd.
+2017-03-31,IN,QUESS,INE615P01015,Quess Corp Ltd.,regular,IndexInclExcl.xls: Quess Corp Ltd.
+2017-03-31,IN,RATNAMANI,INE703B01027,Ratnamani Metals & Tubes Ltd.,regular,IndexInclExcl.xls: Ratnamani Metals & Tubes Ltd.
+2017-03-31,IN,SHILPI,INE510K01019,Shilpi Cable Tech Ltd. CABLES -,regular,IndexInclExcl.xls: Shilpi Cable Tech Ltd.
+2017-03-31,IN,STRTECH,INE089C01029,Sterlite Technologies Ltd.,regular,IndexInclExcl.xls: Sterlite Technologies Ltd.
+2017-03-31,IN,SUDARSCHEM,INE659A01023,Sudarshan Chemical Industries Ltd.,regular,IndexInclExcl.xls: Sudarshan Chemical Industries Ltd.
+2017-03-31,IN,TATAINVEST,INE672A01018,Tata Investment Corporation Ltd.,regular,IndexInclExcl.xls: Tata Investment Corporation Ltd.
+2017-03-31,IN,THYROCARE,INE594H01019,Thyrocare Technologies Ltd.,regular,IndexInclExcl.xls: Thyrocare Technologies Ltd.
+2017-03-31,OUT,ALOKTEXT,INE270A01011,Alok Industries Ltd.,regular,IndexInclExcl.xls: Alok Industries Ltd.
+2017-03-31,OUT,BRFL,INE589G01011,Bombay Rayon Fashions Ltd.,regular,IndexInclExcl.xls: Bombay Rayon Fashions Ltd.
+2017-03-31,OUT,BRIGADE,INE791I01019,Brigade Enterprises Ltd.,regular,IndexInclExcl.xls: Brigade Enterprises Ltd.
+2017-03-31,OUT,DYNAMATECH,INE221B01012,Dynamatic Technologies Ltd.,regular,IndexInclExcl.xls: Dynamatic Technologies Ltd.
+2017-03-31,OUT,FLFL,INE452O01016,Future Lifestyle Fashions Ltd.,regular,IndexInclExcl.xls: Future Lifestyle Fashions Ltd.
+2017-03-31,OUT,INGERRAND,INE177A01018,Ingersoll Rand (India) Ltd.,regular,IndexInclExcl.xls: Ingersoll Rand (India) Ltd.
+2017-03-31,OUT,IPAPPM,INE435A01028,International Paper APPM Ltd.,regular,IndexInclExcl.xls: International Paper APPM Ltd.
+2017-03-31,OUT,JPINFRATEC,INE099J01015,Jaypee Infratech Ltd.,regular,IndexInclExcl.xls: Jaypee Infratech Ltd.
+2017-03-31,OUT,JPPOWER,INE351F01018,Jaiprakash Power Ventures Ltd.,regular,IndexInclExcl.xls: Jaiprakash Power Ventures Ltd.
+2017-03-31,OUT,JSWHL,INE824G01012,JSW Holdings Ltd.,regular,IndexInclExcl.xls: JSW Holdings Ltd.
+2017-03-31,OUT,KSBPUMPS,INE999A01015,KSB Ltd.,regular,IndexInclExcl.xls: KSB Pumps Ltd.
+2017-03-31,OUT,LAOPALA,INE059D01020,La Opala RG Ltd.,regular,IndexInclExcl.xls: La Opala RG Ltd.
+2017-03-31,OUT,LINDEINDIA,INE473A01011,Linde India Ltd.,regular,IndexInclExcl.xls: Linde India Ltd.
+2017-03-31,OUT,LITL,INE785C01048,Lanco Infratech Ltd.,regular,IndexInclExcl.xls: Lanco Infratech Ltd.
+2017-03-31,OUT,MAHLIFE,INE813A01018,Mahindra Lifespace Developers Ltd.,regular,IndexInclExcl.xls: Mahindra Lifespace Developers Ltd.
+2017-03-31,OUT,MAYURUNIQ,INE040D01038,Mayur Uniquoters Ltd.,regular,IndexInclExcl.xls: Mayur Uniquoters Ltd.
+2017-03-31,OUT,SEQUENT,INE807F01027,Sequent Scientific Ltd.,regular,IndexInclExcl.xls: Sequent Scientific Ltd.
+2017-03-31,OUT,SHOPERSTOP,INE498B01024,Shoppers Stop Ltd.,regular,IndexInclExcl.xls: Shoppers Stop Ltd.
+2017-03-31,OUT,SIMPLEXINF,INE059B01024,Simplex Infrastructures Ltd.,regular,IndexInclExcl.xls: Simplex Infrastructures Ltd.
+2017-03-31,OUT,SINTEX,INE429C01035,Sintex Industries Ltd.,regular,IndexInclExcl.xls: Sintex Industries Ltd.
+2017-03-31,OUT,SITINET,INE965H01011,Siti Networks Ltd. MEDIA &,regular,IndexInclExcl.xls: Siti Networks Ltd.
+2017-03-31,OUT,SUPRAJIT,INE399C01030,Suprajit Engineering Ltd.,regular,IndexInclExcl.xls: Suprajit Engineering Ltd.
+2017-05-26,IN,LAURUSLABS,INE947Q01010,Laurus Labs Ltd.,regular,IndexInclExcl.xls: Laurus Labs Ltd.
+2017-05-26,IN,PNBHOUSING,INE572E01012,PNB Housing Finance Ltd.,regular,IndexInclExcl.xls: PNB Housing Finance Ltd.
+2017-05-26,IN,VBL,INE200M01013,Varun Beverages Ltd.,regular,IndexInclExcl.xls: Varun Beverages Ltd.
+2017-05-26,OUT,ABIRLANUVO,INE069A01017,Aditya Birla Nuvo Ltd.,regular,IndexInclExcl.xls: Aditya Birla Nuvo Ltd.
+2017-05-26,OUT,GRASIM,INE047A01021,Grasim Industries Ltd.,regular,IndexInclExcl.xls: Grasim Industries Ltd.
+2017-05-26,OUT,TUBEINVEST,INE149A01025,Tube Investments of India Ltd.,regular,IndexInclExcl.xls: Tube Investments of India Ltd.
+2017-06-23,IN,SFL,INE916U01025,Sheela Foam Ltd.,regular,IndexInclExcl.xls: Sheela Foam Ltd.
+2017-06-23,OUT,IIFL,INE530B01024,IIFL Finance Ltd.,regular,IndexInclExcl.xls: IIFL Holdings Ltd.
+2017-08-01,RENAME,SCHAEFFLER,INE513A01014,Schaeffler India Ltd.,regular,FAGBEARING -> SCHAEFFLER: NSE symbolchange.csv
+2017-09-05,IN,MFSL,INE180A01020,Max Financial Services Ltd.,regular,IndexInclExcl.xls: Max Financial Services Ltd.
+2017-09-05,OUT,RELCAPITAL,INE013A01015,Reliance Capital Ltd.,regular,IndexInclExcl.xls: Reliance Capital Ltd.
+2017-09-18,RENAME,RNAVAL,INE542F01012,Reliance Naval and Engineering Ltd.,regular,RDEL -> RNAVAL: NSE symbolchange.csv
+2017-09-29,IN,BRFL,INE589G01011,Bombay Rayon Fashions Ltd.,regular,IndexInclExcl.xls: Bombay Rayon Fashions Ltd.
+2017-09-29,IN,BRIGADE,INE791I01019,Brigade Enterprises Ltd.,regular,IndexInclExcl.xls: Brigade Enterprises Ltd.
+2017-09-29,IN,BSE,INE118H01025,BSE Ltd.,regular,IndexInclExcl.xls: BSE Ltd.
+2017-09-29,IN,DMART,INE192R01011,Avenue Supermarts Ltd.,regular,IndexInclExcl.xls: Avenue Supermarts Ltd.
+2017-09-29,IN,FLFL,INE452O01016,Future Lifestyle Fashions Ltd.,regular,IndexInclExcl.xls: Future Lifestyle Fashions Ltd.
+2017-09-29,IN,HERITGFOOD,INE978A01019,Heritage Foods Ltd.,regular,IndexInclExcl.xls: Heritage Foods Ltd.
+2017-09-29,IN,IBVENTURES,INE274G01010,Dhani Services Ltd.,regular,IndexInclExcl.xls: Indiabulls Ventures Ltd.
+2017-09-29,IN,IFBIND,INE559A01017,IFB Industries Ltd.,regular,IndexInclExcl.xls: IFB Industries Ltd.
+2017-09-29,IN,INGERRAND,INE177A01018,Ingersoll Rand (India) Ltd.,regular,IndexInclExcl.xls: Ingersoll Rand (India) Ltd.
+2017-09-29,IN,ITDC,INE353K01014,India Tourism Development Corporation Ltd.,regular,IndexInclExcl.xls: India Tourism Development Corporation Ltd.
+2017-09-29,IN,ITI,INE248A01017,ITI Ltd.,regular,IndexInclExcl.xls: ITI Ltd.
+2017-09-29,IN,JINDALSAW,INE324A01024,Jindal Saw Ltd.,regular,IndexInclExcl.xls: Jindal Saw Ltd.
+2017-09-29,IN,JPPOWER,INE351F01018,Jaiprakash Power Ventures Ltd.,regular,IndexInclExcl.xls: Jaiprakash Power Ventures Ltd.
+2017-09-29,IN,JSL,INE220G01021,Jindal Stainless Ltd.,regular,IndexInclExcl.xls: Jindal Stainless Ltd.
+2017-09-29,IN,JSLHISAR,INE455T01018,Jindal Stainless (Hisar) Ltd.,regular,IndexInclExcl.xls: Jindal Stainless (Hisar) Ltd.
+2017-09-29,IN,LINDEINDIA,INE473A01011,Linde India Ltd.,regular,IndexInclExcl.xls: Linde India Ltd.
+2017-09-29,IN,NFL,INE870D01012,National Fertilizers Ltd.,regular,IndexInclExcl.xls: National Fertilizers Ltd.
+2017-09-29,IN,RUPA,INE895B01021,Rupa & Company Ltd.,regular,IndexInclExcl.xls: Rupa & Company Ltd.
+2017-09-29,IN,SHOPERSTOP,INE498B01024,Shoppers Stop Ltd.,regular,IndexInclExcl.xls: Shoppers Stop Ltd.
+2017-09-29,IN,SUPPETRO,INE663A01017,Supreme Petrochem Ltd.,regular,IndexInclExcl.xls: Supreme Petrochem Ltd.
+2017-09-29,IN,SUPRAJIT,INE399C01030,Suprajit Engineering Ltd.,regular,IndexInclExcl.xls: Suprajit Engineering Ltd.
+2017-09-29,IN,TIMETECHNO,INE508G01029,Time Technoplast Ltd.,regular,IndexInclExcl.xls: Time Technoplast Ltd.
+2017-09-29,IN,UNITEDBNK,INE695A01019,United Bank of India,regular,IndexInclExcl.xls: United Bank of India
+2017-09-29,IN,VESUVIUS,INE386A01015,Vesuvius India Ltd.,regular,IndexInclExcl.xls: Vesuvius India Ltd.
+2017-09-29,OUT,AMTEKAUTO,INE130C01021,Amtek Auto Ltd.,regular,IndexInclExcl.xls: Amtek Auto Ltd.
+2017-09-29,OUT,ANANTRAJ,INE242C01024,Anant Raj Ltd.,regular,IndexInclExcl.xls: Anant Raj Ltd.
+2017-09-29,OUT,ASAHIINDIA,INE439A01020,Asahi India Glass Ltd.,regular,IndexInclExcl.xls: Asahi India Glass Ltd.
+2017-09-29,OUT,FDC,INE258B01022,FDC Ltd.,regular,IndexInclExcl.xls: FDC Ltd.
+2017-09-29,OUT,FMGOETZE,INE529A01010,Federal-Mogul Goetze (India) Ltd.,regular,IndexInclExcl.xls: Federal-Mogul Goetze (India) Ltd.
+2017-09-29,OUT,GRINDWELL,INE536A01023,Grindwell Norton Ltd.,regular,IndexInclExcl.xls: Grindwell Norton Ltd.
+2017-09-29,OUT,HMVL,INE871K01015,Hindustan Media Vent Ltd.,regular,IndexInclExcl.xls: Hindustan Media Vent Ltd.
+2017-09-29,OUT,HONAUT,INE671A01010,Honeywell Automation India Ltd.,regular,IndexInclExcl.xls: Honeywell Automation India Ltd.
+2017-09-29,OUT,JMTAUTOLTD,INE988E01036,JMT Auto Ltd.,regular,IndexInclExcl.xls: JMT Auto Ltd.
+2017-09-29,OUT,KNRCON,INE634I01029,KNR Constructions Ltd.,regular,IndexInclExcl.xls: KNR Constructions Ltd.
+2017-09-29,OUT,NITINFIRE,INE489H01020,Nitin Fire Protection Industries Ltd.,regular,IndexInclExcl.xls: Nitin Fire Protection Industries Ltd.
+2017-09-29,OUT,ORISSAMINE,INE725E01024,Orissa Min Dev Co Ltd.,regular,IndexInclExcl.xls: Orissa Min Dev Co Ltd.
+2017-09-29,OUT,PUNJLLOYD,INE701B01021,Punj Lloyd Ltd.,regular,IndexInclExcl.xls: Punj Lloyd Ltd.
+2017-09-29,OUT,RATNAMANI,INE703B01027,Ratnamani Metals & Tubes Ltd.,regular,IndexInclExcl.xls: Ratnamani Metals & Tubes Ltd.
+2017-09-29,OUT,RELAXO,INE131B01039,Relaxo Footwears Ltd.,regular,IndexInclExcl.xls: Relaxo Footwears Ltd.
+2017-09-29,OUT,RIIL,INE046A01015,Reliance Industrial Infrastructure Ltd.,regular,IndexInclExcl.xls: Reliance Industrial Infrastructure Ltd.
+2017-09-29,OUT,ROLTA,INE293A01013,Rolta India Ltd.,regular,IndexInclExcl.xls: Rolta India Ltd.
+2017-09-29,OUT,RUCHISOYA,INE619A01027,Ruchi Soya Industries Ltd.,regular,IndexInclExcl.xls: Ruchi Soya Industries Ltd.
+2017-09-29,OUT,STCINDIA,INE655A01013,State Trading Corporation of IndiaLtd.,regular,IndexInclExcl.xls: State Trading Corporation of India Ltd.
+2017-09-29,OUT,TIDEWATER,INE484C01022,Tide Water Oil (India) Ltd.,regular,IndexInclExcl.xls: Tide Water Oil (India) Ltd.
+2017-09-29,OUT,TRITURBINE,INE152M01016,Triveni Turbine Ltd.,regular,IndexInclExcl.xls: Triveni Turbine Ltd.
+2017-09-29,OUT,VSTIND,INE710A01016,VST Industries Ltd.,regular,IndexInclExcl.xls: VST Industries Ltd.
+2017-09-29,OUT,WONDERLA,INE066O01014,Wonderla Holidays Ltd.,regular,IndexInclExcl.xls: Wonderla Holidays Ltd.
+2017-09-29,OUT,ZYDUSWELL,INE768C01010,Zydus Wellness Ltd.,regular,IndexInclExcl.xls: Zydus Wellness Ltd.
+2017-10-30,IN,HUDCO,INE031A01017,Housing & Urban Development Corporation Ltd.,regular,IndexInclExcl.xls: Housing & Urban Development Corporation Ltd.
+2017-10-30,OUT,FRETAIL,INE752P01024,Future Retail Ltd.,regular,IndexInclExcl.xls: Future Retail Ltd.
+2017-11-13,IN,AUBANK,INE949L01017,AU Small Finance Bank Ltd.,regular,IndexInclExcl.xls: AU Small Finance Bank Ltd.
+2017-11-13,IN,RELAXO,INE131B01039,Relaxo Footwears Ltd.,regular,IndexInclExcl.xls: Relaxo Footwears Ltd.
+2017-11-13,OUT,SHILPI,INE510K01019,Shilpi Cable Tech Ltd. CABLES -,regular,IndexInclExcl.xls: Shilpi Cable Tech Ltd.
+2017-11-13,OUT,SUNDARMFIN,INE660A01013,Sundaram Finance Ltd.,regular,IndexInclExcl.xls: Sundaram Finance Ltd.
+2017-11-20,IN,STARCEMENT,INE460H01021,Star Cement Ltd.,regular,IndexInclExcl.xls: Star Cement Ltd.
+2017-11-20,OUT,GAYAPROJ,INE336H01023,Gayatri Projects Ltd.,regular,IndexInclExcl.xls: Gayatri Projects Ltd.
+2018-02-05,IN,COCHINSHIP,INE704P01017,Cochin Shipyard Ltd.,regular,IndexInclExcl.xls: Cochin Shipyard Ltd.
+2018-02-05,IN,HATSUN,INE473B01035,Hatsun Agro Product Ltd.,regular,IndexInclExcl.xls: Hatsun Agro Product Ltd.
+2018-02-05,IN,RELCAPITAL,INE013A01015,Reliance Capital Ltd.,regular,IndexInclExcl.xls: Reliance Capital Ltd.
+2018-02-05,IN,TIFIN,INE149A01033,Cholamandalam Financial Holdings Ltd.,regular,IndexInclExcl.xls: TI Financial Holdings Ltd.
+2018-02-05,OUT,CESC,INE486A01013,CESC Ltd.,regular,IndexInclExcl.xls: CESC Ltd.
+2018-02-05,OUT,FORTIS,INE061F01013,Fortis Healthcare Ltd.,regular,IndexInclExcl.xls: Fortis Healthcare Ltd.
+2018-02-05,OUT,POLARIS,INE763A01023,Polaris Financial Technology Ltd.,regular,IndexInclExcl.xls: Polaris Consulting & Services Ltd.
+2018-02-05,OUT,STAR,INE939A01011,Strides Pharma Science Ltd.,regular,IndexInclExcl.xls: Strides Shasun Ltd.
+2018-03-13,IN,ERIS,INE406M01024,Eris Lifesciences Ltd.,regular,IndexInclExcl.xls: Eris Lifesciences Ltd.
+2018-03-13,OUT,VIDEOIND,INE703A01011,Videocon Industries Ltd.,regular,IndexInclExcl.xls: Videocon Industries Ltd.
+2018-04-02,IN,ABCAPITAL,INE674K01013,Aditya Birla Capital Ltd.,regular,IndexInclExcl.xls: Aditya Birla Capital Ltd.
+2018-04-02,IN,ASAHIINDIA,INE439A01020,Asahi India Glass Ltd.,regular,IndexInclExcl.xls: Asahi India Glass Ltd.
+2018-04-02,IN,CDSL,INE736A01011,Central Depository Services (India) Ltd.,regular,IndexInclExcl.xls: Central Depository Services (India) Ltd.
+2018-04-02,IN,DCAL,INE385W01011,Dishman Carbogen Amcis Ltd.,regular,IndexInclExcl.xls: Dishman Carbogen Amcis Ltd.
+2018-04-02,IN,DIXON,INE935N01012,Dixon Technologies (India) Ltd.,regular,IndexInclExcl.xls: Dixon Technologies (India) Ltd.
+2018-04-02,IN,GICRE,INE481Y01014,General Insurance Corporation of India,regular,IndexInclExcl.xls: General Insurance Corporation of India
+2018-04-02,IN,GODREJAGRO,INE850D01014,Godrej Agrovet Ltd.,regular,IndexInclExcl.xls: Godrej Agrovet Ltd.
+2018-04-02,IN,GRAPHITE,INE371A01025,Graphite India Ltd.,regular,IndexInclExcl.xls: Graphite India Ltd.
+2018-04-02,IN,GRASIM,INE047A01021,Grasim Industries Ltd.,regular,IndexInclExcl.xls: Grasim Industries Ltd.
+2018-04-02,IN,HEG,INE545A01016,HEG Advanced Materials Ltd.,regular,IndexInclExcl.xls: H.E.G. Ltd.
+2018-04-02,IN,HONAUT,INE671A01010,Honeywell Automation India Ltd.,regular,IndexInclExcl.xls: Honeywell Automation India Ltd.
+2018-04-02,IN,HSCL,INE019C01026,Himadri Speciality Chemical Ltd.,regular,IndexInclExcl.xls: Himadri Speciality Chemical Ltd.
+2018-04-02,IN,ICICIGI,INE765G01017,ICICI Lombard General Insurance Company Ltd.,regular,IndexInclExcl.xls: General Insurance Corporation of India
+2018-04-02,IN,IEX,INE022Q01012,Indian Energy Exchange Ltd.,regular,IndexInclExcl.xls: Indian Energy Exchange Ltd.
+2018-04-02,IN,IIFL,INE530B01024,IIFL Finance Ltd.,regular,IndexInclExcl.xls: IIFL Holdings Ltd.
+2018-04-02,IN,KNRCON,INE634I01029,KNR Constructions Ltd.,regular,IndexInclExcl.xls: KNR Constructions Ltd.
+2018-04-02,IN,MASFIN,INE348L01012,MAS Financial Services Ltd.,regular,IndexInclExcl.xls: MAS Financial Services Ltd.
+2018-04-02,IN,NESCO,INE317F01035,NESCO Ltd.,regular,IndexInclExcl.xls: NESCO Ltd.
+2018-04-02,IN,RHFL,INE217K01011,Reliance Home Finance Ltd.,regular,IndexInclExcl.xls: Reliance Home Finance Ltd.
+2018-04-02,IN,SADBHIN,INE764L01010,Sadbhav Infrastructure Project Ltd.,regular,IndexInclExcl.xls: Sadbhav Infrastructure Project Ltd.
+2018-04-02,IN,SBILIFE,INE123W01016,SBI Life Insurance Company Ltd.,regular,IndexInclExcl.xls: SBI Life Insurance Company Ltd.
+2018-04-02,IN,SHANKARA,INE274V01019,Shankara Building Products Ltd.,regular,IndexInclExcl.xls: Shankara Building Products Ltd.
+2018-04-02,IN,SIS,INE285J01010,SIS Ltd.,regular,IndexInclExcl.xls: Security and Intelligence Services (India) Ltd.
+2018-04-02,IN,SPTL,INE501W01021,Sintex Plastics Technology Ltd.,regular,IndexInclExcl.xls: Sintex Plastics Technology Ltd.
+2018-04-02,OUT,ADANIENT,INE423A01024,Adani Enterprises Ltd.,regular,IndexInclExcl.xls: Adani Enterprises Ltd.
+2018-04-02,OUT,AHLUCONT,INE758C01029,Ahluwalia Contracts (India) Ltd.,regular,IndexInclExcl.xls: Ahluwalia Contracts (India) Ltd.
+2018-04-02,OUT,APARINDS,INE372A01015,Apar Industries Ltd.,regular,IndexInclExcl.xls: Apar Industries Ltd.
+2018-04-02,OUT,ASTRAZEN,INE203A01020,AstraZenca Pharma India Ltd.,regular,IndexInclExcl.xls: AstraZenca Pharma India Ltd.
+2018-04-02,OUT,CORPBANK,INE112A01023,Corporation Bank,regular,IndexInclExcl.xls: Corporation Bank
+2018-04-02,OUT,DALMIABHA,INE439L01019,Dalmia Bharat Ltd.,regular,IndexInclExcl.xls: Dalmia Bharat Ltd.
+2018-04-02,OUT,DHANUKA,INE435G01025,Dhanuka Agritech Ltd.,regular,IndexInclExcl.xls: Dhanuka Agritech Ltd.
+2018-04-02,OUT,ESSELPACK,INE255A01020,EPL Ltd.,regular,IndexInclExcl.xls: Essel Propack Ltd.
+2018-04-02,OUT,ICRA,INE725G01011,ICRA Ltd.,regular,IndexInclExcl.xls: ICRA Ltd.
+2018-04-02,OUT,IGARASHI,INE188B01013,Igarashi Motors India Ltd.,regular,IndexInclExcl.xls: Igarashi Motors India Ltd.
+2018-04-02,OUT,INGERRAND,INE177A01018,Ingersoll Rand (India) Ltd.,regular,IndexInclExcl.xls: Ingersoll Rand (India) Ltd.
+2018-04-02,OUT,LINDEINDIA,INE473A01011,Linde India Ltd.,regular,IndexInclExcl.xls: Linde India Ltd.
+2018-04-02,OUT,MONSANTO,INE274B01011,Monsanto India Ltd.,regular,IndexInclExcl.xls: Monsanto India Ltd.
+2018-04-02,OUT,NAVNETEDUL,INE060A01024,Navneet Education Ltd.,regular,IndexInclExcl.xls: Navneet Education Ltd.
+2018-04-02,OUT,SCHNEIDER,INE839M01018,Schneider Electric Infrastructure Ltd.,regular,IndexInclExcl.xls: Schneider Electric Infrastructure Ltd.
+2018-04-02,OUT,SHARDACROP,INE221J01015,Sharda Cropchem Ltd.,regular,IndexInclExcl.xls: Sharda Cropchem Ltd.
+2018-04-02,OUT,SHILPAMED,INE790G01031,Shilpa Medicare Ltd.,regular,IndexInclExcl.xls: Shilpa Medicare Ltd.
+2018-04-02,OUT,SNOWMAN,INE734N01019,Snowman Logistics Ltd.,regular,IndexInclExcl.xls: Snowman Logistics Ltd.
+2018-04-02,OUT,SOMANYCERA,INE355A01028,Somany Ceramics Ltd.,regular,IndexInclExcl.xls: Somany Ceramics Ltd.
+2018-04-02,OUT,SUPPETRO,INE663A01017,Supreme Petrochem Ltd.,regular,IndexInclExcl.xls: Supreme Petrochem Ltd.
+2018-04-02,OUT,SUPRAJIT,INE399C01030,Suprajit Engineering Ltd.,regular,IndexInclExcl.xls: Suprajit Engineering Ltd.
+2018-04-02,OUT,UNITEDBNK,INE695A01019,United Bank of India,regular,IndexInclExcl.xls: Corporation Bank
+2018-04-02,OUT,VESUVIUS,INE386A01015,Vesuvius India Ltd.,regular,IndexInclExcl.xls: Vesuvius India Ltd.
+2018-04-02,OUT,ZENSARTECH,INE520A01019,Zensar Technolgies Ltd.,regular,IndexInclExcl.xls: Zensar Technolgies Ltd.
+2018-05-04,RENAME,PRSMJOHNSN,INE010A01011,Prism Johnson Ltd.,regular,PRISMCEM -> PRSMJOHNSN: NSE symbolchange.csv
+2018-06-29,IN,ASTERDM,INE914M01019,Aster DM Quality Care Ltd.,regular,IndexInclExcl.xls: Aster DM Healthcare Ltd.
+2018-06-29,IN,FRETAIL,INE752P01024,Future Retail Ltd.,regular,IndexInclExcl.xls: Future Retail Ltd.
+2018-06-29,IN,KIOCL,INE880L01014,KIOCL Ltd.,regular,IndexInclExcl.xls: KIOCL Ltd.
+2018-06-29,IN,TIINDIA,INE974X01010,Tube Investments of India Ltd.,regular,IndexInclExcl.xls: Tube Investments of India Ltd.
+2018-06-29,OUT,ARVIND,INE034A01011,Arvind Ltd.,regular,IndexInclExcl.xls: Arvind Ltd.
+2018-06-29,OUT,COX&KINGS,INE008I01026,Cox & Kings Ltd.,regular,IndexInclExcl.xls: Cox & Kings Ltd.
+2018-06-29,OUT,HTMEDIA,INE501G01024,HT Media Ltd.,regular,IndexInclExcl.xls: HT Media Ltd.
+2018-06-29,OUT,TATACOMM,INE151A01013,Tata Communications Ltd.,regular,IndexInclExcl.xls: Tata Communications Ltd.
+2018-08-08,IN,BDL,INE171Z01018,Bharat Dynamics Ltd.,regular,IndexInclExcl.xls: Bharat Dynamics Ltd.
+2018-08-08,OUT,TECHNO,INE286K01024,Techno Elt & Eng Co. Ltd.,regular,IndexInclExcl.xls: Techno Elt & Eng Co. Ltd.
+2018-09-28,IN,BANDHANBNK,INE545U01014,Bandhan Bank Ltd.,regular,IndexInclExcl.xls: Bandhan Bank Ltd.
+2018-09-28,IN,ELGIEQUIP,INE285A01027,Elgi Equipments Ltd.,regular,IndexInclExcl.xls: Elgi Equipments Ltd.
+2018-09-28,IN,EXCELCROP,INE223G01017,Excel Crop Care Ltd.,regular,IndexInclExcl.xls: Excel Crop Care Ltd.
+2018-09-28,IN,FDC,INE258B01022,FDC Ltd.,regular,IndexInclExcl.xls: FDC Ltd.
+2018-09-28,IN,GALAXYSURF,INE600K01018,Galaxy Surfactants Ltd.,regular,IndexInclExcl.xls: Galaxy Surfactants Ltd.
+2018-09-28,IN,GAYAPROJ,INE336H01023,Gayatri Projects Ltd.,regular,IndexInclExcl.xls: Gayatri Projects Ltd.
+2018-09-28,IN,GRINDWELL,INE536A01023,Grindwell Norton Ltd.,regular,IndexInclExcl.xls: Grindwell Norton Ltd.
+2018-09-28,IN,HAL,INE066F01012,Hindustan Aeronautics Ltd.,regular,IndexInclExcl.xls: Hindustan Aeronautics Ltd.
+2018-09-28,IN,HDFCLIFE,INE795G01014,HDFC Life Insurance Company Ltd.,regular,IndexInclExcl.xls: HDFC Standard Life Insurance Company Ltd.
+2018-09-28,IN,ISEC,INE763G01038,ICICI Securities Ltd.,regular,IndexInclExcl.xls: ICICI Securities Ltd.
+2018-09-28,IN,LEMONTREE,INE970X01018,Lemon Tree Hotels Ltd.,regular,IndexInclExcl.xls: Lemon Tree Hotels Ltd.
+2018-09-28,IN,LINDEINDIA,INE473A01011,Linde India Ltd.,regular,IndexInclExcl.xls: Linde India Ltd.
+2018-09-28,IN,LUXIND,INE150G01020,Lux Industries Ltd.,regular,IndexInclExcl.xls: Lux Industries Ltd.
+2018-09-28,IN,MAHLOG,INE766P01016,Mahindra Logistics Ltd.,regular,IndexInclExcl.xls: Mahindra Logistics Ltd.
+2018-09-28,IN,MONSANTO,INE274B01011,Monsanto India Ltd.,regular,IndexInclExcl.xls: Monsanto India Ltd.
+2018-09-28,IN,NIACL,INE470Y01017,The New India Assurance Company Ltd.,regular,IndexInclExcl.xls: The New India Assurance Company Ltd.
+2018-09-28,IN,PHILIPCARB,INE602A01023,Phillips Carbon Black Ltd.,regular,IndexInclExcl.xls: Phillips Carbon Black Ltd.
+2018-09-28,IN,RNAM,INE298J01013,Nippon Life India Asset Management Ltd.,regular,IndexInclExcl.xls: Reliance Nippon Life Asset Management Ltd.
+2018-09-28,IN,SHILPAMED,INE790G01031,Shilpa Medicare Ltd.,regular,IndexInclExcl.xls: Shilpa Medicare Ltd.
+2018-09-28,IN,STAR,INE939A01011,Strides Pharma Science Ltd.,regular,IndexInclExcl.xls: Strides Pharma Science Ltd.
+2018-09-28,IN,SUNDARMFIN,INE660A01013,Sundaram Finance Ltd.,regular,IndexInclExcl.xls: Sundaram Finance Ltd.
+2018-09-28,IN,TEAMLEASE,INE985S01024,Teamlease Services Ltd.,regular,IndexInclExcl.xls: Teamlease Services Ltd.
+2018-09-28,IN,VENKEYS,INE398A01010,Venky's (India) Ltd.,regular,IndexInclExcl.xls: Venky's (India) Ltd.
+2018-09-28,IN,VMART,INE665J01013,V-Mart Retail Ltd.,regular,IndexInclExcl.xls: V-Mart Retail Ltd.
+2018-09-28,IN,ZENSARTECH,INE520A01027,Zensar Technolgies Ltd.,regular,IndexInclExcl.xls: Zensar Technolgies Ltd.
+2018-09-28,IN,ZYDUSWELL,INE768C01010,Zydus Wellness Ltd.,regular,IndexInclExcl.xls: Zydus Wellness Ltd.
+2018-09-28,OUT,ABAN,INE421A01028,Aban Offshore Ltd.,regular,IndexInclExcl.xls: Aban Offshore Ltd.
+2018-09-28,OUT,ASAHIINDIA,INE439A01020,Asahi India Glass Ltd.,regular,IndexInclExcl.xls: Asahi India Glass Ltd.
+2018-09-28,OUT,BAJAJHIND,INE306A01021,Bajaj Hindusthan Ltd.,regular,IndexInclExcl.xls: Bajaj Hindusthan Sugar Ltd.
+2018-09-28,OUT,BALLARPUR,INE294A01037,Ballarpur Industries Ltd.,regular,IndexInclExcl.xls: Ballarpur Industries Ltd.
+2018-09-28,OUT,BFUTILITIE,INE243D01012,BF Utilities Ltd.,regular,IndexInclExcl.xls: BF Utilities Ltd.
+2018-09-28,OUT,BGRENERGY,INE661I01014,BGR Energy Systems Ltd,regular,IndexInclExcl.xls: BGR Energy Systems Ltd
+2018-09-28,OUT,BHUSANSTL,INE824B01021,Tata Steel BSL Ltd.,regular,IndexInclExcl.xls: Bhushan Steel Ltd.
+2018-09-28,OUT,BRFL,INE589G01011,Bombay Rayon Fashions Ltd.,regular,IndexInclExcl.xls: Bombay Rayon Fashions Ltd.
+2018-09-28,OUT,DBREALTY,INE879I01012,Valor Estate Ltd.,regular,IndexInclExcl.xls: D B Realty Ltd.
+2018-09-28,OUT,GATI,INE152B01027,Gati Ltd.,regular,IndexInclExcl.xls: Gati Ltd.
+2018-09-28,OUT,HDIL,INE191I01012,Housing Development and Infrastructure Ltd.,regular,IndexInclExcl.xls: Housing Development and Infrastructure Ltd.
+2018-09-28,OUT,JBFIND,INE187A01017,JBF Industries Ltd.,regular,IndexInclExcl.xls: JBF Industries Ltd.
+2018-09-28,OUT,JINDALPOLY,INE197D01010,Jindal Poly Films Ltd.,regular,IndexInclExcl.xls: Jindal Poly Films Ltd.
+2018-09-28,OUT,KESORAMIND,INE087A01019,Kesoram Industries Ltd.,regular,IndexInclExcl.xls: Kesoram Industries Ltd.
+2018-09-28,OUT,KITEX,INE602G01020,Kitex Garments Ltd.,regular,IndexInclExcl.xls: Kitex Garments Ltd.
+2018-09-28,OUT,KPIT,INE836A01035,Birlasoft Ltd.,regular,IndexInclExcl.xls: KPIT Technologies Ltd.
+2018-09-28,OUT,KWALITY,INE775B01025,Kwality Ltd.,regular,IndexInclExcl.xls: Kwality Ltd.
+2018-09-28,OUT,MARKSANS,INE750C01026,Marksans Pharma Ltd.,regular,IndexInclExcl.xls: Marksans Pharma Ltd.
+2018-09-28,OUT,MTNL,INE153A01019,Mahanagar Telephone Nigam Ltd.,regular,IndexInclExcl.xls: Mahanagar Telephone Nigam Ltd.
+2018-09-28,OUT,RAMCOSYS,INE246B01019,Ramco Systems Ltd. COMPUTERS -,regular,IndexInclExcl.xls: Ramco Systems Ltd.
+2018-09-28,OUT,RELIGARE,INE621H01010,Religare Enterprises Ltd.,regular,IndexInclExcl.xls: Religare Enterprises Ltd.
+2018-09-28,OUT,RTNPOWER,INE399K01017,RattanIndia Power Ltd.,regular,IndexInclExcl.xls: RattanIndia Power Ltd.
+2018-09-28,OUT,SFL,INE916U01025,Sheela Foam Ltd.,regular,IndexInclExcl.xls: Sheela Foam Ltd.
+2018-09-28,OUT,SMLISUZU,INE294B01019,SML Isuzu Ltd. AUTOMOBILES - 4,regular,IndexInclExcl.xls: SML Isuzu Ltd.
+2018-09-28,OUT,UNITECH,INE694A01020,Unitech Ltd.,regular,IndexInclExcl.xls: Unitech Ltd.
+2018-09-28,OUT,ZEELEARN,INE565L01011,Zee Learn Ltd.,regular,IndexInclExcl.xls: Zee Learn Ltd.
+2018-12-28,IN,ADANIGREEN,INE364U01010,Adani Green Energy Ltd.,regular,IndexInclExcl.xls: Adani Green Energy Ltd.
+2018-12-28,IN,FORTIS,INE061F01013,Fortis Healthcare Ltd.,regular,IndexInclExcl.xls: Fortis Healthcare Ltd.
+2018-12-28,IN,RITES,INE320J01015,RITES Ltd.,regular,IndexInclExcl.xls: RITES Ltd.
+2018-12-28,IN,SFL,INE916U01025,Sheela Foam Ltd.,regular,IndexInclExcl.xls: Sheela Foam Ltd.
+2018-12-28,IN,VARROC,INE665L01035,Varroc Engineering Ltd.,regular,IndexInclExcl.xls: Varroc Engineering Ltd.
+2018-12-28,OUT,BHARATFIN,INE180K01011,Bharat Financial Inclusion Ltd.,regular,IndexInclExcl.xls: Bharat Financial Inclusion Ltd.
+2018-12-28,OUT,CAPF,INE688I01017,Capital First Ltd.,regular,IndexInclExcl.xls: Capital First Ltd.
+2018-12-28,OUT,CENTURYTEX,INE055A01016,Aditya Birla Real Estate Ltd.,regular,IndexInclExcl.xls: Century Textile & Industries Ltd.
+2018-12-28,OUT,HSIL,INE415A01038,HSIL Ltd.,regular,IndexInclExcl.xls: HSIL Ltd.
+2018-12-28,OUT,IIFL,INE530B01024,IIFL Finance Ltd.,regular,IndexInclExcl.xls: IIFL Holdings Ltd.
+2019-01-15,RENAME,BAJAJCON,INE933K01021,Bajaj Consumer Care Ltd.,regular,BAJAJCORP -> BAJAJCON: NSE symbolchange.csv
+2019-01-16,RENAME,IDFCFIRSTB,INE092T01019,IDFC First Bank Ltd.,regular,IDFCBANK -> IDFCFIRSTB: NSE symbolchange.csv
+2019-01-28,IN,CORPBANK,INE112A01023,Corporation Bank,regular,IndexInclExcl.xls: Corporation Bank
+2019-01-28,IN,CREDITACC,INE741K01010,CreditAccess Grameen Ltd.,regular,IndexInclExcl.xls: CreditAccess Grameen Ltd.
+2019-01-28,OUT,DENABANK,INE077A01010,Dena Bank,regular,IndexInclExcl.xls: Dena Bank
+2019-01-28,OUT,VIJAYABANK,INE705A01016,Vijaya Bank,regular,IndexInclExcl.xls: Vijaya Bank
+2019-03-29,IN,AAVAS,INE216P01012,Aavas Financiers Ltd.,regular,IndexInclExcl.xls: Aavas Financiers Ltd.
+2019-03-29,IN,ASTRAZEN,INE203A01020,AstraZenca Pharma India Ltd.,regular,IndexInclExcl.xls: AstraZenca Pharma India Ltd.
+2019-03-29,IN,CESC,INE486A01013,CESC Ltd.,regular,IndexInclExcl.xls: CESC Ltd.
+2019-03-29,IN,COX&KINGS,INE008I01026,Cox & Kings Ltd.,regular,IndexInclExcl.xls: Cox & Kings Ltd.
+2019-03-29,IN,DEEPAKNTR,INE288B01029,Deepak Nitrite Ltd.,regular,IndexInclExcl.xls: Deepak Nitrite Ltd.
+2019-03-29,IN,ESSELPACK,INE255A01020,EPL Ltd.,regular,IndexInclExcl.xls: Essel Propack Ltd.
+2019-03-29,IN,FINEORG,INE686Y01026,Fine Organic Industries Ltd.,regular,IndexInclExcl.xls: Fine Organic Industries Ltd.
+2019-03-29,IN,HDFCAMC,INE127D01025,HDFC Asset Management Company Ltd.,regular,IndexInclExcl.xls: HDFC Asset Management Company Ltd.
+2019-03-29,IN,IBULISL,INE126M01010,Indiabulls Integrated Services Ltd.,regular,IndexInclExcl.xls: Indiabulls Integrated Services Ltd.
+2019-03-29,IN,ICRA,INE725G01011,ICRA Ltd.,regular,IndexInclExcl.xls: ICRA Ltd.
+2019-03-29,IN,INDOSTAR,INE896L01010,IndoStar Capital Finance Ltd.,regular,IndexInclExcl.xls: IndoStar Capital Finance Ltd.
+2019-03-29,IN,IRCON,INE962Y01013,IRCON International Ltd.,regular,IndexInclExcl.xls: IRCON International Ltd.
+2019-03-29,IN,JAMNAAUTO,INE039C01032,Jamna Auto Industries Ltd.,regular,IndexInclExcl.xls: Jamna Auto Industries Ltd.
+2019-03-29,IN,JKPAPER,INE789E01012,JK Paper Ltd.,regular,IndexInclExcl.xls: JK Paper Ltd.
+2019-03-29,IN,KEI,INE878B01027,KEI Industries Ltd.,regular,IndexInclExcl.xls: KEI Industries Ltd.
+2019-03-29,IN,KIRLOSENG,INE146L01010,Kirloskar Oil Eng Ltd.,regular,IndexInclExcl.xls: Kirloskar Oil Eng Ltd.
+2019-03-29,IN,MAHABANK,INE457A01014,Bank of Maharashtra,regular,IndexInclExcl.xls: Bank of Maharashtra.
+2019-03-29,IN,MAHSCOOTER,INE288A01013,Maharashtra Scooters Ltd.,regular,IndexInclExcl.xls: Maharashtra Scooters Ltd.
+2019-03-29,IN,MAHSEAMLES,INE271B01025,Maharashtra Seamless Ltd.,regular,IndexInclExcl.xls: Maharashtra Seamless Ltd.
+2019-03-29,IN,ORIENTELEC,INE142Z01019,Orient Electric Ltd.,regular,IndexInclExcl.xls: Orient Electric Ltd.
+2019-03-29,IN,SHARDACROP,INE221J01015,Sharda Cropchem Ltd.,regular,IndexInclExcl.xls: Sharda Cropchem Ltd.
+2019-03-29,IN,SUPRAJIT,INE399C01030,Suprajit Engineering Ltd.,regular,IndexInclExcl.xls: Suprajit Engineering Ltd.
+2019-03-29,IN,TCNSBRANDS,INE778U01029,TCNS Clothing Co. Ltd.,regular,IndexInclExcl.xls: TCNS Clothing Co. Ltd.
+2019-03-29,IN,TRITURBINE,INE152M01016,Triveni Turbine Ltd.,regular,IndexInclExcl.xls: Triveni Turbine Ltd.
+2019-03-29,IN,VSTIND,INE710A01016,VST Industries Ltd.,regular,IndexInclExcl.xls: VST Industries Ltd.
+2019-03-29,OUT,8KMILES,INE650K01021,8K Miles Soft Services Ltd.,regular,IndexInclExcl.xls: 8K Miles Soft Services Ltd.
+2019-03-29,OUT,AARTIIND,INE769A01020,Aarti Industries Ltd.,regular,IndexInclExcl.xls: Aarti Industries Ltd.
+2019-03-29,OUT,DEN,INE947J01015,Den Networks Ltd.,regular,IndexInclExcl.xls: Den Networks Ltd.
+2019-03-29,OUT,DREDGECORP,INE506A01018,Dredging Corporation of India Ltd.,regular,IndexInclExcl.xls: Dredging Corporation of India Ltd.
+2019-03-29,OUT,EROSMEDIA,INE416L01017,Eros Intl Media Ltd.,regular,IndexInclExcl.xls: Eros Intl Media Ltd.
+2019-03-29,OUT,EVEREADY,INE128A01029,Eveready Industries India Ltd.,regular,IndexInclExcl.xls: Eveready Industries India Ltd.
+2019-03-29,OUT,GREENPLY,INE461C01038,Greenply Industries Ltd.,regular,IndexInclExcl.xls: Greenply Industries Ltd.
+2019-03-29,OUT,GVKPIL,INE251H01024,GVK Power & Infrastructures Ltd.,regular,IndexInclExcl.xls: GVK Power & Infrastructures Ltd.
+2019-03-29,OUT,HCC,INE549A01026,Hindustan Construction Co. Ltd.,regular,IndexInclExcl.xls: Hindustan Construction Co. Ltd.
+2019-03-29,OUT,HCL-INSYS,INE236A01020,HCL Infosystems Ltd.,regular,IndexInclExcl.xls: HCL Infosystems Ltd.
+2019-03-29,OUT,ICIL,INE483B01026,Indo Count Industries Ltd.,regular,IndexInclExcl.xls: Indo Count Industries Ltd.
+2019-03-29,OUT,IL&FSTRANS,INE975G01012,IL&FS Transportation Networks Ltd.,regular,IndexInclExcl.xls: IL&FS Transportation Networks Ltd.
+2019-03-29,OUT,JCHAC,INE782A01015,Johnson Controls - Hitachi Air Conditioning India Ltd.,regular,IndexInclExcl.xls: Johnson Controls - Hitachi Air Conditioning India Ltd.
+2019-03-29,OUT,JKIL,INE576I01022,J.Kumar Infraprojects Ltd.,regular,IndexInclExcl.xls: J.Kumar Infraprojects Ltd.
+2019-03-29,OUT,JPPOWER,INE351F01018,Jaiprakash Power Ventures Ltd.,regular,IndexInclExcl.xls: Jaiprakash Power Ventures Ltd.
+2019-03-29,OUT,MANPASAND,INE122R01018,Manpasand Beverages Ltd.,regular,IndexInclExcl.xls: Manpasand Beverages Ltd.
+2019-03-29,OUT,MCLEODRUSS,INE942G01012,McLeod Russel India Ltd.,regular,IndexInclExcl.xls: McLeod Russel India Ltd.
+2019-03-29,OUT,NAVKARCORP,INE278M01019,Navkar Corporation Ltd.,regular,IndexInclExcl.xls: Navkar Corporation Ltd.
+2019-03-29,OUT,PFS,INE560K01014,PTC India Fin Serv Ltd.,regular,IndexInclExcl.xls: PTC India Fin Serv Ltd.
+2019-03-29,OUT,RNAVAL,INE542F01012,Reliance Naval and Engineering Ltd.,regular,IndexInclExcl.xls: Reliance Naval and Engineering Ltd.
+2019-03-29,OUT,SADBHIN,INE764L01010,Sadbhav Infrastructure Project Ltd.,regular,IndexInclExcl.xls: Sadbhav Infrastructure Project Ltd.
+2019-03-29,OUT,TATASPONGE,INE674A01014,Tata Steel Long Products Ltd.,regular,IndexInclExcl.xls: Tata Sponge Iron Ltd.
+2019-03-29,OUT,TEXRAIL,INE621L01012,Texmaco Rail & Eng. Ltd.,regular,IndexInclExcl.xls: Texmaco Rail & Eng. Ltd.
+2019-03-29,OUT,TVSSRICHAK,INE421C01016,TVS Srichakra Ltd.,regular,IndexInclExcl.xls: TVS Srichakra Ltd.
+2019-03-29,OUT,UNICHEMLAB,INE351A01035,Unichem Laboratories Ltd.,regular,IndexInclExcl.xls: Unichem Laboratories Ltd.
+2019-04-09,RENAME,CHOLAHLDNG,INE149A01033,Cholamandalam Financial Holdings Ltd.,regular,TIFIN -> CHOLAHLDNG: NSE symbolchange.csv
+2019-04-15,IN,SUNCLAYLTD,INE105A01035,Sundaram Clayton Ltd.,regular,IndexInclExcl.xls: Sundaram Clayton Ltd.
+2019-04-15,OUT,EXCELCROP,INE223G01017,Excel Crop Care Ltd.,regular,IndexInclExcl.xls: Excel Crop Care Ltd.
+2019-06-11,RENAME,PGHL,INE199A01012,Procter & Gamble Health Ltd.,regular,MERCK -> PGHL: NSE symbolchange.csv
+2019-06-28,IN,CHALET,INE427F01016,Chalet Hotels Ltd.,regular,IndexInclExcl.xls: Chalet Hotels Ltd.
+2019-06-28,IN,DALBHARAT,INE00R701025,Dalmia Bharat Ltd.,regular,IndexInclExcl.xls: Dalmia Bharat Ltd.
+2019-06-28,OUT,GUJFLUORO,INE538A01037,Gujarat Fluorochemicals Ltd.,regular,IndexInclExcl.xls: Gujarat Fluorochemicals Ltd.
+2019-06-28,OUT,MONSANTO,INE274B01011,Monsanto India Ltd.,regular,IndexInclExcl.xls: Monsanto India Ltd.
+2019-09-24,IN,VAIBHAVGBL,INE884A01019,Vaibhav Global Ltd.,regular,IndexInclExcl.xls: Vaibhav Global Ltd.
+2019-09-24,OUT,JETAIRWAYS,INE802G01018,Jet Airways (India) Ltd.,regular,IndexInclExcl.xls: Jet Airways (India) Ltd.
+2019-09-27,IN,ABBOTINDIA,INE358A01014,Abbott India Ltd.,regular,IndexInclExcl.xls: Abbott India Ltd.
+2019-09-27,IN,ADANIGAS,INE399L01023,Adani Total Gas Ltd.,regular,IndexInclExcl.xls: Adani Gas Ltd.
+2019-09-27,IN,AMBER,INE371P01015,Amber Enterprises India Ltd.,regular,IndexInclExcl.xls: Amber Enterprises India Ltd.
+2019-09-27,IN,ARVINDFASN,INE955V01021,Arvind Fashions Ltd.,regular,IndexInclExcl.xls: Arvind Fashions Ltd.
+2019-09-27,IN,BAYERCROP,INE462A01022,Bayer Cropscience Ltd.,regular,IndexInclExcl.xls: Bayer Cropscience Ltd.
+2019-09-27,IN,BSOFT,INE836A01035,Birlasoft Ltd.,regular,IndexInclExcl.xls: Birlasoft Ltd.
+2019-09-27,IN,CGCL,INE180C01026,Capri Global Capital Ltd.,regular,IndexInclExcl.xls: Capri Global Capital Ltd.
+2019-09-27,IN,DEN,INE947J01015,Den Networks Ltd.,regular,IndexInclExcl.xls: Den Networks Ltd.
+2019-09-27,IN,FMGOETZE,INE529A01010,Federal-Mogul Goetze (India) Ltd.,regular,IndexInclExcl.xls: Federal-Mogul Goetze (India) Ltd.
+2019-09-27,IN,GARFIBRES,INE276A01018,Garware Technical Fibres Ltd.,regular,IndexInclExcl.xls: Garware Technical Fibres Ltd.
+2019-09-27,IN,IIFL,INE530B01024,IIFL Finance Ltd.,regular,IndexInclExcl.xls: IIFL Finance Ltd.
+2019-09-27,IN,JCHAC,INE782A01015,Johnson Controls - Hitachi Air Conditioning India Ltd.,regular,IndexInclExcl.xls: Johnson Controls - Hitachi Air Conditioning India Ltd.
+2019-09-27,IN,KPITTECH,INE04I401011,KPIT Technologies Ltd.,regular,IndexInclExcl.xls: KPIT Technologies Ltd.
+2019-09-27,IN,MCX,INE745G01035,Multi Commodity Exchange of India Ltd.,regular,IndexInclExcl.xls: Multi Commodity Exchange of India Ltd.
+2019-09-27,IN,METROPOLIS,INE112L01020,Metropolis Healthcare Ltd.,regular,IndexInclExcl.xls: Metropolis Healthcare Ltd.
+2019-09-27,IN,NESTLEIND,INE239A01016,Nestle India Ltd.,regular,IndexInclExcl.xls: Nestle India Ltd.
+2019-09-27,IN,ORIENTREF,INE743M01012,RHI MAGNESITA INDIA LTD.,regular,IndexInclExcl.xls: Orient Refractories Ltd.
+2019-09-27,IN,POLYCAB,INE455K01017,Polycab India Ltd.,regular,IndexInclExcl.xls: Polycab India Ltd.
+2019-09-27,IN,RATNAMANI,INE703B01027,Ratnamani Metals & Tubes Ltd.,regular,IndexInclExcl.xls: Ratnamani Metals & Tubes Ltd.
+2019-09-27,IN,RVNL,INE415G01027,Rail Vikas Nigam Ltd.,regular,IndexInclExcl.xls: Rail Vikas Nigam Ltd.
+2019-09-27,IN,TCIEXP,INE586V01016,TCI Express Ltd.,regular,IndexInclExcl.xls: TCI Express Ltd.
+2019-09-27,IN,TECHNOE,INE285K01026,Techno Electric & Engineering Company Ltd.,regular,IndexInclExcl.xls: Techno Electric & Engineering Company Ltd.
+2019-09-27,OUT,ABB,INE117A01022,ABB India Ltd.,regular,IndexInclExcl.xls: ABB India Ltd.
+2019-09-27,OUT,DEEPAKFERT,INE501A01019,Deepak Fertilisers & Petrochemicals Corp. Ltd.,regular,IndexInclExcl.xls: Deepak Fertilisers & Petrochemicals Corp. Ltd.
+2019-09-27,OUT,GDL,INE852F01015,Gateway Distriparks Ltd.,regular,IndexInclExcl.xls: Gateway Distriparks Ltd.
+2019-09-27,OUT,GRUH,INE580B01029,Gruh Finance Ltd.,regular,IndexInclExcl.xls: Gruh Finance Ltd.
+2019-09-27,OUT,GSKCONS,INE264A01014,GlaxoSmithkline Consumer Healthcare Ltd.,regular,IndexInclExcl.xls: GlaxoSmithkline Consumer Healthcare Ltd.
+2019-09-27,OUT,INDOCO,INE873D01024,Indoco Remedies Ltd.,regular,IndexInclExcl.xls: Indoco Remedies Ltd.
+2019-09-27,OUT,INOXWIND,INE066P01011,Inox Wind Ltd.,regular,IndexInclExcl.xls: Inox Wind Ltd.
+2019-09-27,OUT,JPASSOCIAT,INE455F01025,Jaiprakash Associates Ltd.,regular,IndexInclExcl.xls: Jaiprakash Associates Ltd.
+2019-09-27,OUT,KIOCL,INE880L01014,KIOCL Ltd.,regular,IndexInclExcl.xls: KIOCL Ltd.
+2019-09-27,OUT,RCOM,INE330H01018,Reliance Communications Ltd.,regular,IndexInclExcl.xls: Reliance Communications Ltd.
+2019-09-27,OUT,RHFL,INE217K01011,Reliance Home Finance Ltd.,regular,IndexInclExcl.xls: Reliance Home Finance Ltd.
+2019-09-27,OUT,RKFORGE,INE399G01015,Ramkrishna Forgings Ltd.,regular,IndexInclExcl.xls: Ramkrishna Forgings Ltd.
+2019-09-27,OUT,RUPA,INE895B01021,Rupa & Company Ltd.,regular,IndexInclExcl.xls: Rupa & Company Ltd.
+2019-09-27,OUT,SCI,INE109A01011,Shipping Corporation of India Ltd.,regular,IndexInclExcl.xls: Shipping Corporation of India Ltd.
+2019-09-27,OUT,SHANKARA,INE274V01019,Shankara Building Products Ltd.,regular,IndexInclExcl.xls: Shankara Building Products Ltd.
+2019-09-27,OUT,SHARDACROP,INE221J01015,Sharda Cropchem Ltd.,regular,IndexInclExcl.xls: Sharda Cropchem Ltd.
+2019-09-27,OUT,SPTL,INE501W01021,Sintex Plastics Technology Ltd.,regular,IndexInclExcl.xls: Sintex Plastics Technology Ltd.
+2019-09-27,OUT,SREINFRA,INE872A01014,SREI Infrastructure Finance Ltd.,regular,IndexInclExcl.xls: SREI Infrastructure Finance Ltd.
+2019-09-27,OUT,TATACOFFEE,INE493A01027,Tata Coffee Ltd.,regular,IndexInclExcl.xls: Tata Coffee Ltd.
+2019-09-27,OUT,THOMASCOOK,INE332A01027,Thomas Cook (India) Ltd.,regular,IndexInclExcl.xls: Thomas Cook (India) Ltd.
+2019-09-27,OUT,TNPL,INE107A01015,Tamil Nadu Newsprint & Papers Ltd.,regular,IndexInclExcl.xls: Tamil Nadu Newsprint & Papers Ltd.
+2019-09-27,OUT,TRITURBINE,INE152M01016,Triveni Turbine Ltd.,regular,IndexInclExcl.xls: Triveni Turbine Ltd.
+2019-12-26,IN,AFFLE,INE00WC01019,Affle 3i Ltd.,regular,IndexInclExcl.xls: Affle (India) Ltd.
+2019-12-26,IN,MIDHANI,INE099Z01011,Mishra Dhatu Nigam Ltd.,regular,IndexInclExcl.xls: Mishra Dhatu Nigam Ltd.
+2019-12-26,IN,RESPONIND,INE688D01026,Responsive Industries Ltd.,regular,IndexInclExcl.xls: Responsive Industries Ltd.
+2019-12-26,OUT,CGPOWER,INE067A01029,CG Power and Industrial Solutions Ltd.,regular,IndexInclExcl.xls: CG Power and Industrial Solutions Ltd.
+2019-12-26,OUT,COFFEEDAY,INE335K01011,Coffee Day Enterprises Ltd.,regular,IndexInclExcl.xls: Coffee Day Enterprises Ltd.
+2019-12-26,OUT,COX&KINGS,INE008I01026,Cox & Kings Ltd.,regular,IndexInclExcl.xls: Cox & Kings Ltd.
+2019-12-27,IN,AARTIIND,INE769A01020,Aarti Industries Ltd.,regular,IndexInclExcl.xls: Aarti Industries Ltd.
+2019-12-27,IN,ASAHIINDIA,INE439A01020,Asahi India Glass Ltd.,regular,IndexInclExcl.xls: Asahi India Glass Ltd.
+2019-12-27,IN,INDIAMART,INE933S01016,Indiamart Intermesh Ltd.,regular,IndexInclExcl.xls: Indiamart Intermesh Ltd.
+2019-12-27,IN,KENNAMET,INE717A01029,Kennametal India Ltd.,regular,IndexInclExcl.xls: Kennametal India Ltd.
+2019-12-27,IN,SPANDANA,INE572J01011,Spandana Sphoorty Financial Ltd.,regular,IndexInclExcl.xls: Spandana Sphoorty Financial Ltd.
+2019-12-27,IN,SPICEJET,INE285B01017,Spicejet Ltd.,regular,IndexInclExcl.xls: Spicejet Ltd.
+2019-12-27,IN,TASTYBITE,INE488B01017,Tasty Bite Eatables Ltd.,regular,IndexInclExcl.xls: Tasty Bite Eatables Ltd.
+2019-12-27,IN,TRITURBINE,INE152M01016,Triveni Turbine Ltd.,regular,IndexInclExcl.xls: Triveni Turbine Ltd.
+2019-12-27,IN,WESTLIFE,INE274F01020,Westlife Foodworld Ltd.,regular,IndexInclExcl.xls: Westlife Development Ltd.
+2019-12-27,OUT,ALBK,INE428A01015,Allahabad Bank,regular,IndexInclExcl.xls: Allahabad Bank
+2019-12-27,OUT,ANDHRABANK,INE434A01013,Andhra Bank,regular,IndexInclExcl.xls: Andhra Bank
+2019-12-27,OUT,CORPBANK,INE112A01023,Corporation Bank,regular,IndexInclExcl.xls: Corporation Bank
+2019-12-27,OUT,DEN,INE947J01015,Den Networks Ltd.,regular,IndexInclExcl.xls: Den Networks Ltd.
+2019-12-27,OUT,HATHWAY,INE982F01036,Hathway Cable & Datacom Ltd.,regular,IndexInclExcl.xls: Hathway Cable & Datacom Ltd.
+2019-12-27,OUT,MAXINDIA,INE153U01017,Max India Ltd.,regular,IndexInclExcl.xls: Max India Ltd.
+2019-12-27,OUT,ORIENTBANK,INE141A01014,Oriental Bank of Commerce,regular,IndexInclExcl.xls: Oriental Bank of Commerce
+2019-12-27,OUT,SYNDIBANK,INE667A01018,Syndicate Bank,regular,IndexInclExcl.xls: Syndicate Bank
+2019-12-27,OUT,TATACHEM,INE092A01019,Tata Chemicals Ltd.,regular,IndexInclExcl.xls: Tata Chemicals Ltd.
+2020-01-16,IN,TATASTLBSL,INE824B01021,Tata Steel BSL Ltd.,regular,IndexInclExcl.xls: Tata Steel BSL Ltd.
+2020-01-16,OUT,SUVEN,INE495B01038,Suven Life Sciences Ltd.,regular,IndexInclExcl.xls: Suven Life Sciences Ltd.
+2020-01-23,RENAME,NAM-INDIA,INE298J01013,Nippon Life India Asset Management Ltd.,regular,RNAM -> NAM-INDIA: NSE symbolchange.csv
+2020-02-27,RENAME,TATACONSUM,INE192A01025,Tata Consumer Products Ltd.,regular,TATAGLOBAL -> TATACONSUM: NSE symbolchange.csv
+2020-03-19,IN,SWSOLAR,INE00M201021,Sterling and Wilson Renewable Energy Ltd.,regular,IndexInclExcl.xls: Sterling And Wilson Solar Ltd.
+2020-03-19,OUT,YESBANK,INE528G01035,Yes Bank Ltd.,regular,IndexInclExcl.xls: Yes Bank Ltd.
+2020-06-26,IN,ABB,INE117A01022,ABB India Ltd.,regular,ind_prs10062020.pdf
+2020-06-26,IN,ALKYLAMINE,INE150B01021,Alkyl Amines Chemicals Ltd.,regular,ind_prs10062020.pdf
+2020-06-26,IN,BHARATRAS,INE838B01013,Bharat Rasayan Ltd.,regular,ind_prs10062020.pdf
+2020-06-26,IN,CENTURYTEX,INE055A01016,Aditya Birla Real Estate Ltd.,regular,ind_prs10062020.pdf
+2020-06-26,IN,CSBBANK,INE679A01013,CSB Bank Ltd.,regular,ind_prs10062020.pdf
+2020-06-26,IN,DHANUKA,INE435G01025,Dhanuka Agritech Ltd.,regular,ind_prs10062020.pdf
+2020-06-26,IN,ESABINDIA,INE284A01012,ESAB India Ltd.,regular,ind_prs10062020.pdf
+2020-06-26,IN,FLUOROCHEM,INE09N301011,Gujarat Fluorochemicals Ltd.,regular,ind_prs10062020.pdf
+2020-06-26,IN,GMMPFAUDLR,INE541A01023,GMM Pfaudler Ltd.,regular,ind_prs10062020.pdf
+2020-06-26,IN,GRSE,INE382Z01011,Garden Reach Shipbuilders & Engineers Ltd.,regular,ind_prs10062020.pdf
+2020-06-26,IN,HATHWAY,INE982F01036,Hathway Cable & Datacom Ltd.,regular,ind_prs10062020.pdf
+2020-06-26,IN,IIFLWAM,INE466L01020,IIFL Wealth Management Ltd.,regular,ind_prs10062020.pdf
+2020-06-26,IN,INDOCO,INE873D01024,Indoco Remedies Ltd.,regular,ind_prs10062020.pdf
+2020-06-26,IN,INGERRAND,INE177A01018,Ingersoll Rand (India) Ltd.,regular,ind_prs10062020.pdf
+2020-06-26,IN,IRCTC,INE335Y01012,Indian Railway Catering And Tourism Corporation Ltd.,regular,IndexInclExcl.xls: Indian Railway Catering And Tourism Corporation Ltd.
+2020-06-26,IN,KSB,INE999A01015,KSB Ltd.,regular,ind_prs10062020.pdf
+2020-06-26,IN,LAOPALA,INE059D01020,La Opala RG Ltd.,regular,ind_prs10062020.pdf
+2020-06-26,IN,POLYMED,INE205C01021,Poly Medicure Ltd.,regular,ind_prs10062020.pdf
+2020-06-26,IN,SCHNEIDER,INE839M01018,Schneider Electric Infrastructure Ltd.,regular,ind_prs10062020.pdf
+2020-06-26,IN,SCI,INE109A01011,Shipping Corporation of India Ltd.,regular,ind_prs10062020.pdf
+2020-06-26,IN,SEQUENT,INE807F01027,Sequent Scientific Ltd.,regular,ind_prs10062020.pdf
+2020-06-26,IN,SUMICHEM,INE258G01013,Sumitomo Chemical India Ltd.,regular,ind_prs10062020.pdf
+2020-06-26,IN,TATACOMM,INE151A01013,Tata Communications Ltd.,regular,ind_prs10062020.pdf
+2020-06-26,IN,UJJIVANSFB,INE551W01018,Ujjivan Small Finance Bank Ltd.,regular,ind_prs10062020.pdf
+2020-06-26,IN,VESUVIUS,INE386A01015,Vesuvius India Ltd.,regular,ind_prs10062020.pdf
+2020-06-26,OUT,CHALET,INE427F01016,Chalet Hotels Ltd.,regular,ind_prs10062020.pdf
+2020-06-26,OUT,DHFL,INE202B01012,Dewan Housing Finance Corporation Ltd.,regular,ind_prs10062020.pdf
+2020-06-26,OUT,FLFL,INE452O01016,Future Lifestyle Fashions Ltd.,regular,ind_prs10062020.pdf
+2020-06-26,OUT,FMGOETZE,INE529A01010,Federal-Mogul Goetze (India) Ltd.,regular,ind_prs10062020.pdf
+2020-06-26,OUT,GAYAPROJ,INE336H01023,Gayatri Projects Ltd.,regular,ind_prs10062020.pdf
+2020-06-26,OUT,IBULISL,INE126M01010,Indiabulls Integrated Services Ltd.,regular,ind_prs10062020.pdf
+2020-06-26,OUT,ITDCEM,INE686A01026,Cemindia Projects Ltd.,regular,ind_prs10062020.pdf
+2020-06-26,OUT,JISLJALEQS,INE175A01038,Jain Irrigation Systems Ltd.,regular,ind_prs10062020.pdf
+2020-06-26,OUT,KENNAMET,INE717A01029,Kennametal India Ltd.,regular,ind_prs10062020.pdf
+2020-06-26,OUT,KIRLOSENG,INE146L01010,Kirloskar Oil Eng Ltd.,regular,ind_prs10062020.pdf
+2020-06-26,OUT,LAKSHVILAS,INE694C01018,Lakshmi Vilas Bank Ltd.,regular,ind_prs10062020.pdf
+2020-06-26,OUT,MAGMA,INE511C01022,Poonawalla Fincorp Ltd.,regular,ind_prs10062020.pdf
+2020-06-26,OUT,NETWORK18,INE870H01013,Network18 Media & Investments Ltd.,regular,ind_prs10062020.pdf
+2020-06-26,OUT,PARAGMILK,INE883N01014,Parag Milk Foods Ltd.,regular,ind_prs10062020.pdf
+2020-06-26,OUT,PCJEWELLER,INE785M01013,PC Jeweller Ltd.,regular,ind_prs10062020.pdf
+2020-06-26,OUT,RELCAPITAL,INE013A01015,Reliance Capital Ltd.,regular,ind_prs10062020.pdf
+2020-06-26,OUT,RELINFRA,INE036A01016,Reliance Infrastructure Ltd.,regular,ind_prs10062020.pdf
+2020-06-26,OUT,RESPONIND,INE688D01026,Responsive Industries Ltd.,regular,ind_prs10062020.pdf
+2020-06-26,OUT,RPOWER,INE614G01033,Reliance Power Ltd.,regular,ind_prs10062020.pdf
+2020-06-26,OUT,SHILPAMED,INE790G01031,Shilpa Medicare Ltd.,regular,ind_prs10062020.pdf
+2020-06-26,OUT,SHK,INE500L01026,S H Kelkar and Company Ltd.,regular,ind_prs10062020.pdf
+2020-06-26,OUT,SUNCLAYLTD,INE105A01035,Sundaram Clayton Ltd.,regular,ind_prs10062020.pdf
+2020-06-26,OUT,TECHNOE,INE285K01026,Techno Electric & Engineering Company Ltd.,regular,ind_prs10062020.pdf
+2020-06-26,OUT,TRITURBINE,INE152M01016,Triveni Turbine Ltd.,regular,ind_prs10062020.pdf
+2020-06-26,OUT,WABAG,INE956G01038,Va Tech Wabag Ltd.,regular,ind_prs10062020.pdf
+2020-07-31,IN,SBICARD,INE018E01016,SBI Cards and Payment Services Ltd.,regular,ind_prs02072020_1.pdf
+2020-07-31,OUT,VEDL,INE205A01025,Vedanta Ltd.,regular,ind_prs02072020_1.pdf
+2020-08-20,RENAME,COFORGE,INE591G01017,Coforge Ltd.,regular,NIITTECH -> COFORGE: NSE symbolchange.csv
+2020-09-14,IN,JTEKTINDIA,INE643A01035,Sona Koyo Steering Systems Ltd.,regular,ind_prs07092020.pdf
+2020-09-14,OUT,ASAHIINDIA,INE439A01020,Asahi India Glass Ltd.,regular,ind_prs07092020.pdf
+2020-09-25,IN,AARTIDRUGS,INE767A01016,Aarti Drugs Ltd.,regular,ind_prs20082020.pdf
+2020-09-25,IN,ADANIENT,INE423A01024,Adani Enterprises Ltd.,regular,ind_prs20082020.pdf
+2020-09-25,IN,ALEMBICLTD,INE426A01027,Alembic Ltd.,regular,ind_prs20082020.pdf
+2020-09-25,IN,ALOKINDS,INE270A01029,Alok Industries Ltd.,regular,ind_prs20082020.pdf
+2020-09-25,IN,CHALET,INE427F01016,Chalet Hotels Ltd.,regular,ind_prs20082020.pdf
+2020-09-25,IN,GAEL,INE036B01022,Gujarat Ambuja Exports Ltd.,regular,ind_prs20082020.pdf
+2020-09-25,IN,IOLCP,INE485C01011,IOL Chem and Pharma Ltd.,regular,ind_prs20082020.pdf
+2020-09-25,IN,NAVNETEDUL,INE060A01024,Navneet Education Ltd.,regular,ind_prs20082020.pdf
+2020-09-25,IN,NOCIL,INE163A01018,NOCIL Ltd.,regular,ind_prs07092020.pdf
+2020-09-25,IN,PAPERPROD,INE275B01026,Huhtamaki PPL Ltd.,regular,ind_prs20082020.pdf
+2020-09-25,IN,POLYPLEX,INE633B01018,Polyplex Corporation Ltd.,regular,ind_prs20082020.pdf
+2020-09-25,IN,POWERINDIA,INE07Y701011,Hitachi Energy India Ltd.,regular,ind_prs20082020.pdf
+2020-09-25,IN,PSPPROJECT,INE488V01015,PSP Projects Ltd.,regular,ind_prs07092020.pdf
+2020-09-25,IN,SHILPAMED,INE790G01031,Shilpa Medicare Ltd.,regular,ind_prs20082020.pdf
+2020-09-25,IN,SOLARA,INE624Z01016,Solara Active Pharma Sciences Ltd.,regular,ind_prs20082020.pdf
+2020-09-25,IN,SUPPETRO,INE663A01017,Supreme Petrochem Ltd.,regular,ind_prs20082020.pdf
+2020-09-25,IN,SUVENPHAR,INE03QK01018,Cohance Lifesciences Ltd.,regular,ind_prs20082020.pdf
+2020-09-25,IN,SWARAJENG,INE277A01016,Swaraj Engines Ltd.,regular,ind_prs07092020.pdf
+2020-09-25,IN,TATACHEM,INE092A01019,Tata Chemicals Ltd.,regular,ind_prs20082020.pdf
+2020-09-25,IN,TATACOFFEE,INE493A01027,Tata Coffee Ltd.,regular,ind_prs07092020.pdf
+2020-09-25,IN,YESBANK,INE528G01035,Yes Bank Ltd.,regular,ind_prs20082020.pdf
+2020-09-25,OUT,ADANIPOWER,INE814H01011,Adani Power Ltd.,regular,ind_prs20082020.pdf
+2020-09-25,OUT,ARVINDFASN,INE955V01021,Arvind Fashions Ltd.,regular,ind_prs07092020.pdf
+2020-09-25,OUT,GET&D,INE200A01026,GE Vernova T&D India Ltd.,regular,ind_prs20082020.pdf
+2020-09-25,OUT,HEXAWARE,INE093A01033,Hexaware Technologies Ltd.,regular,ind_prs20082020.pdf
+2020-09-25,OUT,HIMATSEIDE,INE049A01027,Himatsingka Seide Ltd.,regular,ind_prs20082020.pdf
+2020-09-25,OUT,IFCI,INE039A01010,IFCI Ltd.,regular,ind_prs20082020.pdf
+2020-09-25,OUT,INDOSTAR,INE896L01010,IndoStar Capital Finance Ltd.,regular,ind_prs20082020.pdf
+2020-09-25,OUT,INTELLECT,INE306R01017,Intellect Design Arena Ltd.,regular,ind_prs20082020.pdf
+2020-09-25,OUT,ITDC,INE353K01014,India Tourism Development Corporation Ltd.,regular,ind_prs20082020.pdf
+2020-09-25,OUT,JUBILANT,INE700A01033,Jubilant Pharmova Ltd.,regular,ind_prs20082020.pdf
+2020-09-25,OUT,KPITTECH,INE04I401011,KPIT Technologies Ltd.,regular,ind_prs07092020.pdf
+2020-09-25,OUT,KPRMILL,INE930H01023,K.P.R. Mill Ltd.,regular,ind_prs20082020.pdf
+2020-09-25,OUT,MAHINDCIE,INE536H01010,CIE Automotive India Ltd.,regular,ind_prs20082020.pdf
+2020-09-25,OUT,NBVENTURES,INE725A01022,Nava Bharat Ventures Ltd.,regular,ind_prs20082020.pdf
+2020-09-25,OUT,RENUKA,INE087H01022,Shree Renuka Sugars Ltd.,regular,ind_prs20082020.pdf
+2020-09-25,OUT,REPCOHOME,INE612J01015,Repco Home Finance Ltd.,regular,ind_prs07092020.pdf
+2020-09-25,OUT,SADBHAV,INE226H01026,Sadbhav Engineering Ltd.,regular,ind_prs20082020.pdf
+2020-09-25,OUT,SPANDANA,INE572J01011,Spandana Sphoorty Financial Ltd.,regular,ind_prs07092020.pdf
+2020-09-25,OUT,TAKE,INE142I01023,Take Solutions Ltd.,regular,ind_prs20082020.pdf
+2020-09-25,OUT,TIMETECHNO,INE508G01029,Time Technoplast Ltd.,regular,ind_prs20082020.pdf
+2020-09-25,OUT,VESUVIUS,INE386A01015,Vesuvius India Ltd.,regular,ind_prs20082020.pdf
+2020-10-19,RENAME,EPL,INE255A01020,EPL Ltd.,regular,ESSELPACK -> EPL: NSE symbolchange.csv
+2020-10-28,RENAME,DHANI,INE274G01010,Dhani Services Ltd.,regular,IBVENTURES -> DHANI: NSE symbolchange.csv
+2020-10-29,RENAME,STLTECH,INE089C01029,Sterlite Technologies Ltd.,regular,STRTECH -> STLTECH: NSE symbolchange.csv
+2020-11-02,IN,NETWORK18,INE870H01013,Network18 Media & Investments Ltd.,regular,ind_prs26102020.pdf
+2020-11-02,OUT,ALLCARGO,INE418H01029,Allcargo Logistics Ltd.,regular,ind_prs26102020.pdf
+2020-11-25,IN,MAHINDCIE,INE536H01010,CIE Automotive India Ltd.,regular,ind_prs18112020.pdf
+2020-11-25,OUT,INFIBEAM,INE483S01020,Infibeam Avenues Ltd.,regular,ind_prs18112020.pdf
+2020-11-26,RENAME,HUHTAMAKI,INE275B01026,Huhtamaki India Ltd.,regular,PAPERPROD -> HUHTAMAKI: NSE symbolchange.csv
+2020-12-18,RENAME,INDUSTOWER,INE121J01017,Indus Towers Ltd.,regular,INFRATEL -> INDUSTOWER: NSE symbolchange.csv
+2021-01-13,RENAME,ATGL,INE399L01023,Adani Total Gas Ltd.,regular,ADANIGAS -> ATGL: NSE symbolchange.csv
+2021-03-31,IN,ANGELBRKG,INE732I01013,Angel One Ltd.,regular,ind_prs23022021.pdf
+2021-03-31,IN,ASAHIINDIA,INE439A01020,Asahi India Glass Ltd.,regular,ind_prs23022021.pdf
+2021-03-31,IN,BALAMINES,INE050E01027,Balaji Amines Ltd.,regular,ind_prs23022021.pdf
+2021-03-31,IN,CAMS,INE596I01012,Computer Age Management Services Ltd.,regular,ind_prs23022021.pdf
+2021-03-31,IN,HAPPSTMNDS,INE419U01012,Happiest Minds Technologies Ltd.,regular,ind_prs23022021.pdf
+2021-03-31,IN,HEMIPROP,INE0AJG01018,Hemisphere Properties India Ltd.,regular,ind_prs23022021.pdf
+2021-03-31,IN,ICIL,INE483B01026,Indo Count Industries Ltd.,regular,ind_prs23022021.pdf
+2021-03-31,IN,INTELLECT,INE306R01017,Intellect Design Arena Ltd.,regular,ind_prs23022021.pdf
+2021-03-31,IN,KPITTECH,INE04I401011,KPIT Technologies Ltd.,regular,ind_prs23022021.pdf
+2021-03-31,IN,KPRMILL,INE930H01023,K.P.R. Mill Ltd.,regular,ind_prs23022021.pdf
+2021-03-31,IN,MAXHEALTH,INE027H01010,Max Healthcare Institute Ltd.,regular,ind_prs23022021.pdf
+2021-03-31,IN,MAZDOCK,INE249Z01012,Mazagoan Dock Shipbuilders Ltd.,regular,ind_prs23022021.pdf
+2021-03-31,IN,PRINCEPIPE,INE689W01016,Prince Pipes and Fittings Ltd.,regular,ind_prs23022021.pdf
+2021-03-31,IN,RESPONIND,INE688D01026,Responsive Industries Ltd.,regular,ind_prs23022021.pdf
+2021-03-31,IN,ROSSARI,INE02A801020,Rossari Biotech Ltd.,regular,ind_prs23022021.pdf
+2021-03-31,IN,ROUTE,INE450U01017,Route Mobile Ltd.,regular,ind_prs23022021.pdf
+2021-03-31,IN,SHARDACROP,INE221J01015,Sharda Cropchem Ltd.,regular,ind_prs23022021.pdf
+2021-03-31,IN,SPANDANA,INE572J01011,Spandana Sphoorty Financial Ltd.,regular,ind_prs23022021.pdf
+2021-03-31,IN,SUNCLAYLTD,INE105A01035,Sundaram Clayton Ltd.,regular,ind_prs23022021.pdf
+2021-03-31,IN,TANLA,INE483C01032,Tanla Platforms Ltd.,regular,ind_prs23022021.pdf
+2021-03-31,IN,TRITURBINE,INE152M01016,Triveni Turbine Ltd.,regular,ind_prs23022021.pdf
+2021-03-31,IN,UTIAMC,INE094J01016,UTI Asset Management Company Ltd.,regular,ind_prs23022021.pdf
+2021-03-31,IN,VALIANTORG,INE565V01010,Valiant Organics Ltd.,regular,ind_prs23022021.pdf
+2021-03-31,IN,VEDL,INE205A01025,Vedanta Ltd.,regular,ind_prs23022021.pdf
+2021-03-31,OUT,BOMDYEING,INE032A01023,Bombay Dyeing & Manufacturing Co. Ltd.,regular,ind_prs23022021.pdf
+2021-03-31,OUT,CARERATING,INE752H01013,CARE Ratings Ltd.,regular,ind_prs23022021.pdf
+2021-03-31,OUT,CHENNPETRO,INE178A01016,Chennai Petroleum Corporation Ltd.,regular,ind_prs23022021.pdf
+2021-03-31,OUT,DBCORP,INE950I01011,D.B.Corp Ltd.,regular,ind_prs23022021.pdf
+2021-03-31,OUT,ESABINDIA,INE284A01012,ESAB India Ltd.,regular,ind_prs23022021.pdf
+2021-03-31,OUT,GMDCLTD,INE131A01031,Gujarat Mineral Development Corporation Ltd.,regular,ind_prs23022021.pdf
+2021-03-31,OUT,HATHWAY,INE982F01036,Hathway Cable & Datacom Ltd.,regular,ind_prs23022021.pdf
+2021-03-31,OUT,HERITGFOOD,INE978A01027,Heritage Foods Ltd.,regular,ind_prs23022021.pdf
+2021-03-31,OUT,ICRA,INE725G01011,ICRA Ltd.,regular,ind_prs23022021.pdf
+2021-03-31,OUT,J&KBANK,INE168A01041,Jammu & Kashmir Bank Ltd.,regular,ind_prs23022021.pdf
+2021-03-31,OUT,JAGRAN,INE199G01027,Jagran Prakashan Ltd.,regular,ind_prs23022021.pdf
+2021-03-31,OUT,JAICORPLTD,INE070D01027,Jai Corp Ltd.,regular,ind_prs23022021.pdf
+2021-03-31,OUT,KOLTEPATIL,INE094I01018,Kolte-Patil Developers Ltd.,regular,ind_prs23022021.pdf
+2021-03-31,OUT,KTKBANK,INE614B01018,Karnataka Bank Ltd.,regular,ind_prs23022021.pdf
+2021-03-31,OUT,NAVNETEDUL,INE060A01024,Navneet Education Ltd.,regular,ind_prs23022021.pdf
+2021-03-31,OUT,OMAXE,INE800H01010,Omaxe Ltd.,regular,ind_prs23022021.pdf
+2021-03-31,OUT,ORIENTCEM,INE876N01018,Orient Cement Ltd.,regular,ind_prs23022021.pdf
+2021-03-31,OUT,PRAJIND,INE074A01025,Praj Industries Ltd.,regular,ind_prs23022021.pdf
+2021-03-31,OUT,PSPPROJECT,INE488V01015,PSP Projects Ltd.,regular,ind_prs23022021.pdf
+2021-03-31,OUT,PTC,INE877F01012,PTC India Ltd.,regular,ind_prs23022021.pdf
+2021-03-31,OUT,SOUTHBANK,INE683A01023,South Indian Bank Ltd.,regular,ind_prs23022021.pdf
+2021-03-31,OUT,SWARAJENG,INE277A01016,Swaraj Engines Ltd.,regular,ind_prs23022021.pdf
+2021-03-31,OUT,TVTODAY,INE038F01029,TV Today Network Ltd.,regular,ind_prs23022021.pdf
+2021-03-31,OUT,VRLLOG,INE366I01010,VRL Logistics Ltd.,regular,ind_prs23022021.pdf
+2021-04-29,IN,BURGERKING,INE07T201019,Restaurant Brands Asia Ltd.,regular,ind_prs22042021.pdf
+2021-04-29,IN,INFIBEAM,INE483S01020,Infibeam Avenues Ltd.,regular,ind_prs22042021.pdf
+2021-04-29,OUT,GHCL,INE539A01019,GHCL Ltd.,regular,ind_prs22042021.pdf
+2021-04-29,OUT,TATASTLBSL,INE824B01021,Tata Steel BSL Ltd.,regular,ind_prs22042021.pdf
+2021-06-30,IN,GLAND,INE068V01023,Gland Pharma Ltd.,regular,ind_prs15062021.pdf
+2021-06-30,OUT,MOTHERSUMI,INE775A01035,Samvardhana Motherson International Ltd.,regular,ind_prs15062021.pdf
+2021-07-22,RENAME,RHIM,INE743M01012,RHI MAGNESITA INDIA LTD.,regular,ORIENTREF -> RHIM: NSE symbolchange.csv
+2021-09-30,IN,ANURAS,INE930P01018,Anupam Rasayan India Ltd.,regular,ind_prs15092021.pdf
+2021-09-30,IN,CGPOWER,INE067A01029,CG Power and Industrial Solutions Ltd.,regular,ind_prs15092021.pdf
+2021-09-30,IN,EQUITASBNK,INE063P01018,Equitas Small Finance Bank Ltd.,regular,ind_prs15092021.pdf
+2021-09-30,IN,FACT,INE188A01015,Fertilisers and Chemicals Travancore Ltd.,regular,ind_prs15092021.pdf
+2021-09-30,IN,HATHWAY,INE982F01036,Hathway Cable & Datacom Ltd.,regular,ind_prs15092021.pdf
+2021-09-30,IN,HGS,INE170I01016,Hinduja Global Solutions Ltd.,regular,ind_prs15092021.pdf
+2021-09-30,IN,HIKAL,INE475B01022,Hikal Ltd.,regular,ind_prs15092021.pdf
+2021-09-30,IN,HOMEFIRST,INE481N01025,Home First Finance Company India Ltd.,regular,ind_prs15092021.pdf
+2021-09-30,IN,INDIGOPNTS,INE09VQ01012,Indigo Paints Ltd.,regular,ind_prs15092021.pdf
+2021-09-30,IN,IRFC,INE053F01010,Indian Railway Finance Corporation Ltd.,regular,ind_prs15092021.pdf
+2021-09-30,IN,JUBLINGREA,INE0BY001018,Jubilant Ingrevia Ltd.,regular,ind_prs15092021.pdf
+2021-09-30,IN,JUBLPHARMA,INE700A01033,Jubilant Pharmova Ltd.,regular,ind_prs15092021.pdf
+2021-09-30,IN,KALYANKJIL,INE303R01014,Kalyan Jewellers India Ltd.,regular,ind_prs15092021.pdf
+2021-09-30,IN,LODHA,INE670K01029,Lodha Developers Ltd.,regular,ind_prs15092021.pdf
+2021-09-30,IN,LXCHEM,INE576O01020,Laxmi Organic Industries Ltd.,regular,ind_prs15092021.pdf
+2021-09-30,IN,MASTEK,INE759A01021,Mastek Ltd.,regular,ind_prs15092021.pdf
+2021-09-30,IN,NAZARA,INE418L01021,Nazara Technologies Ltd.,regular,ind_prs15092021.pdf
+2021-09-30,IN,POONAWALLA,INE511C01022,Poonawalla Fincorp Ltd.,regular,ind_prs15092021.pdf
+2021-09-30,IN,PRAJIND,INE074A01025,Praj Industries Ltd.,regular,ind_prs15092021.pdf
+2021-09-30,IN,RAILTEL,INE0DD101019,Railtel Corporation Of India Ltd.,regular,ind_prs15092021.pdf
+2021-09-30,IN,TATASTLLP,INE674A01014,Tata Steel Long Products Ltd.,regular,ind_prs15092021.pdf
+2021-09-30,IN,TTML,INE517B01013,Tata Teleservices (Maharashtra) Ltd.,regular,ind_prs15092021.pdf
+2021-09-30,OUT,AKZOINDIA,INE133A01011,JSW Dulux Ltd.,regular,ind_prs15092021.pdf
+2021-09-30,OUT,BALMLAWRIE,INE164A01016,Balmer Lawrie & Co. Ltd.,regular,ind_prs15092021.pdf
+2021-09-30,OUT,BLISSGVS,INE416D01022,Bliss GVS Pharma Ltd.,regular,ind_prs15092021.pdf
+2021-09-30,OUT,DCAL,INE385W01011,Dishman Carbogen Amcis Ltd.,regular,ind_prs15092021.pdf
+2021-09-30,OUT,DISHTV,INE836F01026,Dish TV India Ltd.,regular,ind_prs15092021.pdf
+2021-09-30,OUT,FCONSUMER,INE220J01025,Future Consumer Ltd.,regular,ind_prs15092021.pdf
+2021-09-30,OUT,GEPIL,INE878A01011,GE Power India Ltd.,regular,ind_prs15092021.pdf
+2021-09-30,OUT,GRSE,INE382Z01011,Garden Reach Shipbuilders & Engineers Ltd.,regular,ind_prs15092021.pdf
+2021-09-30,OUT,GULFOILLUB,INE635Q01029,Gulf Oil Lubricants India Ltd.,regular,ind_prs15092021.pdf
+2021-09-30,OUT,HSCL,INE019C01026,Himadri Speciality Chemical Ltd.,regular,ind_prs15092021.pdf
+2021-09-30,OUT,HUHTAMAKI,INE275B01026,Huhtamaki India Ltd.,regular,ind_prs15092021.pdf
+2021-09-30,OUT,JTEKTINDIA,INE643A01035,Sona Koyo Steering Systems Ltd.,regular,ind_prs15092021.pdf
+2021-09-30,OUT,MAHSCOOTER,INE288A01013,Maharashtra Scooters Ltd.,regular,ind_prs15092021.pdf
+2021-09-30,OUT,MAHSEAMLES,INE271B01025,Maharashtra Seamless Ltd.,regular,ind_prs15092021.pdf
+2021-09-30,OUT,MASFIN,INE348L01012,MAS Financial Services Ltd.,regular,ind_prs15092021.pdf
+2021-09-30,OUT,RAYMOND,INE301A01014,Raymond Ltd.,regular,ind_prs15092021.pdf
+2021-09-30,OUT,RESPONIND,INE688D01026,Responsive Industries Ltd.,regular,ind_prs15092021.pdf
+2021-09-30,OUT,SHOPERSTOP,INE498B01024,Shoppers Stop Ltd.,regular,ind_prs15092021.pdf
+2021-09-30,OUT,SUNCLAYLTD,INE105A01035,Sundaram Clayton Ltd.,regular,ind_prs15092021.pdf
+2021-09-30,OUT,SWANENERGY,INE665A01038,Swan Corp Ltd.,regular,ind_prs15092021.pdf
+2021-09-30,OUT,TATAINVEST,INE672A01018,Tata Investment Corporation Ltd.,regular,ind_prs15092021.pdf
+2021-09-30,OUT,VSTIND,INE710A01016,VST Industries Ltd.,regular,ind_prs15092021.pdf
+2021-10-29,IN,SONACOMS,INE073K01018,Sona BLW Precision Forgings Ltd.,regular,ind_prs22102021.pdf
+2021-10-29,OUT,GMRINFRA,INE776C01039,GMR Airports Ltd.,regular,ind_prs22102021.pdf
+2021-11-11,RENAME,ANGELONE,INE732I01013,Angel One Ltd.,regular,ANGELBRKG -> ANGELONE: NSE symbolchange.csv
+2022-01-31,RENAME,PCBL,INE602A01023,PCBL Chemical Ltd.,regular,PHILIPCARB -> PCBL: same ISIN in bhavcopy
+2022-02-28,RENAME,RBA,INE07T201019,Restaurant Brands Asia Ltd.,regular,BURGERKING -> RBA: same ISIN in bhavcopy
+2022-03-07,RENAME,ZYDUSLIFE,INE010B01027,Zydus Lifesciences Ltd.,regular,CADILAHC -> ZYDUSLIFE: NSE symbolchange.csv
+2022-03-31,IN,ABSLAMC,INE404A01024,Aditya Birla Sun Life AMC Ltd.,regular,ind_prs24022022_1.pdf
+2022-03-31,IN,ALLCARGO,INE418H01029,Allcargo Logistics Ltd.,regular,ind_prs24022022_1.pdf
+2022-03-31,IN,APTUS,INE852O01025,Aptus Value Housing Finance India Ltd.,regular,ind_prs24022022_1.pdf
+2022-03-31,IN,BCG,INE425B01027,Brightcom Group Ltd.,regular,ind_prs24022022_1.pdf
+2022-03-31,IN,BORORENEW,INE666D01022,Borosil Renewables Ltd.,regular,ind_prs24022022_1.pdf
+2022-03-31,IN,CHEMPLASTS,INE488A01050,Chemplast Sanmar Ltd.,regular,ind_prs24022022_1.pdf
+2022-03-31,IN,CLEAN,INE227W01023,Clean Science and Technology Ltd.,regular,ind_prs24022022_1.pdf
+2022-03-31,IN,DEVYANI,INE872J01023,Devyani International Ltd.,regular,ind_prs24022022_1.pdf
+2022-03-31,IN,EASEMYTRIP,INE07O001018,Easy Trip Planners Ltd.,regular,ind_prs24022022_1.pdf
+2022-03-31,IN,GLS,INE03Q201024,Alivus Life Sciences Ltd.,regular,ind_prs24022022_1.pdf
+2022-03-31,IN,GOCOLORS,INE0BJS01011,Go Fashion (India) Ltd.,regular,ind_prs24022022_1.pdf
+2022-03-31,IN,GRINFRA,INE201P01022,G R Infraprojects Ltd.,regular,ind_prs24022022_1.pdf
+2022-03-31,IN,HLEGLAS,INE461D01010,HLE Glascoat Ltd.,regular,ind_prs24022022_1.pdf
+2022-03-31,IN,KIMS,INE967H01017,Krishna Institute of Medical Sciences Ltd.,regular,ind_prs24022022_1.pdf
+2022-03-31,IN,LATENTVIEW,INE0I7C01011,Latent View Analytics Ltd.,regular,ind_prs24022022_1.pdf
+2022-03-31,IN,MAPMYINDIA,INE0BV301023,C.E. Info Systems Ltd.,regular,ind_prs24022022_1.pdf
+2022-03-31,IN,MEDPLUS,INE804L01022,Medplus Health Services Ltd.,regular,ind_prs24022022_1.pdf
+2022-03-31,IN,METROBRAND,INE317I01021,Metro Brands Ltd.,regular,ind_prs24022022_1.pdf
+2022-03-31,IN,NUVOCO,INE118D01016,Nuvoco Vistas Corporation Ltd.,regular,ind_prs24022022_1.pdf
+2022-03-31,IN,NYKAA,INE388Y01029,FSN E-Commerce Ventures Ltd.,regular,ind_prs24022022_1.pdf
+2022-03-31,IN,PAYTM,INE982J01020,One 97 Communications Ltd.,regular,ind_prs24022022_1.pdf
+2022-03-31,IN,POLICYBZR,INE417T01026,PB Fintech Ltd.,regular,ind_prs24022022_1.pdf
+2022-03-31,IN,PRIVISCL,INE959A01019,Privi Speciality Chemicals Ltd.,regular,ind_prs24022022_1.pdf
+2022-03-31,IN,RENUKA,INE087H01022,Shree Renuka Sugars Ltd.,regular,ind_prs24022022_1.pdf
+2022-03-31,IN,RTNINDIA,INE834M01019,RattanIndia Enterprises Ltd.,regular,ind_prs24022022_1.pdf
+2022-03-31,IN,SAPPHIRE,INE806T01012,Sapphire Foods India Ltd.,regular,ind_prs24022022_1.pdf
+2022-03-31,IN,SAREGAMA,INE979A01017,Saregama India Ltd,regular,ind_prs24022022_1.pdf
+2022-03-31,IN,SHYAMMETL,INE810G01011,Shyam Metalics and Energy Ltd.,regular,ind_prs24022022_1.pdf
+2022-03-31,IN,STARHEALTH,INE575P01011,Star Health and Allied Insurance Company Ltd.,regular,ind_prs24022022_1.pdf
+2022-03-31,IN,TATAINVEST,INE672A01018,Tata Investment Corporation Ltd.,regular,ind_prs24022022_1.pdf
+2022-03-31,IN,VIJAYA,INE043W01024,Vijaya Diagnostic Centre Ltd.,regular,ind_prs24022022_1.pdf
+2022-03-31,IN,ZOMATO,INE758T01015,Eternal Ltd.,regular,ind_prs24022022_1.pdf
+2022-03-31,OUT,ALEMBICLTD,INE426A01027,Alembic Ltd.,regular,ind_prs24022022_1.pdf
+2022-03-31,OUT,ASHOKA,INE442H01029,Ashoka Buildcon Ltd.,regular,ind_prs24022022_1.pdf
+2022-03-31,OUT,BAJAJCON,INE933K01021,Bajaj Consumer Care Ltd.,regular,ind_prs24022022_1.pdf
+2022-03-31,OUT,BHARATRAS,INE838B01013,Bharat Rasayan Ltd.,regular,ind_prs24022022_1.pdf
+2022-03-31,OUT,CGCL,INE180C01026,Capri Global Capital Ltd.,regular,ind_prs24022022_1.pdf
+2022-03-31,OUT,DCBBANK,INE503A01015,DCB Bank Ltd.,regular,ind_prs24022022_1.pdf
+2022-03-31,OUT,DHANUKA,INE435G01025,Dhanuka Agritech Ltd.,regular,ind_prs24022022_1.pdf
+2022-03-31,OUT,FRETAIL,INE752P01024,Future Retail Ltd.,regular,ind_prs24022022_1.pdf
+2022-03-31,OUT,GILLETTE,INE322A01010,Gillette India Ltd.,regular,ind_prs24022022_1.pdf
+2022-03-31,OUT,GREAVESCOT,INE224A01026,Greaves Cotton Ltd.,regular,ind_prs24022022_1.pdf
+2022-03-31,OUT,HEIDELBERG,INE578A01017,HeidelbergCement India Ltd.,regular,ind_prs24022022_1.pdf
+2022-03-31,OUT,INGERRAND,INE177A01018,Ingersoll Rand (India) Ltd.,regular,ind_prs24022022_1.pdf
+2022-03-31,OUT,IOLCP,INE485C01011,IOL Chem and Pharma Ltd.,regular,ind_prs24022022_1.pdf
+2022-03-31,OUT,JCHAC,INE782A01015,Johnson Controls - Hitachi Air Conditioning India Ltd.,regular,ind_prs24022022_1.pdf
+2022-03-31,OUT,JINDALSAW,INE324A01024,Jindal Saw Ltd.,regular,ind_prs24022022_1.pdf
+2022-03-31,OUT,JKTYRE,INE573A01042,JK Tyre & Industries Ltd.,regular,ind_prs24022022_1.pdf
+2022-03-31,OUT,KSB,INE999A01015,KSB Ltd.,regular,ind_prs24022022_1.pdf
+2022-03-31,OUT,KSCL,INE455I01029,Kaveri Seed Company Ltd.,regular,ind_prs24022022_1.pdf
+2022-03-31,OUT,LAOPALA,INE059D01020,La Opala RG Ltd.,regular,ind_prs24022022_1.pdf
+2022-03-31,OUT,LEMONTREE,INE970X01018,Lemon Tree Hotels Ltd.,regular,ind_prs24022022_1.pdf
+2022-03-31,OUT,MIDHANI,INE099Z01011,Mishra Dhatu Nigam Ltd.,regular,ind_prs24022022_1.pdf
+2022-03-31,OUT,MINDACORP,INE842C01021,Minda Corporation Ltd.,regular,ind_prs24022022_1.pdf
+2022-03-31,OUT,NFL,INE870D01012,National Fertilizers Ltd.,regular,ind_prs24022022_1.pdf
+2022-03-31,OUT,NILKAMAL,INE310A01015,Nilkamal Ltd.,regular,ind_prs24022022_1.pdf
+2022-03-31,OUT,SCHNEIDER,INE839M01018,Schneider Electric Infrastructure Ltd.,regular,ind_prs24022022_1.pdf
+2022-03-31,OUT,SHARDACROP,INE221J01015,Sharda Cropchem Ltd.,regular,ind_prs24022022_1.pdf
+2022-03-31,OUT,SPANDANA,INE572J01011,Spandana Sphoorty Financial Ltd.,regular,ind_prs24022022_1.pdf
+2022-03-31,OUT,STARCEMENT,INE460H01021,Star Cement Ltd.,regular,ind_prs24022022_1.pdf
+2022-03-31,OUT,TASTYBITE,INE488B01017,Tasty Bite Eatables Ltd.,regular,ind_prs24022022_1.pdf
+2022-03-31,OUT,UJJIVAN,INE334L01012,Ujjivan Financial Services Ltd.,regular,ind_prs24022022_1.pdf
+2022-03-31,OUT,UJJIVANSFB,INE551W01018,Ujjivan Small Finance Bank Ltd.,regular,ind_prs24022022_1.pdf
+2022-03-31,OUT,VALIANTORG,INE565V01010,Valiant Organics Ltd.,regular,ind_prs24022022_1.pdf
+2022-04-06,RENAME,ZFCVINDIA,INE342J01019,ZF Commercial Vehicle Control Systems India Ltd.,regular,WABCOINDIA -> ZFCVINDIA: same ISIN in bhavcopy
+2022-04-07,IN,MTARTECH,INE864I01014,MTAR Technologies Ltd.,regular,ind_prs06042022.pdf
+2022-04-07,OUT,SUPPETRO,INE663A01017,Supreme Petrochem Ltd.,regular,ind_prs06042022.pdf
+2022-04-12,IN,CGCL,INE180C01026,Capri Global Capital Ltd.,regular,ind_prs05042022_1.pdf
+2022-04-12,OUT,BEML,INE258A01016,BEML Ltd.,regular,ind_prs05042022_1.pdf
+2022-05-04,IN,GMRINFRA,INE776C01039,GMR Airports Ltd.,regular,ind_prs05042022.pdf
+2022-05-04,OUT,AARTIIND,INE769A01020,Aarti Industries Ltd.,regular,ind_prs05042022.pdf
+2022-05-31,IN,TRIVENI,INE256C01024,Triveni Engineering & Industries Ltd.,regular,ind_prs24052022.pdf
+2022-05-31,OUT,JSLHISAR,INE455T01018,Jindal Stainless (Hisar) Ltd.,regular,ind_prs24052022.pdf
+2022-08-05,RENAME,UNOMINDA,INE405E01023,UNO Minda Ltd.,regular,MINDAIND -> UNOMINDA: NSE symbolchange.csv
+2022-08-08,IN,CAMPUS,INE278Y01022,Campus Activewear Ltd.,regular,ind_prs11072022.pdf
+2022-08-08,IN,DELHIVERY,INE148O01028,Delhivery Ltd.,regular,ind_prs11072022.pdf
+2022-08-08,IN,LICI,INE0J1Y01017,Life Insurance Corporation of India,regular,ind_prs11072022.pdf
+2022-08-08,OUT,NMDC,INE584A01023,NMDC Ltd.,regular,ind_prs11072022.pdf
+2022-08-08,OUT,PEL,INE140A01024,Piramal Enterprises Ltd.,regular,ind_prs11072022.pdf
+2022-08-08,OUT,SHRIRAMCIT,INE722A01011,Shriram City Union Finance Ltd.,regular,ind_prs11072022.pdf
+2022-09-30,IN,AETHER,INE0BWX01014,Aether Industries Ltd.,regular,ind_prs01092022.pdf
+2022-09-30,IN,AWL,INE699H01024,AWL Agri Business Ltd.,regular,ind_prs01092022.pdf
+2022-09-30,IN,BHARATRAS,INE838B01013,Bharat Rasayan Ltd.,regular,ind_prs01092022.pdf
+2022-09-30,IN,DEEPAKFERT,INE501A01019,Deepak Fertilisers & Petrochemicals Corp. Ltd.,regular,ind_prs01092022.pdf
+2022-09-30,IN,GREENPANEL,INE08ZM01014,Greenpanel Industries Ltd.,regular,ind_prs01092022.pdf
+2022-09-30,IN,JBMA,INE927D01044,JBM Auto Ltd.,regular,ind_prs01092022.pdf
+2022-09-30,IN,MAHLIFE,INE813A01018,Mahindra Lifespace Developers Ltd.,regular,ind_prs01092022.pdf
+2022-09-30,IN,MANYAVAR,INE825V01034,Vedant Fashions Ltd.,regular,ind_prs01092022.pdf
+2022-09-30,IN,MOTHERSON,INE775A01035,Samvardhana Motherson International Ltd.,regular,ind_prs01092022.pdf
+2022-09-30,IN,MSUMI,INE0FS801015,Motherson Sumi Wiring India Ltd.,regular,ind_prs01092022.pdf
+2022-09-30,IN,NIITLTD,INE161A01038,NIIT Ltd.,regular,ind_prs01092022.pdf
+2022-09-30,IN,OLECTRA,INE260D01016,Olectra Greentech Ltd.,regular,ind_prs01092022.pdf
+2022-09-30,IN,PATANJALI,INE619A01035,Patanjali Foods Ltd.,regular,ind_prs01092022.pdf
+2022-09-30,IN,RAYMOND,INE301A01014,Raymond Ltd.,regular,ind_prs01092022.pdf
+2022-09-30,IN,SHARDACROP,INE221J01015,Sharda Cropchem Ltd.,regular,ind_prs01092022.pdf
+2022-09-30,IN,SHOPERSTOP,INE498B01024,Shoppers Stop Ltd.,regular,ind_prs16092022.pdf
+2022-09-30,IN,SWANENERGY,INE665A01038,Swan Corp Ltd.,regular,ind_prs01092022.pdf
+2022-09-30,IN,TCI,INE688A01022,Transport Corporation of India Ltd.,regular,ind_prs01092022.pdf
+2022-09-30,IN,TEJASNET,INE010J01012,Tejas Networks Ltd.,regular,ind_prs01092022.pdf
+2022-09-30,OUT,ADVENZYMES,INE837H01020,Advanced Enzyme Tech Ltd.,regular,ind_prs01092022.pdf
+2022-09-30,OUT,EQUITAS,INE988K01017,Equitas Holdings Ltd.,regular,ind_prs16092022.pdf
+2022-09-30,OUT,ERIS,INE406M01024,Eris Lifesciences Ltd.,regular,ind_prs01092022.pdf
+2022-09-30,OUT,GLS,INE03Q201024,Alivus Life Sciences Ltd.,regular,ind_prs01092022.pdf
+2022-09-30,OUT,HATHWAY,INE982F01036,Hathway Cable & Datacom Ltd.,regular,ind_prs01092022.pdf
+2022-09-30,OUT,HEMIPROP,INE0AJG01018,Hemisphere Properties India Ltd.,regular,ind_prs01092022.pdf
+2022-09-30,OUT,ICIL,INE483B01026,Indo Count Industries Ltd.,regular,ind_prs01092022.pdf
+2022-09-30,OUT,IRCON,INE962Y01021,IRCON International Ltd.,regular,ind_prs01092022.pdf
+2022-09-30,OUT,MINDTREE,INE018I01017,MindTree Ltd.,regular,ind_prs01092022.pdf
+2022-09-30,OUT,NESCO,INE317F01035,NESCO Ltd.,regular,ind_prs01092022.pdf
+2022-09-30,OUT,RAILTEL,INE0DD101019,Railtel Corporation Of India Ltd.,regular,ind_prs01092022.pdf
+2022-09-30,OUT,SEQUENT,INE807F01027,Sequent Scientific Ltd.,regular,ind_prs01092022.pdf
+2022-09-30,OUT,SOLARA,INE624Z01016,Solara Active Pharma Sciences Ltd.,regular,ind_prs01092022.pdf
+2022-09-30,OUT,SPICEJET,INE285B01017,Spicejet Ltd.,regular,ind_prs01092022.pdf
+2022-09-30,OUT,STAR,INE939A01011,Strides Pharma Science Ltd.,regular,ind_prs01092022.pdf
+2022-09-30,OUT,TATASTLLP,INE674A01014,Tata Steel Long Products Ltd.,regular,ind_prs01092022.pdf
+2022-09-30,OUT,UCOBANK,INE691A01018,UCO Bank,regular,ind_prs01092022.pdf
+2022-09-30,OUT,VAKRANGEE,INE051B01021,Vakrangee Ltd.,regular,ind_prs01092022.pdf
+2022-09-30,OUT,VENKEYS,INE398A01010,Venky's (India) Ltd.,regular,ind_prs01092022.pdf
+2022-12-05,RENAME,LTIM,INE214T01019,LTM Ltd.,regular,LTI -> LTIM: NSE symbolchange.csv
+2022-12-20,RENAME,SHRIRAMFIN,INE721A01013,Shriram Finance Ltd.,regular,SRTRANSFIN -> SHRIRAMFIN: NSE symbolchange.csv
+2022-12-30,IN,BEML,INE258A01016,BEML Ltd.,regular,ind_prs06122022.pdf
+2022-12-30,IN,LEMONTREE,INE970X01018,Lemon Tree Hotels Ltd.,regular,ind_prs06122022.pdf
+2022-12-30,IN,RAINBOW,INE961O01016,Rainbow Childrens Medicare Ltd.,regular,ind_prs22122022.pdf
+2022-12-30,IN,UCOBANK,INE691A01018,UCO Bank,regular,ind_prs06122022.pdf
+2022-12-30,OUT,ALLCARGO,INE418H01029,Allcargo Logistics Ltd.,regular,ind_prs06122022.pdf
+2022-12-30,OUT,NIITLTD,INE161A01038,NIIT Ltd.,regular,ind_prs06122022.pdf
+2022-12-30,OUT,SAREGAMA,INE979A01025,Saregama India Ltd,regular,ind_prs22122022.pdf
+2022-12-30,OUT,SCI,INE109A01011,Shipping Corporation of India Ltd.,regular,ind_prs06122022.pdf
+2023-01-23,RENAME,360ONE,INE466L01020,360 ONE WAM Ltd.,regular,IIFLWAM -> 360ONE: NSE symbolchange.csv
+2023-02-17,IN,PPLPHARMA,INE0DK501011,Piramal Pharma Ltd.,regular,ind_prs09022023_1.pdf
+2023-02-17,OUT,INOXLEISUR,INE312H01016,Inox Leisure Ltd.,regular,ind_prs09022023_1.pdf
+2023-03-31,IN,AARTIIND,INE769A01020,Aarti Industries Ltd.,regular,ind_prs17022023_1.pdf
+2023-03-31,IN,ACI,INE128X01021,Archean Chemical Industries Ltd.,regular,ind_prs17022023_1.pdf
+2023-03-31,IN,ADANIPOWER,INE814H01011,Adani Power Ltd.,regular,ind_prs17022023_1.pdf
+2023-03-31,IN,APARINDS,INE372A01015,Apar Industries Ltd.,regular,ind_prs17022023_1.pdf
+2023-03-31,IN,BIKAJI,INE00E101023,Bikaji Foods International Ltd.,regular,ind_prs17022023_1.pdf
+2023-03-31,IN,BLS,INE153T01027,BLS International Services Ltd.,regular,ind_prs17022023_1.pdf
+2023-03-31,IN,CRAFTSMAN,INE00LO01017,Craftsman Automation Ltd.,regular,ind_prs17022023_1.pdf
+2023-03-31,IN,DATAPATTNS,INE0IX101010,Data Patterns (India) Ltd.,regular,ind_prs17022023_1.pdf
+2023-03-31,IN,FIVESTAR,INE128S01021,Five-Star Business Finance Ltd.,regular,ind_prs17022023_1.pdf
+2023-03-31,IN,INGERRAND,INE177A01018,Ingersoll Rand (India) Ltd.,regular,ind_prs17022023_1.pdf
+2023-03-31,IN,JINDWORLD,INE247D01039,Jindal Worldwide Ltd.,regular,ind_prs17022023_1.pdf
+2023-03-31,IN,KENNAMET,INE717A01029,Kennametal India Ltd.,regular,ind_prs17022023_1.pdf
+2023-03-31,IN,KFINTECH,INE138Y01010,Kfin Technologies Ltd.,regular,ind_prs17022023_1.pdf
+2023-03-31,IN,KSB,INE999A01015,KSB Ltd.,regular,ind_prs17022023_1.pdf
+2023-03-31,IN,MEDANTA,INE474Q01031,Global Health Ltd.,regular,ind_prs17022023_1.pdf
+2023-03-31,IN,MFL,INE071N01016,Epigral Ltd.,regular,ind_prs17022023_1.pdf
+2023-03-31,IN,NMDC,INE584A01023,NMDC Ltd.,regular,ind_prs17022023_1.pdf
+2023-03-31,IN,PEL,INE140A01024,Piramal Enterprises Ltd.,regular,ind_prs17022023_1.pdf
+2023-03-31,IN,RUSTOMJEE,INE263M01029,Keystone Realtors Ltd.,regular,ind_prs17022023_1.pdf
+2023-03-31,IN,TMB,INE668A01016,Tamilnad Mercantile Bank Ltd.,regular,ind_prs17022023_1.pdf
+2023-03-31,OUT,ABSLAMC,INE404A01024,Aditya Birla Sun Life AMC Ltd.,regular,ind_prs17022023_1.pdf
+2023-03-31,OUT,ALOKINDS,INE270A01029,Alok Industries Ltd.,regular,ind_prs17022023_1.pdf
+2023-03-31,OUT,ASTRAZEN,INE203A01020,AstraZenca Pharma India Ltd.,regular,ind_prs17022023_1.pdf
+2023-03-31,OUT,BHARATRAS,INE838B01013,Bharat Rasayan Ltd.,regular,ind_prs17022023_1.pdf
+2023-03-31,OUT,CAPLIPOINT,INE475E01026,Caplin Point Laboratories Ltd.,regular,ind_prs17022023_1.pdf
+2023-03-31,OUT,DBL,INE917M01012,Dilip Buildcon Ltd.,regular,ind_prs17022023_1.pdf
+2023-03-31,OUT,DHANI,INE274G01010,Dhani Services Ltd.,regular,ind_prs17022023_1.pdf
+2023-03-31,OUT,HATSUN,INE473B01035,Hatsun Agro Product Ltd.,regular,ind_prs17022023_1.pdf
+2023-03-31,OUT,INDOCO,INE873D01024,Indoco Remedies Ltd.,regular,ind_prs17022023_1.pdf
+2023-03-31,OUT,MOIL,INE490G01020,MOIL Ltd.,regular,ind_prs17022023_1.pdf
+2023-03-31,OUT,PGHL,INE199A01012,Procter & Gamble Health Ltd.,regular,ind_prs17022023_1.pdf
+2023-03-31,OUT,PRIVISCL,INE959A01019,Privi Speciality Chemicals Ltd.,regular,ind_prs17022023_1.pdf
+2023-03-31,OUT,SFL,INE916U01025,Sheela Foam Ltd.,regular,ind_prs17022023_1.pdf
+2023-03-31,OUT,SHILPAMED,INE790G01031,Shilpa Medicare Ltd.,regular,ind_prs17022023_1.pdf
+2023-03-31,OUT,SIS,INE285J01028,SIS Ltd.,regular,ind_prs17022023_1.pdf
+2023-03-31,OUT,SUDARSCHEM,INE659A01023,Sudarshan Chemical Industries Ltd.,regular,ind_prs17022023_1.pdf
+2023-03-31,OUT,SYMPHONY,INE225D01027,Symphony Ltd.,regular,ind_prs17022023_1.pdf
+2023-03-31,OUT,TATACOFFEE,INE493A01027,Tata Coffee Ltd.,regular,ind_prs17022023_1.pdf
+2023-03-31,OUT,THYROCARE,INE594H01019,Thyrocare Technologies Ltd.,regular,ind_prs17022023_1.pdf
+2023-03-31,OUT,WOCKPHARMA,INE049B01025,Wockhardt Ltd.,regular,ind_prs17022023_1.pdf
+2023-04-28,IN,ERIS,INE406M01024,Eris Lifesciences Ltd.,regular,ind_prs19042023_1.pdf
+2023-04-28,IN,NSLNISP,INE0NNS01018,NMDC Steel Ltd.,regular,ind_prs19042023_1.pdf
+2023-04-28,OUT,BAJAJELEC,INE193E01025,Bajaj Electricals Ltd,regular,ind_prs19042023_1.pdf
+2023-04-28,OUT,EDELWEISS,INE532F01054,Edelweiss Financial Services Ltd.,regular,ind_prs19042023_1.pdf
+2023-05-12,RENAME,PVRINOX,INE191H01014,PVR INOX Ltd.,regular,PVR -> PVRINOX: NSE symbolchange.csv
+2023-06-06,RENAME,KPIL,INE220B01022,Kalpataru Projects International Ltd.,regular,KALPATPOWR -> KPIL: NSE symbolchange.csv
+2023-06-19,RENAME,CIEINDIA,INE536H01010,CIE Automotive India Ltd.,regular,MAHINDCIE -> CIEINDIA: NSE symbolchange.csv
+2023-07-13,IN,MANKIND,INE634S01028,Mankind Pharma Ltd.,regular,ind_prs04072023.pdf
+2023-07-13,OUT,HDFC,INE001A01036,Housing Development Finance Corporation Ltd.,regular,ind_prs04072023.pdf
+2023-07-20,IN,JIOFIN,,Jio Financial Services Ltd.,demerger_temporary,demerger of RELIANCE (spun-off entity)
+2023-08-24,RENAME,ADANIENSOL,INE931S01010,Adani Energy Solutions Ltd.,regular,ADANITRANS -> ADANIENSOL: NSE symbolchange.csv
+2023-09-07,OUT,JIOFIN,INE758E01017,Jio Financial Services Ltd.,demerger_temporary,demerged entity excluded after listing
+2023-09-11,RENAME,EPIGRAL,INE071N01016,Epigral Ltd.,regular,MFL -> EPIGRAL: NSE symbolchange.csv
+2023-09-29,IN,ALLCARGO,INE418H01029,Allcargo Logistics Ltd.,regular,ind_prs17082023.pdf
+2023-09-29,IN,ALOKINDS,INE270A01029,Alok Industries Ltd.,regular,ind_prs17082023.pdf
+2023-09-29,IN,GILLETTE,INE322A01010,Gillette India Ltd.,regular,ind_prs17082023.pdf
+2023-09-29,IN,GLS,INE03Q201024,Alivus Life Sciences Ltd.,regular,ind_prs17082023.pdf
+2023-09-29,IN,GPIL,INE177H01021,Godawari Power & Ispat Ltd.,regular,ind_prs17082023.pdf
+2023-09-29,IN,IRCON,INE962Y01021,IRCON International Ltd.,regular,ind_prs17082023.pdf
+2023-09-29,IN,JINDALSAW,INE324A01024,Jindal Saw Ltd.,regular,ind_prs17082023.pdf
+2023-09-29,IN,KAYNES,INE918Z01012,Kaynes Technology India Ltd.,regular,ind_prs17082023.pdf
+2023-09-29,IN,KIRLFER,INE884B01025,Kirloskar Ferrous Industries Ltd.,regular,ind_prs17082023.pdf
+2023-09-29,IN,MINDACORP,INE842C01021,Minda Corporation Ltd.,regular,ind_prs17082023.pdf
+2023-09-29,IN,PGHL,INE199A01012,Procter & Gamble Health Ltd.,regular,ind_prs17082023.pdf
+2023-09-29,IN,SAFARI,INE429E01023,Safari Industries (India) Ltd.,regular,ind_prs17082023.pdf
+2023-09-29,IN,SAREGAMA,INE979A01025,Saregama India Ltd,regular,ind_prs17082023.pdf
+2023-09-29,IN,SFL,INE916U01025,Sheela Foam Ltd.,regular,ind_prs17082023.pdf
+2023-09-29,IN,SYMPHONY,INE225D01027,Symphony Ltd.,regular,ind_prs17082023.pdf
+2023-09-29,IN,SYRMA,INE0DYJ01015,Syrma SGS Technology Ltd.,regular,ind_prs17082023.pdf
+2023-09-29,IN,UJJIVANSFB,INE551W01018,Ujjivan Small Finance Bank Ltd.,regular,ind_prs17082023.pdf
+2023-09-29,IN,USHAMART,INE228A01035,Usha Martin Ltd.,regular,ind_prs17082023.pdf
+2023-09-29,OUT,BASF,INE373A01013,BASF India Ltd.,regular,ind_prs17082023.pdf
+2023-09-29,OUT,GARFIBRES,INE276A01018,Garware Technical Fibres Ltd.,regular,ind_prs17082023.pdf
+2023-09-29,OUT,GODREJAGRO,INE850D01014,Godrej Agrovet Ltd.,regular,ind_prs17082023.pdf
+2023-09-29,OUT,GREENPANEL,INE08ZM01014,Greenpanel Industries Ltd.,regular,ind_prs17082023.pdf
+2023-09-29,OUT,HGS,INE170I01016,Hinduja Global Solutions Ltd.,regular,ind_prs17082023.pdf
+2023-09-29,OUT,HIKAL,INE475B01022,Hikal Ltd.,regular,ind_prs17082023.pdf
+2023-09-29,OUT,IBREALEST,INE069I01010,Indiabulls Real Estate Ltd.,regular,ind_prs17082023.pdf
+2023-09-29,OUT,IFBIND,INE559A01017,IFB Industries Ltd.,regular,ind_prs17082023.pdf
+2023-09-29,OUT,JINDWORLD,INE247D01039,Jindal Worldwide Ltd.,regular,ind_prs17082023.pdf
+2023-09-29,OUT,KENNAMET,INE717A01029,Kennametal India Ltd.,regular,ind_prs17082023.pdf
+2023-09-29,OUT,MAHLOG,INE766P01016,Mahindra Logistics Ltd.,regular,ind_prs17082023.pdf
+2023-09-29,OUT,NOCIL,INE163A01018,NOCIL Ltd.,regular,ind_prs17082023.pdf
+2023-09-29,OUT,RUSTOMJEE,INE263M01029,Keystone Realtors Ltd.,regular,ind_prs17082023.pdf
+2023-09-29,OUT,TCI,INE688A01022,Transport Corporation of India Ltd.,regular,ind_prs17082023.pdf
+2023-09-29,OUT,TCIEXP,INE586V01016,TCI Express Ltd.,regular,ind_prs17082023.pdf
+2023-09-29,OUT,TCNSBRANDS,INE778U01029,TCNS Clothing Co. Ltd.,regular,ind_prs17082023.pdf
+2023-09-29,OUT,TMB,INE668A01016,Tamilnad Mercantile Bank Ltd.,regular,ind_prs17082023.pdf
+2023-09-29,OUT,UFLEX,INE516A01017,UFLEX Ltd.,regular,ind_prs17082023.pdf
+2023-10-26,IN,CONCORDBIO,INE338H01029,Concord Biotech Ltd.,regular,ind_prs17102023.pdf
+2023-10-26,OUT,KIRLFER,INE884B01025,Kirloskar Ferrous Industries Ltd.,regular,ind_prs17102023.pdf
+2023-10-27,RENAME,ARE&M,INE885A01032,Amara Raja Energy & Mobility Ltd.,regular,AMARAJABAT -> ARE&M: NSE symbolchange.csv
+2023-12-14,RENAME,WELSPUNLIV,INE192B01031,Welspun Living Ltd.,regular,WELSPUNIND -> WELSPUNLIV: NSE symbolchange.csv
+2024-03-28,IN,ACE,INE731H01025,Action Construction Equipment Ltd.,regular,ind_prs28022024.pdf
+2024-03-28,IN,ANANDRATHI,INE463V01026,Anand Rathi Wealth Ltd.,regular,ind_prs28022024.pdf
+2024-03-28,IN,ASTRAZEN,INE203A01020,AstraZenca Pharma India Ltd.,regular,ind_prs28022024.pdf
+2024-03-28,IN,CAPLIPOINT,INE475E01026,Caplin Point Laboratories Ltd.,regular,ind_prs28022024.pdf
+2024-03-28,IN,CELLO,INE0LMW01024,Cello World Ltd.,regular,ind_prs28022024.pdf
+2024-03-28,IN,CHENNPETRO,INE178A01016,Chennai Petroleum Corporation Ltd.,regular,ind_prs28022024.pdf
+2024-03-28,IN,DOMS,INE321T01012,DOMS Industries Ltd.,regular,ind_prs28022024.pdf
+2024-03-28,IN,ELECON,INE205B01023,Elecon Engineering Co. Ltd.,regular,ind_prs28022024.pdf
+2024-03-28,IN,GMDCLTD,INE131A01031,Gujarat Mineral Development Corporation Ltd.,regular,ind_prs28022024.pdf
+2024-03-28,IN,GRSE,INE382Z01011,Garden Reach Shipbuilders & Engineers Ltd.,regular,ind_prs28022024.pdf
+2024-03-28,IN,HAPPYFORGE,INE330T01021,Happy Forgings Ltd.,regular,ind_prs28022024.pdf
+2024-03-28,IN,HBLPOWER,INE292B01021,HBL Engineering Ltd.,regular,ind_prs28022024.pdf
+2024-03-28,IN,HONASA,INE0J5401028,Honasa Consumer Ltd.,regular,ind_prs28022024.pdf
+2024-03-28,IN,HSCL,INE019C01026,Himadri Speciality Chemical Ltd.,regular,ind_prs28022024.pdf
+2024-03-28,IN,INOXWIND,INE066P01011,Inox Wind Ltd.,regular,ind_prs28022024.pdf
+2024-03-28,IN,J&KBANK,INE168A01041,Jammu & Kashmir Bank Ltd.,regular,ind_prs28022024.pdf
+2024-03-28,IN,JAIBALAJI,INE091G01018,Jai Balaji Industries Ltd.,regular,ind_prs28022024.pdf
+2024-03-28,IN,JIOFIN,INE758E01017,Jio Financial Services Ltd.,regular,ind_prs28022024.pdf
+2024-03-28,IN,JSWINFRA,INE880J01026,JSW Infrastructure Ltd.,regular,ind_prs28022024.pdf
+2024-03-28,IN,JWL,INE209L01016,Jupiter Wagons Ltd.,regular,ind_prs28022024.pdf
+2024-03-28,IN,LLOYDSME,INE281B01032,Lloyds Metals And Energy Ltd.,regular,ind_prs28022024.pdf
+2024-03-28,IN,MAHSEAMLES,INE271B01025,Maharashtra Seamless Ltd.,regular,ind_prs28022024.pdf
+2024-03-28,IN,NUVAMA,INE531F01015,Nuvama Wealth Management Ltd.,regular,ind_prs28022024.pdf
+2024-03-28,IN,RAILTEL,INE0DD101019,Railtel Corporation Of India Ltd.,regular,ind_prs28022024.pdf
+2024-03-28,IN,RKFORGE,INE399G01023,Ramkrishna Forgings Ltd.,regular,ind_prs28022024.pdf
+2024-03-28,IN,RRKABEL,INE777K01022,R R Kabel Ltd.,regular,ind_prs28022024.pdf
+2024-03-28,IN,SBFC,INE423Y01016,SBFC Finance Ltd.,regular,ind_prs28022024.pdf
+2024-03-28,IN,SCHNEIDER,INE839M01018,Schneider Electric Infrastructure Ltd.,regular,ind_prs28022024.pdf
+2024-03-28,IN,SIGNATURE,INE903U01023,Signatureglobal (India) Ltd.,regular,ind_prs28022024.pdf
+2024-03-28,IN,TATATECH,INE142M01025,Tata Technologies Ltd.,regular,ind_prs28022024.pdf
+2024-03-28,IN,TITAGARH,INE615H01020,Titagarh Rail Systems Ltd.,regular,ind_prs28022024.pdf
+2024-03-28,IN,TMB,INE668A01016,Tamilnad Mercantile Bank Ltd.,regular,ind_prs28022024.pdf
+2024-03-28,IN,TVSSCS,INE395N01027,TVS Supply Chain Solutions Ltd.,regular,ind_prs28022024.pdf
+2024-03-28,OUT,AARTIDRUGS,INE767A01016,Aarti Drugs Ltd.,regular,ind_prs28022024.pdf
+2024-03-28,OUT,BCG,INE425B01027,Brightcom Group Ltd.,regular,ind_prs28022024.pdf
+2024-03-28,OUT,DELTACORP,INE124G01033,Delta Corp Ltd.,regular,ind_prs28022024.pdf
+2024-03-28,OUT,EPIGRAL,INE071N01016,Epigral Ltd.,regular,ind_prs28022024.pdf
+2024-03-28,OUT,GALAXYSURF,INE600K01018,Galaxy Surfactants Ltd.,regular,ind_prs28022024.pdf
+2024-03-28,OUT,GOCOLORS,INE0BJS01011,Go Fashion (India) Ltd.,regular,ind_prs28022024.pdf
+2024-03-28,OUT,GRINFRA,INE201P01022,G R Infraprojects Ltd.,regular,ind_prs28022024.pdf
+2024-03-28,OUT,GUJALKALI,INE186A01019,Gujarat Alkalies & Chemicals Ltd.,regular,ind_prs28022024.pdf
+2024-03-28,OUT,HLEGLAS,INE461D01028,HLE Glascoat Ltd.,regular,ind_prs28022024.pdf
+2024-03-28,OUT,INFIBEAM,INE483S01020,Infibeam Avenues Ltd.,regular,ind_prs28022024.pdf
+2024-03-28,OUT,INGERRAND,INE177A01018,Ingersoll Rand (India) Ltd.,regular,ind_prs28022024.pdf
+2024-03-28,OUT,JAMNAAUTO,INE039C01032,Jamna Auto Industries Ltd.,regular,ind_prs28022024.pdf
+2024-03-28,OUT,LAXMIMACH,INE269B01029,Lakshmi Machine Works Ltd.,regular,ind_prs28022024.pdf
+2024-03-28,OUT,LUXIND,INE150G01020,Lux Industries Ltd.,regular,ind_prs28022024.pdf
+2024-03-28,OUT,NAZARA,INE418L01021,Nazara Technologies Ltd.,regular,ind_prs28022024.pdf
+2024-03-28,OUT,ORIENTELEC,INE142Z01019,Orient Electric Ltd.,regular,ind_prs28022024.pdf
+2024-03-28,OUT,PFIZER,INE182A01018,Pfizer Ltd.,regular,ind_prs28022024.pdf
+2024-03-28,OUT,PGHL,INE199A01012,Procter & Gamble Health Ltd.,regular,ind_prs28022024.pdf
+2024-03-28,OUT,POLYPLEX,INE633B01018,Polyplex Corporation Ltd.,regular,ind_prs28022024.pdf
+2024-03-28,OUT,RAIN,INE855B01025,Rain Industries Ltd,regular,ind_prs28022024.pdf
+2024-03-28,OUT,RALLIS,INE613A01020,Rallis India Ltd.,regular,ind_prs28022024.pdf
+2024-03-28,OUT,RELAXO,INE131B01039,Relaxo Footwears Ltd.,regular,ind_prs28022024.pdf
+2024-03-28,OUT,ROSSARI,INE02A801020,Rossari Biotech Ltd.,regular,ind_prs28022024.pdf
+2024-03-28,OUT,SFL,INE916U01025,Sheela Foam Ltd.,regular,ind_prs28022024.pdf
+2024-03-28,OUT,SHARDACROP,INE221J01015,Sharda Cropchem Ltd.,regular,ind_prs28022024.pdf
+2024-03-28,OUT,SHOPERSTOP,INE498B01024,Shoppers Stop Ltd.,regular,ind_prs28022024.pdf
+2024-03-28,OUT,SUPRAJIT,INE399C01030,Suprajit Engineering Ltd.,regular,ind_prs28022024.pdf
+2024-03-28,OUT,SYMPHONY,INE225D01027,Symphony Ltd.,regular,ind_prs28022024.pdf
+2024-03-28,OUT,TEAMLEASE,INE985S01024,Teamlease Services Ltd.,regular,ind_prs28022024.pdf
+2024-03-28,OUT,TTKPRESTIG,INE690A01028,TTK Prestige Ltd.,regular,ind_prs28022024.pdf
+2024-03-28,OUT,VINATIORGA,INE410B01037,Vinati Organics Ltd.,regular,ind_prs28022024.pdf
+2024-03-28,OUT,VMART,INE665J01013,V-Mart Retail Ltd.,regular,ind_prs28022024.pdf
+2024-03-28,OUT,ZYDUSWELL,INE768C01010,Zydus Wellness Ltd.,regular,ind_prs28022024.pdf
+2024-04-23,RENAME,LTF,INE498L01015,L&T Finance Ltd.,regular,L&TFH -> LTF: NSE symbolchange.csv
+2024-06-07,RENAME,AEGISLOG,INE208C01025,Aegis Logistics Ltd.,regular,AEGISCHEM -> AEGISLOG: NSE symbolchange.csv
+2024-06-07,RENAME,UNITDSPR,INE854D01024,United Spirits Ltd.,regular,MCDOWELL-N -> UNITDSPR: NSE symbolchange.csv
+2024-06-13,IN,DUMMYSANOF,,Placeholder: Sanofi Consumer Healthcare India Ltd. (demerged from Sanofi India),demerger_placeholder,demerger of SANOFI: placeholder at zero price
+2024-07-11,IN,DUMMYRAYMD,,Placeholder: Raymond Lifestyle Ltd. (demerged from Raymond),demerger_placeholder,demerger of RAYMOND: placeholder at zero price
+2024-07-26,RENAME,SAMMAANCAP,INE148I01020,Sammaan Capital Ltd.,regular,IBULHSGFIN -> SAMMAANCAP: NSE symbolchange.csv
+2024-08-30,OUT,TATAMTRDVR,IN9155A01020,Tata Motors Ltd DVR,regular,DVR shares cancelled: ind_prs23082024_1
+2024-09-05,IN,RAYMONDLSL,INE02ID01020,Raymond Lifestyle Ltd.,demerger_temporary,RAYMONDLSL listed; replaces placeholder DUMMYRAYMD
+2024-09-05,OUT,DUMMYRAYMD,,Placeholder: Raymond Lifestyle Ltd. (demerged from Raymond),demerger_placeholder,RAYMONDLSL listed; replaces placeholder DUMMYRAYMD
+2024-09-13,IN,SANOFICONR,INE0UOS01011,Sanofi Consumer Healthcare India Ltd.,demerger_temporary,SANOFICONR listed; replaces placeholder DUMMYSANOF
+2024-09-13,OUT,DUMMYSANOF,,Placeholder: Sanofi Consumer Healthcare India Ltd. (demerged from Sanofi India),demerger_placeholder,SANOFICONR listed; replaces placeholder DUMMYSANOF
+2024-09-17,OUT,RAYMONDLSL,INE02ID01020,Raymond Lifestyle Ltd.,demerger_temporary,demerged entity excluded after listing
+2024-09-23,OUT,SANOFICONR,INE0UOS01011,Sanofi Consumer Healthcare India Ltd.,demerger_temporary,demerged entity excluded after listing
+2024-09-30,IN,AADHARHFC,INE883F01010,Aadhar Housing Finance Ltd.,regular,ind_prs23082024.pdf
+2024-09-30,IN,ABSLAMC,INE404A01024,Aditya Birla Sun Life AMC Ltd.,regular,ind_prs23082024.pdf
+2024-09-30,IN,ANANTRAJ,INE242C01024,Anant Raj Ltd.,regular,ind_prs23082024.pdf
+2024-09-30,IN,BASF,INE373A01013,BASF India Ltd.,regular,ind_prs23082024.pdf
+2024-09-30,IN,BHARTIHEXA,INE343G01021,Bharti Hexacom Ltd.,regular,ind_prs23082024.pdf
+2024-09-30,IN,DBREALTY,INE879I01012,Valor Estate Ltd.,regular,ind_prs23082024.pdf
+2024-09-30,IN,GET&D,INE200A01026,GE Vernova T&D India Ltd.,regular,ind_prs23082024.pdf
+2024-09-30,IN,GODIGIT,INE03JT01014,Go Digit General Insurance Ltd.,regular,ind_prs23082024.pdf
+2024-09-30,IN,GODREJAGRO,INE850D01014,Godrej Agrovet Ltd.,regular,ind_prs23082024.pdf
+2024-09-30,IN,GRINFRA,INE201P01022,G R Infraprojects Ltd.,regular,ind_prs23082024.pdf
+2024-09-30,IN,IFCI,INE039A01010,IFCI Ltd.,regular,ind_prs23082024.pdf
+2024-09-30,IN,INDGN,INE065X01017,Indegene Ltd.,regular,ind_prs23082024.pdf
+2024-09-30,IN,INOXINDIA,INE616N01034,INOX India Ltd.,regular,ind_prs23082024.pdf
+2024-09-30,IN,IREDA,INE202E01016,Indian Renewable Energy Development Agency Ltd.,regular,ind_prs23082024.pdf
+2024-09-30,IN,JKTYRE,INE573A01042,JK Tyre & Industries Ltd.,regular,ind_prs23082024.pdf
+2024-09-30,IN,JPPOWER,INE351F01018,Jaiprakash Power Ventures Ltd.,regular,ind_prs23082024.pdf
+2024-09-30,IN,JYOTICNC,INE980O01024,Jyoti CNC Automation Ltd.,regular,ind_prs23082024.pdf
+2024-09-30,IN,KIRLOSBROS,INE732A01036,Kirloskar Brothers Ltd.,regular,ind_prs23082024.pdf
+2024-09-30,IN,KIRLOSENG,INE146L01010,Kirloskar Oil Eng Ltd.,regular,ind_prs23082024.pdf
+2024-09-30,IN,NETWEB,INE0NT901020,Netweb Technologies India Ltd.,regular,ind_prs23082024.pdf
+2024-09-30,IN,NEWGEN,INE619B01017,Newgen Software Technologies Ltd.,regular,ind_prs23082024.pdf
+2024-09-30,IN,PFIZER,INE182A01018,Pfizer Ltd.,regular,ind_prs23082024.pdf
+2024-09-30,IN,PTCIL,INE596F01018,PTC Industries Ltd.,regular,ind_prs23082024.pdf
+2024-09-30,IN,SCI,INE109A01011,Shipping Corporation of India Ltd.,regular,ind_prs23082024.pdf
+2024-09-30,IN,TBOTEK,INE673O01025,TBO Tek Ltd.,regular,ind_prs23082024.pdf
+2024-09-30,IN,TECHNOE,INE285K01026,Techno Electric & Engineering Company Ltd.,regular,ind_prs23082024.pdf
+2024-09-30,IN,VINATIORGA,INE410B01037,Vinati Organics Ltd.,regular,ind_prs23082024.pdf
+2024-09-30,OUT,AETHER,INE0BWX01014,Aether Industries Ltd.,regular,ind_prs23082024.pdf
+2024-09-30,OUT,ALLCARGO,INE418H01029,Allcargo Logistics Ltd.,regular,ind_prs23082024.pdf
+2024-09-30,OUT,ANURAS,INE930P01018,Anupam Rasayan India Ltd.,regular,ind_prs23082024.pdf
+2024-09-30,OUT,BORORENEW,INE666D01022,Borosil Renewables Ltd.,regular,ind_prs23082024.pdf
+2024-09-30,OUT,CSBBANK,INE679A01013,CSB Bank Ltd.,regular,ind_prs23082024.pdf
+2024-09-30,OUT,DCMSHRIRAM,INE499A01024,DCM Shriram Ltd.,regular,ind_prs23082024.pdf
+2024-09-30,OUT,EPL,INE255A01020,EPL Ltd.,regular,ind_prs23082024.pdf
+2024-09-30,OUT,FDC,INE258B01022,FDC Ltd.,regular,ind_prs23082024.pdf
+2024-09-30,OUT,GLS,INE03Q201024,Alivus Life Sciences Ltd.,regular,ind_prs23082024.pdf
+2024-09-30,OUT,GMMPFAUDLR,INE541A01023,GMM Pfaudler Ltd.,regular,ind_prs23082024.pdf
+2024-09-30,OUT,HAPPYFORGE,INE330T01021,Happy Forgings Ltd.,regular,ind_prs23082024.pdf
+2024-09-30,OUT,INDIGOPNTS,INE09VQ01012,Indigo Paints Ltd.,regular,ind_prs23082024.pdf
+2024-09-30,OUT,JAIBALAJI,INE091G01018,Jai Balaji Industries Ltd.,regular,ind_prs23082024.pdf
+2024-09-30,OUT,JKPAPER,INE789E01012,JK Paper Ltd.,regular,ind_prs23082024.pdf
+2024-09-30,OUT,KRBL,INE001B01026,KRBL Ltd.,regular,ind_prs23082024.pdf
+2024-09-30,OUT,LXCHEM,INE576O01020,Laxmi Organic Industries Ltd.,regular,ind_prs23082024.pdf
+2024-09-30,OUT,MEDPLUS,INE804L01022,Medplus Health Services Ltd.,regular,ind_prs23082024.pdf
+2024-09-30,OUT,MHRIL,INE998I01010,Mahindra Holidays & Resorts India Ltd.,regular,ind_prs23082024.pdf
+2024-09-30,OUT,MTARTECH,INE864I01014,MTAR Technologies Ltd.,regular,ind_prs23082024.pdf
+2024-09-30,OUT,PRINCEPIPE,INE689W01016,Prince Pipes and Fittings Ltd.,regular,ind_prs23082024.pdf
+2024-09-30,OUT,PRSMJOHNSN,INE010A01011,Prism Johnson Ltd.,regular,excluded instead of IDEA: ind_prs25092024
+2024-09-30,OUT,RBA,INE07T201019,Restaurant Brands Asia Ltd.,regular,ind_prs23082024.pdf
+2024-09-30,OUT,SAFARI,INE429E01023,Safari Industries (India) Ltd.,regular,ind_prs23082024.pdf
+2024-09-30,OUT,STLTECH,INE089C01029,Sterlite Technologies Ltd.,regular,ind_prs23082024.pdf
+2024-09-30,OUT,SUNTECK,INE805D01034,Sunteck Realty Ltd.,regular,ind_prs23082024.pdf
+2024-09-30,OUT,TMB,INE668A01016,Tamilnad Mercantile Bank Ltd.,regular,ind_prs23082024.pdf
+2024-09-30,OUT,VAIBHAVGBL,INE884A01027,Vaibhav Global Ltd.,regular,ind_prs23082024.pdf
+2024-10-10,IN,EMCURE,INE168P01015,Emcure Pharmaceuticals Ltd.,regular,ind_prs04102024.pdf
+2024-10-10,OUT,IDFC,INE043D01016,IDFC Ltd.,regular,ind_prs04102024.pdf
+2024-10-10,RENAME,ABREL,INE055A01016,Aditya Birla Real Estate Ltd.,regular,CENTURYTEX -> ABREL: NSE symbolchange.csv
+2024-10-16,IN,AKUMS,INE09XN01023,Akums Drugs and Pharmaceuticals Ltd.,regular,ind_prs10102024.pdf
+2024-10-16,OUT,TV18BRDCST,INE886H01027,TV18 Broadcast Ltd.,regular,ind_prs10102024.pdf
+2024-11-05,RENAME,GVT&D,INE200A01026,GE Vernova T&D India Ltd.,regular,GET&D -> GVT&D: NSE symbolchange.csv
+2024-12-11,RENAME,GMRAIRPORT,INE776C01039,GMR Airports Ltd.,regular,GMRINFRA -> GMRAIRPORT: NSE symbolchange.csv
+2024-12-23,RENAME,HBLENGINE,INE292B01021,HBL Engineering Ltd.,regular,HBLPOWER -> HBLENGINE: NSE symbolchange.csv
+2025-01-06,IN,DUMMYITC,,Placeholder: ITC Hotels Ltd. (demerged from ITC),demerger_placeholder,demerger of ITC: placeholder at zero price
+2025-01-29,IN,ITCHOTELS,INE379A01028,ITC Hotels Ltd.,demerger_temporary,ITCHOTELS listed; replaces placeholder DUMMYITC
+2025-01-29,OUT,DUMMYITC,,Placeholder: ITC Hotels Ltd. (demerged from ITC),demerger_placeholder,ITCHOTELS listed; replaces placeholder DUMMYITC
+2025-02-10,OUT,ITCHOTELS,INE379A01028,ITC Hotels Ltd.,demerger_temporary,demerged entity excluded after listing
+2025-03-21,IN,RAYMONDLSL,INE02ID01020,Raymond Lifestyle Ltd.,regular,ind_prs17032025.pdf
+2025-03-21,OUT,ISEC,INE763G01038,ICICI Securities Ltd.,regular,ind_prs17032025.pdf
+2025-03-28,IN,ACMESOLAR,INE622W01025,ACME Solar Holdings Ltd.,regular,ind_prs21022025.pdf
+2025-03-28,IN,AFCONS,INE101I01011,Afcons Infrastructure Ltd.,regular,ind_prs21022025.pdf
+2025-03-28,IN,AIIL,INE206F01022,Authum Investment & Infrastructure Ltd.,regular,ind_prs21022025.pdf
+2025-03-28,IN,ALIVUS,INE03Q201024,Alivus Life Sciences Ltd.,regular,ind_prs21022025.pdf
+2025-03-28,IN,BAJAJHFL,INE377Y01014,Bajaj Housing Finance Ltd.,regular,ind_prs21022025.pdf
+2025-03-28,IN,DCMSHRIRAM,INE499A01024,DCM Shriram Ltd.,regular,ind_prs21022025.pdf
+2025-03-28,IN,FIRSTCRY,INE02RE01045,Brainbees Solutions Ltd.,regular,ind_prs21022025.pdf
+2025-03-28,IN,GRAVITA,INE024L01027,Gravita India Ltd.,regular,ind_prs21022025.pdf
+2025-03-28,IN,HYUNDAI,INE0V6F01027,Hyundai Motor India Ltd.,regular,ind_prs21022025.pdf
+2025-03-28,IN,IGIL,INE0Q9301021,International Gemological Institute Ltd.,regular,ind_prs21022025.pdf
+2025-03-28,IN,IKS,INE115Q01022,Inventurus Knowledge Solutions Ltd.,regular,ind_prs21022025.pdf
+2025-03-28,IN,JSWHL,INE824G01012,JSW Holdings Ltd.,regular,ind_prs21022025.pdf
+2025-03-28,IN,LTFOODS,INE818H01020,LT Foods Ltd.,regular,ind_prs21022025.pdf
+2025-03-28,IN,NAVA,INE725A01030,Nava Ltd.,regular,ind_prs21022025.pdf
+2025-03-28,IN,NEULANDLAB,INE794A01010,Neuland Laboratories Ltd.,regular,ind_prs21022025.pdf
+2025-03-28,IN,NIVABUPA,INE995S01015,Niva Bupa Health Insurance Company Ltd.,regular,ind_prs21022025.pdf
+2025-03-28,IN,NTPCGREEN,INE0ONG01011,NTPC Green Energy Ltd.,regular,ind_prs21022025.pdf
+2025-03-28,IN,OLAELEC,INE0LXG01040,Ola Electric Mobility Ltd.,regular,ind_prs21022025.pdf
+2025-03-28,IN,PGEL,INE457L01029,PG Electroplast Ltd.,regular,ind_prs21022025.pdf
+2025-03-28,IN,PREMIERENE,INE0BS701011,Premier Energies Ltd.,regular,ind_prs21022025.pdf
+2025-03-28,IN,RPOWER,INE614G01033,Reliance Power Ltd.,regular,ind_prs21022025.pdf
+2025-03-28,IN,SAGILITY,INE0W2G01015,Sagility Ltd.,regular,ind_prs21022025.pdf
+2025-03-28,IN,SAILIFE,INE570L01029,Sai Life Sciences Ltd.,regular,ind_prs21022025.pdf
+2025-03-28,IN,SARDAEN,INE385C01021,Sarda Energy and Minerals Ltd.,regular,ind_prs21022025.pdf
+2025-03-28,IN,SWIGGY,INE00H001014,Swiggy Ltd.,regular,ind_prs21022025.pdf
+2025-03-28,IN,TARIL,INE763I01026,Transformers And Rectifiers (India) Ltd.,regular,ind_prs21022025.pdf
+2025-03-28,IN,VMM,INE01EA01019,Vishal Mega Mart Ltd.,regular,ind_prs21022025.pdf
+2025-03-28,IN,WAAREEENER,INE377N01017,Waaree Energies Ltd.,regular,ind_prs21022025.pdf
+2025-03-28,IN,WOCKPHARMA,INE049B01025,Wockhardt Ltd.,regular,ind_prs21022025.pdf
+2025-03-28,IN,ZENTEC,INE251B01027,Zen Technologies Ltd.,regular,ind_prs21022025.pdf
+2025-03-28,OUT,ACI,INE128X01021,Archean Chemical Industries Ltd.,regular,ind_prs21022025.pdf
+2025-03-28,OUT,AVANTIFEED,INE871C01038,Avanti Feeds Ltd.,regular,ind_prs21022025.pdf
+2025-03-28,OUT,BALAMINES,INE050E01027,Balaji Amines Ltd.,regular,ind_prs21022025.pdf
+2025-03-28,OUT,BIRLACORPN,INE340A01012,Birla Corporation Ltd.,regular,ind_prs21022025.pdf
+2025-03-28,OUT,CELLO,INE0LMW01024,Cello World Ltd.,regular,ind_prs21022025.pdf
+2025-03-28,OUT,CHEMPLASTS,INE488A01050,Chemplast Sanmar Ltd.,regular,ind_prs21022025.pdf
+2025-03-28,OUT,CIEINDIA,INE536H01010,CIE Automotive India Ltd.,regular,ind_prs21022025.pdf
+2025-03-28,OUT,EASEMYTRIP,INE07O001026,Easy Trip Planners Ltd.,regular,ind_prs21022025.pdf
+2025-03-28,OUT,EQUITASBNK,INE063P01018,Equitas Small Finance Bank Ltd.,regular,ind_prs21022025.pdf
+2025-03-28,OUT,FINEORG,INE686Y01026,Fine Organic Industries Ltd.,regular,ind_prs21022025.pdf
+2025-03-28,OUT,GAEL,INE036B01030,Gujarat Ambuja Exports Ltd.,regular,ind_prs21022025.pdf
+2025-03-28,OUT,GRINDWELL,INE536A01023,Grindwell Norton Ltd.,regular,ind_prs21022025.pdf
+2025-03-28,OUT,GRINFRA,INE201P01022,G R Infraprojects Ltd.,regular,ind_prs21022025.pdf
+2025-03-28,OUT,GSFC,INE026A01025,Gujarat State Fertilizers & Chemicals Ltd.,regular,ind_prs21022025.pdf
+2025-03-28,OUT,JKLAKSHMI,INE786A01032,JK Lakshmi Cement Ltd.,regular,ind_prs21022025.pdf
+2025-03-28,OUT,KSB,INE999A01023,KSB Ltd.,regular,ind_prs21022025.pdf
+2025-03-28,OUT,MAHLIFE,INE813A01018,Mahindra Lifespace Developers Ltd.,regular,ind_prs21022025.pdf
+2025-03-28,OUT,METROBRAND,INE317I01021,Metro Brands Ltd.,regular,ind_prs21022025.pdf
+2025-03-28,OUT,NUVOCO,INE118D01016,Nuvoco Vistas Corporation Ltd.,regular,ind_prs21022025.pdf
+2025-03-28,OUT,PGHH,INE179A01014,Procter & Gamble Hygiene & Health Care Ltd.,regular,ind_prs21022025.pdf
+2025-03-28,OUT,RAJESHEXPO,INE343B01030,Rajesh Exports Ltd.,regular,ind_prs21022025.pdf
+2025-03-28,OUT,RATNAMANI,INE703B01027,Ratnamani Metals & Tubes Ltd.,regular,ind_prs21022025.pdf
+2025-03-28,OUT,SANOFI,INE058A01010,Sanofi India Ltd.,regular,ind_prs21022025.pdf
+2025-03-28,OUT,SPARC,INE232I01014,Sun Pharma Advanced Research Company Ltd.,regular,ind_prs21022025.pdf
+2025-03-28,OUT,SUNDRMFAST,INE387A01021,Sundram Fasteners Ltd.,regular,ind_prs21022025.pdf
+2025-03-28,OUT,TVSSCS,INE395N01027,TVS Supply Chain Solutions Ltd.,regular,ind_prs21022025.pdf
+2025-03-28,OUT,UJJIVANSFB,INE551W01018,Ujjivan Small Finance Bank Ltd.,regular,ind_prs21022025.pdf
+2025-03-28,OUT,VARROC,INE665L01035,Varroc Engineering Ltd.,regular,ind_prs21022025.pdf
+2025-03-28,OUT,VINATIORGA,INE410B01037,Vinati Organics Ltd.,regular,ind_prs21022025.pdf
+2025-03-28,OUT,VIPIND,INE054A01027,V.I.P. Industries Ltd.,regular,ind_prs21022025.pdf
+2025-04-07,IN,DUMMYSIEMS,DUM003A01024,Dummy Siemens Ltd.,demerger_placeholder,demerger of SIEMENS: placeholder at zero price
+2025-04-09,RENAME,ETERNAL,INE758T01015,Eternal Ltd.,regular,ZOMATO -> ETERNAL: NSE symbolchange.csv
+2025-04-11,IN,SUNDRMFAST,INE387A01021,Sundram Fasteners Ltd.,regular,ind_prs04042025_2.pdf
+2025-04-11,OUT,QUESS,INE615P01015,Quess Corp Ltd.,regular,ind_prs04042025_2.pdf
+2025-05-14,IN,DUMMYRAYMN,DUM2301A0101,Dummy2 Raymond Ltd.,demerger_placeholder,demerger of RAYMOND: placeholder at zero price
+2025-05-19,RENAME,COHANCE,INE03QK01018,Cohance Lifesciences Ltd.,regular,SUVENPHAR -> COHANCE: NSE symbolchange.csv
+2025-05-22,IN,DUMMYABFRL,DUM647O01011,Dummy Aditya Birla Fashion and Retail Ltd.,demerger_placeholder,demerger of ABFRL: placeholder at zero price
+2025-06-19,IN,ENRIN,INE1NPP01017,Siemens Energy India Ltd.,demerger_temporary,ENRIN listed; replaces placeholder DUMMYSIEMS
+2025-06-19,OUT,DUMMYSIEMS,DUM003A01024,Dummy Siemens Ltd.,demerger_placeholder,ENRIN listed; replaces placeholder DUMMYSIEMS
+2025-06-23,IN,ABLBL,INE14LE01019,Aditya Birla Lifestyle Brands Ltd.,demerger_temporary,ABLBL listed; replaces placeholder DUMMYABFRL
+2025-06-23,OUT,DUMMYABFRL,DUM647O01011,Dummy Aditya Birla Fashion and Retail Ltd.,demerger_placeholder,ABLBL listed; replaces placeholder DUMMYABFRL
+2025-06-27,OUT,ABLBL,INE14LE01019,Aditya Birla Lifestyle Brands Ltd.,demerger_temporary,demerged entity excluded after listing
+2025-06-27,OUT,ENRIN,INE1NPP01017,Siemens Energy India Ltd.,demerger_temporary,demerged entity excluded after listing
+2025-07-01,IN,RAYMONDREL,INE1SY401010,Raymond Realty Ltd.,demerger_temporary,RAYMONDREL listed; replaces placeholder DUMMYRAYMN
+2025-07-01,OUT,DUMMYRAYMN,DUM2301A0101,Dummy2 Raymond Ltd.,demerger_placeholder,RAYMONDREL listed; replaces placeholder DUMMYRAYMN
+2025-07-10,OUT,RAYMONDREL,INE1SY401010,Raymond Realty Ltd.,demerger_temporary,demerged entity excluded after listing
+2025-07-18,IN,DUMMYDBRLT,DUM879I01012,Dummy Valor Estate Ltd.,demerger_placeholder,demerger of DBREALTY: placeholder at zero price
+2025-09-04,RENAME,SWANCORP,INE665A01038,Swan Corp Ltd.,regular,SWANENERGY -> SWANCORP: NSE symbolchange.csv
+2025-09-23,IN,RELINFRA,INE036A01016,Reliance Infrastructure Ltd.,regular,ind_prs15092025_1.pdf
+2025-09-23,OUT,PEL,INE140A01024,Piramal Enterprises Ltd.,regular,ind_prs15092025_1.pdf
+2025-09-30,IN,ABLBL,INE14LE01019,Aditya Birla Lifestyle Brands Ltd.,regular,ind_prs22082025.pdf
+2025-09-30,IN,AEGISVOPAK,INE0INX01018,Aegis Vopak Terminals Ltd.,regular,ind_prs22082025.pdf
+2025-09-30,IN,AGARWALEYE,INE943P01029,Dr. Agarwal's Health Care Ltd.,regular,ind_prs22082025.pdf
+2025-09-30,IN,AKZOINDIA,INE133A01011,JSW Dulux Ltd.,regular,ind_prs22082025.pdf
+2025-09-30,IN,ATHERENERG,INE0LEZ01016,Ather Energy Ltd.,regular,ind_prs22082025.pdf
+2025-09-30,IN,BLUEJET,INE0KBH01020,Blue Jet Healthcare Ltd.,regular,ind_prs22082025.pdf
+2025-09-30,IN,CHOICEIN,INE102B01014,Choice International Ltd.,regular,ind_prs22082025.pdf
+2025-09-30,IN,ENRIN,INE1NPP01017,Siemens Energy India Ltd.,regular,ind_prs22082025.pdf
+2025-09-30,IN,FORCEMOT,INE451A01017,Force Motors Ltd.,regular,ind_prs22082025.pdf
+2025-09-30,IN,HEXT,INE093A01041,Hexaware Technologies Ltd.,regular,ind_prs22082025.pdf
+2025-09-30,IN,ITCHOTELS,INE379A01028,ITC Hotels Ltd.,regular,ind_prs22082025.pdf
+2025-09-30,IN,KSB,INE999A01023,KSB Ltd.,regular,ind_prs22082025.pdf
+2025-09-30,IN,MAHSCOOTER,INE288A01013,Maharashtra Scooters Ltd.,regular,ind_prs22082025.pdf
+2025-09-30,IN,NUVOCO,INE118D01016,Nuvoco Vistas Corporation Ltd.,regular,ind_prs22082025.pdf
+2025-09-30,IN,ONESOURCE,INE013P01021,Onesource Specialty Pharma Ltd.,regular,ind_prs22082025.pdf
+2025-09-30,IN,PGHH,INE179A01014,Procter & Gamble Hygiene & Health Care Ltd.,regular,ind_prs22082025.pdf
+2025-09-30,IN,THELEELA,INE0AQ201015,Leela Palaces Hotels & Resorts Ltd.,regular,ind_prs22082025.pdf
+2025-09-30,IN,VENTIVE,INE781S01027,Ventive Hospitality Ltd.,regular,ind_prs22082025.pdf
+2025-09-30,OUT,ALIVUS,INE03Q201024,Alivus Life Sciences Ltd.,regular,ind_prs22082025.pdf
+2025-09-30,OUT,GNFC,INE113A01013,Gujarat Narmada Valley Fertilizers and Chemicals Ltd.,regular,ind_prs22082025.pdf
+2025-09-30,OUT,GPPL,INE517F01014,Gujarat Pipavav Port Ltd.,regular,ind_prs22082025.pdf
+2025-09-30,OUT,JSWHL,INE824G01012,JSW Holdings Ltd.,regular,ind_prs22082025.pdf
+2025-09-30,OUT,JUSTDIAL,INE599M01018,Justdial Ltd.,regular,ind_prs22082025.pdf
+2025-09-30,OUT,KANSAINER,INE531A01024,Kansai Nerolac Paints Ltd.,regular,ind_prs22082025.pdf
+2025-09-30,OUT,KNRCON,INE634I01029,KNR Constructions Ltd.,regular,ind_prs22082025.pdf
+2025-09-30,OUT,MASTEK,INE759A01021,Mastek Ltd.,regular,ind_prs22082025.pdf
+2025-09-30,OUT,NETWORK18,INE870H01013,Network18 Media & Investments Ltd.,regular,ind_prs22082025.pdf
+2025-09-30,OUT,PNCINFRA,INE195J01029,PNC Infratech Ltd.,regular,ind_prs22082025.pdf
+2025-09-30,OUT,RAYMOND,INE301A01014,Raymond Ltd.,regular,ind_prs22082025.pdf
+2025-09-30,OUT,RAYMONDLSL,INE02ID01020,Raymond Lifestyle Ltd.,regular,ind_prs22082025.pdf
+2025-09-30,OUT,RENUKA,INE087H01022,Shree Renuka Sugars Ltd.,regular,ind_prs22082025.pdf
+2025-09-30,OUT,ROUTE,INE450U01017,Route Mobile Ltd.,regular,ind_prs22082025.pdf
+2025-09-30,OUT,RTNINDIA,INE834M01019,RattanIndia Enterprises Ltd.,regular,ind_prs22082025.pdf
+2025-09-30,OUT,SWSOLAR,INE00M201021,Sterling and Wilson Renewable Energy Ltd.,regular,ind_prs22082025.pdf
+2025-09-30,OUT,TANLA,INE483C01032,Tanla Platforms Ltd.,regular,ind_prs22082025.pdf
+2025-09-30,OUT,WESTLIFE,INE274F01020,Westlife Foodworld Ltd.,regular,ind_prs22082025.pdf
+2025-10-14,IN,DUMMYTATAM,,Placeholder: TML Commercial Vehicles Ltd. (demerged from Tata Motors),demerger_placeholder,demerger of TATAMOTORS: placeholder at zero price
+2025-10-15,IN,DUMMYSKFIN,,Placeholder: SKF India (Industrial) Ltd. (demerged from SKF India),demerger_placeholder,demerger of SKFINDIA: placeholder at zero price
+2025-10-24,RENAME,TMPV,INE155A01022,Tata Motors Passenger Vehicles Ltd.,regular,TATAMOTORS -> TMPV: NSE symbolchange.csv
+2025-11-12,IN,TMCV,INE1TAE01010,Tata Motors Ltd.,demerger_temporary,TMCV listed; replaces placeholder DUMMYTATAM
+2025-11-12,OUT,DUMMYTATAM,,Placeholder: TML Commercial Vehicles Ltd. (demerged from Tata Motors),demerger_placeholder,TMCV listed; replaces placeholder DUMMYTATAM
+2025-11-13,IN,ADVENTHTL,INE28GN01010,Advent Hotels International Ltd.,demerger_temporary,ADVENTHTL listed; replaces placeholder DUMMYDBRLT
+2025-11-13,OUT,DUMMYDBRLT,DUM879I01012,Dummy Valor Estate Ltd.,demerger_placeholder,ADVENTHTL listed; replaces placeholder DUMMYDBRLT
+2025-11-17,OUT,TMCV,INE1TAE01010,Tata Motors Ltd.,demerger_temporary,demerged entity excluded after listing
+2025-11-28,OUT,ADVENTHTL,INE28GN01010,Advent Hotels International Ltd.,demerger_temporary,demerged entity excluded after listing
+2025-12-05,IN,DUMMYHDLVR,DUM030A01027,Dummy Hindustan Unilever Ltd.,demerger_placeholder,demerger of HINDUNILVR: placeholder at zero price
+2025-12-05,IN,SKFINDUS,INE2J8701016,SKF India (Industrial) Ltd.,demerger_temporary,SKFINDUS listed; replaces placeholder DUMMYSKFIN
+2025-12-05,OUT,DUMMYSKFIN,,Placeholder: SKF India (Industrial) Ltd. (demerged from SKF India),demerger_placeholder,SKFINDUS listed; replaces placeholder DUMMYSKFIN
+2025-12-15,OUT,SKFINDUS,INE2J8701016,SKF India (Industrial) Ltd.,demerger_temporary,demerged entity excluded after listing
+2025-12-31,IN,JSWCEMENT,INE718I01012,JSW Cement Ltd.,regular,ind_prs11122025.pdf
+2025-12-31,OUT,SKFINDIA,INE640A01023,SKF India Ltd.,regular,ind_prs11122025.pdf
+2026-02-16,IN,KWIL,INE2KCE01013,Kwality Wall's (India) Ltd.,demerger_temporary,KWIL listed; replaces placeholder DUMMYHDLVR
+2026-02-16,OUT,DUMMYHDLVR,DUM030A01027,Dummy Hindustan Unilever Ltd.,demerger_placeholder,KWIL listed; replaces placeholder DUMMYHDLVR
+2026-02-24,OUT,KWIL,INE2KCE01013,Kwality Wall's (India) Ltd.,demerger_temporary,demerged entity excluded after listing
+2026-02-27,RENAME,LTM,INE214T01019,LTM Ltd.,regular,LTIM -> LTM: NSE symbolchange.csv
+2026-03-30,IN,ABDL,INE552Z01027,Allied Blenders and Distillers Ltd.,regular,ind_prs23022026.pdf
+2026-03-30,IN,ACUTAAS,INE00FF01025,Acutaas Chemicals Ltd.,regular,ind_prs23022026.pdf
+2026-03-30,IN,ANTHEM,INE0CZ201020,Anthem Biosciences Ltd.,regular,ind_prs23022026.pdf
+2026-03-30,IN,ANURAS,INE930P01018,Anupam Rasayan India Ltd.,regular,ind_prs23022026.pdf
+2026-03-30,IN,BELRISE,INE894V01022,Belrise Industries Ltd.,regular,ind_prs23022026.pdf
+2026-03-30,IN,CANHLIFE,INE01TY01017,Canara HSBC Life Insurance Company Ltd.,regular,ind_prs23022026.pdf
+2026-03-30,IN,CARTRADE,INE290S01011,Cartrade Tech Ltd.,regular,ind_prs23022026.pdf
+2026-03-30,IN,CEMPRO,INE686A01026,Cemindia Projects Ltd.,regular,ind_prs23022026.pdf
+2026-03-30,IN,CPPLUS,INE819V01029,Aditya Infotech Ltd.,regular,ind_prs23022026.pdf
+2026-03-30,IN,EMMVEE,INE1C6T01020,Emmvee Photovoltaic Power Ltd.,regular,ind_prs23022026.pdf
+2026-03-30,IN,GABRIEL,INE524A01029,Gabriel India Ltd.,regular,ind_prs23022026.pdf
+2026-03-30,IN,GALLANTT,INE297H01019,Gallantt Ispat Ltd.,regular,ind_prs23022026.pdf
+2026-03-30,IN,GROWW,INE0HOQ01053,Billionbrains Garage Ventures Ltd.,regular,ind_prs23022026.pdf
+2026-03-30,IN,HDBFS,INE756I01012,HDB Financial Services Ltd.,regular,ind_prs23022026.pdf
+2026-03-30,IN,ICICIAMC,INE346A01027,ICICI Prudential Asset Management Company Ltd.,regular,ind_prs23022026.pdf
+2026-03-30,IN,JAINREC,INE0YD401026,Jain Resource Recycling Ltd.,regular,ind_prs23022026.pdf
+2026-03-30,IN,LENSKART,INE956O01016,Lenskart Solutions Ltd.,regular,ind_prs23022026.pdf
+2026-03-30,IN,LGEINDIA,INE324D01010,LG Electronics India Ltd.,regular,ind_prs23022026.pdf
+2026-03-30,IN,MEESHO,INE0VDM01015,Meesho Ltd.,regular,ind_prs23022026.pdf
+2026-03-30,IN,PARADEEP,INE088F01024,Paradeep Phosphates Ltd.,regular,ind_prs23022026.pdf
+2026-03-30,IN,PINELABS,INE15B701018,Pine Labs Ltd.,regular,ind_prs23022026.pdf
+2026-03-30,IN,PIRAMALFIN,INE202B01038,Piramal Finance Ltd.,regular,ind_prs23022026.pdf
+2026-03-30,IN,PWL,INE0LP301011,Physicswallah Ltd.,regular,ind_prs23022026.pdf
+2026-03-30,IN,SPLPETRO,INE663A01033,Supreme Petrochem Ltd.,regular,ind_prs23022026.pdf
+2026-03-30,IN,TATACAP,INE976I01016,Tata Capital Ltd.,regular,ind_prs23022026.pdf
+2026-03-30,IN,TEGA,INE011K01018,Tega Industries Ltd.,regular,ind_prs23022026.pdf
+2026-03-30,IN,TENNIND,INE19RI01016,Tenneco Clean Air India Ltd.,regular,ind_prs23022026.pdf
+2026-03-30,IN,TMCV,INE1TAE01010,Tata Motors Ltd.,regular,ind_prs23022026.pdf
+2026-03-30,IN,TRAVELFOOD,INE103V01028,Travel Food Services Ltd.,regular,ind_prs23022026.pdf
+2026-03-30,IN,URBANCO,INE0CAZ01013,Urban Company Ltd.,regular,ind_prs23022026.pdf
+2026-03-30,IN,ZYDUSWELL,INE768C01028,Zydus Wellness Ltd.,regular,ind_prs23022026.pdf
+2026-03-30,OUT,AGARWALEYE,INE943P01029,Dr. Agarwal's Health Care Ltd.,regular,ind_prs23022026.pdf
+2026-03-30,OUT,AKUMS,INE09XN01023,Akums Drugs and Pharmaceuticals Ltd.,regular,ind_prs23022026.pdf
+2026-03-30,OUT,ALKYLAMINE,INE150B01039,Alkyl Amines Chemicals Ltd.,regular,ind_prs23022026.pdf
+2026-03-30,OUT,ALOKINDS,INE270A01029,Alok Industries Ltd.,regular,ind_prs23022026.pdf
+2026-03-30,OUT,APLLTD,INE901L01018,Alembic Pharmaceuticals Ltd.,regular,ind_prs23022026.pdf
+2026-03-30,OUT,ASTRAZEN,INE203A01020,AstraZenca Pharma India Ltd.,regular,ind_prs23022026.pdf
+2026-03-30,OUT,BASF,INE373A01013,BASF India Ltd.,regular,ind_prs23022026.pdf
+2026-03-30,OUT,CAMPUS,INE278Y01022,Campus Activewear Ltd.,regular,ind_prs23022026.pdf
+2026-03-30,OUT,CENTURYPLY,INE348B01021,Century Plyboards (India) Ltd.,regular,ind_prs23022026.pdf
+2026-03-30,OUT,CERA,INE739E01017,Cera Sanitaryware Ltd,regular,ind_prs23022026.pdf
+2026-03-30,OUT,DBREALTY,INE879I01012,Valor Estate Ltd.,regular,ind_prs23022026.pdf
+2026-03-30,OUT,FINPIPE,INE183A01024,Finolex Industries Ltd.,regular,ind_prs23022026.pdf
+2026-03-30,OUT,GODREJAGRO,INE850D01014,Godrej Agrovet Ltd.,regular,ind_prs23022026.pdf
+2026-03-30,OUT,GUJGASLTD,INE844O01030,Gujarat Gas Ltd.,regular,ind_prs23022026.pdf
+2026-03-30,OUT,HAPPSTMNDS,INE419U01012,Happiest Minds Technologies Ltd.,regular,ind_prs23022026.pdf
+2026-03-30,OUT,INOXINDIA,INE616N01034,INOX India Ltd.,regular,ind_prs23022026.pdf
+2026-03-30,OUT,JYOTHYLAB,INE668F01031,Jyothy Labs Ltd.,regular,ind_prs23022026.pdf
+2026-03-30,OUT,KIRLOSBROS,INE732A01036,Kirloskar Brothers Ltd.,regular,ind_prs23022026.pdf
+2026-03-30,OUT,KSB,INE999A01023,KSB Ltd.,regular,ind_prs23022026.pdf
+2026-03-30,OUT,MAHSCOOTER,INE288A01013,Maharashtra Scooters Ltd.,regular,ind_prs23022026.pdf
+2026-03-30,OUT,MAHSEAMLES,INE271B01025,Maharashtra Seamless Ltd.,regular,ind_prs23022026.pdf
+2026-03-30,OUT,MANYAVAR,INE825V01034,Vedant Fashions Ltd.,regular,ind_prs23022026.pdf
+2026-03-30,OUT,METROPOLIS,INE112L01020,Metropolis Healthcare Ltd.,regular,ind_prs23022026.pdf
+2026-03-30,OUT,PGHH,INE179A01014,Procter & Gamble Hygiene & Health Care Ltd.,regular,ind_prs23022026.pdf
+2026-03-30,OUT,PRAJIND,INE074A01025,Praj Industries Ltd.,regular,ind_prs23022026.pdf
+2026-03-30,OUT,RCF,INE027A01015,Rashtriya Chemicals & Fertilizers Ltd.,regular,ind_prs23022026.pdf
+2026-03-30,OUT,RELINFRA,INE036A01016,Reliance Infrastructure Ltd.,regular,ind_prs23022026.pdf
+2026-03-30,OUT,SUNDRMFAST,INE387A01021,Sundram Fasteners Ltd.,regular,ind_prs23022026.pdf
+2026-03-30,OUT,TRIVENI,INE256C01024,Triveni Engineering & Industries Ltd.,regular,ind_prs23022026.pdf
+2026-03-30,OUT,VENTIVE,INE781S01027,Ventive Hospitality Ltd.,regular,ind_prs23022026.pdf
+2026-03-30,OUT,VGUARD,INE951I01027,V-Guard Industries Ltd.,regular,ind_prs23022026.pdf
+2026-04-15,RENAME,JSWDULUX,INE133A01011,JSW Dulux Ltd.,regular,AKZOINDIA -> JSWDULUX: NSE symbolchange.csv
+2026-04-30,IN,DUMMYVEDL1,DU1205A01025,Dummy Vedanta Ltd. 1,demerger_placeholder,demerger of VEDL: placeholder at zero price
+2026-04-30,IN,DUMMYVEDL2,DU2205A01025,Dummy Vedanta Ltd. 2,demerger_placeholder,demerger of VEDL: placeholder at zero price
+2026-04-30,IN,DUMMYVEDL3,DU3205A01025,Dummy Vedanta Ltd. 3,demerger_placeholder,demerger of VEDL: placeholder at zero price
+2026-04-30,IN,DUMMYVEDL4,DU4205A01025,Dummy Vedanta Ltd. 4,demerger_placeholder,demerger of VEDL: placeholder at zero price
+2026-05-12,IN,CIEINDIA,INE536H01010,CIE Automotive India Ltd.,regular,ind_prs04052026.pdf
+2026-05-12,OUT,GSPL,INE246F01010,Gujarat State Petronet Ltd.,regular,ind_prs04052026.pdf
+2026-06-15,IN,VAML,INE1CDF01017,Vedanta Aluminium Metal Ltd.,demerger_temporary,VAML listed; replaces placeholder DUMMYVEDL1
+2026-06-15,IN,VEDPOWER,INE694L01019,Vedanta Power Ltd.,demerger_temporary,VEDPOWER listed; replaces placeholder DUMMYVEDL2
+2026-06-15,IN,VISL,INE1CLE01013,Vedanta Iron and Steel Ltd.,demerger_temporary,VISL listed; replaces placeholder DUMMYVEDL4
+2026-06-15,IN,VOGL,INE704J01044,Vedanta Oil and Gas Ltd.,demerger_temporary,VOGL listed; replaces placeholder DUMMYVEDL3
+2026-06-15,OUT,DUMMYVEDL1,DU1205A01025,Dummy Vedanta Ltd. 1,demerger_placeholder,VAML listed; replaces placeholder DUMMYVEDL1
+2026-06-15,OUT,DUMMYVEDL2,DU2205A01025,Dummy Vedanta Ltd. 2,demerger_placeholder,VEDPOWER listed; replaces placeholder DUMMYVEDL2
+2026-06-15,OUT,DUMMYVEDL3,DU3205A01025,Dummy Vedanta Ltd. 3,demerger_placeholder,VOGL listed; replaces placeholder DUMMYVEDL3
+2026-06-15,OUT,DUMMYVEDL4,DU4205A01025,Dummy Vedanta Ltd. 4,demerger_placeholder,VISL listed; replaces placeholder DUMMYVEDL4
+2026-06-19,OUT,VEDPOWER,INE694L01019,Vedanta Power Ltd.,demerger_temporary,demerged entity excluded after listing
+2026-06-19,OUT,VISL,INE1CLE01013,Vedanta Iron and Steel Ltd.,demerger_temporary,demerged entity excluded after listing
+2026-06-23,OUT,VAML,INE1CDF01017,Vedanta Aluminium Metal Ltd.,demerger_temporary,demerged entity excluded after listing
+2026-06-24,OUT,VOGL,INE704J01044,Vedanta Oil and Gas Ltd.,demerger_temporary,demerged entity excluded after listing
+2026-07-17,IN,PFOCUS,INE367G01038,Prime Focus Ltd.,regular,ind_prs13072026_1.pdf
+2026-07-17,OUT,JBCHEPHARM,INE572A01036,J.B. Chemicals & Pharmaceuticals Ltd.,regular,ind_prs13072026_1.pdf
+2026-09-07,IN,DUMMYHEG,DUM545A01024,Dummy HEG Ltd.,demerger_placeholder,demerger of HEG: placeholder at zero price
+2026-09-22,RENAME,HEGAM,INE545A01024,HEG Advanced Materials Ltd.,regular,HEG -> HEGAM: NSE symbolchange.csv
+2026-09-30,IN,AETHER,INE0BWX01014,Aether Industries Ltd.,regular,ind_prs10082026.pdf
+2026-09-30,IN,AVANTIFEED,INE871C01038,Avanti Feeds Ltd.,regular,ind_prs10082026.pdf
+2026-09-30,IN,AZAD,INE02IJ01035,Azad Engineering Ltd.,regular,ind_prs10082026.pdf
+2026-09-30,IN,BAGMANE,INE2OVN25015,Bagmane Prime Office REIT,regular,ind_prs10082026.pdf
+2026-09-30,IN,BBOX,INE676A01027,Black Box Ltd.,regular,ind_prs10082026.pdf
+2026-09-30,IN,BHARATCOAL,INE05XR01022,Bharat Coking Coal Ltd.,regular,ind_prs10082026.pdf
+2026-09-30,IN,BIRET,INE0FDU25010,Brookfield India Real Estate Trust,regular,ind_prs10082026.pdf
+2026-09-30,IN,CLEANMAX,INE647U01026,Clean Max Enviro Energy Solutions Ltd.,regular,ind_prs10082026.pdf
+2026-09-30,IN,CMPDI,INE05HV01027,Central Mine Planning & Design Institute Ltd.,regular,ind_prs10082026.pdf
+2026-09-30,IN,CUPID,INE509F01029,Cupid Ltd.,regular,ind_prs10082026.pdf
+2026-09-30,IN,EMBASSY,INE041025011,EMBASSY OFFICE PARKS REIT,regular,ind_prs10082026.pdf
+2026-09-30,IN,FRACTAL,INE212S01015,Fractal Analytics Ltd.,regular,ind_prs10082026.pdf
+2026-09-30,IN,INOXINDIA,INE616N01034,INOX India Ltd.,regular,ind_prs10082026.pdf
+2026-09-30,IN,KIRLOSBROS,INE732A01036,Kirloskar Brothers Ltd.,regular,ind_prs10082026.pdf
+2026-09-30,IN,KSB,INE999A01023,KSB Ltd.,regular,ind_prs10082026.pdf
+2026-09-30,IN,MTARTECH,INE864I01014,MTAR Technologies Ltd.,regular,ind_prs10082026.pdf
+2026-09-30,IN,PRIVISCL,INE959A01019,Privi Speciality Chemicals Ltd.,regular,ind_prs10082026.pdf
+2026-09-30,IN,RUBICON,INE506V01022,Rubicon Research Ltd.,regular,ind_prs10082026.pdf
+2026-09-30,IN,SANSERA,INE953O01021,Sansera Engineering Ltd.,regular,ind_prs10082026.pdf
+2026-09-30,IN,SHRIPISTON,INE526E01018,SPR Auto Technologies Ltd.,regular,ind_prs10082026.pdf
+2026-09-30,IN,STLTECH,INE089C01029,Sterlite Technologies Ltd.,regular,ind_prs10082026.pdf
+2026-09-30,IN,TDPOWERSYS,INE419M01035,TD Power Systems Ltd.,regular,ind_prs10082026.pdf
+2026-09-30,IN,THANGAMAYL,INE085J01014,Thangamayil Jewellery Ltd.,regular,ind_prs10082026.pdf
+2026-09-30,IN,VAML,INE1CDF01017,Vedanta Aluminium Metal Ltd.,regular,ind_prs10082026.pdf
+2026-09-30,IN,VEDPOWER,INE694L01019,Vedanta Power Ltd.,regular,ind_prs10082026.pdf
+2026-09-30,IN,VISL,INE1CLE01013,Vedanta Iron and Steel Ltd.,regular,ind_prs10082026.pdf
+2026-09-30,IN,VOGL,INE704J01044,Vedanta Oil and Gas Ltd.,regular,ind_prs10082026.pdf
+2026-09-30,OUT,3MINDIA,INE470A01017,3M India Ltd.,regular,ind_prs10082026.pdf
+2026-09-30,OUT,ABFRL,INE647O01011,Aditya Birla Fashion and Retail Ltd.,regular,ind_prs10082026.pdf
+2026-09-30,OUT,ABLBL,INE14LE01019,Aditya Birla Lifestyle Brands Ltd.,regular,ind_prs10082026.pdf
+2026-09-30,OUT,BAYERCROP,INE462A01022,Bayer Cropscience Ltd.,regular,ind_prs10082026.pdf
+2026-09-30,OUT,BBTC,INE050A01025,Bombay Burmah Trading Corporation Ltd.,regular,ind_prs10082026.pdf
+2026-09-30,OUT,BIKAJI,INE00E101023,Bikaji Foods International Ltd.,regular,ind_prs10082026.pdf
+2026-09-30,OUT,BLUEDART,INE233B01017,Blue Dart Express Ltd.,regular,ind_prs10082026.pdf
+2026-09-30,OUT,BLUEJET,INE0KBH01020,Blue Jet Healthcare Ltd.,regular,ind_prs10082026.pdf
+2026-09-30,OUT,CHALET,INE427F01016,Chalet Hotels Ltd.,regular,ind_prs10082026.pdf
+2026-09-30,OUT,DCMSHRIRAM,INE499A01024,DCM Shriram Ltd.,regular,ind_prs10082026.pdf
+2026-09-30,OUT,ERIS,INE406M01024,Eris Lifesciences Ltd.,regular,ind_prs10082026.pdf
+2026-09-30,OUT,GODIGIT,INE03JT01014,Go Digit General Insurance Ltd.,regular,ind_prs10082026.pdf
+2026-09-30,OUT,INDGN,INE065X01017,Indegene Ltd.,regular,ind_prs10082026.pdf
+2026-09-30,OUT,JSWDULUX,INE133A01011,JSW Dulux Ltd.,regular,ind_prs10082026.pdf
+2026-09-30,OUT,JUBLPHARMA,INE700A01033,Jubilant Pharmova Ltd.,regular,ind_prs10082026.pdf
+2026-09-30,OUT,LATENTVIEW,INE0I7C01011,Latent View Analytics Ltd.,regular,ind_prs10082026.pdf
+2026-09-30,OUT,MAPMYINDIA,INE0BV301023,C.E. Info Systems Ltd.,regular,ind_prs10082026.pdf
+2026-09-30,OUT,NEWGEN,INE619B01017,Newgen Software Technologies Ltd.,regular,ind_prs10082026.pdf
+2026-09-30,OUT,NIVABUPA,INE995S01015,Niva Bupa Health Insurance Company Ltd.,regular,ind_prs10082026.pdf
+2026-09-30,OUT,PFIZER,INE182A01018,Pfizer Ltd.,regular,ind_prs10082026.pdf
+2026-09-30,OUT,SAPPHIRE,INE806T01020,Sapphire Foods India Ltd.,regular,ind_prs10082026.pdf
+2026-09-30,OUT,SAREGAMA,INE979A01025,Saregama India Ltd,regular,ind_prs10082026.pdf
+2026-09-30,OUT,SBFC,INE423Y01016,SBFC Finance Ltd.,regular,ind_prs10082026.pdf
+2026-09-30,OUT,SONATSOFTW,INE269A01021,Sonata Software Ltd.,regular,ind_prs10082026.pdf
+2026-09-30,OUT,SPLPETRO,INE663A01033,Supreme Petrochem Ltd.,regular,ind_prs10082026.pdf
+2026-09-30,OUT,THELEELA,INE0AQ201015,Leela Palaces Hotels & Resorts Ltd.,regular,ind_prs10082026.pdf
+2026-09-30,OUT,TRAVELFOOD,INE103V01028,Travel Food Services Ltd.,regular,ind_prs10082026.pdf

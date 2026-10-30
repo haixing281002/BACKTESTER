@@ -35,7 +35,6 @@ import os
 import time
 import zipfile
 from datetime import date, datetime, timedelta
-from typing import Optional, Tuple
 
 import pandas as pd
 import requests
@@ -96,7 +95,7 @@ def _read_zip_csv(content: bytes) -> str:
     return z.read(z.namelist()[0]).decode("utf8", "ignore")
 
 
-def fetch_day(d: date, session: requests.Session) -> Tuple[str, Optional[pd.DataFrame]]:
+def fetch_day(d: date, session: requests.Session) -> tuple[str, pd.DataFrame | None]:
     if os.environ.get("LIGHTYEAR_CACHE_ONLY"):
         raise RuntimeError("cached-data-only run: downloads are disabled (LIGHTYEAR_CACHE_ONLY is set). "
                            "Use the data already in cache/ and scr/, or start a run without the cache-only option.")
@@ -137,7 +136,7 @@ def _load_nontrading(cache_dir: str) -> set:
 
 
 def download_range(start: date, end: date, cache_dir: str = "cache", delay: float = 0.8,
-                   session: Optional[requests.Session] = None, max_errors: int = 25) -> dict:
+                   session: requests.Session | None = None, max_errors: int = 25) -> dict:
     """Fetch every missing weekday in [start, end]. Resumable. Stops after `max_errors`
     consecutive-ish failures so a block is noticed instead of hammered."""
     os.makedirs(cache_dir, exist_ok=True)

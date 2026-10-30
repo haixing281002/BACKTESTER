@@ -21,7 +21,9 @@ def client(tmp_path, monkeypatch):
     monkeypatch.setenv("LY_TEST_CARDS", str(tmp_path / "cards"))
     monkeypatch.setenv("LIGHTYEAR_SKIP_RECALC", "1")
     monkeypatch.setenv("LIGHTYEAR_SKIP_REVIEW", "1")
-    import lightyear.paths, lightyear.jobs, lightyear.server
+    import lightyear.jobs
+    import lightyear.paths
+    import lightyear.server
     for m in (lightyear.paths, lightyear.jobs, lightyear.server):
         importlib.reload(m)
     from fastapi.testclient import TestClient
@@ -118,6 +120,7 @@ def test_gate_rows_advisory_with_a_value_is_a_fail_not_not_computed():
 
 def test_workbook_has_trades_holdings_comparators_and_gate_formulas(tmp_path):
     import openpyxl
+
     from lightyear import charts, workbook
     d = pd.bdate_range("2023-01-02", periods=120)
     rng = np.random.default_rng(5)
@@ -181,6 +184,7 @@ def test_chart_metrics_count_every_return_including_the_first():
 
 def test_cache_only_runs_cannot_download(monkeypatch):
     import datetime
+
     from ros.data import nse_bhavcopy_download, screener_fetch
     monkeypatch.setenv("LIGHTYEAR_CACHE_ONLY", "1")
     with pytest.raises(RuntimeError, match="cached-data-only"):
@@ -195,3 +199,15 @@ def test_cache_only_is_the_default_and_reaches_the_prompt(client):
     rid = client.post("/api/runs", data={"operator": "Tester", "existing": paper}).json()["id"]
     assert jobs.load(rid)["cache_only"] is True
     assert "CACHED DATA ONLY" in jobs._fmt(prompts.PHASE_A, rid)
+
+
+def test_table_columns_shown_as_percent_by_name_words():
+    """Fractions in a run's table CSVs display as percents by the words in the column name, whatever their size:
+    max_dd 0.235 is 23.5%, not 0.23; a 2,169% slope is still a percent. Ratios, counts and turnover multiples are not."""
+    from lightyear.workbook import _is_pct_column
+    for c in ("cagr", "vol", "max_dd", "total_return", "minus_nifty500_cagr", "max_weight", "cash_weight",
+              "annualised_slope", "biggest_move_120d", "raw_move", "position_share_of_20d_traded_value", "pct_vs_100d_avg"):
+        assert _is_pct_column(c), c
+    for c in ("sharpe_over_hurdle", "sharpe", "n_days", "annual_turnover_two_way", "nav", "r_squared", "score",
+              "shares_before", "raw_close", "position_rs_crore", "rank", "n_obs"):
+        assert not _is_pct_column(c), c

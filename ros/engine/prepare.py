@@ -6,17 +6,21 @@ here; no card and no other template changes.
 """
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import numpy as np
 import pandas as pd
 
 from ros.engine.primitives import (
-    ewma_return, portfolio_trailing_vol, rolling_cov, simple_returns,
-    total_return_momentum)
+    ewma_return,
+    portfolio_trailing_vol,
+    rolling_cov,
+    simple_returns,
+    total_return_momentum,
+)
 
 
-def strategic_vector(spec, assets: List[str]) -> np.ndarray:
+def strategic_vector(spec, assets: list[str]) -> np.ndarray:
     """Resolve a strategic-weight spec to a vector. Accepts 'equal', a dict, or a list."""
     if spec == "equal" or spec is None:
         return np.ones(len(assets)) / len(assets)
@@ -30,16 +34,16 @@ def strategic_vector(spec, assets: List[str]) -> np.ndarray:
 
 def build_signal_inputs(
     prices: pd.DataFrame,
-    assets: List[str],
+    assets: list[str],
     lookback: int,
     strategic_weights,
-    alpha_halflife: Optional[int] = None,
+    alpha_halflife: int | None = None,
     alpha_scale: int = 21,
     alpha_source: str = "ewma",
-    alpha_window: Optional[int] = None,
+    alpha_window: int | None = None,
     alpha_skip: int = 0,
     ann: int = 252,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Compute sigma_bench, covariance matrices and the EWMA momentum alpha.
 
     Everything here is causal: each value dated t uses returns up to and including

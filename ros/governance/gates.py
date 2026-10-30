@@ -15,11 +15,18 @@ Rules that make the ladder mean something:
 from __future__ import annotations
 
 import textwrap
-from dataclasses import dataclass, field, asdict
-from typing import Any, Dict, List, Optional
+from dataclasses import asdict, dataclass, field
+from typing import Any
 
-from ros.cards.schema import (BLOCK, DECIDE, GROUPS, GUESS, Fact,
-                              audit_data_requests, reconcile_data_plan)
+from ros.cards.schema import (
+    BLOCK,
+    DECIDE,
+    GROUPS,
+    GUESS,
+    Fact,
+    audit_data_requests,
+    reconcile_data_plan,
+)
 
 LADDER = ["REPLICATED", "INDIA_VALIDATED", "ROBUST", "ORTHOGONAL",
           "PORTFOLIO_USEFUL", "PAPER_TRADED", "LIVE_CANDIDATE"]
@@ -27,7 +34,7 @@ LADDER = ["REPLICATED", "INDIA_VALIDATED", "ROBUST", "ORTHOGONAL",
 _W = 96
 
 
-def _wrap(text: str, width: int) -> List[str]:
+def _wrap(text: str, width: int) -> list[str]:
     """Normalise whitespace and soft-wrap. Empty text yields no lines, so a
     criterion with no evidence renders as one line rather than a blank one."""
     flat = " ".join(str(text or "").split())
@@ -70,7 +77,7 @@ class Criterion:
 class GateResult:
     gate: str
     owner: str
-    criteria: List[Criterion] = field(default_factory=list)
+    criteria: list[Criterion] = field(default_factory=list)
     decision: str = "PENDING"        # APPROVE | REJECT | FIX | OBSERVE | PENDING
     rationale: str = ""
 
@@ -79,7 +86,7 @@ class GateResult:
         return all(c.passed for c in self.criteria if c.blocking)
 
     @property
-    def warnings(self) -> List[Criterion]:
+    def warnings(self) -> list[Criterion]:
         return [c for c in self.criteria if not c.passed and not c.blocking]
 
     def render(self, terse: bool = False) -> str:
@@ -103,7 +110,7 @@ class GateResult:
         tail = f"\n    decision: {self.decision}" + (f" -- {self.rationale}" if self.rationale else "")
         return head + "\n" + "\n".join(rows) + tail
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {"gate": self.gate, "owner": self.owner, "decision": self.decision,
                 "passed": self.passed, "rationale": self.rationale,
                 "criteria": [asdict(c) for c in self.criteria]}
@@ -127,7 +134,7 @@ def _call(tag, headline, detail, who=""):
     return {"tag": tag, "headline": headline, "detail": detail, "who": who}
 
 
-def judgement_calls(card, translation_check=None) -> List[Dict[str, str]]:
+def judgement_calls(card, translation_check=None) -> list[dict[str, str]]:
     """Every choice on this card that a model made and a human may overturn.
 
     The criteria list below is an audit trail: it proves each thing was checked.
@@ -139,7 +146,7 @@ def judgement_calls(card, translation_check=None) -> List[Dict[str, str]]:
     Pulled from the card rather than restated, so this can never drift from what
     the run will actually do.
     """
-    out: List[Dict[str, str]] = []
+    out: list[dict[str, str]] = []
     ut, st, cv = (card.universe_translation, card.strategy,
                   getattr(card, "convertibility", None))
 
@@ -221,7 +228,7 @@ def judgement_calls(card, translation_check=None) -> List[Dict[str, str]]:
     return out
 
 
-def _where_this_runs(card, tc) -> List[str]:
+def _where_this_runs(card, tc) -> list[str]:
     """WHERE the strategy operates, in Indian terms, as facts rather than prose.
 
     The universe section used to print ABOVE the gate header, which made the
@@ -290,7 +297,7 @@ def _where_this_runs(card, tc) -> List[str]:
     return L
 
 
-def _what_it_takes(card, feasibility, india) -> List[str]:
+def _what_it_takes(card, feasibility, india) -> list[str]:
     """What data this needs, where the fund stands today, and what India demands.
 
     Three answers to one question -- can this be run, and at what price -- that
@@ -329,7 +336,7 @@ def _what_it_takes(card, feasibility, india) -> List[str]:
                      f"minimum-viable and links no open request to any of them, "
                      f"so by its own account the design is satisfied.")
         if rec["proxied"]:
-            L.append(f"      standing in: " + "; ".join(rec["proxied"]))
+            L.append("      standing in: " + "; ".join(rec["proxied"]))
         if rec["degraded"]:
             L.append(f"      degraded ({len(rec['degraded'])}): "
                      + ", ".join(rec["degraded"][:4])
@@ -446,7 +453,7 @@ def gate_a_summary(card, result, translation_check=None, feasibility=None,
 
 
 def code_facts(card, translation_check=None, feasibility=None,
-               india=None) -> List[Fact]:
+               india=None) -> list[Fact]:
     """What the CARD cannot know, in the same shape as everything else.
 
     The universe fit, the fund's data position and India's non-negotiables are
@@ -455,7 +462,7 @@ def code_facts(card, translation_check=None, feasibility=None,
     different origin, and the reader never gets a tour of which part of the
     pipeline produced which paragraph.
     """
-    F: List[Fact] = []
+    F: list[Fact] = []
 
     def add(group, label, value, detail="", owner="", flag=""):
         v = " ".join(str(value or "").split())
@@ -543,7 +550,7 @@ def code_facts(card, translation_check=None, feasibility=None,
     return F
 
 
-def extraction_facts(doc=None, conflicts=None, shape=None) -> List[Fact]:
+def extraction_facts(doc=None, conflicts=None, shape=None) -> list[Fact]:
     """What reading the PDF turned up, as facts rather than as a tour.
 
     The report used to open with fifty lines about what the regex reader saw --
@@ -552,7 +559,7 @@ def extraction_facts(doc=None, conflicts=None, shape=None) -> List[Fact]:
     and the rest is plumbing, so only the two survive, in the same shape as
     everything else.
     """
-    F: List[Fact] = []
+    F: list[Fact] = []
     if shape is not None and not shape.looks_like_a_paper:
         F.append(Fact(group="PAPER", label="NOT A PAPER",
                       value="this document does not read like a research paper",
@@ -659,7 +666,7 @@ def gate_a(card, feasibility, extraction_quality=None,
     interpretation, both are wrong often enough to matter, and both are far
     cheaper to correct here than after a run.
     """
-    c: List[Criterion] = []
+    c: list[Criterion] = []
 
     c.append(Criterion(
         "card validates against schema", not card.validate(),
@@ -982,8 +989,8 @@ def _missing(name: str, threshold: Any, why: str) -> Criterion:
                      evidence=f"NO EVIDENCE: {why}")
 
 
-def gate_b(card, research: Dict[str, Any], portfolio: Dict[str, Any],
-           thresholds: Optional[Dict[str, float]] = None) -> GateResult:
+def gate_b(card, research: dict[str, Any], portfolio: dict[str, Any],
+           thresholds: dict[str, float] | None = None) -> GateResult:
     """GATE B -- INVESTMENT DECISION. Owned by PM / IC.
 
     Deliberately strict on orthogonality and incremental IR: those are the two
@@ -992,7 +999,7 @@ def gate_b(card, research: Dict[str, Any], portfolio: Dict[str, Any],
     t = {"min_oos_sharpe": 0.30, "max_corr_to_book": 0.80, "min_delta_ir": 0.05,
          "min_dsr": 0.95, "max_turnover": 4.0, "min_alpha_t": 2.0}
     t.update(thresholds or {})
-    c: List[Criterion] = []
+    c: list[Criterion] = []
 
     # Every criterion below appears on the sheet whether or not its evidence
     # arrived. See _missing(): a checklist that quietly gets shorter is worse
@@ -1097,22 +1104,22 @@ def gate_b(card, research: Dict[str, Any], portfolio: Dict[str, Any],
 @dataclass
 class PromotionRung:
     rung: str
-    criteria: List[Criterion] = field(default_factory=list)
+    criteria: list[Criterion] = field(default_factory=list)
 
     @property
     def passed(self) -> bool:
         return bool(self.criteria) and all(c.passed for c in self.criteria if c.blocking)
 
 
-def evaluate_ladder(card, rung_criteria: Dict[str, List[Criterion]]) -> Dict[str, Any]:
+def evaluate_ladder(card, rung_criteria: dict[str, list[Criterion]]) -> dict[str, Any]:
     """Walk the ladder in order, stopping at the first rung that fails.
 
     An adaptation card starts at INDIA_VALIDATED: REPLICATED is marked N/A rather
     than passed, so an adaptation can never be reported as a replication.
     """
-    results: List[Dict[str, Any]] = []
-    attained: Optional[str] = None
-    stopped_at: Optional[str] = None
+    results: list[dict[str, Any]] = []
+    attained: str | None = None
+    stopped_at: str | None = None
 
     for rung in LADDER:
         if rung == "REPLICATED" and card.intent.mode == "adaptation":
@@ -1147,7 +1154,7 @@ def evaluate_ladder(card, rung_criteria: Dict[str, List[Criterion]]) -> Dict[str
     }
 
 
-def render_ladder(lad: Dict[str, Any]) -> str:
+def render_ladder(lad: dict[str, Any]) -> str:
     lines = ["STEP 08 -- PROMOTION LADDER",
              f"  card: {lad['card_id']} ({lad['mode']})",
              f"  attained: {lad['attained_rung'] or 'NONE'}   stopped at: {lad['stopped_at'] or '--'}",

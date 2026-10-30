@@ -31,7 +31,7 @@ import sys
 import time
 import traceback
 import uuid
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -64,7 +64,7 @@ def health():
 # Real Strategy Cards from cards/*.yaml
 # ---------------------------------------------------------------------
 @app.get("/api/cards")
-def list_cards() -> List[Dict[str, Any]]:
+def list_cards() -> list[dict[str, Any]]:
     out = []
     for path in sorted(glob.glob(os.path.join(CARDS_DIR, "*.yaml"))):
         card_id = os.path.splitext(os.path.basename(path))[0]
@@ -105,7 +105,7 @@ def list_cards() -> List[Dict[str, Any]]:
 # Real Strategy Library entries from outputs/library/*.json
 # ---------------------------------------------------------------------
 @app.get("/api/library")
-def list_library() -> List[Dict[str, Any]]:
+def list_library() -> list[dict[str, Any]]:
     lib = StrategyLibrary(os.path.join(OUTPUTS_DIR, "library"))
     entries = lib.all()
     entries.sort(key=lambda e: e.get("created_utc", ""), reverse=True)
@@ -117,7 +117,7 @@ def list_library() -> List[Dict[str, Any]]:
 # ---------------------------------------------------------------------
 @app.post("/api/analyze")
 async def analyze(file: UploadFile = File(...), mode: str = Form("adaptation"),
-                  notes: str = Form("")) -> Dict[str, Any]:
+                  notes: str = Form("")) -> dict[str, Any]:
     if mode not in ("replication", "adaptation"):
         raise HTTPException(400, "mode must be 'replication' or 'adaptation'")
     has_key = bool(os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN"))
@@ -184,21 +184,21 @@ RUN_TARGETS = {
     },
 }
 
-RUNS: Dict[str, Dict[str, Any]] = {}  # in-memory registry; lost on server restart
+RUNS: dict[str, dict[str, Any]] = {}  # in-memory registry; lost on server restart
 
 
 class RunRequest(BaseModel):
     target: str
-    card_path: Optional[str] = None
+    card_path: str | None = None
 
 
 @app.get("/api/run-targets")
-def run_targets() -> List[Dict[str, Any]]:
+def run_targets() -> list[dict[str, Any]]:
     return [{"target": k, "label": v["label"], "needs_card": v["needs_card"]} for k, v in RUN_TARGETS.items()]
 
 
 @app.post("/api/runs")
-def start_run(req: RunRequest) -> Dict[str, Any]:
+def start_run(req: RunRequest) -> dict[str, Any]:
     spec = RUN_TARGETS.get(req.target)
     if spec is None:
         raise HTTPException(400, f"unknown target '{req.target}'. Valid: {list(RUN_TARGETS)}")
@@ -232,7 +232,7 @@ def start_run(req: RunRequest) -> Dict[str, Any]:
 
 
 @app.get("/api/runs")
-def list_runs() -> List[Dict[str, Any]]:
+def list_runs() -> list[dict[str, Any]]:
     out = []
     for r in sorted(RUNS.values(), key=lambda r: -r["started_at"]):
         rc = r["proc"].poll()
@@ -243,7 +243,7 @@ def list_runs() -> List[Dict[str, Any]]:
 
 
 @app.get("/api/runs/{run_id}")
-def get_run(run_id: str, tail: int = 4000) -> Dict[str, Any]:
+def get_run(run_id: str, tail: int = 4000) -> dict[str, Any]:
     r = RUNS.get(run_id)
     if r is None:
         raise HTTPException(404, "unknown run_id (server restarted since it was started?)")

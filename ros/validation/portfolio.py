@@ -13,12 +13,12 @@ are gating rather than informational.
 """
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import numpy as np
 import pandas as pd
 
-from ros.validation.metrics import ANN, ann_vol, cagr, cvar, max_drawdown
+from ros.validation.metrics import ANN
 
 # Keep the REAL import failure, the same way ros/cards/extract.py does. An
 # absent statsmodels and a statsmodels whose numpy/scipy underneath it is broken
@@ -38,8 +38,8 @@ def _align(a: pd.Series, b: pd.Series):
 
 
 def benchmark_relative(strategy_ret: pd.Series, bench_ret: pd.Series,
-                       rf_daily: Optional[pd.Series] = None,
-                       ann: int = ANN) -> Dict[str, float]:
+                       rf_daily: pd.Series | None = None,
+                       ann: int = ANN) -> dict[str, float]:
     """Beta, annualised alpha, tracking error, information ratio, capture ratios.
 
     For a long-only benchmarked fund these matter more than standalone Sharpe:
@@ -69,13 +69,13 @@ def benchmark_relative(strategy_ret: pd.Series, bench_ret: pd.Series,
         "correlation": float(s.corr(b)),
         "up_capture": float(s[up].mean() / b[up].mean()) if up.sum() > 20 and b[up].mean() != 0 else float("nan"),
         "down_capture": float(s[dn].mean() / b[dn].mean()) if dn.sum() > 20 and b[dn].mean() != 0 else float("nan"),
-        "n_obs": int(len(s)),
+        "n_obs": len(s),
     }
 
 
 def factor_fingerprint(strategy_ret: pd.Series, factor_rets: pd.DataFrame,
-                       rf_daily: Optional[pd.Series] = None,
-                       ann: int = ANN) -> Dict[str, Any]:
+                       rf_daily: pd.Series | None = None,
+                       ann: int = ANN) -> dict[str, Any]:
     """Regress strategy excess return on factor-sleeve excess returns.
 
     Reports HAC (Newey-West) t-stats, because daily strategy returns are
@@ -111,7 +111,7 @@ def factor_fingerprint(strategy_ret: pd.Series, factor_rets: pd.DataFrame,
         "t_stats_hac": tstats,
         "r_squared": float(fit.rsquared),
         "hac_lags": lags,
-        "n_obs": int(len(df)),
+        "n_obs": len(df),
         "fingerprint": {k: round(v / norm, 4) for k, v in sorted(loadings.items())} if norm > 0 else {},
         "residual_vol_ann": float(fit.resid.std(ddof=1) * np.sqrt(ann)),
         "interpretation": (
@@ -121,7 +121,7 @@ def factor_fingerprint(strategy_ret: pd.Series, factor_rets: pd.DataFrame,
 
 
 def signal_similarity(candidate_ret: pd.Series,
-                      existing: Dict[str, pd.Series]) -> pd.DataFrame:
+                      existing: dict[str, pd.Series]) -> pd.DataFrame:
     """Correlation and residual-vol-retained against everything already in the book."""
     rows = []
     for nm, s in existing.items():
@@ -141,8 +141,8 @@ def signal_similarity(candidate_ret: pd.Series,
 
 
 def incremental_ir(candidate_ret: pd.Series, book_ret: pd.Series,
-                   bench_ret: pd.Series, weights: List[float] = (0.05, 0.10, 0.20),
-                   rf_daily: Optional[pd.Series] = None, ann: int = ANN) -> pd.DataFrame:
+                   bench_ret: pd.Series, weights: list[float] = (0.05, 0.10, 0.20),
+                   rf_daily: pd.Series | None = None, ann: int = ANN) -> pd.DataFrame:
     """Blend the candidate into the existing book at several sleeve sizes and
     measure the change in information ratio versus the benchmark.
 
@@ -178,7 +178,7 @@ def incremental_ir(candidate_ret: pd.Series, book_ret: pd.Series,
 
 def turnover_capacity(result, aum_inr_cr: float, adv_inr_cr: float,
                       max_participation: float = 0.10,
-                      ann: int = ANN) -> Dict[str, Any]:
+                      ann: int = ANN) -> dict[str, Any]:
     """Crude but honest capacity check: can the book trade its own turnover?
 
     Deliberately simple. Its purpose is to catch the strategy that needs 280%
@@ -203,7 +203,7 @@ def turnover_capacity(result, aum_inr_cr: float, adv_inr_cr: float,
 
 
 def mandate_check(result, long_only: bool = True, allow_cash: bool = False,
-                  max_cash: float = 0.0, max_single_weight: float = 1.0) -> Dict[str, Any]:
+                  max_cash: float = 0.0, max_single_weight: float = 1.0) -> dict[str, Any]:
     """Does the realised position path actually obey the fund's mandate?
 
     Run on the OUTPUT, not the config, because a template can satisfy its own
@@ -213,7 +213,7 @@ def mandate_check(result, long_only: bool = True, allow_cash: bool = False,
     """
     w = result.weights
     cash = result.cash_weight
-    viol: List[str] = []
+    viol: list[str] = []
     max_cash_obs = float(cash.max())
     mean_cash_obs = float(cash.mean())
     if not allow_cash and max_cash_obs > max_cash + 1e-6:

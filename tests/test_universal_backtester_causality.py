@@ -6,7 +6,12 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from universal_backtester import Backtester, build_allocator, assert_causal, LookaheadError
+from universal_backtester import (
+    Backtester,
+    LookaheadError,
+    assert_causal,
+    build_allocator,
+)
 
 SPREAD, LAG, WARMUP = 30.0, 1, 5
 

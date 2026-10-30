@@ -17,19 +17,18 @@ inputs produce the same buckets and the same backtest results every time.
 from __future__ import annotations
 
 import os
-from typing import Dict, List, Optional
 
 import numpy as np
 import pandas as pd
 
 from universal_backtester.allocators import build_allocator
 from universal_backtester.engine import Backtester, BacktestResult
-from universal_backtester.metrics import cagr, ann_vol, max_drawdown
+from universal_backtester.metrics import ann_vol, cagr, max_drawdown
 
 
 def compute_decile_membership(
     mcap: pd.DataFrame, eligible: pd.DataFrame, n_deciles: int = 10,
-) -> Dict[int, pd.DataFrame]:
+) -> dict[int, pd.DataFrame]:
     """Decile 1 = smallest `1/n_deciles` of that day's ELIGIBLE names by
     market cap, decile `n_deciles` = largest. Buckets are equal by COUNT,
     not by mcap value (matches this repo's existing quantile-cut convention
@@ -49,21 +48,21 @@ def compute_decile_membership(
 
 def run_decile_backtests(
     price_window: pd.DataFrame,
-    assets: List[str],
+    assets: list[str],
     mcap_daily: pd.DataFrame,
-    decile_masks: Dict[int, pd.DataFrame],
+    decile_masks: dict[int, pd.DataFrame],
     spread_bps: float,
     lag_days: int,
     rebalance: str = "monthly",
     warmup: int = 60,
     min_names: int = 10,
-) -> Dict[int, BacktestResult]:
+) -> dict[int, BacktestResult]:
     """One Backtester run per decile, equal-weighted across everyone
     IN that decile that day (quantile=1.0 against a membership mask already
     restricted to the decile -- a name that migrates to a different decile
     is sold at cost on the day it's learned, the same discipline this repo
     already applies to a name leaving the top-500 universe)."""
-    results: Dict[int, BacktestResult] = {}
+    results: dict[int, BacktestResult] = {}
     for k, mask in decile_masks.items():
         bt = Backtester(prices=price_window, assets=assets, spread_bps=spread_bps,
                         lag_days=lag_days, allow_cash=True, membership=mask)
@@ -75,9 +74,9 @@ def run_decile_backtests(
 
 
 def summarize_deciles(
-    decile_results: Dict[int, BacktestResult],
-    start: Optional[pd.Timestamp] = None,
-    end: Optional[pd.Timestamp] = None,
+    decile_results: dict[int, BacktestResult],
+    start: pd.Timestamp | None = None,
+    end: pd.Timestamp | None = None,
     cash_rate: float = 0.06,
 ) -> pd.DataFrame:
     """One row per decile: cagr, vol, sharpe, max_dd -- the table a fund
@@ -107,10 +106,10 @@ def summarize_deciles(
 
 def write_decile_membership_log(
     path: str,
-    decile_masks: Dict[int, pd.DataFrame],
+    decile_masks: dict[int, pd.DataFrame],
     rebalance_dates: pd.DatetimeIndex,
     mcap: pd.DataFrame,
-    name_lookup: Optional[dict] = None,
+    name_lookup: dict | None = None,
 ) -> pd.DataFrame:
     """The universe, named: one row per (rebalance date, Accord Code,
     company name, market cap, decile). This is the actual answer to "which
@@ -138,8 +137,8 @@ def write_decile_membership_log(
 
 
 def write_decile_summary_workbook(path: str, summary: pd.DataFrame,
-                                  benchmark_rows: Optional[pd.DataFrame] = None,
-                                  chart_paths: Optional[List[str]] = None,
+                                  benchmark_rows: pd.DataFrame | None = None,
+                                  chart_paths: list[str] | None = None,
                                   decile_definition_note: str = "Decile 1 = smallest, decile 10 = "
                                   "largest, by whatever this run ranked on (see the script that "
                                   "produced this file for the exact signal).") -> None:
@@ -158,8 +157,8 @@ def write_decile_summary_workbook(path: str, summary: pd.DataFrame,
     never assumed here; the caller states it, because only the caller
     knows what it actually ranked on."""
     import openpyxl
-    from openpyxl.styles import Font, Alignment
     from openpyxl.drawing.image import Image as XLImage
+    from openpyxl.styles import Alignment, Font
 
     wb = openpyxl.Workbook()
     ws = wb.active

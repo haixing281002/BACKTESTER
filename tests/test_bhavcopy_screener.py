@@ -16,7 +16,11 @@ import pytest
 
 from ros.data import nse_bhavcopy_download as dl
 from ros.data.bhavcopy_screener_panel import (
-    ALLOWED_SOURCES, assert_sources, build_turnover_panel, coverage_report, screener_shares,
+    ALLOWED_SOURCES,
+    assert_sources,
+    build_turnover_panel,
+    coverage_report,
+    screener_shares,
     universe_symbols,
 )
 
@@ -211,6 +215,7 @@ def test_shares_snapshot_carries_the_fetch_date(tmp_path):
 
 def test_manifest_stanza_is_valid_yaml_with_the_names_the_card_requires():
     import yaml
+
     from ros.data.bhavcopy_screener_panel import manifest_stanza
     from ros.data.intake import PIT_STATUSES, _validate_entry
     blob = yaml.safe_load(manifest_stanza("data/raw/master/m.csv", "data/raw/master/s.csv", 1000))

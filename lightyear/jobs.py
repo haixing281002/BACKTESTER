@@ -7,8 +7,10 @@ Everything about a run is on disk under outputs/lightyear/<run_id>/: state.json,
 files, charts.json and the workbook, so a server restart loses nothing but the live process.
 One run at a time: Screener's rules allow one session, and the backtests are heavy.
 """
+import csv
 import datetime as dt
 import json
+import logging
 import os
 import re
 import subprocess
@@ -18,7 +20,10 @@ import time
 import uuid
 
 from . import charts, contract, gates, prompts, workbook
-from .paths import LEDGER, REPO, RUNS, find_claude, rel, run_dir
+from .paths import LEDGER, REPO, RUNS, find_claude, git_bash, rel, run_dir
+
+_log = logging.getLogger("lightyear")
+STALL_MINUTES = float(os.environ.get("LIGHTYEAR_STALL_MINUTES", "60"))   # no output from Claude Code for this long = stuck
 
 ALLOWED_TOOLS = ["Read", "Write", "Edit", "Glob", "Grep", "TodoWrite", "Skill",
                  "Bash(python:*)", "Bash(python3:*)", "Bash(py:*)", "Bash(ls:*)", "Bash(mkdir:*)",
@@ -28,7 +33,7 @@ DISALLOWED_TOOLS = ["Bash(git:*)", "Bash(rm:*)", "Bash(curl:*)", "Bash(pip:*)", 
 STAGE_RE = re.compile(r"LIGHTYEAR-STAGE:\s*([0-9A-Za-z]+)")
 # looser signals, used only to move the tracker forward by at most two stages:
 BANNER_RE = re.compile(r"\bSTAGE\s+0?([0-7])\b")                        # script banners: "STAGE 05 -- BUILD"
-LEAD_RE = re.compile(r"^\W{0,4}(?:Stage|Step)\s+0?([0-7])\b", re.M)    # a message that opens "Stage 5 ..."
+LEAD_RE = re.compile(r"^\W{0,4}(?:Stage|Step)\s+0?([0-7])\b", re.MULTILINE)    # a message that opens "Stage 5 ..."
 RUNNING = ("phase_a", "phase_b", "building", "revising")
 CACHE_ONLY = ("- DATA MODE: CACHED DATA ONLY. Do not download or fetch anything: no bhavcopy download, no Screener fetch,\n"
               "  no web request of any kind. Use only what is already on disk: cache/ (NSE bhavcopy, Oct 2021 onward),\n"
@@ -121,8 +126,8 @@ def list_runs():
                     st = load(rid)
                     out.append({k: st.get(k) for k in ("id", "slug", "paper_title", "status", "created", "updated",
                                                        "operator", "decision")})
-                except Exception:
-                    pass
+                except Exception as e:                                    # noqa: BLE001
+                    _log.warning("run %s: state.json unreadable, left out of the run list (%r)", rid, e)
     return sorted(out, key=lambda s: s.get("created") or "", reverse=True)
 
 
@@ -133,11 +138,57 @@ def active_run():
     return None
 
 
+def _pid_alive(pid, names=None):
+    """Is this pid running and, when names is given, is its image one of them (claude, node, python)?
+    The name check guards against a recycled pid belonging to something else."""
+    try:
+        pid = int(pid)
+    except (TypeError, ValueError):
+        return False
+    if pid <= 0:
+        return False
+    if sys.platform == "win32":
+        out = subprocess.run(["tasklist", "/FI", f"PID eq {pid}", "/NH", "/FO", "CSV"],
+                             capture_output=True, text=True).stdout
+        rows = [r for r in csv.reader(out.splitlines()) if len(r) > 1 and r[1].strip() == str(pid)]
+        if not rows:
+            return False
+        image = rows[0][0].lower()
+    else:
+        try:
+            os.kill(pid, 0)
+        except OSError:
+            return False
+        try:
+            with open(f"/proc/{pid}/comm", encoding="utf-8") as fh:
+                image = fh.read().strip().lower()
+        except OSError:
+            image = ""
+    return True if names is None else any(image.startswith(n.lower()) for n in names)
+
+
+def _kill(pid):
+    """Kill a process and, on Windows, its whole tree (the headless session spawns bash and python children)."""
+    if sys.platform == "win32":
+        subprocess.run(["taskkill", "/T", "/F", "/PID", str(pid)], capture_output=True)
+    else:
+        import signal
+        try:
+            os.kill(int(pid), signal.SIGKILL)
+        except OSError:
+            pass
+
+
 def recover_interrupted():
-    """On server start: a run left 'running' has no process any more."""
+    """On server start: a run left 'running' has no live driver any more. If the Claude Code child it last
+    started (pid in state.json) outlived the old server, kill it, so two sessions never write into one run."""
     for r in list_runs():
         if r["status"] in RUNNING:
-            update(r["id"], status="interrupted", error="The server stopped while this phase was running. "
+            pid = load(r["id"]).get("pid")
+            if pid and _pid_alive(pid, names=("claude", "node", "python")):
+                _kill(pid)
+                log(r["id"], "server", f"Killed orphaned Claude Code process {pid} left by the previous server.")
+            update(r["id"], status="interrupted", pid=None, error="The server stopped while this phase was running. "
                    "Resume the phase from the page.", resume_from=r["status"])
             log(r["id"], "server", "Marked interrupted: the server restarted mid-phase.")
 
@@ -235,7 +286,8 @@ def stage_estimates():
                 continue
             try:
                 times = load(rid).get("stage_times", {})
-            except Exception:
+            except Exception as e:                                    # noqa: BLE001
+                _log.warning("run %s: state.json unreadable, skipped for the time estimate (%r)", rid, e)
                 continue
             for s, tt in times.items():
                 if s in samples and tt.get("start") and tt.get("end"):
@@ -296,8 +348,13 @@ def run_claude(rid, prompt, label, phase_ids):
         cmd += ["--model", st["model"]]
     env = dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONUTF8="1", LIGHTYEAR_RUN=rid)
     if sys.platform == "win32":
-        # PowerShell is blocked by Group Policy on this machine (uv_spawn EUNKNOWN); force Git Bash instead.
-        env["CLAUDE_CODE_GIT_BASH_PATH"] = r"C:\Users\harshil.pahuja\AppData\Local\Programs\Git\usr\bin\bash.exe"
+        # PowerShell can be blocked by Group Policy (uv_spawn EUNKNOWN); force Git Bash instead. The path is
+        # discovered (env, ~/.claude/settings.json, PATH, install folders), never hard-coded to one machine.
+        bash = git_bash()
+        if bash:
+            env["CLAUDE_CODE_GIT_BASH_PATH"] = bash
+        else:
+            log(rid, "server", "Git Bash not found. If Claude Code fails to start, set CLAUDE_CODE_GIT_BASH_PATH.")
         env["CLAUDE_CODE_USE_POWERSHELL_TOOL"] = "0"
     # Put this interpreter first on PATH: Git Bash does not see the Windows Python install, and calling python.exe by
     # its full path does not match the "Bash(python:*)" allow rule, so every Python call would need an approval.
@@ -310,10 +367,24 @@ def run_claude(rid, prompt, label, phase_ids):
     proc = subprocess.Popen(cmd, cwd=REPO, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                             env=env, text=True, encoding="utf-8", errors="replace", bufsize=1, creationflags=flags)
     _procs[rid] = proc
+    update(rid, pid=proc.pid)                 # so a restarted server can find and kill an orphaned session
     proc.stdin.write(prompt)
     proc.stdin.close()
+    last_line = [time.time()]
+
+    def _watch():
+        """Kill a session that has gone quiet for STALL_MINUTES: a hung tool call would otherwise hold the run
+        (and the one-run-at-a-time lock) for ever. Every stream line resets the clock."""
+        while proc.poll() is None:
+            time.sleep(15)
+            if proc.poll() is None and time.time() - last_line[0] > STALL_MINUTES * 60:
+                log(rid, "error", f"No output from Claude Code for {STALL_MINUTES:.0f} minutes: killing the session.")
+                _kill(proc.pid)
+                return
+    threading.Thread(target=_watch, daemon=True, name=f"watch-{rid}").start()
     result_text, ok = "", False
     for line in proc.stdout:
+        last_line[0] = time.time()
         line = line.strip()
         if not line:
             continue
@@ -357,6 +428,7 @@ def run_claude(rid, prompt, label, phase_ids):
                 minutes=round((ev.get("duration_ms") or 0) / 60000, 1))
     proc.wait()
     _procs.pop(rid, None)
+    update(rid, pid=None)
     if proc.returncode not in (0, None) and not ok:
         log(rid, "error", f"Claude Code exited with code {proc.returncode}.")
     return ok, result_text
@@ -365,10 +437,7 @@ def run_claude(rid, prompt, label, phase_ids):
 def cancel(rid):
     proc = _procs.get(rid)
     if proc and proc.poll() is None:
-        if sys.platform == "win32":
-            subprocess.run(["taskkill", "/T", "/F", "/PID", str(proc.pid)], capture_output=True)
-        else:
-            proc.kill()
+        _kill(proc.pid)
     st = load(rid)
     update(rid, status="cancelled", error="Cancelled from the page.",
            resume_from=st["status"] if st["status"] in RUNNING else st.get("resume_from"))
@@ -478,11 +547,20 @@ def _workbook(rid, res, df, extra, observations, review):
     rd = run_dir(rid)
     xlsx = os.path.join(rd, f"{st['slug']}_results.xlsx")
     title = f"{st.get('paper_title') or st['slug']}: India test"
+    kw = dict(holdings=extra.get("holdings"), trades=extra.get("trades"), comparators=extra.get("comparators"),
+              observations=observations, review=review, selection=extra.get("selection"),
+              selection_rule=res.get("selection_rule") or (st.get("phase_a") or {}).get("one_line") or None)
     try:
-        workbook.build(rd, res, df, title, xlsx, holdings=extra.get("holdings"), trades=extra.get("trades"),
-                       comparators=extra.get("comparators"), observations=observations, review=review,
-                       selection=extra.get("selection"))
-        update(rid, workbook=os.path.basename(xlsx))
+        try:
+            workbook.build(rd, res, df, title, xlsx, **kw)
+        except PermissionError:
+            # Windows locks a workbook that is open in Excel. Writing nothing would leave the page serving the
+            # previous run's workbook beside this run's charts, so write a new file and serve that one instead.
+            xlsx = os.path.join(rd, f"{st['slug']}_results_{dt.datetime.now():%Y%m%d-%H%M%S}.xlsx")
+            log(rid, "error", f"The workbook is open in another program (Excel?) and could not be replaced; "
+                f"writing {os.path.basename(xlsx)} instead. Close the old file and use Rebuild to go back to one name.")
+            workbook.build(rd, res, df, title, xlsx, **kw)
+        update(rid, workbook=os.path.basename(xlsx), workbook_error=None)
         if os.environ.get("LIGHTYEAR_SKIP_RECALC"):
             return {"error": "recalc skipped (LIGHTYEAR_SKIP_RECALC set)"}
         log(rid, "server", "Workbook built; recalculating with LibreOffice.")
@@ -493,8 +571,12 @@ def _workbook(rid, res, df, extra, observations, review):
             f"{recalc.get('total_formulas', '?')} formulas, {recalc.get('total_errors', '?')} errors.")
         return recalc
     except Exception as e:
-        log(rid, "error", f"Workbook step failed: {e}")
-        return {"error": str(e)}
+        # The page hides Download Excel when no workbook was built; say why there, not only in the log.
+        msg = f"{type(e).__name__}: {e}"
+        log(rid, "error", f"Workbook step failed: {msg}")
+        if not load(rid).get("workbook"):
+            update(rid, workbook_error=msg)
+        return {"error": f"workbook step failed: {msg}"}
 
 
 def analyst_review(rid):

@@ -4,15 +4,20 @@ These target the SAFETY properties, not the prose quality. The question each one
 answers is: can a wrong or hostile model output reach something that matters?
 """
 import json
-import os
 
 import pytest
 from pydantic import BaseModel
 
 from ros.agents import schemas as S
 from ros.agents.client import (
-    PROMPT_INJECTION_NOTE, ReplayTransport, SHARED_SYSTEM, UsageLedger,
-    CallRecord, shared_system, _plain)
+    PROMPT_INJECTION_NOTE,
+    SHARED_SYSTEM,
+    CallRecord,
+    ReplayTransport,
+    UsageLedger,
+    _plain,
+    shared_system,
+)
 from ros.agents.orchestrator import AgenticPipeline, reconcile_feasibility
 
 FIX = "ros/agents/fixtures/devanathan_2026.json"
@@ -161,8 +166,9 @@ def test_triage_uses_a_cheaper_model_than_the_analyst():
 def test_no_agent_returns_free_text():
     """Every agent must declare a Pydantic schema. A None schema would mean prose
     reaching a downstream consumer."""
-    from ros.agents import analysts
     import inspect
+
+    from ros.agents import analysts
     agents = [c for _, c in inspect.getmembers(analysts, inspect.isclass)
               if issubclass(c, analysts.Agent) and c is not analysts.Agent]
     assert len(agents) >= 7

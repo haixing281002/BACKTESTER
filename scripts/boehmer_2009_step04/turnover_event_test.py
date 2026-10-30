@@ -1,4 +1,6 @@
-import sys, json
+import json
+import sys
+
 import numpy as np
 import pandas as pd
 
@@ -30,11 +32,11 @@ for idx, r in ev.iterrows():
         continue
     res.append({"f": float(np.exp(r["dlog_sh"])), "shares_turn_ratio": ma / mb, "value_turn_ratio": va / vb, "volume_ratio": vola / volb})
 x = pd.DataFrame(res)
-out = {"n_events": int(len(x)),
+out = {"n_events": len(x),
        "share_events_up": int((x["f"] > 1).sum()), "share_events_down": int((x["f"] < 1).sum())}
 for name, sub in (("up_f_gt1", x[x["f"] > 1]), ("down_f_lt1", x[x["f"] < 1])):
     out[name] = {
-        "n": int(len(sub)),
+        "n": len(sub),
         "median_f": float(sub["f"].median()),
         "median_volume_ratio_after_over_before": float(sub["volume_ratio"].median()),
         "median_shares_turnover_ratio": float(sub["shares_turn_ratio"].median()),

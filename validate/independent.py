@@ -33,7 +33,7 @@ Where the two must agree by construction, the tolerance is set at 1e-10.
 from __future__ import annotations
 
 import math
-from typing import Dict, List, Optional, Sequence, Tuple
+from collections.abc import Sequence
 
 import numpy as np
 import pandas as pd
@@ -100,7 +100,7 @@ def read_workbook(path: str, sheet: int = 0) -> pd.DataFrame:
     def is_str(v) -> bool:
         return isinstance(v, str) and v.strip() != ""
 
-    cols: Dict[str, List[Optional[float]]] = {}
+    cols: dict[str, list[float | None]] = {}
     width = max(len(r) for r in rows[:date_row + 1])
     c = 0
     while c < width:
@@ -161,7 +161,7 @@ def read_workbook_all_sheets(path: str) -> pd.DataFrame:
     n_sheets = len(wb.sheetnames)
     wb.close()
 
-    seen: Dict[str, int] = {}
+    seen: dict[str, int] = {}
     frames = []
     for i in range(n_sheets):
         df = read_workbook(path, sheet=i)
@@ -206,12 +206,10 @@ def max_drawdown(value: pd.Series) -> float:
     peak = -np.inf
     worst = 0.0
     for v in value.to_numpy(dtype=float):
-        if v > peak:
-            peak = v
+        peak = max(peak, v)
         if peak > 0:
             dd = v / peak - 1.0
-            if dd < worst:
-                worst = dd
+            worst = min(worst, dd)
     return -worst
 
 
@@ -226,7 +224,7 @@ def compounded_cash_cagr(rf_daily: Sequence[float], index: pd.DatetimeIndex) -> 
 
 
 def sharpe_geometric(value: pd.Series, returns: Sequence[float],
-                     rf_daily: Optional[Sequence[float]] = None) -> float:
+                     rf_daily: Sequence[float] | None = None) -> float:
     v = ann_vol(returns)
     if not np.isfinite(v) or v == 0:
         return float("nan")
@@ -235,7 +233,7 @@ def sharpe_geometric(value: pd.Series, returns: Sequence[float],
 
 
 def sharpe_conventional(returns: Sequence[float],
-                        rf_daily: Optional[Sequence[float]] = None) -> float:
+                        rf_daily: Sequence[float] | None = None) -> float:
     r = np.asarray(returns, dtype=float)
     keep = np.isfinite(r)
     r = r[keep]
@@ -274,9 +272,9 @@ def trailing_portfolio_vol(returns: pd.DataFrame, weights: np.ndarray,
     return pd.Series(out, index=returns.index)
 
 
-def month_end_dates(index: pd.DatetimeIndex) -> List[pd.Timestamp]:
+def month_end_dates(index: pd.DatetimeIndex) -> list[pd.Timestamp]:
     """Last TRADING day present in each calendar month."""
-    seen: Dict[Tuple[int, int], pd.Timestamp] = {}
+    seen: dict[tuple[int, int], pd.Timestamp] = {}
     for d in index:
         seen[(d.year, d.month)] = d          # later date overwrites earlier
     return sorted(seen.values())
@@ -293,7 +291,7 @@ class UnitsBacktest:
     them can have a renormalisation bug.
     """
 
-    def __init__(self, prices: pd.DataFrame, assets: List[str],
+    def __init__(self, prices: pd.DataFrame, assets: list[str],
                  rf_daily: pd.Series, spread_bps: float, lag_days: int,
                  allow_cash: bool):
         self.assets = list(assets)
@@ -307,7 +305,7 @@ class UnitsBacktest:
         self.n = len(self.assets)
 
     def run(self, target_fn, rebalance_on: Sequence[pd.Timestamp],
-            warmup: int = 0, name: str = "independent") -> Dict[str, object]:
+            warmup: int = 0, name: str = "independent") -> dict[str, object]:
         idx = self.prices.index
         P = self.prices.to_numpy(dtype=float)
         rf = self.rf.to_numpy(dtype=float)

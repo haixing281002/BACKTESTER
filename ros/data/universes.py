@@ -27,7 +27,6 @@ surfaced at Gate A with its risks, and a named human rules.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
 
 # How closely the Indian universe corresponds to the one the paper studied.
 EXACT = "exact"     # same construction, same market
@@ -135,14 +134,14 @@ class UniverseDef:
     name: str
     market: str                       # IN / US / JP / global ...
     description: str
-    approx_breadth: Optional[int] = None
+    approx_breadth: int | None = None
     asset_class: str = "equity"
-    caveats: List[str] = field(default_factory=list)
+    caveats: list[str] = field(default_factory=list)
     cap_segment: str = "all"
-    sector: Optional[str] = None      # None = broad market
+    sector: str | None = None      # None = broad market
     in_mandate: bool = True           # may the fund HOLD it, not merely test on it
     history_from: str = "2005-04-01"
-    required_instruments: List[str] = field(default_factory=list)
+    required_instruments: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -152,10 +151,10 @@ class Translation:
     target: str
     grade: str
     rationale: str
-    transfer_risks: List[str] = field(default_factory=list)
-    required_instruments: List[str] = field(default_factory=list)
+    transfer_risks: list[str] = field(default_factory=list)
+    required_instruments: list[str] = field(default_factory=list)
 
-    def validate(self) -> List[str]:
+    def validate(self) -> list[str]:
         errs = []
         if self.grade not in GRADES:
             errs.append(f"grade '{self.grade}' not in {GRADES}")
@@ -196,7 +195,7 @@ def _u(name, breadth, segment, desc, in_mandate=True, sector=None,
 #
 # This list is meant to grow. Adding a universe is a data-owner decision: one
 # entry here and every future paper can be routed to it.
-INDIAN_UNIVERSES: Dict[str, UniverseDef] = {u.name: u for u in [
+INDIAN_UNIVERSES: dict[str, UniverseDef] = {u.name: u for u in [
     # ---- broad market, by depth ----
     _u("NIFTY 50 constituents", 50, "mega",
        "Headline large-cap index. Fifty names supports very few independent "
@@ -331,7 +330,7 @@ CROSS_SECTION_INSTRUMENTS = [
     "nifty500_free_float_marketcap",    # for weighting and for size sorts
 ]
 
-_TRANSLATIONS: List[Translation] = [
+_TRANSLATIONS: list[Translation] = [
     _t("S&P 500", "NIFTY 100 constituents", CLOSE,
        "Both are the headline large-cap cross-section of their market. NIFTY 100 "
        "matches the S&P 500's concentration and liquidity profile more closely "
@@ -512,7 +511,7 @@ _TRANSLATIONS: List[Translation] = [
 # Spellings that mean the same source universe. Kept explicit rather than
 # fuzzy-matched: a near-miss that silently picks the wrong universe is worse
 # than an honest "unknown" that goes to a human.
-_ALIASES: Dict[str, str] = {
+_ALIASES: dict[str, str] = {
     "sp500": "S&P 500", "s&p500": "S&P 500", "s&p 500": "S&P 500",
     "spx": "S&P 500", "spy": "S&P 500", "standard & poor's 500": "S&P 500",
     "us large cap": "S&P 500", "us large-cap": "S&P 500",
@@ -560,7 +559,7 @@ _ALIASES: Dict[str, str] = {
 }
 
 
-def canonical_source(name: str) -> Optional[str]:
+def canonical_source(name: str) -> str | None:
     """Resolve a paper's wording to a known source universe, or None.
 
     Matching is exact on a normalised string. Deliberately not fuzzy: guessing
@@ -578,27 +577,27 @@ def canonical_source(name: str) -> Optional[str]:
     return None
 
 
-def translations_for(source: str) -> List[Translation]:
+def translations_for(source: str) -> list[Translation]:
     """Every recorded Indian correspondence for a source universe, best first."""
     canon = canonical_source(source) or source
     hits = [t for t in _TRANSLATIONS if t.source == canon]
     return sorted(hits, key=lambda t: GRADES.index(t.grade))
 
 
-def known_sources() -> List[str]:
+def known_sources() -> list[str]:
     return sorted({t.source for t in _TRANSLATIONS})
 
 
-def target_universe(name: str) -> Optional[UniverseDef]:
+def target_universe(name: str) -> UniverseDef | None:
     return INDIAN_UNIVERSES.get(name)
 
 
 EXPOSURE_SECTORS = {"gold_linked", "crude_linked", "rate_sensitive", "usd_revenue"}
 
 
-def caveats_for(target: str, long_only: bool = True) -> List[str]:
+def caveats_for(target: str, long_only: bool = True) -> list[str]:
     """Everything a human should see before approving a translation."""
-    out: List[str] = []
+    out: list[str] = []
     u = INDIAN_UNIVERSES.get(target)
     if u:
         out.extend(u.caveats)
@@ -622,19 +621,19 @@ class TranslationCheck:
     source: str
     recognised_source: bool
     target: str
-    registry_match: Optional[Translation]
-    divergences: List[str] = field(default_factory=list)
-    held: List[str] = field(default_factory=list)
-    missing: List[str] = field(default_factory=list)
+    registry_match: Translation | None
+    divergences: list[str] = field(default_factory=list)
+    held: list[str] = field(default_factory=list)
+    missing: list[str] = field(default_factory=list)
     computed_resolution: str = INFEASIBLE
     claimed_resolution: str = ""
-    caveats: List[str] = field(default_factory=list)
-    notes: List[str] = field(default_factory=list)
+    caveats: list[str] = field(default_factory=list)
+    notes: list[str] = field(default_factory=list)
     target_is_known: bool = False
     recorded_pair: bool = False
-    requirements: Optional["MechanismRequirements"] = None
-    fit: Optional["UniverseFit"] = None
-    ranked: List["UniverseFit"] = field(default_factory=list)
+    requirements: MechanismRequirements | None = None
+    fit: UniverseFit | None = None
+    ranked: list[UniverseFit] = field(default_factory=list)
 
     @property
     def needs_human(self) -> bool:
@@ -838,12 +837,12 @@ class MechanismRequirements:
     # the number the paper's construction implies, not a round guess.
     min_names: int = 100
     cap_segment: str = "all"            # the segment the PAPER studied
-    sector: Optional[str] = None        # set only for a sector-specific paper
+    sector: str | None = None        # set only for a sector-specific paper
     min_history_years: float = 10.0
     must_be_in_mandate: bool = False    # True only if the run must be holdable
     notes: str = ""
 
-    def validate(self) -> List[str]:
+    def validate(self) -> list[str]:
         errs = []
         if self.cap_segment not in SEGMENTS:
             errs.append(f"cap_segment '{self.cap_segment}' not in {SEGMENTS}")
@@ -856,9 +855,9 @@ class MechanismRequirements:
 class UniverseFit:
     universe: UniverseDef
     score: float
-    reasons_for: List[str] = field(default_factory=list)
-    reasons_against: List[str] = field(default_factory=list)
-    disqualifying: List[str] = field(default_factory=list)
+    reasons_for: list[str] = field(default_factory=list)
+    reasons_against: list[str] = field(default_factory=list)
+    disqualifying: list[str] = field(default_factory=list)
 
     @property
     def usable(self) -> bool:
@@ -941,7 +940,7 @@ def score_universe(u: UniverseDef, req: MechanismRequirements) -> UniverseFit:
     if req.sector:
         if u.sector == req.sector:
             fit.score += 25
-            fit.reasons_for.append(f"sector-specific paper, sector-matched universe")
+            fit.reasons_for.append("sector-specific paper, sector-matched universe")
         elif u.sector is None:
             fit.score -= 5
             fit.reasons_against.append(
@@ -983,7 +982,7 @@ def score_universe(u: UniverseDef, req: MechanismRequirements) -> UniverseFit:
 
 
 def propose_universes(req: MechanismRequirements,
-                      include_unusable: bool = False) -> List[UniverseFit]:
+                      include_unusable: bool = False) -> list[UniverseFit]:
     """Rank every Indian universe against a mechanism's needs, best first."""
     errs = req.validate()
     if errs:

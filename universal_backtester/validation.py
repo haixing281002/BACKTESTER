@@ -22,13 +22,14 @@ good out of sample," which is the only question that matters.
 from __future__ import annotations
 
 import math
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any
 
 import numpy as np
 import pandas as pd
 
-from universal_backtester.metrics import cagr, ann_vol, max_drawdown, sharpe
+from universal_backtester.metrics import ann_vol, cagr, max_drawdown, sharpe
 
 ANN = 252
 _EULER_GAMMA = 0.5772156649015329
@@ -79,8 +80,8 @@ class BootstrapResult:
 
 
 def bootstrap_sharpe_ci(returns: pd.Series, block_size: int = 20, n_resamples: int = 2000,
-                        confidence: float = 0.90, rf_daily: Optional[pd.Series] = None,
-                        ann: int = ANN, seed: Optional[int] = None) -> BootstrapResult:
+                        confidence: float = 0.90, rf_daily: pd.Series | None = None,
+                        ann: int = ANN, seed: int | None = None) -> BootstrapResult:
     """Block-bootstrap confidence interval on the annualized Sharpe ratio.
 
     Ordinary (iid) bootstrapping is wrong for return series because returns
@@ -168,7 +169,7 @@ def deflated_sharpe_ratio(observed_sharpe: float, n_obs: int, n_trials: int = 1,
 
 def deflated_sharpe_from_returns(returns: pd.Series, n_trials: int = 1,
                                  trial_sharpe_std: float = 0.0, ann: int = ANN,
-                                 rf_daily: Optional[pd.Series] = None) -> float:
+                                 rf_daily: pd.Series | None = None) -> float:
     """Convenience wrapper: compute the per-period Sharpe, skew, and excess
     kurtosis directly from a daily-return series and feed deflated_sharpe_ratio.
 
@@ -221,7 +222,7 @@ def deflated_sharpe_from_returns(returns: pd.Series, n_trials: int = 1,
 # someone had already seen the answer for."
 # ---------------------------------------------------------------------------
 def walk_forward_windows(index: pd.DatetimeIndex, n_folds: int = 4,
-                         min_train_years: float = 3.0) -> List[Tuple[pd.Timestamp, pd.Timestamp]]:
+                         min_train_years: float = 3.0) -> list[tuple[pd.Timestamp, pd.Timestamp]]:
     """Anchored (expanding-window) out-of-sample test windows.
 
     Anchored, not rolling: a strategy re-fit on a short rolling window is a
@@ -240,8 +241,8 @@ def walk_forward_windows(index: pd.DatetimeIndex, n_folds: int = 4,
 
 
 def oos_stability_summary(value: pd.Series, returns: pd.Series,
-                          windows: Sequence[Tuple[pd.Timestamp, pd.Timestamp]],
-                          rf_daily: Optional[pd.Series] = None,
+                          windows: Sequence[tuple[pd.Timestamp, pd.Timestamp]],
+                          rf_daily: pd.Series | None = None,
                           min_obs: int = 60) -> pd.DataFrame:
     """One row per anchored window: cagr / vol / sharpe / max_dd computed
     ONLY on that slice. A strategy whose Sharpe is positive in the full

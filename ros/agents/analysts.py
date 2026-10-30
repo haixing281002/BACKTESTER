@@ -14,12 +14,17 @@ bootstrap, the deflated Sharpe and both gates remain untouched deterministic cod
 from __future__ import annotations
 
 import json
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from ros.agents import schemas as S
 from ros.agents.client import (
-    MODEL_REASONING, MODEL_TRIAGE, CallRecord, Transport, UsageLedger,
-    pdf_document_block, shared_system)
+    MODEL_REASONING,
+    MODEL_TRIAGE,
+    Transport,
+    UsageLedger,
+    pdf_document_block,
+    shared_system,
+)
 
 
 class Agent:
@@ -51,7 +56,7 @@ def _fenced(label: str, body: str) -> str:
             f"{body}\n</{label}>")
 
 
-def _precedent_block(precedent: Optional[List[Dict[str, Any]]]) -> Optional[Dict[str, Any]]:
+def _precedent_block(precedent: list[dict[str, Any]] | None) -> dict[str, Any] | None:
     """Renders StrategyLibrary.relevant_precedent()'s output as one extra
     message block, or None if there is nothing to show. Framed explicitly
     as context to weigh, not a rule: this is how an agent draws on what the
@@ -86,7 +91,7 @@ class TriageAgent(Agent):
     max_tokens = 2000
 
     def run(self, title: str, abstract: str,
-            precedent: Optional[List[Dict[str, Any]]] = None) -> S.TriageVerdict:
+            precedent: list[dict[str, Any]] | None = None) -> S.TriageVerdict:
         content = [
             {"type": "text", "text": _fenced("paper_abstract", f"Title: {title}\n\n{abstract}")},
             {"type": "text", "text":
@@ -157,9 +162,9 @@ class CardDrafterAgent(Agent):
     effort = "high"
     max_tokens = 32000
 
-    def run(self, analysis: S.PaperAnalysis, *, mode: str, registry_names: List[str],
-            templates: List[str], primitives: List[str], fund_context: str,
-            precedent: Optional[List[Dict[str, Any]]] = None) -> S.CardProposal:
+    def run(self, analysis: S.PaperAnalysis, *, mode: str, registry_names: list[str],
+            templates: list[str], primitives: list[str], fund_context: str,
+            precedent: list[dict[str, Any]] | None = None) -> S.CardProposal:
         content = [
             {"type": "text", "text":
                 "PAPER ANALYSIS (produced by the previous stage):\n"
@@ -208,7 +213,7 @@ class AmbiguityCriticAgent(Agent):
     effort = "high"
 
     def run(self, pdf_path: str, proposal: S.CardProposal,
-            precedent: Optional[List[Dict[str, Any]]] = None) -> S.AmbiguityReport:
+            precedent: list[dict[str, Any]] | None = None) -> S.AmbiguityReport:
         content = [
             pdf_document_block(pdf_path),
             {"type": "text", "text":
@@ -251,8 +256,8 @@ class DataMapperAgent(Agent):
     schema = S.FeasibilityMapping
     effort = "high"
 
-    def run(self, requirements: List[Dict[str, Any]], registry: Dict[str, Any],
-            precedent: Optional[List[Dict[str, Any]]] = None) -> S.FeasibilityMapping:
+    def run(self, requirements: list[dict[str, Any]], registry: dict[str, Any],
+            precedent: list[dict[str, Any]] | None = None) -> S.FeasibilityMapping:
         content = [
             {"type": "text", "text":
                 "WHAT THE PAPER NEEDS:\n" + json.dumps(requirements, indent=2)},
@@ -286,9 +291,9 @@ class TemplateMatcherAgent(Agent):
     schema = S.TemplateMatch
     effort = "high"
 
-    def run(self, analysis: S.PaperAnalysis, templates: List[str],
-            template_docs: str, assets: List[str],
-            precedent: Optional[List[Dict[str, Any]]] = None) -> S.TemplateMatch:
+    def run(self, analysis: S.PaperAnalysis, templates: list[str],
+            template_docs: str, assets: list[str],
+            precedent: list[dict[str, Any]] | None = None) -> S.TemplateMatch:
         content = [
             {"type": "text", "text": "MECHANISM TO IMPLEMENT:\n" + analysis.core_mechanism},
             {"type": "text", "text": "FULL PAPER ANALYSIS:\n" + analysis.model_dump_json(indent=2)},
@@ -322,8 +327,8 @@ class ResultsCriticAgent(Agent):
     schema = S.ResultsCritique
     effort = "high"
 
-    def run(self, diagnostics: Dict[str, Any], card_summary: str,
-            precedent: Optional[List[Dict[str, Any]]] = None) -> S.ResultsCritique:
+    def run(self, diagnostics: dict[str, Any], card_summary: str,
+            precedent: list[dict[str, Any]] | None = None) -> S.ResultsCritique:
         content = [
             {"type": "text", "text": "STRATEGY UNDER TEST:\n" + card_summary},
             {"type": "text", "text":
@@ -360,7 +365,7 @@ class LibrarianAgent(Agent):
     schema = S.LibrarianAnswer
     effort = "medium"
 
-    def run(self, proposed_question: str, library_summaries: List[Dict[str, Any]]) -> S.LibrarianAnswer:
+    def run(self, proposed_question: str, library_summaries: list[dict[str, Any]]) -> S.LibrarianAnswer:
         return self._call(
             system=shared_system(),
             messages=[{"role": "user", "content": [

@@ -5,7 +5,11 @@
     pl = secs["profit-loss"][0]            # first column = row labels, other columns = periods ('Mar 2024', ..., 'TTM')
     sales = row(pl, ["Sales", "Revenue"])  # -> {'Mar 2015': 1234.0, ...}
 """
-import json, os, pickle, re
+import json
+import os
+import pickle
+import re
+
 import numpy as np
 
 

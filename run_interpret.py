@@ -37,18 +37,25 @@ for _s in (sys.stdout, sys.stderr):
     except (AttributeError, ValueError):
         pass
 
-from ros.cards.extract import (classify_document, detect_target_conflicts,
-                               extract_document, parse_text_tables,
-                               propose_replication_targets, summarize)
-from ros.cards.schema import (CardValidationError, load_card,
-                              reconcile_data_plan)
-from ros.data.firm_registry import build_firm_registry
-from ros.data.intake import MANIFEST, describe_shortfall, extend_registry
-from ros.data.universes import INDIAN_UNIVERSES, check_translation
-from ros.feasibility import UNAVAILABLE, assess
 from ros.cards.completeness import assess as card_completeness
-from ros.governance.gates import (extraction_facts, gate_a,
-                                  gate_a_document, gate_a_summary)
+from ros.cards.extract import (
+    classify_document,
+    detect_target_conflicts,
+    extract_document,
+    parse_text_tables,
+    propose_replication_targets,
+)
+from ros.cards.schema import CardValidationError, load_card
+from ros.data.firm_registry import build_firm_registry
+from ros.data.intake import describe_shortfall, extend_registry
+from ros.data.universes import check_translation
+from ros.feasibility import UNAVAILABLE, assess
+from ros.governance.gates import (
+    extraction_facts,
+    gate_a,
+    gate_a_document,
+    gate_a_summary,
+)
 from ros.india_requirements import derive
 from ros.papers import artifact_paths, require_paper
 
@@ -209,8 +216,8 @@ def main() -> int:
     print("    the only stop; see CLAUDE.md's 4th non-negotiable.")
     print()
     print(f"    Queue for the reviewer : {paths['gate_a']}")
-    print(f"    Record the reading     : python -m ros.interpretation record "
-          f"--stage gate_a \\")
+    print("    Record the reading     : python -m ros.interpretation record "
+          "--stage gate_a \\")
     print(f"                                 --output {paths['gate_a']} "
           f"--operator \"<name>\" --input {paper.path}")
 

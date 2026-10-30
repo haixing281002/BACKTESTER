@@ -16,8 +16,16 @@ Needs: requests, pandas, lxml, html5lib   (pip install requests pandas lxml html
 SCREENER DATA IS NOT POINT-IN-TIME. It is restated, latest-value data with no announcement dates, and the
 headline ratios (market cap, price) are as of the day of the fetch. Anything built from it carries that caveat.
 """
-import argparse, io, json, os, pickle, re, sys, time
-import requests, pandas as pd
+import argparse
+import io
+import json
+import os
+import pickle
+import re
+import time
+
+import pandas as pd
+import requests
 
 BASE = "https://www.screener.in"
 HEADERS = {"User-Agent": "Mozilla/5.0"}
@@ -74,7 +82,7 @@ def fetch_symbol(sym, out, session):
     # 1) every financial section is a plain HTML <table> inside <section id="...">
     secs = {}
     for sid in SECTIONS:
-        m = re.search(r'<section id="%s".*?</section>' % sid, html, re.S)
+        m = re.search(r'<section id="%s".*?</section>' % sid, html, re.DOTALL)
         if not m:
             continue
         try:
@@ -88,12 +96,12 @@ def fetch_symbol(sym, out, session):
 
     # 2) headline ratios (top card): <li class="flex flex-space-between"> Name ... value
     top = {}
-    for m in re.finditer(r'<li class="flex flex-space-between"[^>]*>(.*?)</li>', html, re.S):
+    for m in re.finditer(r'<li class="flex flex-space-between"[^>]*>(.*?)</li>', html, re.DOTALL):
         t = " ".join(re.sub(r"<[^>]+>", "", m.group(1)).split())
         for k in HEADLINE:
             if t.startswith(k):
                 top[k] = t[len(k):].strip()
-    name = re.search(r"<h1[^>]*>(.*?)</h1>", html, re.S)
+    name = re.search(r"<h1[^>]*>(.*?)</h1>", html, re.DOTALL)
     meta = dict(symbol=sym, view=used,
                 name=" ".join(re.sub(r"<[^>]+>", "", name.group(1)).split()) if name else sym,
                 mcap_cr=to_float(top.get("Market Cap")), price=to_float(top.get("Current Price")),

@@ -52,7 +52,6 @@ from __future__ import annotations
 import glob
 import os
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -105,8 +104,8 @@ def dedupe_rows(df: pd.DataFrame) -> pd.DataFrame:
 
 @dataclass
 class IsinLinks:
-    isin_to_entity: Dict[str, str] = field(default_factory=dict)
-    links: List[Tuple[str, str, str, int]] = field(default_factory=list)
+    isin_to_entity: dict[str, str] = field(default_factory=dict)
+    links: list[tuple[str, str, str, int]] = field(default_factory=list)
     # each link: (old_isin, new_isin, symbol, gap_days)
 
 
@@ -125,7 +124,7 @@ def link_isins(df: pd.DataFrame) -> IsinLinks:
                     last=("DATE", "max"))
                .reset_index())
 
-    parent: Dict[str, str] = {isin: isin for isin in spans["ISIN"]}
+    parent: dict[str, str] = {isin: isin for isin in spans["ISIN"]}
 
     def find(x: str) -> str:
         while parent[x] != x:
@@ -138,7 +137,7 @@ def link_isins(df: pd.DataFrame) -> IsinLinks:
         if ra != rb:
             parent[rb] = ra
 
-    links: List[Tuple[str, str, str, int]] = []
+    links: list[tuple[str, str, str, int]] = []
     for symbol, g in spans.groupby("symbol"):
         g = g.sort_values("first")
         rows = list(g.itertuples(index=False))
@@ -246,7 +245,7 @@ def point_in_time_universe(df: pd.DataFrame, links: IsinLinks, top_n: int = 1000
 
 def build_master_csv(df: pd.DataFrame, out_path: str, top_n: int = 1000,
                      lookback_sessions: int = 63, min_sessions: int = 40
-                     ) -> Dict[str, object]:
+                     ) -> dict[str, object]:
     """Run the full pipeline (dedupe -> link -> adjust -> membership) and write
     `ros/data/master.py`'s long CSV shape. Returns a small report dict for the
     caller to print (row counts, number of ISIN links, number of CA events).
@@ -339,8 +338,8 @@ def main() -> None:
     print()
     print("Next:")
     print(f"  1. python -m ros.data.master {args.out}")
-    print(f"     (refuses the file if it looks survivor-only or membership is off)")
-    print(f"  2. Paste this into data/raw/MANIFEST.yaml:")
+    print("     (refuses the file if it looks survivor-only or membership is off)")
+    print("  2. Paste this into data/raw/MANIFEST.yaml:")
     print()
     print(manifest_stanza(args.out).replace("{top_n}", str(args.top_n)))
 

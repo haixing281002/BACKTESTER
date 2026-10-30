@@ -1,9 +1,14 @@
-import sys, json
+import json
+import sys
+
 import numpy as np
 import pandas as pd
 
 sys.path.insert(0, ".")
-from universal_backtester.accord_data import load_accord_daily_price_mcap, load_accord_monthly_universe
+from universal_backtester.accord_data import (
+    load_accord_daily_price_mcap,
+    load_accord_monthly_universe,
+)
 
 df, _ = load_accord_daily_price_mcap("data/raw/stocks/prices_marketcap_data_till_03082026.csv")
 df = df.dropna(subset=["close", "mcap"]).sort_values(["accord_code", "date"]).reset_index(drop=True)
@@ -32,7 +37,7 @@ for _, r in ev.iterrows():
                      "monthly_file_mcap_ratio_after_over_before": float(u[after] / u[before]),
                      "daily_file_mcap_ratio_after_over_before": float(dlast.loc[(c, after), "mcap"] / dlast.loc[(c, before), "mcap"])})
 x = pd.DataFrame(rows)
-out = {"n_events_comparable": int(len(x)),
+out = {"n_events_comparable": len(x),
        "median_f": float(x["f"].median()) if len(x) else None,
        "median_monthly_file_ratio": float(x["monthly_file_mcap_ratio_after_over_before"].median()) if len(x) else None,
        "median_daily_file_ratio": float(x["daily_file_mcap_ratio_after_over_before"].median()) if len(x) else None,

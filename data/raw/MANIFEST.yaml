@@ -81,3 +81,16 @@ series:
       - "Only companies with a Screener page today; delisted and merged names are missing (survivorship)."
       - "Consolidated view where Screener shows one, else standalone; banks and NBFCs use a different row layout (no free cash flow for most)."
       - "Rows are Screener's collapsed headline lines (e.g. 'Borrowings', 'Other Assets'); sub-line detail such as current assets is not present."
+  - name: nifty500_membership_history
+    kind: membership
+    frequency: daily
+    file: nifty500/nifty500_membership.csv
+    date_column: start_date
+    pit_status: point_in_time
+    licence: "Rebuilt from NSE Indices public documents (month-end constituent files, IndexInclExcl.xls, press releases); internal research use; not redistributed"
+    coverage_note: "official NIFTY 500 membership 2013-04-18 to 2026-10-21, one row per spell with NSE's effective dates; symbol valid during the spell plus ISIN; demerger placeholders flagged. Load with ros.data.nifty500. Checked against 128 NSE snapshots (125 exact; see data/raw/nifty500/README.md)"
+    caveats:
+      - "Membership only, no index weights."
+      - "After Mar 2022 it rests on NSE press releases, checked at 14 NSE snapshots rather than every month-end."
+      - "Leave out entry_type demerger_placeholder (not tradable) and normally demerger_temporary; ros.data.nifty500 does this by default."
+      - "Ends 2026-10-21: later NSE changes must be appended before a run that goes past that date."

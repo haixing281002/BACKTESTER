@@ -157,6 +157,7 @@ def test_compute_se_return_analytics_rows_matches_reference_workbook_comprehensi
     STDEVP, Gain-to-Pain, VaR/CVaR-sign, and Average-Annual-Max-Drawdown
     bugs an earlier pass shipped."""
     import json
+
     from universal_backtester.excel_tearsheet import compute_se_return_analytics_rows
 
     fixture = os.path.join(os.path.dirname(__file__), "fixtures",
@@ -218,7 +219,7 @@ def test_reference_workbook_against_real_ground_truth():
     Extreme Capture Ratio numbers match the reference workbook's own
     reported values exactly -- not just "some number came out"."""
     import json
-    import numpy as np
+
     fixture = os.path.join(os.path.dirname(__file__), "fixtures",
                            "se_return_analytics_reference.json")
     with open(fixture) as f:

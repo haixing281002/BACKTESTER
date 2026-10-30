@@ -10,13 +10,13 @@ otherwise), so it is inert, not dangerous, if wired up wrong.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
 import pandas as pd
 
-_REGISTRY: Dict[str, type] = {}
+_REGISTRY: dict[str, type] = {}
 
 
 def register(name: str):
@@ -27,13 +27,13 @@ def register(name: str):
     return deco
 
 
-def build_allocator(name: str, assets: List[str], **params) -> "Allocator":
+def build_allocator(name: str, assets: list[str], **params) -> Allocator:
     if name not in _REGISTRY:
         raise KeyError(f"unknown allocator '{name}'. Known: {sorted(_REGISTRY)}")
     return _REGISTRY[name](assets, **params)
 
 
-def list_allocators() -> List[str]:
+def list_allocators() -> list[str]:
     return sorted(_REGISTRY)
 
 
@@ -72,19 +72,19 @@ class AllocatorContext:
     it is used to trade -- see engine.Backtester._shift_causal."""
     date: pd.Timestamp
     current_weights: np.ndarray
-    alpha: Optional[np.ndarray] = None       # ranking / expected-return score
-    eligible: Optional[np.ndarray] = None    # bool: investable, as known on this date
-    vols: Optional[np.ndarray] = None        # per-asset trailing vol (or ATR%, see allocator)
+    alpha: np.ndarray | None = None       # ranking / expected-return score
+    eligible: np.ndarray | None = None    # bool: investable, as known on this date
+    vols: np.ndarray | None = None        # per-asset trailing vol (or ATR%, see allocator)
     buys_allowed: bool = True                # False = a "regime filter" is blocking NEW entries
     rf_period: float = 0.0
-    extras: Optional[Dict[str, Any]] = None
+    extras: dict[str, Any] | None = None
 
 
 class Allocator:
     template_name = "abstract"
     requires: tuple = ()   # AllocatorContext fields that must be non-None to trade
 
-    def __init__(self, assets: List[str], **params):
+    def __init__(self, assets: list[str], **params):
         self.assets = list(assets)
         self.n = len(assets)
         self.params = params
@@ -95,7 +95,7 @@ class Allocator:
     def target_weights(self, ctx: AllocatorContext) -> np.ndarray:
         raise NotImplementedError
 
-    def describe(self) -> Dict[str, Any]:
+    def describe(self) -> dict[str, Any]:
         return {"template": self.template_name, "assets": self.assets, "params": self.params}
 
 
@@ -172,7 +172,7 @@ class CrossSectional(Allocator):
         self.ascending = bool(ascending)
         self.min_names = int(min_names)
         self._skipped = 0
-        self._held: List[int] = []
+        self._held: list[int] = []
 
     def target_weights(self, ctx: AllocatorContext) -> np.ndarray:
         score = np.asarray(ctx.alpha, dtype=float)
@@ -223,7 +223,7 @@ class CrossSectional(Allocator):
             w = _cap_and_redistribute(w, self.max_weight)
         return w
 
-    def diagnostics(self) -> Dict[str, Any]:
+    def diagnostics(self) -> dict[str, Any]:
         return {"rebalances_skipped_thin_universe": self._skipped,
                 "mean_names_held": (float(np.mean(self._held)) if self._held else 0.0)}
 
@@ -295,8 +295,8 @@ class ATRRiskParity(Allocator):
         self.ascending = bool(ascending)
         self.min_names = int(min_names)
         self._skipped = 0
-        self._held: List[int] = []
-        self._cash_shortfall: List[float] = []
+        self._held: list[int] = []
+        self._cash_shortfall: list[float] = []
 
     def target_weights(self, ctx: AllocatorContext) -> np.ndarray:
         score = np.asarray(ctx.alpha, dtype=float)
@@ -338,7 +338,7 @@ class ATRRiskParity(Allocator):
                 w = np.minimum(w, self.max_weight)
         return w
 
-    def diagnostics(self) -> Dict[str, Any]:
+    def diagnostics(self) -> dict[str, Any]:
         return {"rebalances_skipped_thin_universe": self._skipped,
                 "mean_names_held": (float(np.mean(self._held)) if self._held else 0.0),
                 "mean_cash_shortfall_from_sizing": (
@@ -393,7 +393,7 @@ class CrossSectionalLongShort(Allocator):
         self.short_weight = float(short_weight)
         self.min_names = int(min_names)
         self._skipped = 0
-        self._held: List[int] = []
+        self._held: list[int] = []
 
     def target_weights(self, ctx: AllocatorContext) -> np.ndarray:
         score = np.asarray(ctx.alpha, dtype=float)
@@ -434,7 +434,7 @@ class CrossSectionalLongShort(Allocator):
             w[short_idx] = -(self.short_weight * sv / sv.sum()) if sv.sum() > 0 else -self.short_weight / k
         return w
 
-    def diagnostics(self) -> Dict[str, Any]:
+    def diagnostics(self) -> dict[str, Any]:
         return {"rebalances_skipped_thin_universe": self._skipped,
                 "mean_names_held_both_legs": (float(np.mean(self._held)) if self._held else 0.0)}
 
@@ -482,12 +482,12 @@ class TwoWayCellTranches(Allocator):
         self.long_weight = float(long_weight)
         self.short_weight = float(short_weight)
         self.min_cell = int(min_cell)
-        self._tranches: List[np.ndarray] = []
+        self._tranches: list[np.ndarray] = []
         self._formed = 0
         self._skipped = 0
-        self._skip_dates: List[str] = []
-        self._n_long: List[int] = []
-        self._n_short: List[int] = []
+        self._skip_dates: list[str] = []
+        self._n_long: list[int] = []
+        self._n_short: list[int] = []
 
     def target_weights(self, ctx: AllocatorContext) -> np.ndarray:
         a = np.nan_to_num(np.asarray(ctx.alpha, dtype=float), nan=0.0)
@@ -516,7 +516,7 @@ class TwoWayCellTranches(Allocator):
         target[~elig] = 0.0
         return target
 
-    def diagnostics(self) -> Dict[str, Any]:
+    def diagnostics(self) -> dict[str, Any]:
         return {"tranches_formed": self._formed,
                 "months_skipped_thin_cell": self._skipped,
                 "skipped_dates": list(self._skip_dates),

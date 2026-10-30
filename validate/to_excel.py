@@ -14,14 +14,13 @@ engine's NAV, on every trading day. It should be ~1e-15 on all of them.
 from __future__ import annotations
 
 import os
-from typing import List
 
 import pandas as pd
 
 OUT_DEFAULT = "outputs/validation/backtest_audit.xlsx"
 
 
-def write_workbook(prices: pd.DataFrame, assets: List[str], rf: pd.Series,
+def write_workbook(prices: pd.DataFrame, assets: list[str], rf: pd.Series,
                    engine_result, spread_bps: float, warmup: int,
                    rebal_dates, out: str = OUT_DEFAULT) -> str:
     """Build the audit workbook for the equal-weight, fully-invested run.

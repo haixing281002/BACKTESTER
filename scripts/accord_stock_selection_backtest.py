@@ -76,27 +76,36 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import numpy as np
 import pandas as pd
 
 from universal_backtester.accord_data import (
-    load_accord_price_panel, load_accord_monthly_universe, load_accord_fundamentals,
-    load_accord_daily_price_mcap, get_top_n_universe, restrict_to_priced_universe,
-    BACKTEST_START, BACKTEST_END,
+    BACKTEST_END,
+    BACKTEST_START,
+    get_top_n_universe,
+    load_accord_daily_price_mcap,
+    load_accord_fundamentals,
+    load_accord_monthly_universe,
+    load_accord_price_panel,
+    restrict_to_priced_universe,
 )
-from universal_backtester.data import load_banner_workbook, write_holdings_log
-from universal_backtester.engine import Backtester, assert_causal, LookaheadError
 from universal_backtester.allocators import build_allocator
-from universal_backtester.tearsheet import compute_tearsheet, render_tearsheet
-from universal_backtester.excel_tearsheet import (
-    write_se_return_analytics_workbook, write_se_return_analytics_csv,
-)
-from universal_backtester.validation import (
-    bootstrap_sharpe_ci, deflated_sharpe_from_returns, oos_stability_summary,
-    parameter_sensitivity_sweep, sensitivity_verdict, walk_forward_windows,
-)
 from universal_backtester.charting import save_backtest_charts
 from universal_backtester.checkpoint import checkpoint
+from universal_backtester.data import load_banner_workbook, write_holdings_log
+from universal_backtester.engine import Backtester, LookaheadError, assert_causal
+from universal_backtester.excel_tearsheet import (
+    write_se_return_analytics_csv,
+    write_se_return_analytics_workbook,
+)
+from universal_backtester.tearsheet import compute_tearsheet, render_tearsheet
+from universal_backtester.validation import (
+    bootstrap_sharpe_ci,
+    deflated_sharpe_from_returns,
+    oos_stability_summary,
+    parameter_sensitivity_sweep,
+    sensitivity_verdict,
+    walk_forward_windows,
+)
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PRICE_PATH = os.path.join(REPO_ROOT, "data", "raw", "stocks", "price_data_till_03aug2026.xlsx")
@@ -358,10 +367,10 @@ def main():
     else:
         weighting = "equal"
         weighting_frame = None
-        print(f"  NOT FOUND -- this is expected in an environment that doesn't have the 366MB "
-              f"fifth Accord file (it's local-only, gitignored). Degrading to equal weighting, "
-              f"no liquidity floor. Run this same script where that file exists for the real "
-              f"cap-weighted, liquidity-screened output.")
+        print("  NOT FOUND -- this is expected in an environment that doesn't have the 366MB "
+              "fifth Accord file (it's local-only, gitignored). Degrading to equal weighting, "
+              "no liquidity floor. Run this same script where that file exists for the real "
+              "cap-weighted, liquidity-screened output.")
 
     print(f"Building 12-1 momentum signal ({STRATEGY['momentum_lookback_days']}d lookback, "
           f"{STRATEGY['momentum_skip_days']}d skip)...")

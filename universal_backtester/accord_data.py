@@ -66,7 +66,7 @@ fund's guidance, stock selection and backtesting should draw from this
 from __future__ import annotations
 
 import warnings
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import numpy as np
 import openpyxl
@@ -95,7 +95,7 @@ TOP_N_NIFTY500_PROXY = 500   # market_rank cutoff used as the NIFTY 500 proxy; a
                              # happens to carry -- see get_top_n_universe().
 
 
-def load_publishing_dates(path: str) -> Tuple[pd.DataFrame, Dict[str, Any]]:
+def load_publishing_dates(path: str) -> tuple[pd.DataFrame, dict[str, Any]]:
     """Real results-publication dates (`YR_Result Date`), one row per
     (Accord Code, fiscal year end, C/S basis). This is the actual date a
     year's numbers became public -- not a guess like
@@ -141,7 +141,7 @@ def load_publishing_dates(path: str) -> Tuple[pd.DataFrame, Dict[str, Any]]:
 
     prov = {
         "loader": "load_publishing_dates", "path": path, "sha256": file_sha256(path),
-        "n_rows": int(len(df)), "n_securities": int(df["accord_code"].nunique()),
+        "n_rows": len(df), "n_securities": int(df["accord_code"].nunique()),
         "n_footer_rows_dropped": int(n_footer_dropped),
         "n_no_result_date": n_no_result_date,
         "n_negative_lag_dates_suspect": n_negative_lag,
@@ -151,7 +151,7 @@ def load_publishing_dates(path: str) -> Tuple[pd.DataFrame, Dict[str, Any]]:
     return df, prov
 
 
-def load_accord_price_panel(path: str) -> Tuple[pd.DataFrame, Dict[str, Any]]:
+def load_accord_price_panel(path: str) -> tuple[pd.DataFrame, dict[str, Any]]:
     """Daily close price panel, columns = Accord Code (as int)."""
     wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
     ws = wb["Sheet1"] if "Sheet1" in wb.sheetnames else wb[wb.sheetnames[0]]
@@ -177,8 +177,8 @@ def load_accord_price_panel(path: str) -> Tuple[pd.DataFrame, Dict[str, Any]]:
 
 
 def load_accord_daily_price_mcap(
-    path: str, verify_against_price_panel_path: Optional[str] = None,
-) -> Tuple[pd.DataFrame, Dict[str, Any]]:
+    path: str, verify_against_price_panel_path: str | None = None,
+) -> tuple[pd.DataFrame, dict[str, Any]]:
     """Long-format daily OHLC + market cap + volume + traded value, one row
     per (Accord Code, date): [date, accord_code, company_name, open, high,
     low, close, mcap, volume, traded_value].
@@ -246,9 +246,9 @@ def load_accord_daily_price_mcap(
         warnings.warn(f"{path}: {dupes} duplicate (accord_code, date) rows -- "
                       f"last one wins if you pivot, silently, unless you check this yourself.")
 
-    prov: Dict[str, Any] = {
+    prov: dict[str, Any] = {
         "loader": "load_accord_daily_price_mcap", "path": path, "sha256": file_sha256(path),
-        "n_rows": int(len(df)), "n_securities": int(df["accord_code"].nunique()),
+        "n_rows": len(df), "n_securities": int(df["accord_code"].nunique()),
         "date_min": str(df["date"].min().date()), "date_max": str(df["date"].max().date()),
         "n_rows_dropped_no_code_or_date": int(n_dropped),
         "n_rows_unparseable_date": n_unparsed_dates,
@@ -276,8 +276,8 @@ def load_accord_daily_price_mcap(
 
 
 def load_accord_fundamentals(
-    path: str, publishing_dates_path: Optional[str] = None,
-) -> Tuple[pd.DataFrame, Dict[str, Any]]:
+    path: str, publishing_dates_path: str | None = None,
+) -> tuple[pd.DataFrame, dict[str, Any]]:
     """Long-format valuation or profitability ratios: one row per (Accord
     Code, fiscal year end, C/S basis). Adds `known_date`, the date the
     year's numbers actually became public.
@@ -331,7 +331,7 @@ def load_accord_fundamentals(
     dupes = df.duplicated(["accord_code", "fiscal_year_end", "basis"]).sum()
     prov = {
         "loader": "load_accord_fundamentals", "path": path, "sha256": file_sha256(path),
-        "n_rows": int(len(df)), "n_securities": int(df["accord_code"].nunique()),
+        "n_rows": len(df), "n_securities": int(df["accord_code"].nunique()),
         "n_footer_rows_dropped": int(n_dropped),
         "fiscal_year_end_range": [str(df["fiscal_year_end_date"].min().date()),
                                   str(df["fiscal_year_end_date"].max().date())],
@@ -347,7 +347,7 @@ def load_accord_fundamentals(
     return df, prov
 
 
-def load_accord_monthly_universe(path: str) -> Tuple[pd.DataFrame, Dict[str, Any]]:
+def load_accord_monthly_universe(path: str) -> tuple[pd.DataFrame, dict[str, Any]]:
     """Point-in-time monthly universe/market-rank file. Tidy long frame:
     columns [month_end, sheet_name, accord_code, company_name, market_rank,
     mcap, close, nse_symbol]. `close`/`nse_symbol` are NaN/None on the ~36
@@ -366,12 +366,12 @@ def load_accord_monthly_universe(path: str) -> Tuple[pd.DataFrame, Dict[str, Any
     to the source tab.
     """
     wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
-    frames: List[pd.DataFrame] = []
-    empty_sheets: List[str] = []
-    schema_counts: Dict[tuple, int] = {}
-    row_counts: List[Tuple[str, int]] = []
-    bad_date_sheets: List[Dict[str, Any]] = []
-    mislabeled_sheets: List[Dict[str, Any]] = []
+    frames: list[pd.DataFrame] = []
+    empty_sheets: list[str] = []
+    schema_counts: dict[tuple, int] = {}
+    row_counts: list[tuple[str, int]] = []
+    bad_date_sheets: list[dict[str, Any]] = []
+    mislabeled_sheets: list[dict[str, Any]] = []
 
     for sheet_name in wb.sheetnames:
         ws = wb[sheet_name]
@@ -467,7 +467,7 @@ def load_accord_monthly_universe(path: str) -> Tuple[pd.DataFrame, Dict[str, Any
 
 def get_top_n_universe(
     universe_df: pd.DataFrame, n: int = TOP_N_NIFTY500_PROXY,
-) -> Tuple[pd.DataFrame, Dict[str, Any]]:
+) -> tuple[pd.DataFrame, dict[str, Any]]:
     """Filter the monthly universe frame to `market_rank <= n` for every
     month, independent of how many rows that month's sheet happened to
     carry. This is the fix for the file's headline irregularity: the
@@ -498,7 +498,7 @@ def get_top_n_universe(
 
 def restrict_to_priced_universe(
     universe_df: pd.DataFrame, price_codes,
-) -> Tuple[pd.DataFrame, Dict[str, Any]]:
+) -> tuple[pd.DataFrame, dict[str, Any]]:
     """Constrain a (typically top-N) universe frame to the Accord Codes
     that actually have a price series in price_data_till_03aug2026.xlsx --
     the 1314-security panel. A cross-sectional strategy should rank and
@@ -510,14 +510,14 @@ def restrict_to_priced_universe(
     in_panel = df["accord_code"].astype("Int64").isin(price_codes)
     kept, dropped = df[in_panel].copy(), df[~in_panel]
     prov = {
-        "n_rows_in": int(len(df)), "n_rows_kept": int(len(kept)),
-        "n_rows_dropped_no_price_series": int(len(dropped)),
+        "n_rows_in": len(df), "n_rows_kept": len(kept),
+        "n_rows_dropped_no_price_series": len(dropped),
         "n_codes_dropped_no_price_series": int(dropped["accord_code"].nunique()) if len(dropped) else 0,
     }
     return kept, prov
 
 
-def build_accord_ticker_bridge(universe_df: pd.DataFrame) -> Tuple[pd.DataFrame, Dict[str, Any]]:
+def build_accord_ticker_bridge(universe_df: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, Any]]:
     """The Accord Code <-> NSE ticker bridge key, one row per Accord Code,
     built from the monthly universe frame's own nse_symbol/company_name
     columns -- never a separate guessed mapping.
@@ -565,14 +565,14 @@ def build_accord_ticker_bridge(universe_df: pd.DataFrame) -> Tuple[pd.DataFrame,
             "accord_code": int(code), "nse_symbol": latest["nse_symbol"],
             "company_name": latest["company_name"],
             "as_of": latest["month_end"], "n_months_seen": n_seen,
-            "n_months_symbol_known": int(len(known)),
+            "n_months_symbol_known": len(known),
             "symbol_ever_changed": len(distinct_symbols) > 1,
             "prior_symbols": ", ".join(s for s in distinct_symbols if s != latest["nse_symbol"]),
         })
 
     bridge = pd.DataFrame(rows).sort_values("accord_code").reset_index(drop=True)
     prov = {
-        "n_codes_total": int(len(bridge)),
+        "n_codes_total": len(bridge),
         "n_codes_with_known_symbol": int(bridge["nse_symbol"].notna().sum()),
         "n_codes_symbol_unknown": int(bridge["nse_symbol"].isna().sum()),
         "n_codes_symbol_ever_changed": int(bridge["symbol_ever_changed"].sum()),

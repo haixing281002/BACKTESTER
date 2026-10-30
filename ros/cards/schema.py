@@ -11,8 +11,8 @@ small signal function in ros/engine/primitives.py.
 from __future__ import annotations
 
 import hashlib
-from dataclasses import dataclass, field, asdict
-from typing import Any, Dict, List, Optional
+from dataclasses import asdict, dataclass, field
+from typing import Any
 
 import yaml
 
@@ -29,7 +29,7 @@ DATA_KINDS = {
 }
 
 
-def _wrap(text: str, width: int) -> List[str]:
+def _wrap(text: str, width: int) -> list[str]:
     """Soft-wrap for the human-facing blocks. Long prose in a terminal is prose
     nobody reads, and these blocks exist to be read."""
     words, lines, cur = text.split(" "), [], ""
@@ -55,14 +55,14 @@ class DataRequirement:
     name: str
     kind: str
     frequency: str = "daily"
-    start: Optional[str] = None
+    start: str | None = None
     mandatory: bool = True
     purpose: str = ""
-    evidence_page: Optional[int] = None
+    evidence_page: int | None = None
     # Set by the feasibility gate, not by the card author.
-    acceptable_proxies: List[str] = field(default_factory=list)
+    acceptable_proxies: list[str] = field(default_factory=list)
 
-    def validate(self, ctx: str) -> List[str]:
+    def validate(self, ctx: str) -> list[str]:
         errs = []
         if self.kind not in DATA_KINDS:
             errs.append(f"{ctx}: data kind '{self.kind}' not in {sorted(DATA_KINDS)}")
@@ -74,7 +74,7 @@ class DataRequirement:
 HEADLINE_MAX = 100
 
 
-def _check_headline(text: str, ctx: str) -> List[str]:
+def _check_headline(text: str, ctx: str) -> list[str]:
     """A headline longer than one line is not a headline.
 
     Optional everywhere -- a card written before this existed still loads, and
@@ -101,7 +101,7 @@ class Ambiguity:
     issue: str
     resolution: str = ""
     confidence: str = "low"
-    evidence_page: Optional[int] = None
+    evidence_page: int | None = None
     material: bool = True  # does this plausibly move the headline metric?
     # One line a human can rule on without reading the paragraph below it.
     # Written by the model, because compressing an argument is a judgement --
@@ -110,7 +110,7 @@ class Ambiguity:
     # this is a pointer, never a replacement.
     headline: str = ""
 
-    def validate(self, ctx: str) -> List[str]:
+    def validate(self, ctx: str) -> list[str]:
         errs = []
         errs += _check_headline(self.headline, ctx)
         if self.confidence not in CONFIDENCE:
@@ -131,8 +131,8 @@ class ReplicationTarget:
     metric: str
     value: float
     tolerance: float = 0.10       # relative tolerance unless absolute_tolerance set
-    absolute_tolerance: Optional[float] = None
-    evidence_page: Optional[int] = None
+    absolute_tolerance: float | None = None
+    evidence_page: int | None = None
 
 
 GRANULARITIES = {"tick", "minute", "daily", "weekly", "monthly", "quarterly"}
@@ -164,7 +164,7 @@ class DataSpec:
     adjustments: str = ""              # corporate actions, float, publication date
     minimum_viable: bool = False       # in the smallest honest subset?
 
-    def validate(self, ctx: str) -> List[str]:
+    def validate(self, ctx: str) -> list[str]:
         errs = []
         if not self.field.strip():
             errs.append(f"{ctx}: field is required")
@@ -186,13 +186,13 @@ class DataPlan:
     The section a human reads to answer "are we testing this properly, or
     testing what we happen to own?"
     """
-    ideal: List[DataSpec] = field(default_factory=list)
-    rejected_alternatives: List[Dict[str, str]] = field(default_factory=list)
+    ideal: list[DataSpec] = field(default_factory=list)
+    rejected_alternatives: list[dict[str, str]] = field(default_factory=list)
     optimality_argument: str = ""
     granularity_verdict: str = ""      # the headline call, with its reason
     what_would_change_the_answer: str = ""
 
-    def validate(self, ctx: str = "data_plan") -> List[str]:
+    def validate(self, ctx: str = "data_plan") -> list[str]:
         errs = []
         if not self.ideal:
             errs.append(f"{ctx}: ideal is empty -- the card must say what dataset "
@@ -224,12 +224,12 @@ class SecuritySelection:
     completeness check and Gate A both surface rather than a field to leave blank.
     """
     rule: str = ""                     # how the cross-section is selected
-    explicit_securities: List[str] = field(default_factory=list)
+    explicit_securities: list[str] = field(default_factory=list)
     verified_against: str = ""         # see VERIFY_SOURCES
     as_of: str = ""                    # membership is a date-dependent fact
     why_these: str = ""
 
-    def validate(self, ctx: str = "selection") -> List[str]:
+    def validate(self, ctx: str = "selection") -> list[str]:
         errs = []
         if not self.rule.strip():
             errs.append(f"{ctx}: rule is required -- a named list without a rule "
@@ -259,18 +259,18 @@ class BacktestPlan:
     sample_start: str = ""
     sample_end: str = ""
     why_this_window: str = ""
-    warmup_days: Optional[int] = None
+    warmup_days: int | None = None
     why_warmup: str = ""
     rebalance_rule: str = ""
     weights_rule: str = ""
-    explicit_weights: Dict[str, float] = field(default_factory=dict)
-    benchmarks: List[Dict[str, str]] = field(default_factory=list)
-    must_beat: List[str] = field(default_factory=list)
+    explicit_weights: dict[str, float] = field(default_factory=dict)
+    benchmarks: list[dict[str, str]] = field(default_factory=list)
+    must_beat: list[str] = field(default_factory=list)
     success_looks_like: str = ""
     failure_looks_like: str = ""
-    known_failure_modes: List[str] = field(default_factory=list)
+    known_failure_modes: list[str] = field(default_factory=list)
 
-    def validate(self, ctx: str = "backtest_plan") -> List[str]:
+    def validate(self, ctx: str = "backtest_plan") -> list[str]:
         errs = []
         for f_ in ("sample_start", "sample_end", "rebalance_rule", "weights_rule"):
             if not str(getattr(self, f_) or "").strip():
@@ -324,12 +324,12 @@ class DataRequest:
     without_it: str = ""                # the fallback, and what it costs
     priority: str = "high"              # blocking | high | nice_to_have
     format_hint: str = ""               # so a human knows what to send
-    evidence_page: Optional[int] = None
+    evidence_page: int | None = None
     # Which data_plan field(s) this request would supply, named exactly.
     # Declared rather than guessed: the link is what lets the code say a
     # minimum-viable field is NOT in hand, and a fuzzy match would quietly
     # mark the gap closed -- the failure this exists to catch.
-    satisfies: List[str] = field(default_factory=list)
+    satisfies: list[str] = field(default_factory=list)
     # One line a human can rule on without reading the paragraph below it.
     # Written by the model, because compressing an argument is a judgement --
     # mechanical extraction can only TRUNCATE, and a headline cut mid-sentence
@@ -337,7 +337,7 @@ class DataRequest:
     # this is a pointer, never a replacement.
     headline: str = ""
 
-    def validate(self, ctx: str) -> List[str]:
+    def validate(self, ctx: str) -> list[str]:
         errs = _check_headline(self.headline, ctx)
         if not self.item.strip():
             errs.append(f"{ctx}: item is required")
@@ -367,7 +367,7 @@ class OpenQuestion:
     what_i_assumed: str = ""
     ask_of: str = "researcher"          # data_owner | pm | researcher | anyone
     blocks_run: bool = False
-    evidence_page: Optional[int] = None
+    evidence_page: int | None = None
     # One line a human can rule on without reading the paragraph below it.
     # Written by the model, because compressing an argument is a judgement --
     # mechanical extraction can only TRUNCATE, and a headline cut mid-sentence
@@ -375,7 +375,7 @@ class OpenQuestion:
     # this is a pointer, never a replacement.
     headline: str = ""
 
-    def validate(self, ctx: str) -> List[str]:
+    def validate(self, ctx: str) -> list[str]:
         errs = _check_headline(self.headline, ctx)
         if not self.question.strip():
             errs.append(f"{ctx}: question is required")
@@ -421,10 +421,10 @@ class IndiaNote:
     item: str = ""
     why: str = ""
     triggered_by: str = ""              # what in the paper raised it
-    addresses: List[str] = field(default_factory=list)
-    evidence_page: Optional[int] = None
+    addresses: list[str] = field(default_factory=list)
+    evidence_page: int | None = None
 
-    def validate(self, ctx: str) -> List[str]:
+    def validate(self, ctx: str) -> list[str]:
         errs = []
         if self.category not in INDIA_CATEGORIES:
             errs.append(f"{ctx}: category '{self.category}' not in "
@@ -468,13 +468,13 @@ class Convertibility:
     visible instead of averaged away in a paragraph.
     """
     verdict: str = ""
-    what_must_be_true: List[str] = field(default_factory=list)
+    what_must_be_true: list[str] = field(default_factory=list)
     weakest_link: str = ""              # which link you least believe, and why
     decisive_evidence: str = ""         # what would settle it either way
     if_it_fails: str = ""               # what a null result would teach us
     capacity_note: str = ""             # what size this could carry, if it works
     confidence: str = "medium"          # low | medium | high
-    evidence_page: Optional[int] = None
+    evidence_page: int | None = None
     # One line a human can rule on without reading the paragraph below it.
     # Written by the model, because compressing an argument is a judgement --
     # mechanical extraction can only TRUNCATE, and a headline cut mid-sentence
@@ -482,7 +482,7 @@ class Convertibility:
     # this is a pointer, never a replacement.
     headline: str = ""
 
-    def validate(self, ctx: str = "convertibility") -> List[str]:
+    def validate(self, ctx: str = "convertibility") -> list[str]:
         errs = _check_headline(self.headline, ctx)
         if self.verdict not in CONVERTIBILITY_VERDICTS:
             errs.append(f"{ctx}: verdict '{self.verdict}' not in "
@@ -510,7 +510,7 @@ _NON_ANSWERS = {"", "-", "--", "n/a", "na", "none", "nothing", "tbd", "todo",
 _FALLBACK_MIN_CHARS = 25
 
 
-def reconcile_data_plan(card, feasibility=None) -> Dict[str, Any]:
+def reconcile_data_plan(card, feasibility=None) -> dict[str, Any]:
     """Is the card RUNNING on the dataset it designed, or on what was lying around?
 
     These are different questions and the report used to answer only the first.
@@ -556,7 +556,7 @@ def reconcile_data_plan(card, feasibility=None) -> Dict[str, Any]:
             "proxied": proxied, "degraded": degraded}
 
 
-def audit_data_requests(card) -> Dict[str, Any]:
+def audit_data_requests(card) -> dict[str, Any]:
     """Are the card's asks real, and are the fallbacks usable?
 
     Lives here so Gate A and the completeness report cannot drift: one concern,
@@ -622,12 +622,12 @@ class MechanismNeeds:
     needs_cross_section: bool = True
     min_names: int = 100
     cap_segment: str = "all"            # mega|large|large_mid|mid|mid_small|small|micro|all
-    sector: Optional[str] = None        # set only for a sector-specific paper
+    sector: str | None = None        # set only for a sector-specific paper
     min_history_years: float = 10.0
     must_be_in_mandate: bool = False    # True only if the run must be holdable
     notes: str = ""
 
-    def validate(self, ctx: str = "mechanism_needs") -> List[str]:
+    def validate(self, ctx: str = "mechanism_needs") -> list[str]:
         from ros.data.universes import SEGMENTS
         errs = []
         if self.cap_segment not in SEGMENTS:
@@ -652,24 +652,24 @@ class UniverseTranslation:
     them per paper. `transfer_risks` is what a human signs for at Gate A.
     """
     source_universe: str = ""          # as the paper describes it
-    source_breadth: Optional[int] = None
+    source_breadth: int | None = None
     source_selection_rule: str = ""    # how the paper picks from its universe
     target_universe: str = ""          # the Indian analogue
     grade: str = ""                    # exact | close | loose | none
     resolution: str = ""               # direct | sleeve_proxy | needs_data | infeasible
     rationale: str = ""
-    transfer_risks: List[str] = field(default_factory=list)
-    required_instruments: List[str] = field(default_factory=list)
-    evidence_page: Optional[int] = None
+    transfer_risks: list[str] = field(default_factory=list)
+    required_instruments: list[str] = field(default_factory=list)
+    evidence_page: int | None = None
     # What the mechanism needed, and what else was on the table. Recording the
     # runners-up is what stops a universe choice being unfalsifiable later: a
     # reader can see the alternatives were considered rather than assumed away.
-    mechanism_needs: Optional[MechanismNeeds] = None
-    alternatives_considered: List[str] = field(default_factory=list)
+    mechanism_needs: MechanismNeeds | None = None
+    alternatives_considered: list[str] = field(default_factory=list)
     why_not_alternatives: str = ""
 
-    def validate(self, ctx: str = "universe_translation") -> List[str]:
-        from ros.data.universes import GRADES, RESOLUTIONS, NONE
+    def validate(self, ctx: str = "universe_translation") -> list[str]:
+        from ros.data.universes import GRADES, NONE, RESOLUTIONS
         errs = []
         if not self.source_universe:
             errs.append(f"{ctx}: source_universe is required")
@@ -709,7 +709,7 @@ class StrategyReconstruction:
     """
     signal_name: str = ""
     signal_definition: str = ""        # unambiguous, executable prose
-    inputs_required: List[str] = field(default_factory=list)
+    inputs_required: list[str] = field(default_factory=list)
     cross_sectional: bool = False      # ranks securities vs times one series
     formation_rule: str = ""           # how the signal becomes a selection
     weighting_rule: str = ""           # how selection becomes weights
@@ -717,13 +717,13 @@ class StrategyReconstruction:
     rebalance_frequency: str = ""
     is_long_short: bool = False
     long_only_adaptation: str = ""     # required when is_long_short
-    constraints: List[str] = field(default_factory=list)
+    constraints: list[str] = field(default_factory=list)
     engine_template: str = ""          # a registered template, or NEEDS_NEW_TEMPLATE
     template_gap: str = ""             # spec for a human, when no template fits
     confidence: str = "low"
-    evidence_pages: List[int] = field(default_factory=list)
+    evidence_pages: list[int] = field(default_factory=list)
 
-    def validate(self, ctx: str = "strategy") -> List[str]:
+    def validate(self, ctx: str = "strategy") -> list[str]:
         errs = []
         if self.confidence not in CONFIDENCE:
             errs.append(f"{ctx}: confidence '{self.confidence}' not in {sorted(CONFIDENCE)}")
@@ -744,9 +744,9 @@ class Universe:
     description: str = ""
     asset_class: str = "equity"
     geography: str = ""
-    assets: List[str] = field(default_factory=list)
-    benchmark: Optional[str] = None
-    cash_asset: Optional[str] = None
+    assets: list[str] = field(default_factory=list)
+    benchmark: str | None = None
+    cash_asset: str | None = None
 
 
 @dataclass
@@ -755,8 +755,8 @@ class Signal:
     `params` are its arguments. No free-form code lives in the card."""
     name: str = ""
     template: str = ""
-    params: Dict[str, Any] = field(default_factory=dict)
-    lookback_days: Optional[int] = None
+    params: dict[str, Any] = field(default_factory=dict)
+    lookback_days: int | None = None
     lag_days: int = 0
     description: str = ""
 
@@ -767,33 +767,33 @@ class PortfolioSpec:
     long_only: bool = True
     max_gross: float = 1.0
     allow_cash: bool = True
-    target_vol: Optional[float] = None
-    start: Optional[str] = None
-    end: Optional[str] = None
+    target_vol: float | None = None
+    start: str | None = None
+    end: str | None = None
     # The FUND's mandate, which is not the paper's spec. When this differs from
     # `allow_cash`, the pipeline runs both: the faithful variant (does the
     # mechanism work?) and the mandate variant (may we actually run it?).
     # Conflating the two is how an un-runnable strategy reaches an IC deck.
-    mandate_allow_cash: Optional[bool] = None
+    mandate_allow_cash: bool | None = None
 
 
 @dataclass
 class CostSpec:
     spread_bps: float = 5.0        # full bid-ask spread in bps; charged at half
     cost_model: str = "half_spread"
-    impact_bps_per_pct_adv: Optional[float] = None
-    borrow_bps: Optional[float] = None
+    impact_bps_per_pct_adv: float | None = None
+    borrow_bps: float | None = None
 
 
 @dataclass
 class Paper:
     id: str
     title: str = ""
-    authors: List[str] = field(default_factory=list)
-    date: Optional[str] = None
-    source_file: Optional[str] = None
-    source_sha256: Optional[str] = None
-    url: Optional[str] = None
+    authors: list[str] = field(default_factory=list)
+    date: str | None = None
+    source_file: str | None = None
+    source_sha256: str | None = None
+    url: str | None = None
 
 
 @dataclass
@@ -801,10 +801,10 @@ class Intent:
     """The board's first non-negotiable upgrade: replication and India-investability
     validation are different questions and must never share a verdict."""
     mode: str = "replication"
-    parent_card: Optional[str] = None
+    parent_card: str | None = None
     rationale: str = ""
     transferred_mechanism: str = ""   # for adaptations: what actually carries over
-    broken_assumptions: List[str] = field(default_factory=list)
+    broken_assumptions: list[str] = field(default_factory=list)
 
 
 # The groups a reviewer thinks in. Named after the STRATEGY, never after the
@@ -844,7 +844,7 @@ class Fact:
     detail: str = ""
     owner: str = ""                  # "" | pm | researcher | data_owner
     flag: str = ""                   # "" | BLOCK | DECIDE | GUESS
-    page: Optional[int] = None
+    page: int | None = None
     ref: str = ""                    # the card field, for anyone tracing it back
 
     @property
@@ -862,39 +862,39 @@ class StrategyCard:
     costs: CostSpec
     # Stage 01 outputs. Optional so cards written before this existed still
     # load, but Gate A reports their absence rather than passing over it.
-    universe_translation: Optional[UniverseTranslation] = None
-    strategy: Optional[StrategyReconstruction] = None
+    universe_translation: UniverseTranslation | None = None
+    strategy: StrategyReconstruction | None = None
     # Stage 02's job: design the dataset, name the securities, state the plan.
     # If a human has to supply any of these at Gate A, Stage 02 did not finish.
-    data_plan: Optional[DataPlan] = None
-    selection: Optional[SecuritySelection] = None
-    backtest_plan: Optional[BacktestPlan] = None
-    data_requirements: List[DataRequirement] = field(default_factory=list)
-    ambiguities: List[Ambiguity] = field(default_factory=list)
-    replication_targets: List[ReplicationTarget] = field(default_factory=list)
-    benchmark_templates: List[Dict[str, Any]] = field(default_factory=list)
+    data_plan: DataPlan | None = None
+    selection: SecuritySelection | None = None
+    backtest_plan: BacktestPlan | None = None
+    data_requirements: list[DataRequirement] = field(default_factory=list)
+    ambiguities: list[Ambiguity] = field(default_factory=list)
+    replication_targets: list[ReplicationTarget] = field(default_factory=list)
+    benchmark_templates: list[dict[str, Any]] = field(default_factory=list)
     # What the model wants FROM a human, and what it cannot settle alone. These
     # are the card's two outward-facing sections: everything else describes the
     # paper, these describe what is still needed to do it justice.
-    data_requests: List[DataRequest] = field(default_factory=list)
-    open_questions: List[OpenQuestion] = field(default_factory=list)
+    data_requests: list[DataRequest] = field(default_factory=list)
+    open_questions: list[OpenQuestion] = field(default_factory=list)
     # Asking for nothing is a legitimate position and a strong claim. Stating it
     # here turns it into one somebody can disagree with; leaving it blank makes
     # "no further data would help" indistinguishable from nobody having looked.
     no_further_data_needed: str = ""
     # India requirements a MODEL read out of the paper, on top of the ones the
     # rules derive mechanically. Additive and never blocking -- see IndiaNote.
-    india_notes: List[IndiaNote] = field(default_factory=list)
+    india_notes: list[IndiaNote] = field(default_factory=list)
     # The model's opinion on the question the fund is actually paying for.
     # Decides nothing; a `not_convertible` verdict is a finding, not a block.
-    convertibility: Optional[Convertibility] = None
+    convertibility: Convertibility | None = None
     n_configs_tried: int = 1     # feeds the deflated Sharpe ratio; understating it is a lie
     notes: str = ""
     card_version: str = "1.0"
 
     # ---------------- validation ----------------
-    def validate(self) -> List[str]:
-        errs: List[str] = []
+    def validate(self) -> list[str]:
+        errs: list[str] = []
         if self.intent.mode not in MODES:
             errs.append(f"intent.mode '{self.intent.mode}' not in {sorted(MODES)}")
         if self.intent.mode == "adaptation" and not self.intent.transferred_mechanism:
@@ -941,14 +941,14 @@ class StrategyCard:
         return errs
 
     @property
-    def blocking_requests(self) -> List[DataRequest]:
+    def blocking_requests(self) -> list[DataRequest]:
         return [r for r in self.data_requests if r.priority == "blocking"]
 
     @property
-    def blocking_questions(self) -> List[OpenQuestion]:
+    def blocking_questions(self) -> list[OpenQuestion]:
         return [q for q in self.open_questions if q.blocks_run]
 
-    def require_valid(self) -> "StrategyCard":
+    def require_valid(self) -> StrategyCard:
         errs = self.validate()
         if errs:
             raise CardValidationError(
@@ -956,11 +956,11 @@ class StrategyCard:
         return self
 
     @property
-    def unresolved_ambiguities(self) -> List[Ambiguity]:
+    def unresolved_ambiguities(self) -> list[Ambiguity]:
         return [a for a in self.ambiguities if not a.resolution.strip()]
 
     @property
-    def material_ambiguities(self) -> List[Ambiguity]:
+    def material_ambiguities(self) -> list[Ambiguity]:
         return [a for a in self.ambiguities if a.material]
 
     def fingerprint(self) -> str:
@@ -984,13 +984,13 @@ class StrategyCard:
         blob = yaml.safe_dump(econ, sort_keys=True).encode()
         return hashlib.sha256(blob).hexdigest()[:16]
 
-    def facts(self) -> List[Fact]:
+    def facts(self) -> list[Fact]:
         """The whole card as a flat list of displayable lines.
 
         Every surface that shows the card reads this, so they cannot drift and
         none of them needs to know a field name.
         """
-        F: List[Fact] = []
+        F: list[Fact] = []
 
         def add(group, label, value, detail="", owner="", flag="", page=None,
                 ref=""):
@@ -1532,7 +1532,7 @@ class StrategyCard:
                     L.append(f"    {label if i == 0 else '':<12} {line}")
         if bp.explicit_weights:
             tot = sum(bp.explicit_weights.values())
-            L.append(f"    strategic  : " + ", ".join(
+            L.append("    strategic  : " + ", ".join(
                 f"{k} {v:.0%}" for k, v in bp.explicit_weights.items())
                 + f"   (sum {tot:.0%})")
         if bp.benchmarks:
@@ -1573,7 +1573,7 @@ class StrategyCard:
         return "\n".join([self.plan_data(W), "", self.plan_selection(W), "",
                            self.plan_run(W), "", "  " + "=" * W])
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
     def to_yaml(self, path: str) -> None:
