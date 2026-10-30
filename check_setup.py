@@ -81,12 +81,17 @@ def main() -> int:
             "      python -m pip install --upgrade --force-reinstall cffi cryptography\n"
             "      python -m pip install --upgrade --force-reinstall pdfminer.six pdfplumber")
 
-    xlsx = "data/raw/NSE_Broad_Factor_Indices_Historical_Data.xlsx"
-    have_data = os.path.exists(xlsx)
-    print(f"{OK if have_data else BAD}price data"
-          + (f"  {xlsx}  {os.path.getsize(xlsx):,} bytes" if have_data else "  MISSING"))
-    if not have_data:
-        problems.append(f"{xlsx} is missing -- are you in the repo root?")
+    from ros.data import sources
+    have_data = True
+    for src in sources.describe():
+        ok = src["exists"]
+        have_data = have_data and ok
+        print(f"{OK if ok else BAD}{src['key']:<12}"
+              + (f"  {src['path']}  {src['size_mb']:,} MB, modified {src['modified']}" if ok
+                 else f"  MISSING  {src['path']}"))
+        if not ok:
+            problems.append(f"{src['what']} is missing at {src['path']} (override: see ros/data/sources.py)")
+    xlsx = sources.NSE_INDEX_WORKBOOK
 
     pdfs = [f for f in os.listdir("docs") if f.endswith(".pdf")] if os.path.isdir("docs") else []
     papers = [f for f in os.listdir("docs/papers") if f.endswith(".pdf")] if os.path.isdir("docs/papers") else []

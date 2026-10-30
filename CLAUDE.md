@@ -397,30 +397,38 @@ adaptation to India happens by default, the same way it already does for every
 card in this repo. This is what makes the pipeline able to take *any* paper,
 not only ones already about this market.
 
+## Data: three files, nothing else (changed 2026-10-30)
+
+Every price, membership and index number comes from one of three files named
+in `ros/data/sources.py`. There is no downloader in the repository and a run
+never fetches anything. See `docs/DATA_SOURCES.md`.
+
+1. **Stock prices: the Ace Equity daily file** (`ros/data/ace.py`). Every
+   listed Indian company from January 2000: adjusted and unadjusted OHLC,
+   market cap, volume, traded value, PE and P/BV. Keyed by Accord Code in
+   the file; the loader bridges to ISIN through the holdings workbook's
+   security master, and every panel the engines see is dates x ISIN.
+   Parsed once into a Parquet cache under `data/processed/ace/`.
+2. **Index membership: the NIFTY 500 holdings workbook** (`ros/data/nifty500.py`).
+   Quarterly constituent snapshots from 2012-03-31, with the Nifty 50 / Next 50 /
+   100 / Midcap 150 / Smallcap 250 split. A name is a member from the snapshot
+   that first lists it to the first snapshot that does not. Truncated pulls are
+   skipped, unmapped (delisted) names are counted, and `staleness()` says when a
+   run has crossed an NSE review the file has not seen. Post-review lists go in
+   `data/raw/nifty500_updates/YYYY-MM-DD.csv`.
+3. **Index levels: `data/raw/NSE_Broad_Factor_Indices_Historical_Data.xlsx`**
+   (`ros/data/loaders.py`): the NIFTY 500 benchmark and the factor sleeves.
+
+The NSE calendar is the Ace file's own date set (`ace.trading_calendar()`),
+never weekday logic. Returns are price returns: there are no dividends in the
+file, and every report says so. The bhavcopy, Screener and Accord-panel code
+paths that used to live here were removed on 2026-10-30.
+
 ## Individual-stock data changes what Stage 02 has to decide
 
-**The default individual-stock source is now NSE bhavcopy (changed
-2026-10-06), not the Accord Fintech panel.** `ros/data/nse_bhavcopy_ingest.py`
-turns a local `download_history.py` pull (NSE's own public archive) into
-`ros/data/master.py`'s master-universe CSV — ISIN-linked, corporate-action-
-neutralised, point-in-time top-N membership, no look-ahead — declared the
-normal way in `data/raw/MANIFEST.yaml`'s `master:` block. `load_master()`
-reads it into the same wide price/membership/ADV panels any stock-level
-mechanism needs. `ros/data/firm_registry.py`'s `build_firm_registry()` no
-longer registers the Accord capabilities by default for this reason
-(`include_accord=True` brings them back).
-
-`data/raw/stocks/` (the Accord Fintech panel; gitignored — see its own
-README) and its loaders in `universal_backtester/accord_data.py` are **kept,
-not deleted, and not used by the pipeline by default.** They remain available
-by explicit choice — a reconciliation against bhavcopy
-(`scripts/reconcile_accord_vs_nse.py`), or a future decision to use Accord
-again — but a new card's Stage 02/05 work should reach for the bhavcopy
-master file first.
-
-Whichever source backs it, individual-stock data is a different kind of input
-than the index-level workbook the fund has always held, and it changes what
-the Strategy Card has to do at Stage 02:
+Individual-stock data is a different kind of input than the index-level
+workbook the fund has always held, and it changes what the Strategy Card has
+to do at Stage 02:
 
 - **The indexes are now benchmarks and regime references only** — NIFTY 500 and
   the factor sleeves are what a result is measured against and what a regime
@@ -460,9 +468,11 @@ ros/
                        model chooses, the code scores, a human signs. Includes
                        EXPOSURE PROXIES: a gold paper maps to listed gold
                        financiers and jewellers, whose sign may be inverted.
-      intake.py        supplying data at Gate A (manifest-declared, never sniffed)
-      master.py        the master universe: one long CSV in, engine panels out.
-                       Refuses a survivor-only file -- see its README.
+      sources.py       the THREE data files (paths, env overrides, describe())
+      ace.py           Ace Equity prices -> Parquet cache -> dates x ISIN panels
+      nifty500.py      NIFTY 500 (and sub-index) membership from the holdings workbook
+      loaders.py       the NSE index workbook (benchmark and factor sleeves)
+      intake.py        supplying extra series at Gate A (manifest-declared, never sniffed)
   engine/              primitives, allocator templates, backtester
       templates.py     9 allocators; `cross_sectional` ranks a changing universe
       backtest.py      pass `membership=` for a cross-section: NaN prices become
@@ -488,14 +498,12 @@ universal_backtester/  GENERIC engine, separate from ros/ on purpose -- see
                        stays long-only by construction; a card whose strategy
                        needs a short leg is executed here instead of through
                        ros/engine, never blended with it.
-      data.py          load_stock_universe(): individual-stock loader, long/
-                       tidy or wide shape, reads data/raw/stocks/ (gitignored)
+      data.py          load_banner_workbook(): the index workbook, every field
 scripts/
       universal_backtester_momentum_rotation.py  worked example, runs against
                        this fund's own registered index data
-data/raw/stocks/       individual-stock price data, LOCAL ONLY (gitignored,
-                       100MB+ files can't be pushed to GitHub at all). See its
-                       README for the loader and the expected shape.
+data/processed/        derived data only (Parquet caches, security master);
+                       gitignored where large. data/raw/ is never written.
 ```
 
 ## Commands you will actually use
@@ -534,13 +542,12 @@ session Lightyear launched, the prompt states the hand-off contract: write exact
   price file. Names that delisted must be present and held into their fall; the
   engine sells them at cost when they leave. Dropping a 6-in-30 delisting set is
   worth ~5.6% of three-year return.
-- **Check a master universe the day it lands**, before building on it:
-  `python -m ros.data.master <file>`. It refuses a survivor-only file, a missing
-  membership column, duplicate (date, security) rows and unrecognised membership
-  values — each of which yields a normal-looking backtest that is wrong in the
-  direction that flatters the strategy. Key the file on ISIN or an internal ID,
+- **Check the data the day it lands**, before building on it:
+  `python -m ros.data.ace` and `python -m ros.data.nifty500` print what each
+  file covers, what was dropped and what is unmapped. Key everything on ISIN,
   never on the NSE symbol: symbols get reused and a rename splices two companies
-  into one series. See `data/raw/master/README.md`.
+  into one series. `python -m ros.data.sources` lists the three files and their
+  dates; quote it in every data map.
 
 ## Presentation: clean and professional, for every paper
 
@@ -558,12 +565,14 @@ number and assumption documented next to it with its source; percentages stored 
 headless LibreOffice (set `SOFFICE` or unpack it to `~\LibreOffice`), and `scripts/xlsx_recalc_excel.py <file>` uses Excel COM, needs `pip install pywin32`). Colour code and styles live in `universal_backtester/xlsx_style.py`:
 blue = hardcoded, black = formula, green = cross-sheet formula, yellow = key assumption, green/red fills for pass/fail and sign.
 Use defined names so formulas read `=(CAGR-Hurdle)/Vol`. Put a colour key on the Summary sheet.
-`scripts/lee_swaminathan_1998_build_workbook.py` is the worked example; `excel_tearsheet.py` applies `apply_house_style()` on save.
+`lightyear/workbook.py` is the worked example; `excel_tearsheet.py` applies `apply_house_style()` on save.
 
 ## Data
 
-`data/raw/Factor_Indices_Historical_Price_Data.xlsx` — eight NSE daily close
-series, 2003-2026. Registry and caveats: `ros/data/firm_registry.py`.
+Three files, listed in `ros/data/sources.py` and described in
+`docs/DATA_SOURCES.md`: the Ace Equity price file, the NIFTY 500 holdings
+workbook, and `data/raw/NSE_Broad_Factor_Indices_Historical_Data.xlsx` (NSE
+daily index levels, 1996-2026). Registry and caveats: `ros/data/firm_registry.py`.
 There is no Indian risk-free series; the cash rate is a declared constant proxy
 and every cash-holding result is swept 4–8%.
 

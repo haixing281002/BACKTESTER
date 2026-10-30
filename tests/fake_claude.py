@@ -31,7 +31,7 @@ if "stages 00 through Gate A" in prompt or "revise the card" in prompt:
     open(gate_a, "w").write("# Gate A\n\n| fact | value |\n|---|---|\n| universe | NIFTY 500 |\n")
     json.dump({"status": "ok", "reason": "", "paper_title": "A Test Paper", "slug": slug, "card_path": card,
                "gate_a_path": gate_a, "plain_summary": "Buys winners.", "universe": "NIFTY 500",
-               "data_verdict": "bhavcopy covers it", "open_questions": ["is 12-1 right?"], "files": [card]},
+               "data_verdict": "the Ace file covers it", "open_questions": ["is 12-1 right?"], "files": [card]},
               open(os.path.join(run_dir, "phase_a.json"), "w"))
 else:
     for sid in ["03", "04", "05", "06", "07", "GB"]:

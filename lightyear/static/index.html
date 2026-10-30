@@ -197,7 +197,6 @@ details{margin-top:6px} summary{cursor:pointer;color:var(--navy);font-weight:600
         <select id="model"><option value="">Your Claude Code default</option><option value="opus">Opus</option><option value="sonnet">Sonnet</option></select></div>
     </div>
     <label class="row" style="color:var(--ink);font-size:13px;margin-top:14px"><input type="checkbox" id="auto" style="width:auto"> Don't wait at Gate A (show the card, keep going; Gate B is still a stop)</label>
-    <label class="row" style="color:var(--ink);font-size:13px;margin-top:6px"><input type="checkbox" id="cacheonly" checked style="width:auto"> Use cached data only (no downloads: faster, and nothing leaves this machine)</label>
     <div class="row" style="margin-top:16px"><button class="primary" id="go" onclick="startRun()">Start run</button><span class="small muted" id="newmsg"></span></div>
   </div>
 </template>
@@ -220,7 +219,7 @@ const TRIVIA = [
  ["history","Momentum was documented by Jegadeesh and Titman in 1993: US stocks that had risen most over the past 3 to 12 months kept outperforming the biggest fallers for months afterwards."],
  ["history","The National Stock Exchange of India was set up in 1992 and began equity trading in 1994, bringing fully electronic, screen-based trading to Indian markets."],
  ["history","The NIFTY 50 index starts from a base value of 1,000 on 3 November 1995."],
- ["data","Lightyear's prices come from the NSE bhavcopy: the exchange's end-of-day file with the open, high, low, close and volume of every traded security."],
+ ["data","Lightyear reads three files and nothing else: Ace Equity daily prices for every listed company (adjusted for splits and bonuses, with market cap and traded value), the NIFTY 500 holdings workbook (who was in the index each quarter since 2012), and the NSE index workbook for the benchmark. Nothing is downloaded during a run."],
  ["history","India finished moving its stock market to T+1 settlement in January 2023, among the first major markets to do so: trades settle the next working day."],
  ["term","Survivorship bias: testing only on companies that still exist today makes any strategy look better, because the failures have quietly dropped out of the data."],
  ["term","Look-ahead bias: using information in a backtest before it was actually available. Lightyear's backtests shift every signal by at least a day to avoid it."],
@@ -297,7 +296,7 @@ async function startRun(){
   if(!f && !ex){ $("#newmsg").textContent = "Choose a paper. There is no default paper."; return }
   LS.set("ly_operator", op);
   if(f) fd.append("pdf", f); else fd.append("existing", ex);
-  fd.append("operator", op); fd.append("model", $("#model").value); fd.append("auto_continue", $("#auto").checked); fd.append("cache_only", $("#cacheonly").checked);
+  fd.append("operator", op); fd.append("model", $("#model").value); fd.append("auto_continue", $("#auto").checked);
   $("#go").disabled = true; $("#newmsg").textContent = "Starting…";
   try{ const r = await api("/api/runs", {method:"POST", body:fd}); H.active_run = r.id; USER_TAB = false; TAB = "progress"; await openRun(r.id) }
   catch(e){ $("#newmsg").textContent = e.message; $("#go").disabled = false }
@@ -543,7 +542,7 @@ function renderResults(st){
     const key = `<span class="key"><i style="background:#1f4e79"></i>Strategy: ${esc(sn)}${costTag(r)}</span><span class="key"><i style="background:#d98324"></i>Benchmark: ${esc(bn)} (price index)</span>`;
     $('[data-p="results"]').innerHTML = `
       <div class="card" id="pvbcard"><h2>The paper's strategy vs our backtest</h2>
-        <p class="small muted" style="margin-top:0">What the paper's own strategy returned, in its own market and period, next to what we measured running the same mechanism on NSE bhavcopy data. This is the comparison that matters most -- everything else on this page explains it.</p>
+        <p class="small muted" style="margin-top:0">What the paper's own strategy returned, in its own market and period, next to what we measured running the same mechanism on Ace Equity prices. This is the comparison that matters most -- everything else on this page explains it.</p>
         <table class="t" id="pvbtab"></table></div>
       <div class="card"><div class="row" style="justify-content:space-between"><h2 style="margin:0">Strategy vs benchmark</h2>
         <div class="row">${st.workbook?`<a href="/api/runs/${st.id}/workbook"><button class="primary">⬇ Download Excel</button></a>`

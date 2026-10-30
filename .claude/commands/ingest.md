@@ -85,10 +85,10 @@ Adapt to India by default; skip the translation only when the paper's source
 universe already is Indian equities. Both are decided here, at Stage 01, not
 guessed at later.
 
-**If `data/raw/stocks/` has individual-stock data** (check
-`universal_backtester.data.load_stock_universe` — it will tell you plainly if
-nothing is there yet), the index universes below become benchmark/regime
-references, not the thing you rank. A cross-sectional mechanism gets ranked
+**Individual-stock data is held** (the Ace Equity price file through
+`ros.data.ace`, with NIFTY 500 membership through `ros.data.nifty500`; run
+`python -m ros.data.sources` to confirm the files are present), so the index
+universes below are benchmark/regime references, not the thing you rank. A cross-sectional mechanism gets ranked
 against actual stocks, with the same discipline as picking an index: state
 `mechanism_needs`, argue the eligible universe (index membership at each date,
 a liquidity floor, listing history), and justify the selection in the card the

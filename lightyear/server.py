@@ -84,7 +84,7 @@ def runs():
 
 
 @app.post("/api/runs")
-async def new_run(operator: str = Form(...), model: str = Form(""), auto_continue: bool = Form(False), cache_only: bool = Form(True),
+async def new_run(operator: str = Form(...), model: str = Form(""), auto_continue: bool = Form(False),
                   existing: str = Form(""), pdf: UploadFile | None = File(None)):
     _busy_guard()
     if not operator.strip():
@@ -104,7 +104,7 @@ async def new_run(operator: str = Form(...), model: str = Form(""), auto_continu
     else:
         raise HTTPException(400, "Upload a PDF or pick one already in docs/papers. There is no default paper.")
     rid = jobs.create(os.path.relpath(dest, REPO).replace("\\", "/"), slug, operator.strip(),
-                      model.strip(), auto_continue, cache_only)
+                      model.strip(), auto_continue)
     jobs.start(jobs.phase_a, rid)
     return {"id": rid}
 

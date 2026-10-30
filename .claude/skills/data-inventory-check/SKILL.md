@@ -7,76 +7,64 @@ description: "Before drafting or trusting a Strategy Card's data_plan, or before
 
 ## Why this exists
 
-A card in this repo once stated `Monthly_uni_new.xlsx` "is not present on
-this machine" and fell back to an unrestricted, unverified pool of all 1,314
-Accord-priced names instead of the real, verified top-500 point-in-time
-universe. The file was present the whole time. The false claim wasn't
-malicious — it just wasn't checked — but it silently changed which stocks a
-backtest was allowed to select from, and the error was only caught when a
-human noticed the resulting stock count looked wrong. **Never describe what
-data is or isn't available, or what it contains, from memory or assumption.
-Run the check.**
+A card in this repo once stated a universe file "is not present on this
+machine" and fell back to an unrestricted pool of every priced name instead of
+the real, verified point-in-time universe. The file was present the whole
+time. The false claim wasn't malicious — it just wasn't checked — but it
+silently changed which stocks a backtest was allowed to select from, and the
+error was only caught when a human noticed the stock count looked wrong.
+**Never describe what data is or isn't available, or what it contains, from
+memory or assumption. Run the check.**
+
+## The three files, and nothing else
+
+```bash
+python -m ros.data.sources          # the three paths: present or MISSING, size, last modified (IST)
+```
+
+If a path says MISSING, say so in those words with the path. Do not look for
+the data anywhere else; there is nowhere else.
 
 ## The checks to actually run, by question
 
-**"Is file X present, and what's really in it?"**
+**"What does the Ace price file cover?"**
 ```python
-import os
-os.path.exists(path)  # first, always
+from ros.data import ace
+prov = ace.provenance()            # rows, securities, first/last date, trading days, dropped rows, sha256
+print(prov["first_date"], prov["last_date"], prov["securities"], prov["dropped_rows"])
+print(ace.coverage_report().tail())            # per year: trading days, securities, how many carry an ISIN
+print(ace.unmapped_report().head())            # Ace codes with no ISIN (cannot join to membership)
 ```
-Then load it with the real loader (never `pd.read_excel` ad hoc — this
-repo's loaders already handle the quirks: mixed sheet schemas, empty
-trailing sheets, alternating coverage). For the default stock-level source
-(NSE bhavcopy, via `ros/data/nse_bhavcopy_ingest.py` into a
-`ros/data/master.py` master CSV):
-```python
-from ros.data.master import load_master
-mu = load_master(master_csv_path)
-print(mu.diagnosis.render())
-```
-For the Accord dataset (kept, not deleted, but no longer the pipeline's
-default — see CLAUDE.md's "Individual-stock data changes what Stage 02 has
-to decide"):
-```python
-from universal_backtester.accord_data import diagnose_accord_dataset
-print(diagnose_accord_dataset(price_path, universe_path).to_string())
-```
-This surfaces survivorship risk, coverage swings, and schema variants as a
-named table — read it, don't guess.
 
-**"What series/columns does the NSE index workbook actually have?"**
+**"Who was in NIFTY 500 (or a sub-index) on a date, and is the list current?"**
 ```python
+from ros.data import nifty500 as n
+print(n.snapshot_summary().tail())             # per snapshot: names, mapped, unmapped, complete, sleeve counts
+print(len(n.members_on("2024-03-28")))
+print(n.staleness("<run end date>")["message"])  # quote this in the data map when it says stale
+```
+
+**"Is a security priced on the dates the strategy needs?"**
+```python
+close = ace.wide("close", start="2013-01-01")
+isins = n.members_on("2013-04-18")["isin"]
+print(close.loc["2013-04-18", isins].notna().sum(), "of", len(isins), "members have a close")
+```
+
+**"What series does the NSE index workbook actually have?"**
+```python
+from ros.data.sources import NSE_INDEX_WORKBOOK
 from universal_backtester.data import load_banner_workbook
-df, prov = load_banner_workbook(
-    "data/raw/NSE_Broad_Factor_Indices_Historical_Data.xlsx", sheet="Broad Market")
-print(list(df.columns))          # real series names, not a guess from a README
-print(df.index.min(), df.index.max())
+df, prov = load_banner_workbook(NSE_INDEX_WORKBOOK, sheet="Broad Market")
+print(list(df.columns)); print(df.index.min(), df.index.max())
 ```
-Repeat for `sheet="Factor Indices"`. As of this check (2026-09-29): 20 index
-series x 6 fields each (Open/High/Low/Close/PE/PB) = 120 usable columns —
-richer than older repo documentation states. Don't trust a prior summary;
-re-run this and compare.
+Repeat for `sheet="Factor Indices"`.
 
-**"Does this signal need a fundamental, and is its publication date real or assumed?"**
-```python
-from universal_backtester.accord_data import load_accord_fundamentals
-fund, prov = load_accord_fundamentals(valuation_path, publishing_dates_path=pubdates_path)
-print(prov["n_known_date_from_real_date"], "real vs.", prov["n_known_date_from_assumption"], "assumed")
-```
-If `publishing_dates_path` doesn't exist locally, say so explicitly in
-whatever you're writing (card, script docstring, chat reply) — this is a
-real, previously-hit discrepancy (`w_publishing_date_data.xlsx` not being
-present on a given machine despite being documented as held locally), and it
-weakens point-in-time gating from "real result date" to "flat assumed lag."
-Never silently substitute one for the other without saying so.
-
-**"Do we have a ticker/company name for this Accord Code?"**
-```python
-from universal_backtester.accord_data import build_accord_ticker_bridge
-bridge, prov = build_accord_ticker_bridge(monthly_universe_df)
-```
-`n_months_symbol_known == 0` means genuinely unknown, not unresolved — say
-that, don't invent a plausible-looking symbol.
+**"Does this signal need a fundamental?"** The Ace file carries daily PE,
+P/BV, EV/EBITDA and market cap to sales (standalone and consolidated) and
+market cap. It carries no balance-sheet or cash-flow lines and no announcement
+dates. If the card needs those, the honest answer is "missing", recorded as a
+`data_request` with `without_it`, never a stand-in from memory.
 
 ## The rule this enforces
 
