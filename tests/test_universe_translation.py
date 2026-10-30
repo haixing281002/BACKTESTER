@@ -83,15 +83,29 @@ def test_a_sleeve_paper_resolves_against_what_we_hold(registry):
     assert not chk.divergences
 
 
-def test_a_cross_sectional_paper_names_the_data_we_lack(registry):
-    """The case that matters: most equity research needs stock-level data."""
+def test_a_nifty500_cross_section_now_resolves_from_the_three_files(registry):
+    """Since 2026-10-30 the fund holds constituent prices (Ace) and membership (the holdings workbook) for
+    NIFTY 500. Free-float market cap is served by a declared proxy (total market cap) and must be noted."""
     ut = UniverseTranslation(
         source_universe="S&P 500", target_universe="NIFTY 500 constituents",
         grade="loose", resolution="direct", transfer_risks=["x"])
     chk = check_translation(ut, registry)
+    assert chk.computed_resolution == DIRECT
+    assert not chk.missing
+    assert "nifty500_constituent_prices" in chk.held and "nifty500_membership_history" in chk.held
+    assert chk.proxied == ["nifty500_free_float_marketcap"]
+    assert any("declared proxy" in n for n in chk.notes)
+
+
+def test_a_cross_sectional_paper_names_the_data_we_lack(registry):
+    """A universe the three files cannot serve still reports exactly what is missing."""
+    ut = UniverseTranslation(
+        source_universe="S&P 500", target_universe="NIFTY Microcap 250 constituents",
+        grade="loose", resolution="direct", transfer_risks=["x"])
+    chk = check_translation(ut, registry)
     assert chk.computed_resolution == NEEDS_DATA
-    assert "nifty500_constituent_prices" in chk.missing
-    assert "nifty500_membership_history" in chk.missing
+    assert "nifty_microcap_250_constituent_prices" in chk.missing
+    assert "nifty_microcap_250_membership_history" in chk.missing
     assert chk.needs_human
 
 
@@ -99,7 +113,7 @@ def test_an_overclaimed_resolution_is_reported_not_reconciled(registry):
     """The card said `direct`; the fund holds none of it. The registry decides
     and the disagreement reaches a human rather than being silently resolved."""
     ut = UniverseTranslation(
-        source_universe="S&P 500", target_universe="NIFTY 500 constituents",
+        source_universe="S&P 500", target_universe="NIFTY Microcap 250 constituents",
         grade="loose", resolution="direct", transfer_risks=["x"])
     chk = check_translation(ut, registry)
     assert chk.claimed_resolution == DIRECT
@@ -117,7 +131,7 @@ def test_a_model_chosen_target_is_allowed_not_rejected(registry):
     """
     ut = UniverseTranslation(
         source_universe="S&P 500", target_universe="NIFTY Smallcap 250 constituents",
-        grade="close", resolution="needs_data", transfer_risks=["x"])
+        grade="close", resolution="direct", transfer_risks=["x"])
     chk = check_translation(ut, registry)
     assert not chk.divergences, chk.divergences
     assert chk.target_is_known and not chk.recorded_pair
@@ -229,12 +243,22 @@ def test_gate_a_blocks_when_the_engine_cannot_express_the_strategy():
 def test_gate_a_blocks_when_the_fund_cannot_obtain_the_universe(registry):
     card = load_card(CARD)
     card.universe_translation.source_universe = "S&P 500"
-    card.universe_translation.target_universe = "NIFTY 500 constituents"
+    card.universe_translation.target_universe = "NIFTY Microcap 250 constituents"
     chk = check_translation(card.universe_translation, registry)
     gr = gate_a(card, _Feas(), translation_check=chk)
     row = next(c for c in gr.criteria if c.name == "the fund can obtain this universe")
     assert row.blocking and not row.passed
-    assert "nifty500_constituent_prices" in row.evidence
+    assert "nifty_microcap_250_constituent_prices" in row.evidence
+
+
+def test_gate_a_passes_the_universe_row_for_nifty500_constituents(registry):
+    card = load_card(CARD)
+    card.universe_translation.source_universe = "S&P 500"
+    card.universe_translation.target_universe = "NIFTY 500 constituents"
+    chk = check_translation(card.universe_translation, registry)
+    gr = gate_a(card, _Feas(), translation_check=chk)
+    row = next(c for c in gr.criteria if c.name == "the fund can obtain this universe")
+    assert row.passed and "instruments held" in row.evidence
 
 
 def test_the_shipped_cards_clear_gate_a_on_these_criteria(registry):
@@ -436,11 +460,18 @@ def test_the_catalogue_knows_what_data_each_universe_needs(registry):
     and Gate A can print exactly what to supply."""
     ut = UniverseTranslation(
         source_universe="Russell 1000",
-        target_universe="NIFTY Midcap 150 constituents",
+        target_universe="NIFTY Microcap 250 constituents",
         grade="loose", resolution="needs_data", transfer_risks=["x"])
     chk = check_translation(ut, registry)
-    assert "nifty_midcap_150_constituent_prices" in chk.missing
-    assert "nifty_midcap_150_membership_history" in chk.missing
+    assert "nifty_microcap_250_constituent_prices" in chk.missing
+    assert "nifty_microcap_250_membership_history" in chk.missing
+    # and one the three files DO serve resolves through its slugged names
+    ut = UniverseTranslation(
+        source_universe="Russell 1000",
+        target_universe="NIFTY Midcap 150 constituents",
+        grade="loose", resolution="direct", transfer_risks=["x"])
+    chk = check_translation(ut, registry)
+    assert not chk.missing and "nifty_midcap_150_membership_history" in chk.held
 
 
 def test_mechanism_needs_reject_an_unknown_segment():

@@ -238,7 +238,7 @@ def test_run_interpret_never_imports_a_data_loader():
         elif isinstance(node, ast.Import):
             imported |= {a.name for a in node.names}
     banned = {"ros.data.loaders", "ros.data.snapshot", "ros.runner",
-              "ros.engine.backtest"}
+              "ros.engine.backtest", "ros.data.ace", "ros.data.nifty500"}
     assert not (imported & banned), (
         f"run_interpret.py imports {imported & banned}; it must reach Gate A "
         f"without touching market data")

@@ -28,7 +28,7 @@ non-blocking Gate A). Gate B always stops.
 
 ## How it is put together
 
-- `server.py`: FastAPI on 127.0.0.1. One run at a time (Screener allows one session; backtests are heavy).
+- `server.py`: FastAPI on 127.0.0.1. One run at a time (the backtests are heavy).
 - `jobs.py`: the run state machine and the Claude Code driver
   (`claude -p --output-format stream-json`, tools limited: no git, no rm, no web, no pip).
   Claude prints `LIGHTYEAR-STAGE: <id>` as each stage starts; that drives the tracker.

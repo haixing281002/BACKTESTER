@@ -74,10 +74,12 @@ INDIA_EQUITY_CAVEATS = [
     "floor for index sleeves and optimistic for single-stock rotation at "
     "mid-cap depth. A paper's 5bp assumption never transfers.",
 
-    "MEMBERSHIP HISTORY: point-in-time index constituents are not freely "
-    "available. Reconstructing who was in NIFTY 500 on a past date is the "
-    "single hardest data problem in this translation, and getting it wrong "
-    "imports survivorship bias that flatters every result.",
+    "MEMBERSHIP HISTORY: NIFTY 500 constituents come from quarterly snapshots "
+    "(ros/data/nifty500.py), not daily effective dates, and names that delisted "
+    "before the security master was exported are missing from the early years. "
+    "Sub-indices (50/Next 50/100/Midcap 150/Smallcap 250) are flags on the same "
+    "snapshots. Getting membership wrong imports survivorship bias that flatters "
+    "every result; say what the file covers.",
 ]
 
 EXPOSURE_PROXY_CAVEATS = [
@@ -624,6 +626,7 @@ class TranslationCheck:
     registry_match: Translation | None
     divergences: list[str] = field(default_factory=list)
     held: list[str] = field(default_factory=list)
+    proxied: list[str] = field(default_factory=list)      # held through a declared proxy (see notes)
     missing: list[str] = field(default_factory=list)
     computed_resolution: str = INFEASIBLE
     claimed_resolution: str = ""
@@ -779,7 +782,18 @@ def check_translation(translation, registry, long_only: bool = True) -> Translat
     else:
         needed = list(getattr(translation, "required_instruments", []) or [])
     for inst in needed:
-        (chk.held if registry.get(inst) is not None else chk.missing).append(inst)
+        if registry.get(inst) is not None:
+            chk.held.append(inst)
+        elif registry.proxies_for(inst):
+            # Held through a declared proxy (e.g. TOTAL market cap standing in for free float). It
+            # resolves, and the proxy's own caveats travel with the result via the feasibility report.
+            chk.held.append(inst)
+            chk.proxied.append(inst)
+            chk.notes.append(f"'{inst}' is served by a declared proxy: "
+                             f"{', '.join(p.name for p in registry.proxies_for(inst))}. "
+                             f"The proxy's caveats apply to every number built on it.")
+        else:
+            chk.missing.append(inst)
 
     if not tgt:
         chk.computed_resolution = INFEASIBLE

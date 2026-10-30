@@ -182,23 +182,26 @@ def test_chart_metrics_count_every_return_including_the_first():
     assert abs(m["max_dd"] - (-(v / np.maximum.accumulate(v) - 1).min())) < 1e-12
 
 
-def test_cache_only_runs_cannot_download(monkeypatch):
-    import datetime
+def test_the_repo_has_no_downloader():
+    """The three files in ros/data/sources.py are the whole data universe: no module can reach the network."""
+    import glob
+    import re
+    hits = []
+    for f in glob.glob("ros/**/*.py", recursive=True) + glob.glob("lightyear/*.py") + glob.glob("universal_backtester/*.py"):
+        src = open(f, encoding="utf-8").read()
+        if re.search(r"^\s*(import requests|from requests|import urllib\.request|from urllib\.request|import httpx)", src, re.M):
+            hits.append(f)
+    assert hits == [], f"modules that can reach the network: {hits}"
 
-    from ros.data import nse_bhavcopy_download, screener_fetch
-    monkeypatch.setenv("LIGHTYEAR_CACHE_ONLY", "1")
-    with pytest.raises(RuntimeError, match="cached-data-only"):
-        screener_fetch.get("https://www.screener.in/company/TCS/", session=None)
-    with pytest.raises(RuntimeError, match="cached-data-only"):
-        nse_bhavcopy_download.fetch_day(datetime.date(2026, 10, 5), session=None)
 
-
-def test_cache_only_is_the_default_and_reaches_the_prompt(client):
+def test_the_three_sources_reach_the_prompt(client):
     from lightyear import jobs, prompts
     paper = client.get("/api/papers").json()[0]
     rid = client.post("/api/runs", data={"operator": "Tester", "existing": paper}).json()["id"]
-    assert jobs.load(rid)["cache_only"] is True
-    assert "CACHED DATA ONLY" in jobs._fmt(prompts.PHASE_A, rid)
+    text = jobs._fmt(prompts.PHASE_A, rid)
+    assert "ros.data.ace" in text and "ros.data.nifty500" in text and "NSE_Broad_Factor_Indices" in text
+    assert "bhavcopy" not in text.lower() and "screener" not in text.lower()
+    assert "cache_only" not in jobs.load(rid)
 
 
 def test_table_columns_shown_as_percent_by_name_words():

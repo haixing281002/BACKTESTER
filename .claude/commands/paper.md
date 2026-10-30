@@ -61,8 +61,8 @@ yet is never a reason to stop; a card that is actually wrong is.
 4. `/critique-card <card.yaml> $1` — attack your own draft. Fold anything
    material back into the card and re-validate. Iterate here, not at a human.
 5. `/map-data <card.yaml>` — resolve the card's data needs against the
-   registry (NSE bhavcopy via `ros/data/master.py`, cm-market, Screener
-   fundamentals — see "Data sources" below). A genuine shortfall is reported
+   registry (the Ace price file, the NIFTY 500 holdings workbook and the NSE
+   index workbook — see "Data sources" below). A genuine shortfall is reported
    plainly; it is a procurement fact, not a pause.
 6. `/gate-a <card.yaml>` — assemble the card display. Print:
    - `card.plain_summary()` first — what this strategy actually does, in
@@ -96,15 +96,14 @@ asking.
    of earlier autonomy changes that — `decision: PENDING` until a named human
    records one (`run_pipeline.py --decision ... --decided-by ... --rationale ...`).
 
-## Data sources (changed 2026-10-06)
+## Data sources (changed 2026-10-30)
 
-All data for this chain comes from the fund's own feeds, not the Accord
-Fintech panel (kept on disk, opt-in only — see CLAUDE.md): NSE bhavcopy
-(`ros/data/nse_bhavcopy_ingest.py` → `ros/data/master.py`'s master CSV,
-declared in `data/raw/MANIFEST.yaml`), cm-market for point lookups, and
-Screener.in for fundamentals. Use all three where the card's `data_plan` or
-`data_requirements` call for them rather than defaulting to whichever is
-already loaded.
+Exactly three files, named in `ros/data/sources.py` (see `docs/DATA_SOURCES.md`):
+the Ace Equity daily price file (`ros.data.ace`), the NIFTY 500 holdings
+workbook for quarterly index membership (`ros.data.nifty500`), and the NSE
+index workbook for the benchmark and sleeves (`ros.data.loaders`). Nothing is
+downloaded. Key every security by ISIN. If the card needs something these
+files do not hold, record it as missing; never substitute a proxy silently.
 
 ## At the end: list every file this run produced
 

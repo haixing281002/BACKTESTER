@@ -118,7 +118,7 @@ def _cost_basis(results):
 
 MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 TRADE_HEADERS = {"isin": "ISIN", "signal_date": "Signal date (ranking close)", "execution_date": "Execution date",
-                 "price_date": "Price date (bhavcopy used)", "price": "Price used (Rs)", "price_basis": "Price source",
+                 "price_date": "Price date (Ace file)", "price": "Price used (Rs)", "price_basis": "Price source",
                  "shares": "Shares traded", "value_rs": "Trade value (Rs)", "why": "Why"}
 DECISION_FILL = {"BOUGHT": FILL_PASS, "KEPT": PatternFill("solid", fgColor="DDEBF7"), "SOLD": FILL_FAIL,
                  "SKIPPED": PatternFill("solid", fgColor="FFEB9C"), "NOT NEEDED": PatternFill("solid", fgColor="E7E6E6")}
@@ -590,7 +590,7 @@ def build(run_dir, results, df, title, out_path, hurdle=0.06, holdings=None, tra
         put(wt, "A1", "Every trade", F_TITLE)
         has_px = "price_date" in t.columns
         put(wt, "A2", t_note + " Weights are fractions of capital; shorts negative. Change = after minus before (formula)."
-            + (" To check a trade: open the NSE bhavcopy for the 'Price date', find the symbol, and compare its CLOSE with "
+            + (" To check a trade: open the Ace price file at the 'Price date', find the ISIN, and compare its close with "
                "'Price used'. Trades are done at the same close the ranking used (signal date = execution date), except a "
                "sale that could not trade that day, which goes at its next traded close." if has_px else ""), F_NOTE)
         wt.row_dimensions[2].height = 40
@@ -741,8 +741,8 @@ def build(run_dir, results, df, title, out_path, hurdle=0.06, holdings=None, tra
     wn = wb.create_sheet("Notes")
     put(wn, "A1", "Assumptions and caveats", F_TITLE)
     notes = list(results.get("notes", []) or []) + ([sel_note] if sel_note else []) + [
-        "Data: NSE bhavcopy and Screener.in only, plus the NIFTY 500 index for the benchmark. Screener values are "
-        "today's restated figures carried back, not point-in-time.",
+        "Data: Ace Equity daily prices (adjusted; price returns, no dividends), the NIFTY 500 holdings workbook for "
+        "quarterly index membership, and the NSE index workbook for the benchmark. Nothing else.",
         "Gate B is a human decision. Nothing in this workbook assigns one."]
     for i, t in enumerate(notes, start=3):
         put(wn, f"A{i}", t, align=Alignment(wrap_text=True, vertical="top"))

@@ -167,21 +167,6 @@ RUN_TARGETS = {
         "build": lambda card_path: [sys.executable, "run_pipeline.py", "--card", card_path, "--auto-approve"],
         "label": "run_pipeline.py -- deterministic Step 03-08 on a card (ros/engine, index sleeves)",
     },
-    "accord_stock_selection": {
-        "needs_card": False,
-        "build": lambda _: [sys.executable, "scripts/accord_stock_selection_backtest.py", "--auto-approve"],
-        "label": "accord_stock_selection_backtest.py -- Profitable Momentum, individual stocks",
-    },
-    "alquist_small_cap": {
-        "needs_card": False,
-        "build": lambda _: [sys.executable, "scripts/alquist_2018_india_small_cap_backtest.py", "--auto-approve"],
-        "label": "alquist_2018_india_small_cap_backtest.py -- SMALL/BIG decile, individual stocks",
-    },
-    "asness_value_longshort": {
-        "needs_card": False,
-        "build": lambda _: [sys.executable, "scripts/asness_2015_india_value_longshort_backtest.py", "--auto-approve"],
-        "label": "asness_2015_india_value_longshort_backtest.py -- long-short value, individual stocks",
-    },
 }
 
 RUNS: dict[str, dict[str, Any]] = {}  # in-memory registry; lost on server restart

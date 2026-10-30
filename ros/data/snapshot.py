@@ -26,7 +26,8 @@ import pandas as pd
 _ENGINE_FILES = [
     "ros/engine/backtest.py", "ros/engine/templates.py", "ros/engine/primitives.py",
     "ros/validation/metrics.py", "ros/validation/research.py", "ros/validation/portfolio.py",
-    "ros/data/loaders.py", "ros/data/snapshot.py", "ros/feasibility.py",
+    "ros/data/loaders.py", "ros/data/ace.py", "ros/data/nifty500.py", "ros/data/sources.py",
+    "ros/data/snapshot.py", "ros/feasibility.py",
 ]
 
 

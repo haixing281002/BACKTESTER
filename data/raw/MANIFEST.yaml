@@ -1,96 +1,23 @@
 # Data supplied at Gate A.
 #
-# Gate A is the last cheap moment in the pipeline. When a paper's universe
-# translation needs a series the fund does not hold, this is where you hand it
-# over instead of abandoning the paper: drop the file in data/raw/, declare it
-# below, re-run. Step 03 then resolves against the enlarged registry.
+# THE THREE SOURCES ARE NOT DECLARED HERE. They are code: ros/data/sources.py names the Ace Equity price file,
+# the NIFTY 500 holdings workbook and the NSE index workbook, and ros/data/firm_registry.py registers what they
+# hold. Nothing else is read by a run, and nothing is ever downloaded. See docs/DATA_SOURCES.md.
+#
+# This file is for the rare extra series a paper needs that the three files do not carry (a macro series, a
+# risk-free rate, a factor return). Drop the file in data/raw/, declare it below, re-run; Step 03 then resolves
+# against the enlarged registry.
 #
 # WHY THE AWKWARD FIELDS ARE MANDATORY
 #
-# ros/data/firm_registry.py says, correctly, that an over-generous registry
-# turns a fail-fast into three wasted days and a result nobody can defend. A
-# file's existence tells you nothing about whether its history was knowable
-# as-was on past dates. So `pit_status`, `licence` and `caveats` are required,
-# and they travel with every result computed from the series.
-#
-# `pit_status: point_in_time` is the field that decides whether a live claim may
-# rest on this work. Typing it without checking is the single easiest way to
-# mislead everyone downstream, including yourself.
+# A file's existence tells you nothing about whether its history was knowable as-was on past dates. So
+# `pit_status`, `licence` and `caveats` are required, and they travel with every result computed from the series.
+# `pit_status: point_in_time` is the field that decides whether a live claim may rest on this work. Typing it
+# without checking is the single easiest way to mislead everyone downstream, including yourself.
 #
 # Get the stanza for a series you are missing:
 #     python -c "from ros.data.intake import manifest_stanza; print(manifest_stanza('<name>'))"
 #
-# A supplied series may not share a name with one the fund already holds -- that
-# is an error, not an override.
+# A supplied series may not share a name with one the fund already holds -- that is an error, not an override.
 
-master:
-  file: master/bhavcopy_screener_master.csv
-  pit_status: backfilled   # traded value and membership are point in time; shares and market cap are not
-  licence: "NSE bhavcopy public archive and Screener.in public pages; personal research use; not redistributed"
-
-series:
-  - name: NSE_BHAVCOPY_STOCK_PANEL
-    kind: price
-    frequency: daily
-    file: master/bhavcopy_screener_master.csv
-    date_column: date
-    pit_status: backfilled
-    licence: "NSE bhavcopy public archive; personal research use"
-    coverage_note: "raw daily close and traded value for every main-board stock incl. delisted, corporate-action neutralised, top-N by trailing traded value with in_universe flag"
-    caveats:
-      - "Only two sources: NSE bhavcopy and Screener.in. Nothing else enters this panel."
-      - "Shares are today's shares (Screener market cap / price) carried back. Share issuance inside the window is not captured, and Screener is not point-in-time."
-      - "Screener lists only companies that exist today; delisted names have no shares and no turnover (survivorship bias). See coverage_report()."
-      - "Universe is top-1000 by trailing traded value, not by market cap and not an official index."
-      - "Corporate-action neutralisation is a heuristic threshold on daily gross return; a real move outside 0.72 to 1.40 in one day is flattened."
-      - "Prices are raw bhavcopy, price return only, no dividends."
-      - "Free-float fraction is a current promoter-holding snapshot."
-  - name: Screener.in current shares
-    kind: fundamental
-    frequency: annual
-    file: master/screener_shares_snapshot.csv
-    date_column: date
-    pit_status: backfilled
-    licence: "Screener.in public pages; personal research use; not redistributed"
-    coverage_note: "one row per symbol: current market cap / price = shares in crore, promoter holding; a snapshot dated the day of fetch"
-    caveats:
-      - "Restated latest values, not point in time; the date column is the fetch date, not an announcement date."
-      - "Only companies that exist today have a page, so delisted names are missing."
-  - name: Screener.in industry classification
-    kind: fundamental
-    frequency: annual
-    file: master/screener_industry_snapshot.csv
-    date_column: fetch_date
-    pit_status: backfilled
-    licence: "Screener.in public pages; personal research use; not redistributed"
-    coverage_note: "one row per security ever in the top 500 by trailing traded value (2021-10 to 2026-10): Screener's Broad Sector / Sector / Broad Industry / Industry, read from the public company page by scripts/ssrn_962461_fetch_industry.py (no login, one session, >=1.6 s apart)"
-    caveats:
-      - "Today's classification carried back over five years; a company that changed business inside the window is labelled by what it is now."
-      - "Only companies with a Screener page today are labelled; names that delisted or merged and lost their page are in no basket (survivorship)."
-      - "Labels are Screener's (NSE-style four-level industry), not an index provider's sector assignment."
-  - name: Screener.in annual financials (P&L, balance sheet, cash flow)
-    kind: fundamental
-    frequency: annual
-    file: master/screener_annual_financials.csv
-    date_column: fetch_date
-    pit_status: backfilled
-    licence: "Screener.in public pages; personal research use; not redistributed"
-    coverage_note: "long table (fetch_date, symbol, view, statement, field, period, value) flattened from the Screener pages already cached in scr/ (1,555 symbols, fiscal years mostly FY2015-FY2026, plus TTM); built offline by outputs/lightyear/20261007-135736-d92e/scratch/build_screener_annual.py, nothing fetched"
-    caveats:
-      - "Restated latest annual figures, not as first reported; no announcement date. The period column is the fiscal year end, the fetch_date is the day the page was cached."
-      - "Only companies with a Screener page today; delisted and merged names are missing (survivorship)."
-      - "Consolidated view where Screener shows one, else standalone; banks and NBFCs use a different row layout (no free cash flow for most)."
-      - "Rows are Screener's collapsed headline lines (e.g. 'Borrowings', 'Other Assets'); sub-line detail such as current assets is not present."
-  - name: nifty500_membership_history
-    kind: membership
-    frequency: daily
-    file: nifty500/nifty500_membership.csv
-    date_column: start_date
-    pit_status: point_in_time
-    licence: "Rebuilt from NSE Indices public documents (month-end constituent files, IndexInclExcl.xls, press releases); internal research use; not redistributed"
-    coverage_note: "official NIFTY 500 membership 2013-04-18 to 2026-10-21, one row per spell with NSE's effective dates; symbol valid during the spell plus ISIN; demerger placeholders flagged. Load with ros.data.nifty500. Checked against 128 NSE snapshots (125 exact; see data/raw/nifty500/README.md)"
-    caveats:
-      - "Membership only, no index weights."
-      - "After Mar 2022 it rests on NSE press releases, checked at 14 NSE snapshots rather than every month-end."
-      - "Leave out entry_type demerger_placeholder (not tradable) and normally demerger_temporary; ros.data.nifty500 does this by default."
-      - "Ends 2026-10-21: later NSE changes must be appended before a run that goes past that date."
+series: []

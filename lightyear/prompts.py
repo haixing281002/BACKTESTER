@@ -16,15 +16,21 @@ record it, and carry on.
 
 Hard rules (from CLAUDE.md, restated):
 - Read CLAUDE.md first and follow it. The operator is {operator}.
-- Data: NSE bhavcopy and Screener.in only (cached locally in cache/, scr/, data/raw/master/, declared in
-  data/raw/MANIFEST.yaml), five years, plus the NIFTY 500 index workbook as the benchmark and a flat 6% hurdle.
-  Do not fetch from any other source. Screener rules: public pages only, never log in, >=1.5 s between
-  requests, one session, nothing in parallel.
-- NIFTY 500 universe: when a card's universe is NIFTY 500 (or a subset of it), membership on each date comes
-  ONLY from the official file data/raw/nifty500/nifty500_membership.csv, loaded with ros.data.nifty500
-  (members_on(d), membership_panel(dates, columns=isins)). Join it to bhavcopy on ISIN. Do not rebuild a
-  NIFTY 500 list, and do not use the master panel's in_universe column (top-N by traded value) or any
-  market-cap proxy in its place. Its README says what it covers; a run past its last date must say so.
+- Data: exactly THREE files, read through ros/data/sources.py, and nothing else. Never download or fetch
+  anything; there is no downloader in this repository.
+    1. Stock prices: Ace Equity daily file (ros.data.ace). Adjusted and unadjusted OHLC, market cap, volume,
+       traded value, PE and P/BV for every listed company, Jan 2000 onward. ace.wide("close") gives a
+       dates x ISIN panel; ace.panel([...]) several fields; ace.security_master() the Accord Code / ISIN /
+       NSE symbol bridge; ace.trading_calendar() the NSE calendar (the file's own dates, never weekdays).
+    2. Index membership: the NIFTY 500 holdings workbook (ros.data.nifty500). members_on(d) and
+       membership_panel(dates, columns=isins) for NIFTY 500 and, with index=..., for NIFTY 50 / NEXT 50 / 100 /
+       MIDCAP 150 / SMALLCAP 250. Quarterly snapshots; call staleness(end_date) and report its message when the
+       run extends past the last snapshot. Never rebuild an index list from market cap or anything else.
+    3. Index levels: data/raw/NSE_Broad_Factor_Indices_Historical_Data.xlsx (ros.data.loaders) for the NIFTY 500
+       benchmark and the factor sleeves; plus a flat 6% hurdle.
+  Key every security by ISIN. Join prices to membership on ISIN. Returns are price returns (no dividends): say so.
+  If the card needs data that is not in these three files, do not substitute: mark it 'missing' in the data map
+  and the Gate A gaps, and stop with status 'stopped' and the reason if the test cannot be run honestly.
 {data_mode}
 - Never run git commit, git push or any git command that changes the repository.
 - Never record a Gate B decision. A named human does that on the Lightyear page.
@@ -43,8 +49,6 @@ Skills: use the installed skills for the jobs they cover (invoke them with the S
 improvising:
 - pdf (anthropic-skills:pdf): read and extract the paper (text, tables, figures) in stages 00-01.
 - data-inventory-check (repo): before writing any data_plan or claiming a file/series is or isn't present.
-- nse-stock-analysis / nse-market-toolkit (user): any bhavcopy/Screener work: point-in-time universes,
-  corporate-action (bonus/split) adjustment, sector/industry labels, fundamentals, index-wide checks.
 - new-paper-backtest (repo): scaffolding an individual-stock or multi-sleeve backtest script.
 - xlsx (anthropic-skills:xlsx): the rules for any Excel file you write (Lightyear builds the results workbook).
 - pipeline-stage-checkpoint (repo): after each stage, to confirm you continue rather than pause.
@@ -99,13 +103,13 @@ operator reads to approve. Every list item is one or two short sentences.
              // no quantitative result at all.
   "sleeves": [ {{"name": "<sleeve/basket name>", "holds": "<what is in it, with example NSE names and a count>",
                  "stands_in_for": "<what it replaces from the paper, or 'same as paper'>",
-                 "how_built": "<how it is built from bhavcopy/Screener, one sentence>"}} ],
+                 "how_built": "<how it is built from the Ace prices and the NIFTY 500 holdings, one sentence>"}} ],
              // a 'sleeve' = one separately managed slice of the portfolio. Empty list if the strategy has none.
              // If the paper itself tests more than one variant/strategy (e.g. several sort signals, several
              // holding periods), each one is a sleeve here or an "approve" item below -- never left unexplained.
   "universe": "<which Indian stocks, how many, chosen how, point in time or not; two sentences max>",
-  "data": [ {{"need": "<data item>", "source": "bhavcopy|screener|nifty500 workbook|flat 6%|none",
-              "status": "held|fetch needed|proxy|missing", "note": "<one short sentence>"}} ],
+  "data": [ {{"need": "<data item>", "source": "ace prices|nifty500 holdings|index workbook|flat 6%|none",
+              "status": "held|proxy|missing", "note": "<one short sentence>"}} ],
   "approve": [ {{"item": "<a specific choice the operator is signing off>", "our_choice": "<what the card does>",
                  "why": "<one sentence>", "alternative": "<the other reasonable option>"}} ],
              // 3-7 items: only the real judgement calls (proxies, universe, sizing, costs, period, what counts as success)
@@ -155,8 +159,9 @@ Then write these hand-off files into {run_dir}/ (the server builds the workbook 
 1c. trades.csv -- optional: date,symbol,action,weight_before,weight_after[,price,...] with action one of
    BUY|SELL|SHORT|COVER|ADD|TRIM|FLIP. If you do not write it, Lightyear derives it from holdings.csv.
 1c2. trades.csv for a stock-level strategy should also carry, so a human can check every fill against the
-   bhavcopy: isin, signal_date (the close the ranking used), execution_date, price_date (the bhavcopy date whose
-   price was used), price, price_basis (e.g. "NSE bhavcopy CLOSE, raw"), shares, value_rs, why (one sentence).
+   Ace file: isin, signal_date (the close the ranking used), execution_date, price_date (the Ace date whose
+   price was used), price, price_basis (e.g. "Ace adjusted close" or "Ace unadjusted close"), shares, value_rs,
+   why (one sentence).
 1c3. selection.csv -- recommended for any ranked selection: one row per name considered at each rebalance with
    signal_date, symbol, decision (BOUGHT|KEPT|SOLD|SKIPPED|NOT NEEDED), why (one plain sentence with the numbers),
    and the values that decided it (rank, pick_no, score and its parts, filter values, close_raw, weights,
@@ -183,7 +188,7 @@ Then write these hand-off files into {run_dir}/ (the server builds the workbook 
                            "why_different": "<one sentence: market, period, costs, universe -- the real reason
                                                they differ, or 'in line' if they agree>"}} ],
              // THE MOST IMPORTANT TABLE IN THE BRIEF: what the paper's own strategy returned (in its own market)
-             // side by side with what we measured running the same mechanism on NSE bhavcopy data. 2-5 rows,
+             // side by side with what we measured running the same mechanism on Ace Equity prices. 2-5 rows,
              // one per metric that both sides report (return, Sharpe, drawdown -- whichever the paper gives).
              // Never leave this empty if phase_a.json had any paper_reported entries.
   "gate_b": <gate_b(...).to_dict(), unchanged; its decision must be PENDING>,
