@@ -63,8 +63,8 @@ def fact_lines(daily: pd.DataFrame, reb: pd.DataFrame, r: pd.DataFrame, names: p
     bad = check_names_ever(r, names)
     return [f"Rebalance columns: {len(by_reb)}, {by_reb.index.min().date()} to {by_reb.index.max().date()}",
             f"Rebalance columns whose member set differs from the CSV on that date: {len(mismatch)}",
-            f"Dates the daily member set changes: {len(changed)}; of those NOT a rebalance column: {len(outside)}"
-            f" {[str(d.date()) for d in outside[:10]]}",
+            (f"Dates the daily member set changes: {len(changed)}; of those NOT a rebalance column: {len(outside)}"
+            f" {[str(d.date()) for d in outside[:10]]}"),
             f"2017 names min/max: {n['2017'].min()}/{n['2017'].max()}; 2018: {n['2018'].min()}/{n['2018'].max()}",
             f"Barrids: {r['barrid'].nunique()}; with a ticker change: {(r.groupby('barrid').size() > 1).sum()}",
             f"Names-ever history disagreeing with the CSV's run order: {len(bad)}"] + [f"  {b}" for b in bad[:20]]
@@ -198,11 +198,11 @@ def main() -> int:
     lines += [f"Bridge rows: {len(b)}; barrids {b['barrid'].nunique()}",
               f"By confidence: {b['confidence'].value_counts().to_dict()}",
               f"By method: {b['match_method'].value_counts().to_dict()}",
-              f"Unmatched rows: {len(un)}; barrids with no ISIN at all: "
-              f"{b.groupby('barrid')['ISIN'].apply(lambda s: (s == '').all()).sum()}",
+              (f"Unmatched rows: {len(un)}; barrids with no ISIN at all: "
+              f"{b.groupby('barrid')['ISIN'].apply(lambda s: (s == '').all()).sum()}"),
               f"Rows with a dated source conflict: {(b['conflict'] != '').sum()}; low confidence: {(b['confidence'] == 'low').sum()}",
-              f"Mapped to an ISIN but no Ace price in the run's dates: {len(unpriced)} rows, {unpriced['barrid'].nunique()} barrids "
-              f"(see reports/bridge_mapped_but_unpriced.csv)",
+              (f"Mapped to an ISIN but no Ace price in the run's dates: {len(unpriced)} rows, {unpriced['barrid'].nunique()} barrids "
+              f"(see reports/bridge_mapped_but_unpriced.csv)"),
               f"ISINs reached by more than one barrid: {(dup > 1).sum()}"]
     with open(os.path.join(C.REPORTS, "bridge_summary.txt"), "w", encoding="utf-8") as fh:
         fh.write("\n".join(lines) + "\n")

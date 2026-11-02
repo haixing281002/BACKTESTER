@@ -129,7 +129,7 @@ def main() -> int:
         nse_now = nse.on(d)
         reasons: dict[str, int] = {}
 
-        def note(side: str, st: str, isin: str, tick: str, why: str) -> None:
+        def note(side: str, st: str, isin: str, tick: str, why: str, reasons=reasons, d=d) -> None:
             reasons[why] = reasons.get(why, 0) + 1
             detail.append({"date": d.date(), "side": side, "ISIN": isin, "ticker": tick, "reason": why})
 
