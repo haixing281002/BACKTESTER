@@ -25,7 +25,7 @@ _FIXTURE = os.path.join(os.path.dirname(__file__), "fixtures", "se_return_analyt
 
 @pytest.fixture(scope="module")
 def real_series():
-    with open(_FIXTURE) as f:
+    with open(_FIXTURE, encoding="utf-8") as f:
         d = json.load(f)
     idx = pd.to_datetime(d["dates"])
     strat = pd.Series(d["strat"], index=idx)

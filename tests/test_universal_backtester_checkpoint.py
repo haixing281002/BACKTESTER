@@ -2,6 +2,7 @@
 scripts/*.py execution scripts (the same pattern run_pipeline.py uses for
 Gate A/Steps 03-07/Gate B, extracted so every local script can pause and
 show its outputs-so-far too)."""
+import os
 from unittest.mock import patch
 
 from universal_backtester.checkpoint import checkpoint
@@ -40,7 +41,5 @@ def test_produced_paths_are_printed_as_absolute_paths(capsys):
     with patch("sys.stdin.isatty", return_value=True), patch("builtins.input", return_value="approve"):
         checkpoint("STEP 1", ["relative/path.csv"])
     out = capsys.readouterr().out
-    assert "relative/path.csv" in out
-    # printed path must actually be absolute, not the relative one verbatim
-    import os
+    # printed absolute, as the name says; the relative spelling is not in the output on Windows (backslashes)
     assert os.path.abspath("relative/path.csv") in out

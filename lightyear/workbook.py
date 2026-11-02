@@ -1,3 +1,4 @@
+# Quant AI Researcher by Harshil Pahuja
 """The results workbook for any Lightyear run, built to the xlsx skill's rules from the run's hand-off files.
 
 Sheets
@@ -81,7 +82,7 @@ def _num_or_text(v):
 
 
 def _sheet_title(title, used):
-    t = re.sub(r"[\[\]\:\*\?\/\\]", " ", str(title)).strip()[:28] or "Table"
+    t = re.sub(r"\s+", " ", re.sub(r"[\[\]\:\*\?\/\\]", " ", str(title))).strip()[:28] or "Table"
     base, k = t, 2
     while t.lower() in used:
         t = f"{base[:25]} {k}"
@@ -317,7 +318,8 @@ def derive_trades(h):
 
 
 def build(run_dir, results, df, title, out_path, hurdle=0.06, holdings=None, trades=None, comparators=None,
-          observations=None, review=None, selection=None, selection_rule=None):
+          observations=None, review=None, selection=None, selection_rule=None, revisions=None, approval=None,
+          provenance=None, change_log=None):
     s_name = results.get("strategy_name") or "Strategy"
     b_name = results.get("benchmark_name") or "NIFTY 500"
     df = df.sort_values("date").reset_index(drop=True)
@@ -369,6 +371,11 @@ def build(run_dir, results, df, title, out_path, hurdle=0.06, holdings=None, tra
     ws = wb.create_sheet("Summary", 0)
     put(ws, "A1", title, F_TITLE)
     put(ws, "A2", results.get("headline", ""), F_NOTE)
+    pv = provenance or {}
+    put(ws, "A3", (f"Run {pv.get('run_id', '?')} created {str(pv.get('created', '?')).replace('T', ' ')} · card "
+                   f"{pv.get('card_path', '?')} sha256 {(pv.get('card_sha256_approved') or pv.get('card_sha256_run') or '?')[:12]} · "
+                   f"script sha256 {(pv.get('script_sha256') or '?')[:12]} · Lightyear code {pv.get('code_hash_disk', '?')} · "
+                   f"git {pv.get('git_commit', '?')} · Quant AI Researcher by Harshil Pahuja"), F_NOTE)
     put(ws, "A4", "Hurdle rate for Sharpe", F_BOLD)
     put(ws, "B4", hurdle, F_INPUT, PCT, FILL_KEY, border=True,
         comment="Key assumption: flat 6% proxy for the Indian short rate (the repo's convention).")
@@ -740,10 +747,26 @@ def build(run_dir, results, df, title, out_path, hurdle=0.06, holdings=None, tra
     # ---------------------------------------------------------------- Notes
     wn = wb.create_sheet("Notes")
     put(wn, "A1", "Assumptions and caveats", F_TITLE)
-    notes = list(results.get("notes", []) or []) + ([sel_note] if sel_note else []) + [
+    gate_a_lines = []
+    for i, r in enumerate(revisions or [], start=1):
+        gate_a_lines.append(f"Gate A, card revision {i} asked by the operator at {r.get('at', '?')}: {r.get('notes', '')}")
+    if approval:
+        gate_a_lines.append(f"Gate A approved by {approval.get('by', '?')} at {approval.get('at', '?')}"
+                            + (f"; approval notes: {approval['notes']}" if approval.get("notes") else "")
+                            + (f"; card pinned at sha256 {approval['card_sha256'][:12]}" if approval.get("card_sha256") else ""))
+    pv = provenance or {}
+    if pv:
+        gate_a_lines.append(f"Provenance: run {pv.get('run_id')} created {pv.get('created')}; card {pv.get('card_path')} sha256 "
+                            f"{pv.get('card_sha256_approved') or pv.get('card_sha256_run')}; script sha256 {pv.get('script_sha256')}; "
+                            f"Lightyear code {pv.get('code_hash_disk')}; git {pv.get('git_commit')}.")
+    for c in results.get("wording_corrections") or []:
+        gate_a_lines.append(f"Wording corrected to follow the numbers in {c['field']}: '{c['was']}' -> '{c['now']}'.")
+    gate_a_lines += [str(line) for line in (change_log or [])]
+    notes = list(results.get("notes", []) or []) + ([sel_note] if sel_note else []) + gate_a_lines + [
         "Data: Ace Equity daily prices (adjusted; price returns, no dividends), the NIFTY 500 holdings workbook for "
         "quarterly index membership, and the NSE index workbook for the benchmark. Nothing else.",
-        "Gate B is a human decision. Nothing in this workbook assigns one."]
+        "Gate B is a human decision. Nothing in this workbook assigns one.",
+        "Quant AI Researcher by Harshil Pahuja"]
     for i, t in enumerate(notes, start=3):
         put(wn, f"A{i}", t, align=Alignment(wrap_text=True, vertical="top"))
     wn.column_dimensions["A"].width = 130

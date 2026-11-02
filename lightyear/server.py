@@ -1,16 +1,17 @@
+# Quant AI Researcher by Harshil Pahuja
 """Lightyear HTTP server. Listens on 127.0.0.1 only: nobody else on the network can reach it."""
 import json
 import os
 import shutil
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Response, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from . import __version__, gates, jobs, prompts, workbook
-from .paths import PAPERS, REPO, STATIC, find_claude, run_dir, slugify
+from .paths import PAPERS, REPO, STATIC, code_hash, find_claude, git_commit, run_dir, slugify
 
 
 def _code_fingerprint():
@@ -21,6 +22,7 @@ def _code_fingerprint():
 
 
 _BOOT_CODE = _code_fingerprint()
+_BOOT_HASH = code_hash()           # the code version this server process actually runs
 
 
 @asynccontextmanager
@@ -70,6 +72,7 @@ def health():
     changed = [f for f, t in _code_fingerprint().items() if _BOOT_CODE.get(f) != t]
     return {"ok": True, "version": __version__, "repo": REPO, "claude": claude, "libreoffice": lo,
             "active_run": jobs.active_run(), "restart_needed": bool(changed), "changed_files": changed,
+            "code_hash": _BOOT_HASH, "code_hash_on_disk": code_hash(), "git_commit": git_commit(),
             "stages": {"A": prompts.STAGES_A, "B": prompts.STAGES_B}}
 
 
@@ -110,8 +113,10 @@ async def new_run(operator: str = Form(...), model: str = Form(""), auto_continu
 
 
 @app.get("/api/runs/{rid}")
-def run_state(rid: str):
+def run_state(rid: str, response: Response):
+    response.headers["Cache-Control"] = "no-store"
     st = _state(rid)
+    st["provenance"] = jobs.provenance(st, boot_hash=_BOOT_HASH)
     pa = st.get("phase_a") or {}
     if pa.get("card_path"):
         try:
@@ -222,7 +227,9 @@ def run_workbook(rid: str):
     if not st.get("workbook"):
         raise HTTPException(404, "workbook not built yet")
     p = os.path.join(run_dir(rid), st["workbook"])
-    return FileResponse(p, filename=st["workbook"],
+    # the download name always carries the run id, so two downloads from different runs can never be confused
+    name = st["workbook"] if rid in st["workbook"] else st["workbook"].replace(".xlsx", f"_{rid}.xlsx")
+    return FileResponse(p, filename=name, headers={"Cache-Control": "no-store"},
                         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
 
@@ -280,6 +287,30 @@ def revise(rid: str, r: Revision):
     jobs.log(rid, "gate", f"Revision requested at Gate A: {r.notes}")
     jobs.start(jobs.revise_a, rid, r.notes)
     return {"ok": True}
+
+
+class Rerun(BaseModel):
+    by: str
+    note: str = ""
+    src_dir: str = ""      # optional: an archived run folder to inherit from (its state.json), when the run is no longer under outputs/
+
+
+@app.post("/api/runs/{rid}/rerun")
+def rerun(rid: str, r: Rerun):
+    """A new run from this run's approved card: stages 03-07 again, Gate A hand-off, revisions and approval inherited."""
+    if r.src_dir:
+        if not os.path.isfile(os.path.join(r.src_dir, "state.json")):
+            raise HTTPException(404, f"no state.json in {r.src_dir}")
+        st = json.load(open(os.path.join(r.src_dir, "state.json"), encoding="utf-8"))
+    else:
+        st = _state(rid)
+    if st["status"] not in ("gate_b", "decided", "failed", "interrupted", "cancelled") or not st.get("approval"):
+        raise HTTPException(409, "Re-run needs a run whose Gate A was approved and whose backtest has finished or failed.")
+    if not r.by.strip():
+        raise HTTPException(400, "A named human re-runs from the approved card.")
+    _busy_guard()
+    new_id = jobs.rerun_from(rid, r.by.strip(), r.note.strip(), src_dir=r.src_dir or None)
+    return {"id": new_id}
 
 
 @app.post("/api/runs/{rid}/decide")

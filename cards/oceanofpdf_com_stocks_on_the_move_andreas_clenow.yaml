@@ -1,605 +1,777 @@
 card_version: "1.0"
 
+# Quick-test card (CLAUDE.md default, 2026-10-06): the book's own construction,
+# translated to India. Drafted 2026-10-30 against the three data files
+# (Ace Equity prices, NIFTY 500 holdings workbook, NSE index workbook).
+# convertibility is deliberately omitted until a result earns it (data_plan is written
+# because Gate A's own check blocks without one).
+#
+# REVISED 2026-10-30 after the operator's Gate A notes (Lightyear run 20261030-124039-5511):
+#   1. cash: kept as a drift only (the book's own cash drift stays in the headline);
+#   2. costs: zero basis points at the operator's instruction (house floor is 30bp; the
+#      appendix cost sweep still shows 0 to 100bp);
+#   3. window: 2014-01-01 to 2026-09-30 asked; the run ends 2026-09-18 because the NIFTY 500
+#      index series that drives the 200-day gate and the benchmark ends there, and the house
+#      limit is 2026-09-29 in any case;
+#   4. the 15% gap rule kept as it is;
+#   5. benchmark asked: NIFTY 500 TRI. NOT in the three data files (checked 2026-10-30:
+#      the NSE index workbook holds the NIFTY 500 price index only). The benchmark used is
+#      the NIFTY 500 price index, which matches the strategy's own price-return basis; the
+#      TRI is a high-priority data request.
+#
+# REVISED AGAIN 2026-10-30 (operator's second ruling, recorded as a Gate A revision in Lightyear):
+#   6. mandate: "my allow_cash: true note meant the mandate allows cash for this test", so
+#      portfolio.mandate_allow_cash is now true and Gate B's "implementable within mandate" is
+#      judged with cash allowed. Nothing else in the construction changed.
+# Quant AI Researcher by Harshil Pahuja
+
 paper:
   id: oceanofpdf_com_stocks_on_the_move_andreas_clenow
   title: "Stocks on the Move: Beating the Market with Hedge Fund Momentum Strategies"
   authors: [Andreas F. Clenow]
   date: "2015-01-01"
   source_file: docs/papers/oceanofpdf_com_stocks_on_the_move_andreas_clenow.pdf
-  source_sha256: "c59a35cc7bee73d8"
+  source_sha256: "c59a35cc7bee73d8b1eda36f61d70679bf4773f3f1f9ac4469e68660b031ecd3"
 
 intent:
   mode: adaptation
   parent_card: ""
   rationale: >
-    The book describes one rule-based way to own stocks that are going up. This card keeps
-    the book's RANKING and replaces the book's PORTFOLIO RULES with the operator's own
-    monthly design. On the last trading day of each month, score every stock in a
-    500-stock universe by how steeply and how smoothly its price has climbed over 120
-    trading days, rule out stocks below their 100-day average or with a single-day move
-    above 15% in the last 120 days, and hold the 20 best that remain, 5% each, reset to
-    5% every month. There is no market filter and no risk-based sizing: the portfolio is
-    always invested. The book's own figures are for a different portfolio: weekly
-    checks, positions sized by volatility, a 200-day market filter and a hold band.
-    Clenow reports 12.3% a year against 5.2% for the S&P 500 total return index over 16
-    years (1999 to 2014), worst fall 24% against 55%, for those rules with a 90-day
-    window (12.5% and 24.6% for 120 days, Table 14-46). The closest reference the book
-    gives for this card is Table 14-44, the same model with no market filter: 9.1% a year
-    and a worst fall of 50.9%. The paper's numbers are US, 1999 to 2014, and are never a
-    target for this run. The question is quick and narrow: does the book's ranking, held
-    as a plain monthly equal-weight top 20, beat the NIFTY 500 in India over about four
-    and a half years? It is a first read, not a financing memo.
+    The book gives one complete rule set for owning stocks that are going up: every
+    week, rank all index members by how steeply and how smoothly they have climbed
+    over 90 trading days, keep only names in the top fifth that sit above their 100-day
+    average and have not jumped more than 15% in a day, size each so it moves the book
+    about 0.1% a day, and stop buying new names while the index is below its 200-day
+    average. Clenow reports 12.3% a year against 5.2% for the S&P 500 total return
+    index over 1999 to 2014, with a worst fall of 24% against 55% (Table 12-10, page
+    115). This card runs those exact rules on NIFTY 500 members from January 2014 to
+    September 2026 (the operator's window), with real point-in-time membership, no
+    trading costs (the operator's instruction of 2026-10-30; a 0 to 100 basis point cost
+    sweep sits in the appendix), and price returns on both sides because the price file
+    carries no dividends. It is a first read: does the book's mechanism show up in
+    India at all, and does the index filter do the same job here that it did in the
+    US? The book's numbers are US, include dividends and exclude costs; they are
+    context, never a target.
   transferred_mechanism: >
-    On the last trading day of each month, take the 500 NSE stocks in the current universe
-    (top 500 by 60-day traded value, rebuilt at each month-end). Score every one of them,
-    before any filter, by the annualised 120-day log-price regression slope times the fit
-    (R-squared over the same 120 days). Rule out any stock under its 100-day average or
-    with a one-day move above 15% (up or down) in the past 120 days. Hold the top 20 that
-    remain, 5% each, whole shares, starting at Rs 10 crore. At the next session's close,
-    sell anything not in the new top 20 and reset every holding (new and kept) to 5%. No
-    trades between month-ends. Empty slots, if fewer than 20 qualify, stay in cash at 6%.
+    Signals are computed at the Tuesday close and traded at the Wednesday close (the
+    repo's one-day lag applied to the book's Wednesday rule). Universe: NIFTY 500
+    members as of the latest quarterly snapshot on or before the signal date. Score
+    every member with 100 trading days of its own history: fit a straight line to the
+    log of its adjusted close over the last 90 trading days, annualise the slope as
+    exp(slope)^250 - 1, and multiply by the R-squared of the same fit. Disqualify any
+    name below its 100-day simple moving average or with a one-day close-to-close move
+    above 15% in the last 90 trading days. Each week sell any holding that is outside
+    the top 20% of scored members, disqualified, or no longer a member. Then, only if
+    the NIFTY 500 index close is above its 200-day simple moving average, buy down the
+    ranking, skipping disqualified and held names, until the cash is spent; each new
+    position is sized at shares = NAV x 0.001 / ATR20. Every second Wednesday, reset
+    every holding to its target size if the difference exceeds 5%. Cash is only ever a
+    drift: what the sizing leaves unspent and what the index filter keeps out of the
+    market; it earns a flat 6%. No trading cost is charged, at the operator's
+    instruction, so gross equals net in the headline; a 0 to 100 basis point cost sweep
+    is reported in the appendix.
   broken_assumptions:
     - >
-      THE PORTFOLIO RULES ARE NOT THE BOOK'S. The book checks weekly, sizes each stock by
-      its 20-day ATR (average daily swing) so every stock carries the same risk, keeps a
-      stock while it stays in the top 100, and stops buying when the NIFTY 500-equivalent
-      index is under its 200-day average. This card does none of that: monthly, equal 5%
-      weights, hold only the top 20, always invested. The book's 12.3% / 24.0% (90-day) and
-      12.5% / 24.6% (120-day) belong to the book's rules and are not a replication target.
-      The nearest published reference is Table 14-44 (no market filter): 9.1% a year, worst
-      fall 50.9%, which is also the closest sign of what dropping the filter costs in a
-      crash. That row was supplied by the operator; Table 14-44 is an image and was not
-      machine-read.
+      PRICE RETURN, NOT TOTAL RETURN. The book includes cash dividends on the strategy
+      and compares with the S&P 500 Total Return index (pages 40, 115). The Ace file has
+      no dividends, so both the strategy and the NIFTY 500 benchmark are price return;
+      the comparison is fair but each side is understated by roughly its dividend yield.
     - >
-      FOUR AND A HALF YEARS, NOT SIXTEEN. The paper runs 1999 to 2014 including the
-      dot-com crash and the 2008 crisis. NSE bhavcopy starts 2021-10-04, a stock needs
-      120 trading days of its own history. The first portfolio is signalled at the 2022-04-29
-      close (last trading day of April; 142 trading days of history exist by then) and bought
-      at the 2022-05-02 close. The last rebalance is 2026-08-31 and the value is tracked to
-      2026-09-18, about 4.4 years of results.
-      That window holds the 2022 chop, the 2023 to 2024 mid and small-cap boom and the
-      2024 to 2026 corrections, but the worst NIFTY 500 fall from a peak is about 19%
-      (to 2025-02-28). With no market filter in this design there is also no crash in the
-      window to test it against.
+      MEMBERSHIP IS QUARTERLY, NOT DAILY. The book knows index membership on every day
+      (page 107). The holdings workbook gives quarter-end snapshots from 2012-03-31, so a
+      joiner becomes eligible at the first snapshot that lists it and a leaver is sold at
+      the first snapshot that omits it, up to three months after the actual change.
     - >
-      NOT THE REAL NIFTY 500. Historical NIFTY 500 membership is not held. The universe
-      is the top 500 NSE main-board stocks by 60-day traded value, rebuilt at month-end
-      with no look-ahead. It overlaps the index heavily but is not it.
+      THE EARLY UNIVERSE IS THINNER ON LATER FAILURES. In the 2013-12-31 snapshot, the
+      first one this run uses, 34 of 500 names have no ISIN in the price file (21 by
+      end-2014, 9 by end-2017, 2 by 2021). Those are mostly companies that later
+      delisted, so the 2014 to 2017 universe under-represents names that went bad. The
+      bias runs in the strategy's favour and is stated as a gap.
     - >
-      THE 15% JUMP RULE MEANS SOMETHING DIFFERENT HERE. S&P 500 stocks rarely move 15%
-      in a day. NSE mid and small caps often do. The rule may disqualify a large share
-      of the ranking at any time. It is only meaningful if splits, bonuses and demergers
-      are removed from the prices first, and real falls (a fraud scare, a failed deal)
-      are left in.
+      INDIAN STOCKS GAP MORE. The 15% one-day rule was set for S&P 500 large caps. NIFTY
+      500 holds about 250 small caps that move 15% in a day far more often, and NSE price
+      bands (5%, 10%, 20%) sit exactly where momentum leaders trade. The rule will
+      disqualify a larger share of the ranking here and tilt the book to large and mid
+      caps. That is the book's rule doing its job in a different market, not an error, and
+      the run reports how many names it removes each week.
     - >
-      THE OLD PRICE CLEANER WAS REPLACED. The master panel hid any one-day move outside
-      0.72 to 1.40, so a real +50% gap looked like no gap. This card does not use that
-      cleaner. Every out-of-band day, and every in-band day near a split or bonus ratio,
-      is classified from bhavcopy alone and listed for sign-off (see
-      outputs/lightyear/20261016-102923-bdc1/corporate_action_events.csv).
+      THE RISK FACTOR WAS SET FOR US VOLATILITY. With 10 basis points per name the author
+      holds 20 to 30 stocks (page 230). Indian names have a larger average true range as a
+      share of price, so the same factor gives smaller weights and a broader book; the run
+      reports the name count and the cash share rather than retuning the factor.
     - >
-      PRICE RETURN ONLY. The paper includes dividends; bhavcopy does not. Strategy and
-      benchmark are both price return, which understates both by about 1.3 to 1.5 points
-      a year for a broad index.
+      COSTS. The book states none (pages 43, 48, 93), and at the operator's instruction
+      (2026-10-30) this card charges none either, so the headline is gross and gross
+      equals net. The house floor for an Indian round trip is 30 basis points and this
+      strategy trades weekly, so the appendix sweeps the cost from 0 to 100 basis points
+      and reports the round-trip cost at which the edge over NIFTY 500 reaches zero. A
+      reader must take the headline as the book's basis, not as what the fund would keep.
     - >
-      NO COSTS, BY THE OPERATOR'S DESIGN. Returns are gross. The paper states no costs
-      either, but the fund's floor for India is 30bp a round trip and the monthly full
-      reset to 5% trades a large part of the book every month. The gross result cannot be
-      achieved in practice; annual turnover is reported so a reader can price it.
+      TWELVE AND THREE-QUARTER YEARS, NOT SIXTEEN, AND ONE CRASH, NOT TWO. The window
+      2014-01 to 2026-09 contains the 2020 COVID fall (NIFTY 500 down 38.3% to 2020-03-23),
+      the 2015-16 (20.8%), 2018 (15.8%), 2022 (18.5%) and 2024-25 (18.8%) corrections, but
+      no multi-year bear market like 2000-2003 or 2008, which is where the book's filter
+      earned most of its edge.
 
 universe:
   description: >
-    The top 500 NSE main-board stocks by trailing traded value (average of the prior 60
-    trading days), rebuilt at each month-end from NSE bhavcopy with no look-ahead and
-    applied from the next trading day, delisted names included. A stand-in for NIFTY 500
-    membership, which is not held. A stock that is suspended or delisted while held is
-    sold at its last traded price and the money stays in cash until the next month-end.
-    It is an in-mandate universe, so a result is actionable.
+    NIFTY 500 constituents, point in time, from the fund's holdings workbook: quarterly
+    snapshots from 2012-03-31, a name being a member from the first snapshot that lists
+    it to the first that does not, delisted names kept and keyed by ISIN. Prices and
+    daily high, low and close from the Ace Equity file, back-adjusted for splits and
+    bonuses, joined to membership on ISIN. In mandate, so a result is actionable.
+    Benchmark: the operator asked for the NIFTY 500 Total Return index (TRI). It is not
+    in the three data files (checked 2026-10-30), so the NIFTY 500 price index is the
+    benchmark; the strategy is price return too, so the two sides are on one basis.
   asset_class: equity
   geography: IN
   assets:
-    - NSE_BHAVCOPY_STOCK_PANEL
+    - nifty_500_constituent_prices
   benchmark: NIFTY 500
   cash_asset: CASH_PROXY_CONSTANT_6PCT
 
 universe_translation:
-  source_universe: "S&P 500 constituents on each day, with historical membership and delisted stocks, 1999 to 2014"
+  source_universe: "S&P 500 constituents on each day, with historical membership and delisted stocks, January 1999 to December 2014"
   source_breadth: 500
   source_selection_rule: >
-    Rank every index member on the day; hold only stocks in the top 20% (about 100 of
-    500), above their 100-day average, with no 15% move in 90 days; buy only when the
-    S&P 500 is above its 200-day average (pages 40, 98, 99). This card keeps the ranking
-    and the two stock filters and replaces the rest with a monthly top-20 equal-weight
-    portfolio.
-  target_universe: "NIFTY 500 constituents (proxy: top 500 NSE main-board stocks by 60-day traded value, point in time, rebuilt at month-end, from bhavcopy)"
+    Rank every current member on the 90-day score; hold only names in the top 20% of
+    the ranking (the top 100 of 500), above their 100-day average and without a one-day
+    move above 15% in the past 90 days; open new positions only while the S&P 500 is
+    above its 200-day average, buying down the ranking until the cash is spent (pages
+    98, 99, 110, 111).
+  target_universe: "NIFTY 500 constituents"
   grade: close
-  resolution: needs_data
+  resolution: direct
   rationale: >
-    The ranking is run across about 500 names, the fund's own NIFTY 500 mandate, and the
-    top 20 are held after the trend and jump filters. NIFTY 200 and LargeMidcap 250 score
-    higher on the generic fit ranking but give a thinner pool to pick 20 from after the
-    filters. Historical NIFTY 500 membership is not held, so a traded-value top 500 is the
-    closest point-in-time stand-in. A wider top-1,000 run is not needed for this mechanism.
+    The book's rules are written for a 500-stock index and its key cut, the top 20%, is
+    100 names. NIFTY 500 is the only in-mandate Indian universe of that breadth, it is
+    the fund's own benchmark, and real point-in-time membership is held, so the
+    index-member constraint the author calls 'absolutely critical' (page 107) is applied
+    as written rather than proxied. The code ranks NIFTY 500 first for a 500-name,
+    cross-sectional, broad-market mechanism. NIFTY 500 reaches further down the cap
+    ladder than the S&P 500 does in the US, which the author expects to help momentum
+    (pages 232, 233) but which makes the 15% gap rule and the ATR sizing bite differently.
   transfer_risks:
-    - "Top 500 by traded value is not NIFTY 500: the index uses free-float market cap and semi-annual rebalances."
-    - "About 4.5 years of data against the paper's 16; the worst NIFTY 500 fall in the window is about 19%, and this design has no market filter, so no crash is tested."
-    - "The 15% jump rule is calibrated to US large caps; NSE mid and small caps move 15% in a day often, so the rule may empty the ranking and leave slots in cash."
-    - "Splits, bonuses and demergers have to be told apart from real gaps using bhavcopy alone; a wrong label either hides a real gap or creates a false one."
-    - "No dividends in bhavcopy: price return only, compared with the NIFTY 500 price index."
-    - "Price bands (circuits) can stop a buy or sell filling at the next close."
-    - "Equal 5% weights give volatile stocks more risk than the book's volatility sizing would (book pp. 83-86)."
+    - "NSE price bands and frequent 15%-plus days in mid and small caps: the gap rule disqualifies far more of the ranking than in the S&P 500, and limit-up days cluster at the top of a momentum list."
+    - "Quarterly membership snapshots, not daily: joiners enter late, leavers are sold up to a quarter late."
+    - "34 of 500 names in the 2013-12-31 snapshot (the first this run uses) cannot be priced (no ISIN bridge); they are mostly later delistings, so the early universe is thinner on failures."
+    - "No dividends in the price file: both sides are price return; the book's are total return, and the NIFTY 500 TRI the operator asked for as benchmark is not held."
+    - "The 10-basis-point risk factor was tuned to US volatility; Indian ATR as a share of price is higher, so the book will hold more names with more cash than the author's 20 to 30."
+    - "The NIFTY 500 index closed below its 200-day average on 24.6% of trading days between 2014-01-01 and 2026-09-18, so the cash drift is a live part of the test; cash earns a declared constant, not a market rate."
+    - "No trading cost is charged (operator's instruction); a weekly strategy with zero cost overstates what the fund would keep, which is why the appendix cost sweep exists."
   mechanism_needs:
     needs_cross_section: true
     min_names: 500
     cap_segment: large_mid
     sector: null
-    min_history_years: 5.0
-    must_be_in_mandate: true
+    min_history_years: 10.0
+    must_be_in_mandate: false
     notes: >
-      500 names so there are enough candidates after the filters to fill 20 slots. The
-      paper's own history is 16 years; the cache holds about 4.5, so the 5.0 here is a wish
-      the data cannot meet.
+      The book's hold band is the top 20% of a 500-stock index, which it equates to the
+      top 100 (pages 95, 110). A thinner index gives a thinner candidate pool for 20 to 30
+      positions after the two stock filters. Ten years so that at least one real bear
+      market falls inside the sample; the operator's window is 12.7 years (2014-01-01 to
+      2026-09-18) with one 38% fall.
   alternatives_considered:
-    - "NIFTY 200 constituents (ranked first by the code, 200 names, in mandate)"
-    - "NIFTY LargeMidcap 250 constituents (ranked second, 250 names, in mandate)"
-    - "NIFTY 500 constituents (ranked third, 500 names, in mandate; real membership not held)"
+    - "NIFTY Total Market constituents (750 names, OUT OF MANDATE; ranked second by the code)"
+    - "NIFTY LargeMidcap 250 constituents (250 names, in mandate; ranked third)"
+    - "NIFTY MidSmallcap 400 constituents (400 names, in mandate; ranked fourth)"
   why_not_alternatives: >
-    NIFTY 200 and LargeMidcap 250 are smaller pools to pick 20 from after the 100-day and
-    15% filters. NIFTY 500 is the right size and is what the fund is measured against, but
-    its membership history is not held, so the traded-value top 500 stands in for it.
+    Total Market adds 250 microcaps where the 15% rule and the ATR sizing behave even
+    more differently from the book, and a result there could not be held by the fund.
+    LargeMidcap 250 gives a top 20% of only 50 names to fill 20 to 30 positions after
+    the filters. MidSmallcap 400 drops the large caps the S&P 500 analogue is made of.
+    NIFTY 500 is the one universe that is both the right breadth and the fund's own
+    benchmark, with real membership held.
   required_instruments:
-    - NSE_BHAVCOPY_STOCK_PANEL
+    - nifty_500_constituent_prices
+    - ACE_EQUITY_STOCK_PRICES
+    - nifty_500_membership_history
     - NIFTY 500
+    - CASH_PROXY_CONSTANT_6PCT
   evidence_page: 98
 
 strategy:
   signal_name: volatility_adjusted_momentum_regression_slope_x_r2
   signal_definition: >
-    On the last trading day of each month, for every stock in the universe (all of them,
-    before any filter), fit a straight line (ordinary least squares) to the natural log of
-    its daily corporate-action-adjusted close against the day number, over the last 120
-    trading days ending at that close. Turn the daily slope into a yearly figure as
-    exp(slope) to the power 250, minus 1; the power is 250, the trading days in a year, not
-    120. Multiply by the R-squared of the same 120-day fit. That product is the score: a
-    high score is a steep and smooth climb. Ranks run from 1 down across the whole
-    universe. A stock is then ruled out if its close is below its 100-day simple average,
-    or if any one-day close-to-close move in the past 120 days was larger than 15%, up or
-    down. A stock needs 120 trading days of its own history to be scored. The paper does not
-    say how a jump is measured or how ties break; here it is the close-to-close move and
-    ties break by ISIN. The 20% jump limit is run as the one sensitivity.
+    For every current NIFTY 500 member with at least 100 trading days of its own
+    adjusted-close history, fit an ordinary least squares line to the natural log of the
+    daily adjusted close against the day number over the last 90 trading days ending at
+    the signal close. Annualise the daily slope as exp(slope) to the power 250, minus 1
+    (page 77). Multiply by the R-squared of the same 90-day fit. Sort every scored member
+    on that product; rank 1 is the highest, ties broken by ISIN. A name is disqualified,
+    for buying and for holding, if its adjusted close is below its 100-day simple moving
+    average (page 81) or if any one-day close-to-close move in the last 90 trading days
+    exceeded 15% in either direction, measured on adjusted closes (page 82). The index
+    gate reads the NIFTY 500 index close against the simple average of its last 200
+    closes (page 99).
   inputs_required:
-    - "daily corporate-action-adjusted close per stock, including delisted names, built from bhavcopy with the signed-off event list (bhavcopy)"
-    - "point-in-time top-500 membership by trailing traded value (bhavcopy), rebuilt at month-end"
-    - "NIFTY 500 daily close (benchmark only)"
+    - "daily corporate-action-adjusted close per NIFTY 500 member, keyed by ISIN, delisted names included (Ace)"
+    - "daily adjusted high and low per stock, same adjustment, for the 20-day average true range (Ace)"
+    - "point-in-time NIFTY 500 membership on each signal date (holdings workbook, quarterly snapshots)"
+    - "NIFTY 500 index daily close for the 200-day filter and as the benchmark (NSE index workbook)"
   cross_sectional: true
   formation_rule: >
-    Signals are computed at the close of the last trading day of each month and trades fill
-    at the next session's close. The first signal is the 2022-04-29 close (bought at the
-    2022-05-02 close) and the last rebalance is 2026-08-31; NAV is tracked to 2026-09-18. At each rebalance: take the ranked, filtered
-    list, hold the top 20 that pass both filters, sell everything not in it, and reset every
-    holding, new and kept, to 5% of the account. There is no hold band, no market filter
-    and no weekly review. If fewer than 20 stocks pass, hold those at 5% each and leave the
-    empty slots in cash at 6%; the run reports how many months this happens. Between
-    rebalances there are no trades; a holding that is suspended or delisted is sold at its
-    last traded price and the cash waits until the next month-end.
-    CHURN SPEC. Selection uses data up to the signal close only: universe, ranking and
-    filters are all as of that day. The target is the first 20 eligible names found walking
-    down the full ranking. SELL = held but not in the target; BUY = in the target but not
-    held; KEEP = in both, and is re-traded to 5%. Share counts are whole shares sized off the
-    account value (NAV) and the fill-day close. Orders run in the order sells, then trims,
-    then buys. If a name cannot trade on the fill day, a sell carries to the next day it
-    trades, and a buy passes its slot to the next eligible name down the ranking (the
-    substitution is logged). Holdings are tracked by linked ISIN, never by symbol. NAV is
-    computed on adjusted prices; the trade log records raw (unadjusted) prices. A weight is
-    shares x price / (stocks + cash) and is never scaled up to 100%.
+    Every Tuesday close is a signal date (the previous trading day if Tuesday is a
+    holiday); trades fill at the following trading day's close, normally Wednesday.
+    Ranks are assigned to every member with enough history BEFORE any filter, so the
+    top 20% is a cut of the whole index, not of the names that pass the filters (the
+    book ranks all, then disqualifies, pages 98, 99). Step 1, sells: sell any holding
+    whose rank is outside the top 20% of all ranked members, that is below its 100-day
+    average, that had a one-day move above 15% in the last 90
+    trading days, or that is no longer a NIFTY 500 member at the latest snapshot. A
+    holding that stops trading (suspension, delisting) is sold at its last available
+    close on the day that is learned and the proceeds sit in cash. Step 2, resize: on
+    every second signal date, recompute each remaining holding's target shares as
+    NAV x 0.001 / ATR20 and trade to target if the share difference exceeds 5% (pages
+    99, 246). Step 3, buys: only if the NIFTY 500 index close on the signal date is
+    above its 200-day simple moving average, walk down the ranking from rank 1, skip
+    names that are held or disqualified, and buy each at NAV x 0.001 / ATR20 shares
+    until the next position would cost more than the cash available; stop there. If the
+    index is below its average, buy nothing and hold the cash; when it crosses back
+    above, refill from the top of the list the same way (page 111). On the first signal
+    date, Tuesday 2014-01-07 (fills Wednesday 2014-01-08), the initial book is built by
+    Step 3 alone. No trades on any other day.
   weighting_rule: >
-    Equal weight, 5% of the account value per holding (20 holdings), whole shares, starting
-    value Rs 10 crore. Leftover rupees from whole-share rounding and empty slots stay in
-    cash at 6%. No ATR sizing and no cap beyond the 5% itself.
-  holding_period: "One month: every holding is reset to 5% at each month-end, and a stock stays only if it is still in the top 20 that pass the filters"
-  rebalance_frequency: "monthly (last trading day signal, next-session close fill)"
+    Shares per position = NAV x 0.001 / ATR20, where ATR20 is the simple 20-day average
+    of the true range (the largest of high minus low, high minus previous close, and
+    previous close minus low) on adjusted prices (pages 88, 98). As a weight that is
+    0.001 / (ATR20 / price): a stock whose daily range is 2% of its price gets 5%, a 4%
+    stock gets 2.5%. Weights are never scaled to sum to one; the book buys down the list
+    until the cash is spent and leaves the remainder in cash (pages 80, 88, 230). Whole
+    shares, starting value Rs 10 crore. No position cap beyond the formula and no
+    sector cap (page 80). The engine works in weights: ATR20 and price are both Ace
+    back-adjusted series, so their ratio is right while an adjusted share count is not;
+    share counts and fills quoted to a human use the unadjusted close of the day.
+  holding_period: "Open-ended: held until the weekly exit test fails (rank outside top 20%, below 100-day average, a 15% gap, or left the index)"
+  rebalance_frequency: "weekly portfolio check (Tuesday signal, Wednesday fill); position-size reset every second week"
   is_long_short: false
   long_only_adaptation: ""
   constraints:
-    - "long only, unlevered, no stop losses, always invested except unfilled slots and suspended or delisted proceeds"
-    - "hold exactly the top 20 eligible names, 5% each, reset monthly; no hold band"
-    - "signals use the last trading day's close; fills are at the next session's close"
-    - "a stock needs 120 trading days of its own history to be ranked"
-    - "no trades between rebalances; a stock that is suspended or delisted is sold at its last traded price and held as cash until the next month-end; never dropped from the history"
-    - "costs are zero by the operator's design; returns are gross and annual turnover is reported"
-  engine_template: "universal_backtester:cross_sectional"
+    - "long only, unlevered, no stop losses (page 94)"
+    - "only current NIFTY 500 members may be bought; a holding that leaves the index is sold at the first snapshot that omits it (pages 40, 99)"
+    - "new buys only while the NIFTY 500 index close is above its 200-day simple moving average; sells are always allowed (pages 96, 99)"
+    - "positions sized at a 10-basis-point risk factor over ATR20; cash is a drift only (unspent sizing and the index filter), never a target allocation, and earns the declared 6% (pages 88, 98; operator's note 2026-10-30)"
+    - "signals at Tuesday close, fills at Wednesday close: lag_days is 1"
+    - "zero trading cost at the operator's instruction (2026-10-30), so gross equals net; the appendix sweeps 0 to 100 basis points a round trip because the house floor is 30bp"
+    - "a stock needs 100 trading days of its own history to be scored"
+  engine_template: "universal_backtester:atr_risk_parity"
   template_gap: >
-    The allocator cross_sectional ranks and holds a fixed top-k, which fits the 20 names.
-    It does not by itself hold a fixed 5% per slot with empty slots left in cash, round to
-    whole shares, apply the 100-day and 15% filters, fill at the next session's close from
-    a rebalance-day signal, use the event-list price adjustment, carry untradeable sells and
-    pass untradeable buys to the next eligible name, keep a monthly holdings ledger, or
-    re-run on trading days 1, 6, 11 and 16 of the month. These are plain code in
-    scripts/oceanofpdf_com_stocks_on_the_move_andreas_clenow_india_backtest.py, written
-    at Step 05.
-  confidence: medium
-  evidence_pages: [80, 82, 88, 94, 95, 96, 98, 99, 115]
+    universal_backtester's atr_risk_parity allocator is the book's sizing exactly
+    (weight = risk_factor / (ATR / price), leftover cash kept, never renormalised) but
+    it selects a fixed top-k or top quantile at each rebalance. The book keeps a holding
+    while it stays in the top 20%, buys new names from the top only to fill the cash
+    freed by sells, gates buys on the index 200-day average, and applies the 100-day and
+    15% filters to holds as well as buys. Those pieces are plain code in
+    scripts/oceanofpdf_com_stocks_on_the_move_andreas_clenow_india_backtest.py, built
+    with the new-paper-backtest skill at Step 05 (ace.panel for close/high/low,
+    nifty500.membership_panel for eligibility, the index workbook for the gate). No new
+    ros/engine template is needed and ros/engine is not used.
+  confidence: high
+  evidence_pages: [40, 73, 77, 80, 81, 82, 88, 95, 96, 98, 99, 107, 110, 111, 115, 221, 225, 230, 245, 246]
 
 signal:
   name: volatility_adjusted_momentum_regression_slope_x_r2
-  template: "universal_backtester:cross_sectional"
-  lookback_days: 120
+  template: "universal_backtester:atr_risk_parity"
+  lookback_days: 90
   lag_days: 1
   description: >
-    lag_days is 1: the ranking and filters use data up to the month-end close and trades
-    fill at the next session's close, which is the repo's floor. lookback_days is the
-    120-day regression window. Other windows are 100 days (stock trend filter) and 120
-    days (jump look-back, same as the regression). This card runs through
-    universal_backtester, long-only, never through ros/engine.
+    lookback_days is the 90-day regression window. Other windows: 100 days (stock trend
+    filter), 90 days (gap look-back), 20 days (ATR), 200 days (index filter). lag_days is
+    1: the ranking, filters and index gate use data up to the Tuesday close and trades
+    fill at the Wednesday close. Long-only; runs through universal_backtester, never
+    through ros/engine.
   params:
-    regression_days: 120
+    regression_days: 90
     annualise_power: 250
     stock_trend_days: 100
     gap_limit: 0.15
-    gap_days: 120
-    min_history_days: 120
-    n_hold: 20
-    weight_per_name: 0.05
-    weighting: equal
+    gap_days: 90
+    atr_days: 20
+    risk_factor: 0.001
+    hold_band_quantile: 0.20
+    index_filter_days: 200
+    index_filter_series: "NIFTY 500"
+    resize_every_n_signals: 2
+    resize_tolerance: 0.05
+    min_history_days: 100
     whole_shares: true
     start_capital_inr: 100000000
-    universe_n: 500
-    universe_rebuild: month_end
-    universe_turnover_days: 60
-    timing_offsets_trading_day: [1, 6, 11, 16]
+    signal_weekday: "Tuesday"
+    fill_weekday: "Wednesday"
 
 portfolio:
-  rebalance: monthly
+  rebalance: weekly
   long_only: true
   max_gross: 1.0
   allow_cash: true
-  mandate_allow_cash: true
-  start: "2022-04-29"
+  mandate_allow_cash: true   # operator's ruling 2026-10-30: the mandate allows cash for this test
+  start: "2014-01-01"
   end: "2026-09-18"
 
 costs:
+  # ZERO at the operator's instruction (Gate A note, 2026-10-30: "we do not assume any BPS
+  # cost, keep it as 0"). The book states no costs either. The house floor for an Indian
+  # round trip is 30bp; the appendix cost sweep (0 to 100bp) shows what that floor would
+  # take from the result, so both readings are on the page.
   spread_bps: 0.0
   cost_model: half_spread
-  borrow_bps: 0.0
 
 data_requirements:
-  - {name: NSE_BHAVCOPY_STOCK_PANEL, kind: price, frequency: daily, start: "2021-10-04", mandatory: true, purpose: "NSE bhavcopy only: raw daily close and traded value for every main-board stock including delisted names, keyed on ISIN, read from cache/; split, bonus and demerger factors come from the event list and are applied to the close"}
-  - {name: "NIFTY 500", kind: price, frequency: daily, start: "2021-10-04", mandatory: true, purpose: "fund benchmark only (no market filter in this design); the workbook ends 2026-09-18, which sets the end of the NAV"}
-  - {name: india_cash_rate, kind: risk_free_rate, frequency: daily, mandatory: true, purpose: "empty slots and delisting proceeds earn the flat 6% hurdle"}
+  - {name: nifty_500_constituent_prices, kind: price, frequency: daily, start: "2013-07-01", mandatory: true, evidence_page: 98, purpose: "adjusted daily close of every NIFTY 500 member, delisted names included, keyed by ISIN; the mid-2013 start supplies the 100-day warm-up before the first signal on 2014-01-07"}
+  - {name: ACE_EQUITY_STOCK_PRICES, kind: price, frequency: daily, start: "2013-07-01", mandatory: true, evidence_page: 88, purpose: "adjusted daily high and low per stock for the 20-day average true range that sizes every position"}
+  - {name: nifty_500_membership_history, kind: membership, frequency: quarterly, start: "2013-12-31", mandatory: true, evidence_page: 107, purpose: "which names may be bought on each signal date and which holdings must be sold because they left the index; the 2013-12-31 snapshot (466 priced of 500) is the first one used"}
+  - {name: "NIFTY 500", kind: price, frequency: daily, start: "2013-03-01", mandatory: true, evidence_page: 99, purpose: "the 200-day moving-average gate on new buys (200 closes before 2014-01-07 are held from 2013-03-12) and the headline benchmark, as a PRICE index: the NIFTY 500 TRI the operator asked for is not in the three files; the workbook's last NIFTY 500 close, 2026-09-18, sets the end of the run"}
+  - {name: CASH_PROXY_CONSTANT_6PCT, kind: risk_free_rate, frequency: daily, mandatory: true, evidence_page: 96, purpose: "the book holds cash by design (unspent sizing and the whole book under a bear filter); cash earns the declared constant, swept 4 to 8%"}
 
 ambiguities:
-  - field: strategy.formation_rule
-    headline: "The book's portfolio rules are replaced; only its ranking is kept"
-    issue: "The book trades weekly, sizes by ATR, keeps stocks in the top 100 and stops buying under a 200-day market filter. The operator's design is a monthly top-20 equal-weight, always invested, no costs. The book's reported results do not belong to this portfolio."
-    resolution: "Carried out as the operator specified. The book's figures are shown only as context: 12.3% / -24.0% (90-day) and 12.5% / -24.6% (120-day) are for the weekly, volatility-sized, filtered rules; Table 14-44 (no filter, 9.1% / -50.9%, operator-supplied) is the closest reference."
-    confidence: high
-    material: true
-    evidence_page: 115
   - field: strategy.signal_definition
-    headline: "How a 15% 'jump' is measured is not stated"
-    issue: "The paper says 'a move larger than 15% in the past 90 days' and 'gap' interchangeably (pages 82, 98). It does not say close to close or open against prior close."
-    resolution: "Close-to-close, up or down, over the past 120 trading days (the same window as the regression). A 20% limit is the one sensitivity. The test is only fair on prices where splits, bonuses and demergers are removed and real falls are kept."
+    headline: "How a 15% 'gap' is measured is not stated; close-to-close on adjusted prices is used"
+    issue: "The book says 'any move larger than 15% in the past 90 days' and 'gap' interchangeably (pages 82, 104) without saying close to close, open against prior close, or intraday."
+    resolution: "Close-to-close, up or down, on Ace's adjusted closes, over the same 90 trading days as the regression. A real demerger that Ace leaves unadjusted will read as a gap and disqualify the name; a 20% limit is the one sensitivity on this rule."
     confidence: low
     material: true
     evidence_page: 82
-  - field: data_requirements.NSE_BHAVCOPY_STOCK_PANEL
-    headline: "Splits, bonuses and demergers must be told from real gaps with bhavcopy only"
-    issue: "The old 0.72 to 1.40 cleaner is dropped. NSE's own previous-close field does not adjust for splits in this data (it equals the prior close even on a 10-for-1 split), so the labels rest on ISIN changes, closeness of the move to a standard split or bonus ratio, and whether traded value jumped. A bonus or demerger ex-date can be loud, so some labels are judgement calls."
-    resolution: "Every out-of-band day, every day within two sessions of an ISIN change and every in-band fall near a ratio is listed with a label (SPLIT/BONUS adjust, DEMERGER adjust, REAL keep), an adjust factor, a confidence and the evidence. Fixes applied from the operator's notes: IRCTC 2021-10-28 (5-for-1 split) added because it was missing; TATAMOTORS 2025-10-14, SIEMENS 2025-04-07, ABFRL 2025-05-22 and VEDL 2026-04-30 set to DEMERGER at the observed one-day ratio; ADANIENT 2023-02-01, ZEEL 2024-01-23 and IEX 2025-07-24 stay REAL. ALLCARGO 2024-01-02 and CUPID 2026-03-09 are still labelled REAL but their traded volume jumped about 4x, which looks like a rescale; they are the first two to verify."
+  - field: strategy.formation_rule
+    headline: "Execution price not stated; signals at Tuesday close, fills at Wednesday close"
+    issue: "The book calculates all analytics 'at the end of the day and then we take action based on it' (page 245) and trades on Wednesdays (page 98). Whether the trade is at that close or the next is not said."
+    resolution: "Signals use data to the Tuesday close; every trade fills at the Wednesday close. This keeps the book's 'trade on Wednesday' and the repo's one-day lag. The same rule is also run with the signal on Thursday close and fill on Friday close as a timing-luck check."
     confidence: medium
     material: true
-    evidence_page: 82
-  - field: strategy.formation_rule
-    headline: "Monthly churn rules and checks are fixed by the operator (notes 6 and 17)"
-    issue: "A monthly full reset needs exact rules for who is sold, bought and kept, for share rounding, for names that cannot trade on the fill day, and for tracking a company across a symbol change. It also needs checks that prove the book did what the rules say."
-    resolution: "Written into strategy.formation_rule (CHURN SPEC). Checks at Step 05: a monthly holdings ledger (rank, slot, slope, R-squared, score, filter flags, action, shares and weights before and after); at every rebalance assert 20 names (or a logged reason), all in that month's eligible top 20, SELL/BUY/KEEP equal to set differences, weights 5% give or take rounding, stocks plus cash equal 100%, and no buy outside that month's universe; a look-ahead test that recomputes 3 random months with data cut at the signal date and must give the same top 20; a hand-check of 3 months against Excel SLOPE and RSQ; a check that no holding jumps on a corporate-action day beyond its adjusted return; and a churn report (names in and out, turnover, average holding period)."
-    confidence: high
-    material: false
-    evidence_page: 98
-  - field: strategy.weighting_rule
-    headline: "Equal weights give volatile stocks more risk than the book intended"
-    issue: "The book sizes by ATR so each stock carries the same daily risk (pp. 83-86). An equal 5% to every holding lets a jumpy stock move the portfolio more than a calm one."
-    resolution: "Kept as the operator's design. Reported as a known gap; no ATR variant is run."
-    confidence: high
-    material: false
-    evidence_page: 86
-  - field: strategy.formation_rule
-    headline: "Fewer than 20 eligible names: empty slots go to cash"
-    issue: "If the two filters leave fewer than 20 names, the book is partly in cash at a flat 6%, which flatters a weak stock selection and breaks 'always invested'."
-    resolution: "Hold those names at 5% each; the empty slots earn 6%. The run reports how many months this happens."
-    confidence: medium
-    material: false
-    evidence_page: 98
-  - field: strategy.constraints
-    headline: "Trade timing: signal at month-end close, fill at the next session's close"
-    issue: "The operator said 'signals at the last trading day's close, fills at next session close'. Month-end timing is arbitrary and one month-end can give a very different result from another."
-    resolution: "Base run uses the last trading day. The same rule is also run with the rebalance on trading day 1, 6, 11 and 16 of each month and the range of results is reported as the timing-luck band."
-    confidence: medium
-    material: false
-    evidence_page: 217
+    evidence_page: 245
   - field: costs.spread_bps
-    headline: "No costs: returns are gross"
-    issue: "The operator set costs to zero. The fund's floor for India is 30bp a round trip and the monthly reset to 5% trades a large part of the book each month, so the gross result cannot be achieved in practice."
-    resolution: "Report gross returns and annual turnover (rupees traded a year divided by average account value). No cost sensitivity is run."
+    headline: "The book states no costs; none charged at the operator's instruction (30bp floor in appendix)"
+    issue: "No commission, spread or slippage treatment is given for the main strategy. The earlier chapter 4 models exclude commissions (pages 43, 48) and the resize frequency is justified by costs (page 93), so the headline is best read as gross. The repo's own floor for an Indian round trip is 30 basis points."
+    resolution: "Zero basis points, per the operator's Gate A note of 2026-10-30 ('we do not assume any BPS cost, keep it as 0'). The headline is therefore gross, and gross equals net. The appendix sweeps the round-trip cost from 0 to 100 basis points and reports the cost at which the edge over NIFTY 500 reaches zero, so the 30bp house floor is visible on the same page as the headline."
+    confidence: high
+    material: true
+    evidence_page: 43
+  - field: universe.description
+    headline: "Operator asked for NIFTY 500 TRI as benchmark; it is not held, so both sides are price return"
+    issue: "The simulation includes cash dividends and the benchmark is the S&P 500 Total Return index (pages 40, 115). The operator's note names the NIFTY 500 Total Return index as the benchmark. The NSE index workbook holds the NIFTY 500 price index only (checked 2026-10-30, no sheet carries a TRI column) and the Ace file carries no dividends."
+    resolution: "Benchmark is the NIFTY 500 price index. The strategy is price return as well, so the comparison is on one basis; a TRI benchmark against a price-return strategy would understate the strategy by its dividend yield. Each side is understated by roughly its own dividend yield; a high-momentum book tends to hold lower-yield names, so the understatement is probably smaller for the strategy than for the index. The TRI is a high-priority data request; if it is supplied under data/raw/MANIFEST.yaml it becomes the benchmark and a dividend series for the stocks is needed to keep the two sides on one basis."
     confidence: high
     material: true
     evidence_page: 115
-  - field: universe.description
-    headline: "Universe is the traded-value top 500, rebuilt monthly, not NIFTY 500 membership"
-    issue: "No historical index membership is held."
-    resolution: "Top 500 by 60-day average traded value, rebuilt at month-end with no look-ahead and applied from the next trading day. A held stock that is suspended or delisted exits at its last price."
+  - field: universe_translation.target_universe
+    headline: "Membership is quarterly, not daily: joiners enter late, leavers are sold up to a quarter late"
+    issue: "The book checks membership every day and sells a leaver immediately (pages 99, 107). The holdings workbook gives quarter-end snapshots."
+    resolution: "A name is eligible from the first snapshot that lists it; a holding is sold at the first snapshot that omits it, at that day's close. A name that stops trading before the snapshot is sold at its last available close. The run reports how many sells were forced by membership."
     confidence: medium
     material: true
-    evidence_page: 98
-  - field: portfolio.allow_cash
-    headline: "Mandate says fully invested; this design is fully invested except unfilled slots"
-    issue: "Cash arises only when fewer than 20 names pass the filters, from whole-share rounding, or after a delisting."
-    resolution: "Allow cash for those cases and report the average cash share each month."
+    evidence_page: 107
+  - field: strategy.formation_rule
+    headline: "'Top 20%' and 'top 100' are the same cut for 500 names; top 20% of scored members is used"
+    issue: "The exit rule is stated as the top 20% of the index (pages 95, 99) and as rank 100 or better (pages 110, 246). NIFTY 500 has 466 to 504 priced members in the snapshots this run uses."
+    resolution: "Top 20% of the members scored on that signal date, rounded down, so the cut scales with the number of priced names."
+    confidence: high
+    material: false
+    evidence_page: 110
+  - field: strategy.weighting_rule
+    headline: "ATR formula and 5% resize tolerance read from prose; standard true range and 5% band used"
+    issue: "The book describes the true range in words as 'the maximum of the day's high to low or move from previous day' with a 20-day average (page 88) and suggests, without requiring, a 5% difference filter on resizes (page 246)."
+    resolution: "True range = max(high - low, |high - previous close|, |previous close - low|) on adjusted prices, simple 20-day mean. A resize trades only if the share difference exceeds 5%. Neither choice moves the ranking; both move turnover and therefore the net result slightly."
     confidence: medium
     material: false
-    evidence_page: 98
+    evidence_page: 88
+  - field: strategy.weighting_rule
+    headline: "10bp risk factor kept although Indian volatility is higher; name count and cash share are reported"
+    issue: "The author chose 10 basis points to land at 20 to 30 names in US large caps (page 230) and shows 5bp and 50bp variants (Table 14-48). Indian NIFTY 500 names have a higher ATR as a share of price, so the same factor gives more, smaller positions."
+    resolution: "Kept at 0.001 as the book's construction. The run reports the weekly name count, the average and maximum cash share, and the weight range; no risk-factor variant is run in the quick test."
+    confidence: high
+    material: false
+    evidence_page: 230
+  - field: strategy.signal_definition
+    headline: "Minimum history for a new listing is not stated; 100 trading days of own history is required"
+    issue: "The book does not say what happens to a stock with fewer than 90 days of prices (a recent listing that joins the index)."
+    resolution: "A name needs 100 trading days of its own adjusted closes to be scored, which also covers the 100-day average; until then it is neither bought nor counted in the top-20% denominator."
+    confidence: medium
+    material: false
+    evidence_page: 73
+  - field: portfolio.allow_cash
+    headline: "Cash kept as a drift only, and the mandate allows cash for this test (operator rulings, 2026-10-30)"
+    issue: "Cash is the book's main defence (pages 96, 111, 219 to 221), and sizing leftovers also sit in cash. The fund's standing mandate is fully invested, so this run holds cash the fund could not under it. The operator's Gate A note rules: 'keep the cash as a drift only'; a second ruling the same day says that note meant the mandate allows cash for this test."
+    resolution: "Cash arises only as a drift, from unspent sizing and from the index filter holding buys back; there is no cash target and no separate cash sleeve, and the headline keeps the book's drift exactly as the book runs it. portfolio.mandate_allow_cash is true, so Gate B's 'implementable within mandate' is judged with cash allowed. Cash earns the declared 6%, swept 0, 4, 6 and 8% (0% bounds how much of the result is the rate rather than the stocks; the book never says what its cash earned). The average and maximum cash share, and the share of total return earned by cash, are reported so the PM can see how much of any result is the filter rather than the stocks. The no-filter variant (the book's own Table 14-44) stays a sensitivity in the appendix."
+    confidence: high
+    material: true
+    evidence_page: 96
 
 replication_targets: []
 
 benchmark_templates:
-  - {name: "Equal-weight, all universe stocks, monthly (appendix only, not in the headline)", template: equal_weight, params: {}, rebalance: monthly}
+  - {name: "Equal-weight, all current NIFTY 500 members, monthly (appendix)", template: equal_weight, params: {}, rebalance: monthly}
+  - {name: "Inverse-volatility weight, all current NIFTY 500 members, monthly (appendix; the book's Table 14-45)", template: inverse_vol, params: {lookback_days: 20}, rebalance: monthly}
 
 selection:
   rule: >
-    Universe = top 500 NSE main-board stocks by 60-day average traded value, rebuilt at
-    month-end with no look-ahead and applied from the next trading day. On the last
-    trading day of each month score every name that has 120 trading days of history by the
-    annualised 120-day log-price regression slope (exp(slope)^250 - 1) times the R-squared
-    of the same fit, and rank them all. Rule out any stock below its 100-day average or
-    with a one-day move above 15% in the past 120 days. Hold the top 20 that pass, 5% each,
-    reset monthly. No explicit securities are named.
+    Universe = NIFTY 500 members at the latest quarterly snapshot on or before the
+    signal date, keyed by ISIN, with 100 trading days of adjusted-close history. On each
+    Tuesday close score every such name by the annualised 90-day log-price regression
+    slope (exp(slope)^250 - 1) times the R-squared of the same fit. Disqualify names
+    below their 100-day simple average or with a one-day move above 15% in the last 90
+    trading days. Hold names while they stay in the top 20% of scored members and pass
+    both filters; buy from the top of the list, while the NIFTY 500 index is above its
+    200-day average, until the cash is spent. No explicit securities are named; the rule
+    is re-derived from the three data files every week.
   explicit_securities: []
-  verified_against: master_universe
-  as_of: "2026-10-16"
+  verified_against: ""
+  as_of: ""
   why_these: >
-    The rule is the whole decision. The universe is rebuilt from the bhavcopy cache and
-    the rule is re-derived every month from it.
+    The rule is the whole decision; naming stocks would be naming a snapshot of a list
+    that changes every week.
 
 backtest_plan:
-  sample_start: "2022-04-29"
+  sample_start: "2014-01-01"
   sample_end: "2026-09-18"
   why_this_window: >
-    The cache starts 2021-10-04. The first portfolio is signalled at the 2022-04-29 close
-    (last trading day of April; 142 trading days of history exist by then, so every stock
-    is scored on a full 120 days and no cache extension is needed) and bought at the
-    2022-05-02 close (2022-05-01 is a Sunday). The equal-weight basket and the timing-luck
-    runs (trading days 1, 6, 11, 16) take their first signal on or after 2022-04-29. The
-    last rebalance is 2026-08-31 (filled 2026-09-01) and the NAV is tracked to 2026-09-18,
-    the last date the cache and the NIFTY 500 workbook have in common (bhavcopy runs to
-    2026-10-05 but the workbook ends 2026-09-18, and no refresh is possible in
-    cached-data mode). The window includes the 2022 chop, the 2023 to 2024 broad rally
-    and the 2024 to 2026 corrections.
-  warmup_days: 120
-  why_warmup: "120 trading days of a stock's own prices for the 120-day regression and the 120-day jump look-back; the 100-day average sits inside it."
-  rebalance_rule: "Monthly. Signals at the last trading day's close, fills at the next session's close. Sell anything not in the new top 20, reset every holding to 5%. No trades between rebalances. Timing luck: also run with the rebalance on trading day 1, 6, 11 and 16 of each month and report the range."
-  weights_rule: "Equal 5% per holding, top 20 eligible, whole shares, start Rs 10 crore. Fewer than 20 eligible: hold those at 5% each, empty slots in cash at 6%. Gross never above 1.0."
+    The operator set the window at Gate A (2026-10-30): 1 January 2014 to 30 September
+    2026. The start is honoured exactly: 2014-01-01 was an NSE trading day, the first
+    Tuesday signal is 2014-01-07 and the first fills are on Wednesday 2014-01-08, using
+    the 2013-12-31 membership snapshot (466 of 500 names priced, every one of them with
+    at least 100 closes before the first signal). Stock-level warm-up (100 trading days)
+    and the index 200-day average are read from Ace and workbook history before
+    2014-01-01, which both files have (200 NIFTY 500 closes back to 2013-03-12). The end
+    cannot be 2026-09-30: the house limit for any backtest is 2026-09-29, the day before
+    the NSE review effective 2026-09-30 that the holdings file has not seen, and the
+    NIFTY 500 index series in the workbook ends 2026-09-18, which is the last day the
+    200-day gate can be read and the last day strategy and benchmark can be compared.
+    The run therefore ends 2026-09-18, eight trading days short of the operator's date;
+    the last signal is Tuesday 2026-09-15. Between the two dates there are 629 Tuesday
+    signals and 3,147 trading days. The window holds the 2015-16 (20.8%), 2018 (15.8%),
+    2020 (38.3% to 2020-03-23), 2022 (18.5%) and 2024-25 (18.8%) index falls. It holds
+    no multi-year bear market, which is where the book's filter earned most of its edge.
+    Membership is held from 2012-03-31, so the 2012-2013 stretch is available if the
+    operator wants it back; it was dropped at the operator's instruction, not for lack
+    of data.
+  warmup_days: 200
+  why_warmup: >
+    200 trading days of NIFTY 500 index closes for the index filter and 100 trading days
+    of each stock's own closes for the regression, the 100-day average and the 90-day
+    gap look-back (20 for ATR sits inside). All of it comes from history before
+    2014-01-01, so the track record starts on the operator's start date.
+  rebalance_rule: >
+    Weekly. Signal at the Tuesday close (previous trading day if a holiday), fills at
+    the next trading day's close. Sells first, then on every second signal date the
+    resize to target with a 5% tolerance, then buys from the top of the ranking while the
+    index is above its 200-day average until the cash is spent. No trades on other days.
+  weights_rule: >
+    Shares = NAV x 0.001 / ATR20 per position, whole shares, start Rs 10 crore; weights
+    are not normalised, leftover cash is a drift that stays in cash at 6%. Gross never
+    above 1.0.
   explicit_weights: {}
   benchmarks:
     - name: "NIFTY 500 (price index)"
-      why_this: "The fund benchmark and the do-nothing option; price return, like the strategy. The only comparator in the headline charts."
-    - name: "Equal-weight, all universe stocks, monthly (appendix)"
-      why_this: "Owning all 500 universe stocks at equal weight, rebalanced monthly, shows how much of any result is just owning the universe rather than the ranking. Appendix only."
+      why_this: "The fund benchmark and the do-nothing option; price return, like the strategy. The only comparator in the headline charts. The operator asked for the NIFTY 500 TRI; it is not in the three data files, and a TRI against a price-return strategy would be a mismatched comparison, so the price index stands until a TRI and a dividend series are supplied together."
+    - name: "NIFTY500 MOMENTUM 50 (price index, appendix, the one extra sleeve)"
+      why_this: "The off-the-shelf product that would replace this strategy for zero research effort: NSE's own momentum index on the same universe. Its history is backfilled before launch (rules chosen with hindsight), so beating it is weak evidence and losing to it is strong; marked backfilled on every chart and table, price return, appendix only."
+    - name: "Inverse-volatility weight, all current NIFTY 500 members, monthly (appendix)"
+      why_this: "The book's own 'risk parity index' (Table 14-45, page 223): every member weighted by inverse volatility, no ranking, no filter. Shows how much of any result is the sizing rule alone."
+    - name: "Equal-weight, all current NIFTY 500 members, monthly (appendix)"
+      why_this: "Owning the whole universe at equal weight shows how much of any result is the small-cap tilt of equal weighting rather than the ranking and the filter."
+    - name: "Same rules without the 200-day index filter (appendix)"
+      why_this: "The book's own ablation (Table 14-44): separates what the stock ranking buys from what the cash drift buys. The operator ruled (2026-10-30) that the mandate allows the cash for this test; this variant still shows what a fully invested book would have done."
   must_beat:
-    - "NIFTY 500 price index on annualised return, gross, with a smaller maximum drawdown"
-    - "the equal-weight basket of all universe stocks (monthly), gross"
+    - "NIFTY 500 price index on annualised return, at zero trading cost (gross equals net), with a smaller maximum drawdown over 2014-01 to 2026-09"
+    - "the monthly equal-weight basket of all current NIFTY 500 members, at the same zero cost, on annualised return (so the ranking adds something beyond owning the universe equal-weighted)"
+    - "NIFTY500 MOMENTUM 50 price index (backfilled) on BOTH annualised return and maximum drawdown: return at least equal and drawdown no larger (the off-the-shelf alternative)"
   success_looks_like: >
-    The strategy returns more than the NIFTY 500 price index over the window, gross, with a
-    smaller maximum drawdown, and also beats the equal-weight basket of the same 500
-    stocks (so the ranking, not just the universe, adds something). The result keeps its
-    sign when the rebalance is moved to trading day 1, 6, 11 and 16 of the month: the
-    range across those four timings and the month-end base run is narrow compared with
-    the gap to the NIFTY 500. It also keeps its sign with a 20% jump limit instead of 15%.
-    Gaps of a few percent a year are treated as noise given about 4.5 years of data.
+    At zero trading cost, the strategy returns more than the NIFTY 500 price index over
+    2014-01-01 to 2026-09-18 with a smaller maximum drawdown, and also beats the monthly
+    equal-weight basket of all members. The 2020 drawdown is visibly shallower than the
+    index's 38% because the filter took the book to cash. The result keeps its sign when
+    the signal day is moved from Tuesday to Thursday, with a 20% gap limit instead of 15%
+    (the rule itself stays at 15%), and with a 120-day regression window (the book's
+    Table 14-46). In the appendix cost sweep the edge over NIFTY 500 survives at least
+    the 30 basis point house floor and ideally 50. Gaps of a couple of percent a year are
+    noise over 12.7 years with one crash.
   failure_looks_like: >
-    Any of: no edge over the NIFTY 500 even gross; no edge over the equal-weight basket
-    (the ranking selects nothing beyond owning the universe); the result changes sign or
-    swings widely across the four other rebalance days; the 15% jump rule leaves fewer
-    than 20 names in many months so the book is partly cash; the result depends on one or
-    two stocks; or a drawdown no smaller than the index. A gross result on four and a half
-    years with no market filter and no crash is a read on this window, not on the paper's
-    16-year claim, and says nothing about crash protection.
+    Any of: no edge over the NIFTY 500 price index at zero cost; no edge over the
+    equal-weight member basket (the ranking selects nothing beyond owning the universe);
+    the index filter costs more in missed rallies than it saves in 2020 so the no-filter
+    variant beats the filtered one on both return and drawdown; the result changes sign
+    when the signal day moves or when the gap limit is 20%; the 15% rule leaves fewer
+    than 20 eligible names in a large share of weeks; or the appendix cost sweep shows
+    the edge over NIFTY 500 gone at or below the 30 basis point house floor, which would
+    mean the zero-cost headline is an artefact of the cost assumption. A good result over
+    2014 to 2026 with one crash says little about a 2000-2003-style bear market and
+    nothing the fund's standing fully-invested mandate could hold while the book is in cash
+    (the operator allowed that cash for this test on 2026-10-30).
   known_failure_modes:
-    - "NO MARKET FILTER AND NO CRASH IN THE WINDOW: the worst NIFTY 500 fall is about 19%, so the test cannot show what the design does in a real bear market (the book's no-filter row, Table 14-44, fell 50.9%)."
-    - "GROSS RETURNS ARE NOT ACHIEVABLE: costs are zero by design, and a monthly reset of all 20 positions to 5% is high turnover, so a net result will be lower."
-    - "HIGH TURNOVER FROM THE MONTHLY FULL RESET: kept stocks are also traded back to 5% every month."
-    - "EQUAL WEIGHTS GIVE VOLATILE NAMES MORE RISK than the book's volatility sizing would (book pp. 83-86)."
-    - "JUMP RULE AND DATA: NSE stocks often move 15%, and a wrong split/bonus/demerger label either hides a real gap or invents one."
-    - "UNIVERSE: the traded-value top 500 is not the NIFTY 500; some names the fund cannot hold may rank."
-    - "SHORT SAMPLE: about 53 monthly rebalances (April 2022 to August 2026)."
-    - "MISSING SESSIONS: six special weekend or holiday sessions in the index workbook are not in the bhavcopy cache, so moves across them look like multi-day moves."
+    - "CASH IN THE BOOK: the filter puts the book partly or wholly in cash about a quarter of the time (24.6% of days in the window). Kept as a drift only at the operator's instruction, and the operator ruled (2026-10-30) that the mandate allows this cash for the test; under the fund's standing fully-invested mandate the no-filter variant is the holdable version."
+    - "ZERO COST ON A WEEKLY STRATEGY: at the operator's instruction no cost is charged; weekly exits, bi-weekly resizes and buy-until-cash refills trade a large part of the book, so the headline overstates what the fund would keep; the appendix sweep (0 to 100bp, house floor 30bp) is the honest companion."
+    - "THE 15% RULE IN A GAPPY MARKET: NSE mid and small caps move 15% often, so the rule may thin the eligible list sharply and tilt the book to large caps; a demerger Ace leaves unadjusted reads as a gap. Kept as it is at the operator's instruction."
+    - "PRICE BANDS: names at the top of a momentum list are often at an upper circuit where a buy may not fill at the close; fills are assumed at the close."
+    - "QUARTERLY MEMBERSHIP: a leaver is sold up to a quarter late and a joiner enters late; the early universe is missing 34 unmapped (mostly later-delisted) names in the 2013-12-31 snapshot."
+    - "BENCHMARK BASIS: the operator asked for NIFTY 500 TRI; it is not held, so the price index is used, and the run ends 2026-09-18 where that series ends rather than on the operator's 2026-09-30."
+    - "ONE CRASH IN THE WINDOW: 2020 was a three-week fall and a fast recovery; a 200-day filter is designed for slow bear markets and can lose on both legs of a V."
+    - "PRICE RETURN ONLY on both sides; the book's figures include dividends."
+    - "CASH RATE IS A CONSTANT: 6% swept 4 to 8%; every cash-heavy stretch is rate-dependent."
 
 data_requests:
-  - item: "A longer bhavcopy history, ideally back to 2008, from the NSE archive"
-    why: "The 4.5 years held contain no market fall of 40% or more, so the design (which has no market filter) is never tested in a bear market."
-    unlocks: "A test through the 2008 crash and the 2020 fall, and several independent market regimes."
-    without_it: "The run is a read on one rally-and-correction window. A good result cannot be called evidence of downside behaviour, and the drawdown comparison with the book's no-filter row cannot be made."
+  - item: "NIFTY 500 membership changes with their effective dates between the quarterly snapshots (the NSE semi-annual review lists plus ad-hoc replacements), 2012 to date"
+    why: "The book sells a leaver the day it leaves and only buys current members (pages 99, 107); quarterly snapshots sell leavers up to a quarter late and admit joiners late."
+    unlocks: "The index-member constraint applied as the book applies it, and a clean count of membership-forced sells."
+    without_it: "Quarterly snapshots stand in: a holding is sold at the first snapshot that omits it, which lets a demoted name be held for up to three months after the index dropped it. The direction of the bias is unknown (demoted names are usually weak, but a momentum book rarely holds them), so the run reports the number and return of those late sells."
     priority: high
-    satisfies: ["daily open, high, low, close and traded value per stock, split and bonus adjusted, delisted names included, keyed on ISIN"]
-    headline: "4.5 years has no bear market in it; crash behaviour stays untested"
-    format_hint: "the same daily files that ros/data/nse_bhavcopy_download.py writes, further back"
-  - item: "A refreshed NIFTY 500 workbook and bhavcopy cache (both to the same last date)"
-    why: "This session is cached-data only and cannot download, so the NAV ends at the last common date on disk, 2026-09-18."
-    unlocks: "About 11 more trading days (to 2026-10-05 for bhavcopy) once the workbook is extended to match."
-    without_it: "The NAV ends 2026-09-18; nothing else changes."
+    satisfies: ["point-in-time NIFTY 500 membership on each signal date (holdings workbook, quarterly snapshots)"]
+    headline: "Membership between quarterly snapshots: leavers sold up to a quarter late"
+    format_hint: "effective_date, isin, action (add/remove), source review"
+  - item: "ISIN mapping for the 34 names in the 2013-12-31 snapshot (21 by end-2014, 9 by end-2017, 2 by 2021) that the price file cannot bridge"
+    why: "They are mostly companies that later delisted; without them the early universe is thinner on exactly the names a long-only momentum book can be caught holding into a collapse."
+    unlocks: "A 2014 to 2017 universe that is the real index, not the index minus its failures."
+    without_it: "The unmapped names are excluded from ranking and from the equal-weight basket for those snapshots. The bias flatters the strategy and the basket by an unknown amount; the run reports the unmapped count per snapshot alongside the results."
+    priority: high
+    satisfies: ["daily corporate-action-adjusted close per NIFTY 500 member, keyed by ISIN, delisted names included (Ace)"]
+    headline: "34 of 500 names in the 2013-12-31 snapshot cannot be priced; mostly later delistings"
+    format_hint: "symbol or company name as in the holdings workbook, isin, accord code if known"
+  - item: "The NIFTY 500 Total Return index (daily close, 2013 to date) and dividend-adjusted (total return) stock prices or a per-stock dividend series"
+    why: "The operator named the NIFTY 500 TRI as the benchmark (Gate A note, 2026-10-30) and the book's strategy and benchmark both include dividends (pages 40, 115); the three files held are price only, and no sheet of the NSE index workbook carries a TRI column."
+    unlocks: "The benchmark the operator asked for, on the same basis as the book. The stock-level dividends are needed alongside it: a TRI benchmark against a price-return strategy would understate the strategy by its own dividend yield."
+    without_it: "Both sides are price return, so the comparison stays fair; each side is understated by roughly its dividend yield and the gap between them is probably small, because momentum books hold lower-yield names. This changes what may be claimed and the benchmark label, not whether the mechanism shows up. Declared in data/raw/MANIFEST.yaml when supplied; the run does not fetch anything."
+    priority: high
+    satisfies: ["NIFTY 500 index daily close for the 200-day filter and as the benchmark (NSE index workbook)"]
+    headline: "NIFTY 500 TRI (the operator's benchmark) is not held; price index used on both sides"
+    format_hint: "date, NIFTY 500 TRI close; date, isin, dividend per share with ex-date (or dividend-adjusted close)"
+  - item: "Daily NSE price-band (circuit limit) history per stock"
+    why: "Momentum leaders sit at upper bands; a buy at the Wednesday close may not have filled, and a sell on a name at a lower band may not either."
+    unlocks: "Fills modelled as not happening on band days, carried to the next trading day."
+    without_it: "Fills are assumed at the close. The 15% gap rule already removes most names that just hit a 20% band, and the run reports how many buys were made on a day the stock closed up more than 9.5% (a proxy for a band day)."
     priority: nice_to_have
-    satisfies: ["NIFTY 500 daily close, total return"]
-    headline: "Data refresh was not possible in cached-data mode; NAV ends 2026-09-18"
-    format_hint: "the same workbook layout, extended"
-  - item: "Historical NIFTY 500 membership by date"
-    why: "The paper restricts the portfolio to index members on each day; the top-500-by-traded-value stand-in differs from it."
-    unlocks: "An exact translation of the universe rule and a test the fund can hold."
-    without_it: "The traded-value top 500 stands in."
-    priority: nice_to_have
-    satisfies: ["historical NIFTY 500 membership by date"]
-    headline: "Real NIFTY 500 membership would remove the universe proxy (refines the claim)"
-    format_hint: "date, isin, in_index"
-  - item: "Dividend-adjusted (total return) NIFTY 500 series"
-    why: "The paper compares with a total return index; the held series is price only."
-    unlocks: "A like-for-like comparison that is fair to the benchmark."
-    without_it: "Both sides are price return, so the comparison is consistent but understates both by about 1.3 to 1.5 points a year."
-    priority: nice_to_have
-    satisfies: ["NIFTY 500 daily close, total return"]
-    headline: "A total return index would give a fair benchmark (does not decide the result)"
-    format_hint: "date, close"
+    satisfies: ["daily corporate-action-adjusted close per NIFTY 500 member, keyed by ISIN, delisted names included (Ace)"]
+    headline: "No price-band history: fills assumed at the close on circuit days"
+    format_hint: "date, isin, band percent, hit_upper, hit_lower"
 
 open_questions:
-  - question: "Please sign off the split, bonus and demerger event list before the run uses it."
-    why_it_matters: "A wrong label hides a real jump (so the 15% rule lets a stock in) or invents one (so a good stock is thrown out). The list has 734 rows, of which 263 are proposed as adjustments (250 split/bonus, 13 demergers) and about 121 need a human look."
-    what_i_assumed: "The proposed labels are applied as they stand unless the operator edits corporate_action_events.csv. IRCTC 2021-10-28 was added; TATAMOTORS, SIEMENS, ABFRL and VEDL are DEMERGER at the observed ratio, as asked. ADANIENT 2023-02-01, ZEEL 2024-01-23 and IEX 2025-07-24 stay REAL. ALLCARGO 2024-01-02 and CUPID 2026-03-09 stay REAL pending a check; their volume jump suggests a rescale."
-    headline: "Sign off the corporate-action event list (263 proposed adjustments); verify ALLCARGO and CUPID"
-    ask_of: researcher
-    blocks_run: false
-  - question: "Is the convertibility chain needed now, or does the quick-test result decide first?"
-    why_it_matters: "A thin chain would look checked and not be."
-    what_i_assumed: "Convertibility is deferred until the quick-test result says the mechanism shows up at all, per CLAUDE.md's quick-test default. The data_plan is short and states the shortfalls."
-    headline: "convertibility is deferred until the quick test says it is worth the time"
-    ask_of: researcher
-    blocks_run: false
-  - question: "Is a gross-only result acceptable as the headline, given the monthly full reset trades most of the book every month?"
-    why_it_matters: "The 30bp round-trip floor would take a visible slice of a high-turnover strategy, and the card no longer shows it."
-    what_i_assumed: "Yes, as the operator designed: gross returns plus annual turnover, so a reader can price the cost. Gate B must say the gross result cannot be achieved."
-    headline: "Costs are zero by design; gross returns are not achievable"
+  - question: "The 2026-10-16 run of this same book used the operator's simplified design (monthly, top 20 equal-weight at 5%, no index filter, no costs) on bhavcopy data. This card runs the book's own rules on the three current files. The operator's 2026-10-30 notes set the cash, cost, window, gap rule and benchmark for the book's rules without asking for the monthly design back; is that read right?"
+    why_it_matters: "The two designs answer different questions: the book's rules test the mechanism as published (including the cash drift the fund cannot hold); the monthly top-20 tests a holdable simplification of the ranking alone."
+    what_i_assumed: "The book's own construction, per CLAUDE.md's 'one card, the paper's own construction, translated to India', with the operator's five notes applied to it. The no-filter variant in the appendix is the nearest holdable version. The monthly top-20 equal-weight design can be added as a named sensitivity at Step 05 if the PM asks."
+    headline: "Book's own rules with the operator's 2026-10-30 settings; the monthly top-20 design stays optional"
     ask_of: pm
     blocks_run: false
-  - question: "Is the traded-value top 500 an acceptable stand-in for NIFTY 500?"
-    why_it_matters: "It may rank stocks the index excludes, and exclude stocks the fund can hold."
-    what_i_assumed: "Yes for a first read. No universe-size sensitivity is run."
-    headline: "Accept a traded-value top 500 instead of real NIFTY 500 membership?"
+  - question: "The operator asked for the NIFTY 500 TRI as the benchmark. It is not in the three data files (the NSE index workbook holds the NIFTY 500 price index only). Is the price index on both sides acceptable until a TRI and a stock dividend series are supplied?"
+    why_it_matters: "A benchmark the run cannot read is not a benchmark. The price index is the consistent choice for a price-return strategy; a TRI alone would hand the index roughly 1.2 to 1.5% a year of dividends the strategy is not credited with."
+    what_i_assumed: "NIFTY 500 price index on both sides, labelled as such on every chart and table; the TRI is a high-priority data request. The run does not fetch anything. If the TRI is supplied without stock dividends, it is shown as a second line in the appendix with the basis mismatch stated, not as the headline."
+    headline: "NIFTY 500 TRI benchmark asked for but not held; price index used, TRI requested"
     ask_of: pm
     blocks_run: false
-  - question: "Is n_configs_tried = 8 honest?"
-    why_it_matters: "The deflated Sharpe depends on it."
-    what_i_assumed: "8 is a floor taken from the book's own earlier models. This run adds four rebalance-day timings and a 20% jump-limit sensitivity, so the true count is higher; the researcher should raise it before Gate B."
-    headline: "n_configs_tried = 8 is a floor; this run's own variants add to it"
+  - question: "The operator's end date is 30 September 2026. The house limit is 2026-09-29 (NSE review effective 2026-09-30 not yet in the holdings file) and the NIFTY 500 index series ends 2026-09-18, so the run ends 2026-09-18. Is that acceptable, or should the index workbook be refreshed first?"
+    why_it_matters: "Without the index close the 200-day gate cannot be read and the benchmark cannot be compared, so running past 2026-09-18 would mean inventing the gate. Eight trading days are lost; the last signal is 2026-09-15."
+    what_i_assumed: "End 2026-09-18, stated on every output. A refreshed NSE index workbook through 2026-09-29 and a 2026-09-30 post-review constituent list under data/raw/nifty500_updates/ would let the run reach the house limit; the run never fetches either."
+    headline: "Run ends 2026-09-18 (index series end), not the operator's 2026-09-30"
+    ask_of: pm
+    blocks_run: false
+  - question: "Costs are zero at the operator's instruction. CLAUDE.md's floor for an Indian round trip is 30 basis points and this strategy trades weekly. Is the zero-cost headline, with the 30bp reading in the appendix sweep, the presentation wanted?"
+    why_it_matters: "A weekly strategy at zero cost can show an edge that a 30bp round trip removes; the two readings can disagree in sign. Showing both keeps the headline honest about what it is."
+    what_i_assumed: "Headline at zero cost (gross equals net), as instructed. The appendix sweeps 0, 10, 20, 30, 50, 75 and 100bp and reports the breakeven cost; failure_looks_like names the 30bp floor so the bar is set before the numbers."
+    headline: "Zero cost at the operator's instruction; the 30bp house floor is shown in the appendix sweep"
+    ask_of: pm
+    blocks_run: false
+  - question: "Is n_configs_tried = 9 honest for the deflated Sharpe?"
+    why_it_matters: "The deflated Sharpe depends on it. The book reports the base rules plus eight variants on the same sample (Tables 14-44, 14-46, 14-47, 14-48). This run adds a Thursday signal day, a 20% gap limit, a 120-day window and the no-filter ablation."
+    what_i_assumed: "9 for the paper's own trials. The run's four sensitivities are counted on top at Step 06 (13 in total) before any deflated Sharpe is reported."
+    headline: "n_configs_tried = 9 from the book; this run's four variants are added at Step 06"
+    ask_of: researcher
+    blocks_run: false
+  - question: "The convertibility chain is deferred (the data_plan is written, because Gate A's own check blocks without one): is a quick-test result the right trigger for writing the chain?"
+    why_it_matters: "A thin chain written now would look checked and not be. Its weakest link is already visible: the cash the mechanism needs and the fund's standing mandate forbids (allowed for this test by the operator's ruling of 2026-10-30), followed by costs at weekly turnover."
+    what_i_assumed: "Deferred until the quick test says the mechanism shows up net; if it does, the convertibility section is written before Gate B with the cash question as its weakest link."
+    headline: "Convertibility deferred until the quick test says it is worth it; data_plan written"
+    ask_of: researcher
+    blocks_run: false
+  - question: "Should the 20% top band be re-based on the number of priced members or fixed at 100 names?"
+    why_it_matters: "With 466 priced names at the first signal the top 20% is 93, not 100; a fixed 100 is a slightly looser hold band early on."
+    what_i_assumed: "Top 20% of scored members on the day, rounded down, as the book's primary statement (pages 95, 99); 'top 100' is its 500-name special case."
+    headline: "Hold band is top 20% of priced members (93 to 100 names), not a fixed 100"
     ask_of: researcher
     blocks_run: false
 
-n_configs_tried: 8
+n_configs_tried: 9
 
 notes: >
-  Quick-test card (CLAUDE.md default 2026-10-06), revised 2026-10-16 a second time with
-  the operator's Gate A notes: the book's ranking is kept (120-day OLS of ln(close),
-  exp(slope)^250-1, times R-squared, all names ranked before filters) and the book's
-  portfolio rules are replaced with a monthly top-20 equal-weight portfolio at 5% each,
-  always invested, no market filter, no costs, gross returns with annual turnover.
-  Benchmarks are the NIFTY 500 price index (headline) and a monthly equal-weight basket
-  of the 500 universe stocks (appendix); the inverse-volatility basket is dropped.
-  Timing luck is tested by rebalancing on trading day 1, 6, 11 and 16 of each month.
-  The only sensitivity is the 20% jump limit. The corporate-action event list was
-  revised (IRCTC added; four stocks set to DEMERGER). Convertibility is deliberately not
-  written and the data_plan is short. Data: NSE bhavcopy only (plus the NIFTY 500
-  workbook for the benchmark), cached data only; no download was possible or attempted.
-  Revised again 2026-10-16 with operator notes 6 and 17: the churn spec is in
-  strategy.formation_rule and the churn checks (holdings ledger, per-rebalance assertions,
-  look-ahead test on 3 random months, corporate-action-day check, churn report) are in the
-  ambiguities list.
-  Revised 2026-10-16 with operator note 6: start date moved to a first signal at the
-  2022-04-29 close, bought at the 2022-05-02 close.
-  Validation planned at Step 05: hand-check 3 months' rankings against Excel SLOPE and
-  RSQ, and check that ADANIENT 2023-02-01, ZEEL 2024-01-23 and
-  IEX 2025-07-24 appear as real falls in the adjusted series.
-
-india_notes:
-  - category: data
-    item: >
-      Splits, bonuses and demergers on NSE have to be separated from real jumps from
-      bhavcopy alone. NSE's own previous-close field does not adjust for splits in this
-      data, so ISIN changes, closeness to a standard ratio and traded value are the
-      evidence, and the labels are a judgement for a human to sign.
-    why: >
-      NSE stocks hit price bands and have frequent bonuses, splits and demergers. The 15%
-      jump rule only works if a corporate action is not read as a jump and a real fall is
-      not smoothed away.
-    triggered_by: "disqualify any stock with a move over 15% in 120 days (page 82)"
-    addresses: ["daily corporate-action-adjusted close per stock, including delisted names, built from bhavcopy with the signed-off event list (bhavcopy)"]
-    evidence_page: 82
-  - category: execution
-    item: >
-      Stocks near the top of a momentum ranking are the ones most likely to be at an upper
-      price band, where a buy may not fill, and stocks that drop out may be stuck at a
-      lower band when the rule says sell.
-    why: "The rule resets all 20 holdings at one close each month."
-    triggered_by: "buy from the top of the ranking (page 98)"
-    addresses: ["point-in-time top-500 membership by trailing traded value (bhavcopy), rebuilt at month-end"]
-    evidence_page: 98
-  - category: validity
-    item: >
-      The universe is ranked by traded value, which already favours recently popular
-      stocks, and momentum stocks are popular stocks, so the traded-value top 500 is
-      partly selected on the same thing the ranking rewards. Rebuilding only at month-end
-      softens this but does not remove it.
-    why: "A rising stock trades more, so it enters a traded-value top 500 as it climbs, which can flatter a momentum rank."
-    triggered_by: "S&P 500 membership is by size and committee, not by recent trading (page 40)"
-    addresses: ["point-in-time top-500 membership by trailing traded value (bhavcopy), rebuilt at month-end"]
-    evidence_page: 40
-  - category: cost
-    item: >
-      Costs are zero by the operator's design, but the monthly reset of every holding to
-      5% trades a large part of the book every month, often into mid and small caps with
-      wide spreads.
-    why: "India's round trip cost is far above a US large cap's; the turnover is high enough that the gross result will not be achievable net."
-    triggered_by: "monthly full reset to equal weights"
-    addresses: ["NIFTY 500 daily close (benchmark only)"]
-    evidence_page: 99
-  - category: timing
-    item: >
-      The NIFTY 500 workbook ends on 2026-09-18, earlier than bhavcopy (2026-10-05). Six
-      special weekend or holiday sessions (2023-11-12, 2024-01-20, 2024-03-02, 2024-05-18,
-      2025-02-01, 2026-02-01) are in the workbook but not in the bhavcopy cache.
-    why: "The index gap shortens the NAV window; a missing session turns a one-day move into a two-day move."
-    triggered_by: "benchmark comparison to 2026-09-18"
-    addresses: ["NIFTY 500 daily close (benchmark only)"]
-    evidence_page: 88
+  Quick-test card drafted 2026-10-30 in a Lightyear run (run id 20261030-124039-5511)
+  against the three data files: Ace Equity prices (2000-01-03 to 2026-10-26, 4,512
+  securities), the NIFTY 500 holdings workbook (55 quarterly snapshots, 2012-03-31 to
+  2026-05-31; backtest end limit 2026-09-29) and the NSE index workbook (NIFTY 500 close
+  to 2026-09-18). Every number above about the data (458 priced members in the first
+  snapshot, 40 unmapped, 38% worst index fall on 2020-03-23, 25% of days below the
+  200-day average, 717 Wednesdays in the window) was printed by
+  outputs/lightyear/20261030-124039-5511/scratch/inventory_check.py in this session.
+  The book's headline figures were read from the rendered table images on pages 115,
+  221, 225, 228 and 231, not from extracted text. This card supersedes the 2026-10-16
+  card for the same PDF, which ran on NSE bhavcopy with a traded-value top-500 proxy
+  universe and the operator's monthly top-20 equal-weight design; that design is
+  recorded in open_questions and can be re-run as a sensitivity on request.
+  Sensitivities planned at Step 05: Thursday signal day, 20% gap limit, 120-day
+  regression window, no index filter. Cost sweep 0 to 100bp. Cash sweep 0, 4, 6, 8%.
+  Critique (2026-10-30) folded in: top-20% band is of all ranked members, filters
+  after; the Momentum 50 bar needs both return and drawdown; cash swept down to 0%;
+  engine works in weights, share counts quoted on unadjusted prices; Momentum 50 is
+  marked backfilled wherever it appears.
+  REVISION after the operator's Gate A notes (2026-10-30, same run): (1) cash kept as a
+  drift only, the book's own drift stays in the headline, no cash target; (2) costs set
+  to zero at the operator's instruction, gross equals net, the 30bp house floor shown in
+  the appendix sweep; (3) window 2014-01-01 to 2026-09-18 (the operator asked for
+  2026-09-30; the house limit is 2026-09-29 and the NIFTY 500 index series ends
+  2026-09-18, so the run ends there; first signal 2014-01-07, last 2026-09-15, 629
+  signals, 3,147 trading days, 24.6% of days below the 200-day average, worst index fall
+  38.3% on 2020-03-23); (4) the 15% gap rule kept as it is; (5) the NIFTY 500 TRI the
+  operator named as benchmark is not in the three files (checked 2026-10-30 with
+  load_banner_workbook on both sheets of the NSE index workbook), so the NIFTY 500 price
+  index stays the benchmark and the TRI is a high-priority data request. The numbers in
+  this paragraph were printed by scratch/inventory_check_revision.py and
+  scratch/window_stats_revision.py in this run.
 
 data_plan:
+  # Designed from the book first (pages 40, 240: membership, delistings, dividends,
+  # end-of-day data only), then compared with the three files the fund holds.
   ideal:
-    - field: "daily open, high, low, close and traded value per stock, split and bonus adjusted, delisted names included, keyed on ISIN"
+    - field: "daily adjusted close per index member, delisted names included, keyed by ISIN"
       granularity: daily
-      history_from: "2008-01-01"
-      why: "The regression, the 100-day average and the 15% jump test all need daily bars; delisted names must be held into their fall, never dropped."
-      why_granularity: "Monthly bars would blur the jump test and the 120-day fit; intraday adds nothing to a rule that trades once a month at a close."
-      why_history: "A design with no market filter needs at least one fall of 40% or more (2008) to show what it does in a bear market. About 4.5 years held has none."
-      adjustments: "Splits, bonuses and demergers neutralised using the signed-off bhavcopy event list, with real falls kept; price return only; ISIN key so renamed symbols do not splice."
+      history_from: "2007-01-01"
+      why: "The 90-day regression, the 100-day average and the 15% one-day gap test are all computed on daily closes; a delisted name must be held into its fall, never dropped (page 240)."
+      why_granularity: "The book states 'all calculations are done on daily data' (page 98) and that intraday 'won't improve the strategy' (page 240). Weekly bars cannot see a one-day 15% move or form a 90-point regression; intraday prices a decision the rule never makes."
+      why_history: "From 2007 so the window holds the 2008 bear market (NIFTY 500 fell more than half) as well as 2020; the book earned most of its edge in two slow bear markets (pages 219 to 221), and a sample with only a three-week crash cannot test that."
+      adjustments: "Splits, bonuses, rights and demergers back-adjusted so a mechanical price change never reads as a gap; real shocks kept; ISIN key so a renamed symbol does not splice two companies."
       minimum_viable: true
-    - field: "historical NIFTY 500 membership by date"
-      granularity: monthly
-      history_from: "2008-01-01"
-      why: "The paper buys only index members on each day."
-      why_granularity: "Index rebalances are semi-annual, so monthly captures every change."
-      why_history: "Same window as prices."
-      adjustments: "As announced, with the effective date, not the announcement date."
+    - field: "daily adjusted high and low per stock, same adjustment factor as the close"
+      granularity: daily
+      history_from: "2007-01-01"
+      why: "The 20-day average true range that sizes every position needs high, low and previous close (page 88)."
+      why_granularity: "ATR is defined on daily bars; a weekly range overstates it and shrinks every position."
+      why_history: "Same window as the closes; 20 days of warm-up only."
+      adjustments: "Identical back-adjustment to the close so ATR as a share of price is unchanged by corporate actions."
+      minimum_viable: true
+    - field: "NIFTY 500 index daily close (price index) for the 200-day filter"
+      granularity: daily
+      history_from: "2006-01-01"
+      why: "New buys are gated on the index close against its 200-day simple average (page 99); the book reads the price index, so a price index is the right series for the gate."
+      why_granularity: "A 200-day average needs daily closes; the gate is checked weekly but on daily data."
+      why_history: "200 trading days before the first signal."
+      adjustments: "None; index level as published."
+      minimum_viable: true
+    - field: "index membership on each day, with the effective date of every addition and removal"
+      granularity: daily
+      history_from: "2007-01-01"
+      why: "Only current members may be bought and a leaver is sold at once (pages 99, 107); the author calls this 'absolutely critical'."
+      why_granularity: "NSE changes take effect on a dated day; a quarterly snapshot can be up to three months late on either side of a change."
+      why_history: "Same window as the prices."
+      adjustments: "Effective dates, not announcement dates; delisted and merged names kept with their ISIN."
       minimum_viable: false
-    - field: "NIFTY 500 daily close, total return"
+    - field: "cash dividends per stock (or total-return adjustment factors) and the NIFTY 500 Total Return index"
       granularity: daily
-      history_from: "2008-01-01"
-      why: "The fund benchmark."
-      why_granularity: "Daily, to match the NAV dates."
-      why_history: "Same window as the strategy; the workbook holds this already (price only)."
-      adjustments: "Price return held; total return would add about 1.3 to 1.5 points a year."
-      minimum_viable: true
+      history_from: "2007-01-01"
+      why: "The book's strategy and benchmark both include dividends (pages 40, 115); without them both sides are understated."
+      why_granularity: "Ex-dates are daily events; monthly factors blur which week a payout fell in."
+      why_history: "Same window."
+      adjustments: "Total-return factors applied on the ex-date; the TRI as published by NSE."
+      minimum_viable: false
+    - field: "Indian overnight or 91-day T-bill rate"
+      granularity: daily
+      history_from: "2007-01-01"
+      why: "The book is in cash whenever the index is under its 200-day average, about a quarter of the days in the window; what that cash earns is part of the result."
+      why_granularity: "Daily accrual on a daily NAV."
+      why_history: "Same window; must cover the 2009, 2020-21 easing cycles and the 2022-23 tightening."
+      adjustments: "None."
+      minimum_viable: false
+    - field: "daily NSE price-band (circuit) status per stock"
+      granularity: daily
+      history_from: "2007-01-01"
+      why: "Buys at the top of a momentum ranking and sells after a sharp fall are the trades most likely to sit at a band where a close-price fill did not exist."
+      why_granularity: "Bands are set per stock per day."
+      why_history: "Same window."
+      adjustments: "None."
+      minimum_viable: false
   rejected_alternatives:
-    - option: "NSE factor index workbook (index closes only)"
+    - option: "Weekly bars (the 'lazy solution' the author names on page 245)"
+      why_not: "Cannot see a one-day 15% move, gives a 90-week not 90-day regression, and loses the daily NAV the drawdown figures need."
+    - option: "Intraday data"
+      why_not: "The book trades once a week at a close and says intraday 'won't improve the strategy as such' (page 240); it would price a decision the rule never makes."
+    - option: "NIFTY Total Market (750 names) or a top-1,000-by-traded-value universe"
+      why_not: "Out of mandate, and it adds microcaps where the 15% rule and the ATR sizing behave least like the book's large-cap calibration; the author's analogue is a 500-name large index."
+    - option: "The traded-value top-500 proxy universe used in the 2026-10-16 run of this book"
+      why_not: "Real point-in-time NIFTY 500 membership is now held; a universe selected on recent turnover is partly selected on the thing the ranking rewards, which flatters a momentum test."
+    - option: "The NSE index workbook alone (index levels, no stocks)"
       why_not: "The rule ranks individual stocks on their own trend; index closes carry none of that."
-    - option: "Top 1,000 by traded value as the universe"
-      why_not: "The paper's universe is a 500-name large-cap index; going to 1,000 adds illiquid names the mandate excludes."
-    - option: "What is held now: bhavcopy from October 2021, adjusted prices, NIFTY 500 workbook"
-      why_not: "Not rejected for this quick test, it is what runs. Its shortcomings are 4.5 years, no bear market, a proxy universe and a hand-labelled corporate-action list."
-  what_would_change_the_answer: >
-    A history back to 2008 could change the reading, because a 4.5-year window with a
-    worst fall of about 19% can neither confirm nor reject how a no-filter design behaves
-    in a crash. Real NIFTY 500 membership and a total return index only change what may
-    be claimed.
-  granularity_verdict: "Daily bars are right: the rule trades monthly but measures jumps and trend on daily data. The binding constraint is years of history, not frequency."
+    - option: "What is held now: Ace prices from 2000, quarterly NIFTY 500 snapshots from 2012-03-31, NIFTY 500 price index"
+      why_not: "Not rejected, it is what runs. Its shortcomings: membership is held from 2012 and the operator's window starts 2014, so 2008 is outside it; membership is quarterly, not daily; 34 of 500 names in the 2013-12-31 snapshot cannot be priced; no dividends and no NIFTY 500 TRI; a constant cash rate; no band history. All three minimum-viable fields are in hand; the four that are not change what may be claimed, not whether the mechanism shows up."
+  granularity_verdict: "Daily bars are right, as the book itself says: the rule trades weekly but measures gaps, trend, ATR and the index filter on daily data. The binding constraint is history (membership from 2012, so one crash, not two bear markets), not frequency."
   optimality_argument: >
-    The claim being tested is that smooth momentum stocks keep rising for a month or more,
-    so holding the best 20 and resetting monthly beats the market. That needs enough months
-    and enough stocks, and the held data has about 53 monthly portfolios and 500 names. What it cannot
-    show is behaviour in a bear market, since 2022 to 2026 in India has none worse than
-    about a 19% fall in the NIFTY 500 (to February 2025). So the dataset this paper
-    deserves reaches back to 2008; what is held answers whether the ranking shows an edge
-    in this window and nothing about crash protection.
+    The claim is that smooth risers among the members of a 500-stock index keep rising for
+    weeks, and that stepping aside when the index is under its 200-day average avoids the
+    worst of bear markets. Testing it needs daily closes and ranges for every member on
+    each day (held, from 2000), the member list on each day (held quarterly from 2012) and
+    the index level (held from 1996). Those three are enough to run the book's rules
+    exactly; everything else on the list sharpens the reading. Dividends change the level
+    of both sides by about the same amount; daily membership and the band history change
+    the timing of a minority of trades; a real cash rate changes how much the
+    bear-market stretches earn. None of them can turn a mechanism that is absent into
+    one that is present. What the held set cannot do is reach 2008, so the one thing the
+    book is proudest of, a shallow loss in a long bear market, is tested only on 2020's
+    three-week fall. A membership file reaching back to 2007 is the single addition that
+    would test a different claim rather than refine this one.
+  what_would_change_the_answer: >
+    Membership history back to 2007 (adds the 2008 bear market) could change the verdict
+    on the filter. Daily membership dates and the ISIN bridge for the 34 early unmapped
+    names could move the return by a few tenths of a percent a year and the direction
+    is unknown, so they are reported as counts beside the result. Dividends (and the
+    NIFTY 500 TRI the operator asked for), the cash rate and band history change what
+    may be claimed, not whether the ranking shows an edge. A trading cost above zero
+    changes what the fund would keep, which is why the appendix sweep runs to 100bp.
+
+india_notes:
+  - category: execution
+    item: >
+      Momentum leaders on NSE are often at an upper price band (5%, 10% or 20%), where a
+      buy at the close may not fill, and a name being sold after a sharp fall may be at a
+      lower band. Fills are assumed at the close; the run counts buys on days the stock
+      closed up more than 9.5% and sells on days it closed down more than 9.5%.
+    why: "The book buys from the top of the ranking at the close (page 99); in India that is exactly where circuit filters bite."
+    triggered_by: "buy from the top of the ranking list until you run out of cash (page 99)"
+    addresses: ["daily corporate-action-adjusted close per NIFTY 500 member, keyed by ISIN, delisted names included (Ace)"]
+    evidence_page: 99
+  - category: data
+    item: >
+      Ace back-adjusts for splits and bonuses, so a split day does not read as a gap.
+      Demergers and rights issues may be adjusted differently or not at all, and a large
+      unadjusted ex-date move will count as a 15% gap and disqualify the name for 90
+      days. The run lists every disqualifying move above 15% with the ratio of adjusted
+      to unadjusted close around it so a human can spot corporate actions among them.
+    why: "The 15% rule is only the book's rule if real shocks are kept and mechanical price changes are removed."
+    triggered_by: "disqualify any stock with a move larger than 15% in the past 90 days (page 82)"
+    addresses: ["daily adjusted high and low per stock, same adjustment, for the 20-day average true range (Ace)"]
+    evidence_page: 82
+  - category: validity
+    item: >
+      NIFTY 500 is a large, mid AND small cap index (50 / 50 / 100 / 150 / 250 split in
+      the workbook), whereas the S&P 500 is large cap only. The author expects smaller
+      caps to show more momentum (pages 232, 233), but the 15% rule and ATR sizing will
+      remove or shrink exactly those names, so the realised portfolio is likely to be
+      tilted to large and mid caps. The run reports the cap-segment mix of holdings by
+      year using the workbook's sub-index flags.
+    why: "A result driven by a small-cap tilt and one driven by the ranking are different claims; the sub-index flags make them separable."
+    triggered_by: "the choice of index will over time have quite a large effect (page 232)"
+    addresses: ["point-in-time NIFTY 500 membership on each signal date (holdings workbook, quarterly snapshots)"]
+    evidence_page: 232
+  - category: timing
+    item: >
+      The NIFTY 500 index series in the workbook ends 2026-09-18, eleven days before the
+      membership-driven house limit of 2026-09-29, so the run ends 2026-09-18. The
+      200-day filter is read on the price index, which publishes after the close, so a
+      Tuesday-close signal is actionable only on Wednesday: lag_days is 1.
+    why: "A filter read on a same-day index close that is not yet published is look-ahead."
+    triggered_by: "check index filter: above its 200 day moving average (page 99)"
+    addresses: ["NIFTY 500 index daily close for the 200-day filter and as the benchmark (NSE index workbook)"]
+    evidence_page: 99
+  - category: cost
+    item: >
+      The book's weekly exit check, bi-weekly resize and buy-until-cash refill trade
+      often, frequently in mid and small caps with wide spreads and sometimes on band
+      days. The headline charges nothing, at the operator's instruction (2026-10-30).
+      The house floor of 30 basis points a round trip is itself a floor, not an
+      estimate, for a name at a circuit. The run reports annual turnover and sweeps the
+      cost from 0 to 100bp in the appendix so the zero-cost headline and the 30bp
+      reading sit on the same page.
+    why: "India's round trip is several times a US large cap's, and this strategy's edge in the book is modest once the filter is removed (9.1% a year, Table 14-44); a zero-cost headline on a weekly strategy must be read with the sweep beside it."
+    triggered_by: "rebalance portfolio every Wednesday; rebalance positions every second Wednesday (page 99)"
+    addresses: ["daily corporate-action-adjusted close per NIFTY 500 member, keyed by ISIN, delisted names included (Ace)"]
+    evidence_page: 99
