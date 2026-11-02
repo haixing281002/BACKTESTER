@@ -51,7 +51,12 @@ def run(run_dir, card_path, results=None):
     hold = _csv(run_dir, "holdings.csv", parse_dates=["date"])
     comp = _csv(run_dir, "comparators.csv", parse_dates=["date"])
     rb = _csv(run_dir, "out/rebalance_log.csv", parse_dates=["signal_date", "fill_date"])
-    cal = pd.DatetimeIndex(dr["date"]) if dr is not None else None       # the run's own trading calendar
+    # The run's own trading calendar: the daily-returns dates plus every signal and fill date the run recorded, because the
+    # first return is the session AFTER the first fill and a start rule may signal one session before the window.
+    cal = None
+    if dr is not None:
+        extra = [tr[c] for c in ("signal_date", "execution_date") if tr is not None and c in tr.columns]
+        cal = pd.DatetimeIndex(pd.concat([dr["date"], *extra]).dropna().unique()).sort_values()
 
     # ---- window
     if dr is not None and bp.get("sample_start") and bp.get("sample_end"):
@@ -68,7 +73,7 @@ def run(run_dir, card_path, results=None):
             if sp.get("first_signal_date"):
                 fs, ff = tr["signal_date"].min(), tr["execution_date"].min()
                 add(f"Start rule: first signal {sp['first_signal_date']}, first fill on the sample start",
-                    bool(fs == first_ok and ff == cal[cal >= s][0]),
+                    bool(fs == first_ok and s <= ff <= dr["date"].min()),
                     f"first signal {fs.date()}, first fill {ff.date()}; the book is invested from the first session of the window")
 
     # ---- signal day and lag
