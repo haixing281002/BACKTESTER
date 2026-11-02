@@ -108,6 +108,11 @@ def _params_from_card(card) -> tuple[dict, dict]:
 
 P, CARD_PARAMS = _params_from_card(CARD_OBJ)
 START, END = pd.Timestamp(CARD_OBJ.backtest_plan.sample_start), pd.Timestamp(CARD_OBJ.backtest_plan.sample_end)
+# Universe and start rule (card fields, added 2026-11-02): which membership file the run reads, and optionally a first
+# signal one session BEFORE the window on a named NSE list, so the book is invested from the window's first day.
+MEMBERSHIP_SOURCE = CARD_OBJ.universe.membership_source or "holdings_workbook"
+FIRST_SIGNAL = pd.Timestamp(CARD_PARAMS["first_signal_date"]) if CARD_PARAMS.get("first_signal_date") else None
+FIRST_SIGNAL_UNIVERSE = CARD_PARAMS.get("first_signal_universe") or None
 LOAD_START = START - pd.DateOffset(years=1)       # 200 index closes and 100 stock closes of warm-up sit before START
 MEMBERSHIP_FROM = START - pd.offsets.QuarterEnd(1)  # the last quarter-end snapshot before START is the first one used
 START_CAPITAL = float(CARD_PARAMS.get("start_capital_inr", 100_000_000))   # Rs 10 crore on the card
@@ -172,10 +177,16 @@ class _Res:
 # ------------------------------------------------------------------------------------------------- data
 def load_data() -> dict:
     """Stage 04: point-in-time panels. Everything keyed by ISIN; dates are the Ace file's own calendar."""
-    log("loading membership spells (holdings workbook)")
-    spells = nifty500.load_membership()
+    log(f"loading membership spells (membership_source = {MEMBERSHIP_SOURCE})")
+    spells = nifty500.load_membership(source=MEMBERSHIP_SOURCE)
     ever = spells[(spells["start_date"] <= END) & (spells["end_date"].isna() | (spells["end_date"] > MEMBERSHIP_FROM))]
     isins = sorted(ever["isin"].unique())
+    fsu = None
+    if FIRST_SIGNAL_UNIVERSE:
+        fsu = nifty500.first_signal_universe(FIRST_SIGNAL_UNIVERSE)
+        isins = sorted(set(isins) | set(fsu["isin"]))
+        log(f"first signal {FIRST_SIGNAL.date()} uses the {FIRST_SIGNAL_UNIVERSE} list: {len(fsu)} names, "
+            f"{int(fsu['in_ace_master'].sum())} in the Ace master")
     sm = ace.security_master().set_index("isin")
     sm = sm[~sm.index.duplicated()]
     names = {i: (sm["nse_symbol"].get(i) or i, sm["company_name"].get(i) or "") for i in isins}
@@ -191,10 +202,14 @@ def load_data() -> dict:
         panels[f] = w
     del long
 
-    log("membership panel (point in time, quarterly snapshots)")
-    mdates = cal[cal >= MEMBERSHIP_FROM]
+    log("membership panel (point in time)")
+    mdates = cal[cal >= min(MEMBERSHIP_FROM, FIRST_SIGNAL or MEMBERSHIP_FROM)]
     members = nifty500.membership_panel(mdates, columns=isins, m=spells).reindex(index=cal, columns=isins).fillna(False)
     members = members.astype(bool)
+    if fsu is not None:
+        assert FIRST_SIGNAL in members.index, f"first signal {FIRST_SIGNAL.date()} is not an NSE session"
+        members.loc[FIRST_SIGNAL, :] = False
+        members.loc[FIRST_SIGNAL, [i for i in fsu["isin"] if i in members.columns]] = True
 
     log("NIFTY 500 index and factor sleeves (NSE workbook)")
     bm, prov_bm = load_banner_workbook(NSE_INDEX_WORKBOOK, sheet="Broad Market")
@@ -255,12 +270,15 @@ def signal_schedule(cal: pd.DatetimeIndex, weekday: int) -> list[tuple[pd.Timest
         if len(cands) == 0:
             continue
         s = cands[-1]
-        if s < START:
+        if s < START and s != FIRST_SIGNAL:
             continue
         i = pos[s]
         if i + 1 >= len(cal) or cal[i + 1] > END:
             continue
         out.append((s, cal[i + 1]))
+    if FIRST_SIGNAL is not None:
+        assert out and out[0][0] == FIRST_SIGNAL, f"the first signal must be {FIRST_SIGNAL.date()}, got {out[0][0].date() if out else None}"
+        assert out[0][1] == cal[cal >= START][0], "the first fill must be the window's first session"
     return out
 
 
@@ -627,6 +645,7 @@ FIXED_TABLES = [
     {"title": "Cap mix by year", "csv": "cap_mix_by_year.csv", "note": "Average NAV share in NIFTY 100, Midcap 150 and Smallcap 250 names per rebalance; the rest is cash."},
     {"title": "Gap events", "csv": "gap_events.csv", "note": "Every member-day with a one-day move over the gap limit and whether Ace's adjustment factor changed that day."},
     {"title": "Checks", "csv": "checks.csv", "note": "Look-ahead tripwires and accounting identities; every row must pass."},
+    {"title": "Universe coverage", "csv": "universe_coverage.csv", "note": "Per year: members on the run's own panel, how many had an Ace close, and the names that never did (in the universe, never tradable)."},
 ]
 
 
@@ -718,7 +737,75 @@ FIXED_VALIDATION_SPEC = [
     {"label": "Signals (weekly)", "group": "other", "format": "int", "fn": lambda r: r["n_signals"], "source": "simulate()"},
     {"label": "Member-days with a move over the gap limit that coincide with an Ace adjustment change", "group": "other", "format": "text",
      "fn": lambda r: f"{r['gap_events']['n_with_adjustment_factor_change']} of {r['gap_events']['n_member_days_over_15pct']}", "source": "out/gap_events.csv"},
+    # appended 2026-11-02 (universe v2 and the start rule)
+    {"label": "Universe source (card: universe.membership_source)", "group": "other", "format": "text", "fn": lambda r: r["universe"]["source"], "source": "card"},
+    {"label": "First signal and first fill", "group": "other", "format": "text", "fn": lambda r: f"{r['sched_first']} -> {r['first_fill']}", "source": "simulate()"},
+    {"label": "Members at the first signal", "group": "other", "format": "int", "fn": lambda r: r["universe"]["first_signal_members"], "source": "out/universe_coverage.csv"},
+    {"label": "Members with an Ace close at the first signal", "group": "other", "format": "int", "fn": lambda r: r["universe"]["first_signal_priced"], "source": "out/universe_coverage.csv"},
+    {"label": "Members never priced over the run (in universe, never tradable)", "group": "other", "format": "int", "fn": lambda r: len(r["universe"]["never_priced"]), "source": "out/universe_coverage.csv"},
 ]
+
+
+def universe_coverage(d: dict, sig: dict, sched, out: str) -> dict:
+    """What the run's own membership panel held, year by year, and how much of it Ace priced (close within the carry
+    limit). Unpriced members are in the universe and cannot be traded; they are named, never dropped."""
+    members = d["members"]
+    priced = members & sig["close"].notna()
+    rows = []
+    window = members.index[members.index >= START]
+    for y, idx in window.to_series().groupby(window.year):
+        m, p = members.loc[idx].sum(axis=1), priced.loc[idx].sum(axis=1)
+        ever_member = members.loc[idx].any(axis=0)
+        ever_priced = priced.loc[idx].any(axis=0)
+        never = sorted(d["names"][i][0] for i in members.columns[ever_member & ~ever_priced])
+        rows.append({"year": int(y), "sessions": len(idx), "members_min": int(m.min()), "members_max": int(m.max()),
+                     "members_mean": round(float(m.mean()), 1), "priced_min": int(p.min()), "priced_max": int(p.max()),
+                     "priced_mean": round(float(p.mean()), 1), "unpriced_mean": round(float((m - p).mean()), 1),
+                     "never_priced_in_year": len(never), "never_priced_names": ", ".join(never)})
+    pd.DataFrame(rows).to_csv(os.path.join(out, "universe_coverage.csv"), index=False)
+    s0 = sched[0][0]
+    ever_m = members.loc[window].any(axis=0) | members.loc[s0]
+    ever_p = priced.loc[window].any(axis=0) | priced.loc[s0]
+    never_all = sorted(d["names"][i][0] for i in members.columns[ever_m & ~ever_p])
+    return {"source": MEMBERSHIP_SOURCE, "by_year": rows, "first_signal_date": str(s0.date()),
+            "first_signal_members": int(members.loc[s0].sum()), "first_signal_priced": int(priced.loc[s0].sum()),
+            "first_signal_unpriced_names": sorted(d["names"][i][0] for i in members.columns[members.loc[s0] & ~priced.loc[s0]]),
+            "never_priced": never_all}
+
+
+def write_fixed_notes(raw: dict, out: str) -> str:
+    """out/notes_fixed.json: sentences computed here that Lightyear places first in the Notes, whatever the model writes."""
+    u = raw["universe"]
+    by = {r["year"]: r for r in u["by_year"]}
+    cov = "; ".join(f"{y}: {by[y]['members_mean']:.0f} members, {by[y]['priced_mean']:.0f} priced" for y in sorted(by))
+    notes = [
+        f"Universe: membership_source = {u['source']} ({nifty500.MEMBERSHIP_SOURCES.get(u['source'], '')}).",
+        f"Universe coverage by year, mean per session on the run's own panel: {cov}.",
+        (f"Unpriced members (in the universe, never tradable, so the survivorship bias they carry remains): "
+         f"{len(u['never_priced'])} names over the run: {', '.join(u['never_priced']) or 'none'}. The only fix is price "
+         f"history for these names (the 'Adjusted Prices' folder is empty on this machine)."),
+        (f"Start rule: first signal {u['first_signal_date']} on the {FIRST_SIGNAL_UNIVERSE} list ({u['first_signal_members']} "
+         f"names, {u['first_signal_priced']} with an Ace close), first fill {raw['first_fill']}, so the book is invested from "
+         f"the window's first session; the benchmark starts the same day."
+         if FIRST_SIGNAL is not None else
+         f"Start: first signal {u['first_signal_date']} (the first signal weekday on or after the sample start), first fill "
+         f"{raw['first_fill']}; the book is in cash until then."),
+    ]
+    p = os.path.join(out, "notes_fixed.json")
+    with open(p, "w", encoding="utf-8") as fh:
+        json.dump(notes, fh, indent=1)
+    return p
+
+
+def gate_a_revisions(run_dir: str) -> list[dict]:
+    """The Gate A revisions Lightyear recorded for this run (state.json), so the manifest carries them too."""
+    p = os.path.join(run_dir, "state.json")
+    try:
+        with open(p, encoding="utf-8") as fh:
+            st = json.load(fh)
+        return [{"at": r.get("at"), "notes": r.get("notes")} for r in (st.get("revisions") or [])]
+    except (OSError, ValueError):
+        return []
 
 
 def write_fixed_outputs(raw: dict, out: str, run_dir: str) -> list[str]:
@@ -765,6 +852,10 @@ def main() -> int:
     assert P["gap_limit"] == float(card.signal.params["gap_limit"]), "gap limit must be the card's"
     assert P["signal_weekday"] == _WEEKDAY[str(card.signal.params["signal_weekday"]).lower()], "signal weekday must be the card's"
     assert N_TRIALS >= int(card.n_configs_tried), "trial count can only add to the card's"
+    assert MEMBERSHIP_SOURCE in nifty500.MEMBERSHIP_SOURCES, f"unknown universe.membership_source {MEMBERSHIP_SOURCE!r}"
+    assert (FIRST_SIGNAL is None) == (FIRST_SIGNAL_UNIVERSE is None), "first_signal_date and first_signal_universe go together"
+    log(f"universe: {MEMBERSHIP_SOURCE}; start rule: " + (f"first signal {FIRST_SIGNAL.date()} on {FIRST_SIGNAL_UNIVERSE}, "
+        f"first fill {START.date()}" if FIRST_SIGNAL is not None else "first signal is the first signal weekday on or after the start"))
     log(f"card {os.path.relpath(CARD, REPO_DIR)}: window {START.date()} to {END.date()}, {COST_LABEL}, gap {P['gap_limit']:.0%}, "
         f"signal weekday {P['signal_weekday']}, cash {P['cash_rate']:.0%}, trials {N_TRIALS}, mandate allows cash {MANDATE_ALLOWS_CASH}")
 
@@ -784,7 +875,12 @@ def main() -> int:
            "last_signal": str(sched[-1][0].date()), "last_fill": str(sched[-1][1].date()),
            "index_days_forward_filled_in_window": d["idx_missing_days"], "membership_staleness": d["stale"],
            "ace_source_sha256": ace.provenance()["source_sha256"], "nifty500_last_snapshot": nifty500.provenance()["last_snapshot"],
-           "index_workbook_sha256": d["prov_index"], "price_basis": "Ace back-adjusted OHLC; PRICE returns, no dividends"}
+           "index_workbook_sha256": d["prov_index"], "price_basis": "Ace back-adjusted OHLC; PRICE returns, no dividends",
+           "membership_source": MEMBERSHIP_SOURCE, "membership_provenance": nifty500.provenance(source=MEMBERSHIP_SOURCE),
+           "first_signal_rule": ({"first_signal_date": str(FIRST_SIGNAL.date()), "first_signal_universe": FIRST_SIGNAL_UNIVERSE}
+                                 if FIRST_SIGNAL is not None else None)}
+    uni = universe_coverage(d, sig, sched, out)
+    produced.append(os.path.join(out, "universe_coverage.csv"))
     with open(os.path.join(out, "pit_snapshot.json"), "w", encoding="utf-8") as fh:
         json.dump(pit, fh, indent=1, default=str)
     produced.append(os.path.join(out, "pit_snapshot.json"))
@@ -1118,6 +1214,7 @@ def main() -> int:
         "checks": checks, "gate_b": gb.to_dict(), "pit": pit, "charts": [c.replace("\\", "/") for c in charts],
         "deflated_sharpe_variants_variance": dsr_var, "latest_index_correction": latest_corr,
         "params": P, "sched_first": str(sched[0][0].date()), "sched_last": str(sched[-1][0].date()), "n_signals": len(sched),
+        "first_fill": str(sched[0][1].date()), "universe": uni,
         "runtime_s": time.time() - t0,
     }
     with open(os.path.join(out, "results_raw.json"), "w", encoding="utf-8") as fh:
@@ -1126,13 +1223,17 @@ def main() -> int:
     exit_summary.to_csv(os.path.join(out, "exits_by_reason.csv"), index=False)
     produced.append(os.path.join(out, "exits_by_reason.csv"))
     produced += write_fixed_outputs(raw, out, run_dir)       # after every table CSV exists
+    produced.append(write_fixed_notes(raw, out))
 
     mp = write_run_manifest(run_dir, __file__, {"ace_prices": ACE_PRICES_CSV, "nifty500_holdings": NIFTY500_HOLDINGS_XLSX,
                                                "nse_index_workbook": NSE_INDEX_WORKBOOK, "card": CARD},
                             params={**CARD_PARAMS, **P, "n_trials": N_TRIALS, "cost_sweep_bp": COST_SWEEP_BP, "cash_sweep": CASH_SWEEP,
                                     "start": str(START.date()), "end": str(END.date()), "start_capital": START_CAPITAL,
                                     "mandate_allow_cash": MANDATE_ALLOWS_CASH, "sensitivities": list(SENSITIVITIES),
-                                    "card_sha256_at_import": sha256_file(CARD)},
+                                    "card_sha256_at_import": sha256_file(CARD), "membership_source": MEMBERSHIP_SOURCE,
+                                    "first_signal_date": CARD_PARAMS.get("first_signal_date"),
+                                    "first_signal_universe": CARD_PARAMS.get("first_signal_universe"),
+                                    "gate_a_revisions": gate_a_revisions(run_dir)},
                             outputs=["daily_returns.csv", "holdings.csv", "trades.csv", "selection.csv", "comparators.csv"])
     produced.append(mp)
     checkpoint("Stages 05-07 complete -- hand-off files written; Gate B criteria computed, decision PENDING", produced, auto_approve=True)

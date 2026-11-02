@@ -629,6 +629,14 @@ def build_outputs(rid, review=True):
         model_tabs = [t for t in (res.get("tables") or []) if os.path.normpath(t.get("csv", "")) not in csvs]
         res["tables"] = fixed_t + model_tabs
         log(rid, "server", f"Table sheets: {len(fixed_t)} fixed from the run, {len(model_tabs)} model tables appended.")
+    # Run-authored notes (2026-11-02): a script may write out/notes_fixed.json, a list of sentences computed from its own
+    # data (universe coverage, unpriced names, the start rule). They go first in results.notes, so the page and the
+    # workbook Notes carry them whatever the model wrote.
+    fixed_n = _load_json_list(os.path.join(rd, "out", "notes_fixed.json"))
+    if fixed_n:
+        have = set(res.get("notes") or [])
+        res["notes"] = [n for n in fixed_n if isinstance(n, str)] + [n for n in (res.get("notes") or []) if n not in fixed_n]
+        log(rid, "server", f"Notes: {len(fixed_n)} fixed sentences from the run placed first, {len(have)} model notes kept.")
     # Comparison words follow the numbers ('lower volatility (16.8% against 15.9%)' is corrected, and recorded)
     corrections = wording.fix_results(res)
     if corrections:
@@ -784,7 +792,7 @@ def rerun_from(src_rid, by, extra_note="", src_dir=None):
     hand-off (phase_a.json, paper_facts.json), every revision on record and the approval notes, re-pins the card at
     its current sha256 and runs stages 03-07 again. Used after a code fix, or after a human edits the card directly
     (pass the edit as `extra_note`, which is recorded as one more revision). `src_dir` points at an archived run
-    folder when the source run has been moved out of outputs/."""
+    folder when the source run has been moved out of outputs/. `extra_note` may be a list: one revision each."""
     src_dir = src_dir or run_dir(src_rid)
     with open(os.path.join(src_dir, "state.json"), encoding="utf-8") as fh:
         src = json.load(fh)
@@ -806,8 +814,9 @@ def rerun_from(src_rid, by, extra_note="", src_dir=None):
                     continue
                 if e.get("kind") == "gate" and str(e.get("msg", "")).startswith("Revision requested at Gate A: "):
                     revisions.append({"at": e.get("t"), "notes": e["msg"][len("Revision requested at Gate A: "):], "source": "log.jsonl"})
-    if extra_note:
-        revisions.append({"at": now(), "notes": extra_note, "by": by, "source": "rerun"})
+    for note in ([extra_note] if isinstance(extra_note, str) else list(extra_note or [])):
+        if note:
+            revisions.append({"at": now(), "notes": note, "by": by, "source": "rerun"})
     with _lock:
         st = load(rid)
         for s, _ in prompts.STAGES_A:

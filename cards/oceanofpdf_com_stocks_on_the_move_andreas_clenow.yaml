@@ -129,6 +129,10 @@ universe:
     - nifty_500_constituent_prices
   benchmark: NIFTY 500
   cash_asset: CASH_PROXY_CONSTANT_6PCT
+  # Gate A revision 3 (2026-11-02): universe v2 = the holdings workbook with every name ISIN-mapped, Alpha Lab
+  # membership on NSE effective dates for 2017-2018 (the workbook's truncated pulls), NSE-confirmed fills elsewhere.
+  # Unpriced members stay in the universe and cannot be traded. See data/processed/universe/reports/.
+  membership_source: nifty500_members_v2
 
 universe_translation:
   source_universe: "S&P 500 constituents on each day, with historical membership and delisted stocks, January 1999 to December 2014"
@@ -299,6 +303,11 @@ signal:
     start_capital_inr: 100000000
     signal_weekday: "Tuesday"
     fill_weekday: "Wednesday"
+    # Gate A revision 4 (2026-11-02): the first signal is Tuesday 2013-12-31 on the Sep-2013 NSE review list (interim
+    # changes to 31 Dec 2013 reported, not applied), filled 2014-01-01, so the book is invested from the window's
+    # first day and the benchmark starts the same day. Lookbacks read price history before 2013-12-31.
+    first_signal_date: "2013-12-31"
+    first_signal_universe: "nse_review_2013-09-27"
 
 portfolio:
   rebalance: weekly

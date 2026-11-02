@@ -61,8 +61,15 @@ def run(run_dir, card_path, results=None):
         add(f"Window {bp['sample_start']} to {bp['sample_end']}", bool(ok),
             f"daily returns run {first.date()} to {last.date()} ({len(dr)} sessions); first return is the first session after the start")
         if tr is not None:
-            late = int((tr["execution_date"] > e).sum()) + int((tr["signal_date"] < s).sum())
-            add("No trade outside the window", late == 0, f"{late} trades signalled before the start or filled after the end")
+            first_ok = pd.Timestamp(sp["first_signal_date"]) if sp.get("first_signal_date") else s
+            late = int((tr["execution_date"] > e).sum()) + int((tr["signal_date"] < first_ok).sum())
+            add("No trade outside the window", late == 0,
+                f"{late} trades signalled before {first_ok.date()} or filled after the end")
+            if sp.get("first_signal_date"):
+                fs, ff = tr["signal_date"].min(), tr["execution_date"].min()
+                add(f"Start rule: first signal {sp['first_signal_date']}, first fill on the sample start",
+                    bool(fs == first_ok and ff == cal[cal >= s][0]),
+                    f"first signal {fs.date()}, first fill {ff.date()}; the book is invested from the first session of the window")
 
     # ---- signal day and lag
     wd = sp.get("signal_weekday")

@@ -35,6 +35,19 @@ NSE_INDEX_WORKBOOK = os.environ.get("LIGHTYEAR_INDEX_WORKBOOK") or os.path.join(
     REPO, "data", "raw", "NSE_Broad_Factor_Indices_Historical_Data.xlsx")
 
 PROCESSED_DIR = os.path.join(REPO, "data", "processed")
+# BUILD-TIME source for the NIFTY 500 universe v2 (data/processed/universe/, loader ros.data.nifty500 with
+# membership_source "nifty500_members_v2"): the Alpha Lab constituents pull of 2026-10-30. Read only by
+# scripts/universe_v2/*; a run reads the derived spells CSV and never this file.
+ALPHALAB_NIFTY500_XLSX = os.environ.get("LIGHTYEAR_ALPHALAB_XLSX") or (
+    r"C:\Users\harshil.pahuja\Alpha Alternatives Holdings Private Limited\Rohit Rakhecha - Ace_Equity_Prices"
+    r"\NIFTY500_constituents_weights_alphalab_2013-06-03_to_2026-10-30.xlsx")
+ALPHALAB_NIFTY500_CSV = os.environ.get("LIGHTYEAR_ALPHALAB_CSV") or (
+    r"C:\Users\harshil.pahuja\Desktop\Market & Company Data"
+    r"\NIFTY500_constituents_weights_alphalab_2013-06-03_to_2026-10-30.csv")
+BUILD_SOURCES = {
+    "alphalab_nifty500_xlsx": ("Alpha Lab NIFTY 500 constituents workbook (universe v2 build only)", ALPHALAB_NIFTY500_XLSX),
+    "alphalab_nifty500_csv": ("Alpha Lab NIFTY 500 row-level pull, dated tickers (universe v2 build only)", ALPHALAB_NIFTY500_CSV),
+}
 # Later NIFTY 500 constituent lists (after the workbook's last snapshot) are dropped here, one CSV per
 # snapshot date, named YYYY-MM-DD.csv with an `isin` column. See ros/data/nifty500.py.
 NIFTY500_UPDATES_DIR = os.path.join(REPO, "data", "raw", "nifty500_updates")
@@ -70,10 +83,12 @@ def file_signature(path: str) -> str:
     return f"{st.st_size}-{st.st_mtime_ns}"
 
 
-def describe() -> list[dict]:
-    """One row per source: present or not, size, last modified (IST). For check_setup and the page."""
+def describe(include_build: bool = False) -> list[dict]:
+    """One row per source: present or not, size, last modified (IST). For check_setup and the page.
+    `include_build` adds the build-time sources of derived universes (not needed to run)."""
     out = []
-    for key, (what, path) in SOURCES.items():
+    items = list(SOURCES.items()) + (list(BUILD_SOURCES.items()) if include_build else [])
+    for key, (what, path) in items:
         row = {"key": key, "what": what, "path": path, "exists": os.path.isfile(path)}
         if row["exists"]:
             st = os.stat(path)
