@@ -1,0 +1,1294 @@
+# Quant AI Researcher by Harshil Pahuja
+isin,symbol,company_name,start_date,end_date,source,flags
+INE001A01036,HDFC,Housing Development Finance Corporation Ltd. - (Amalgamated),2012-04-02,2023-10-03,alpha_lab_gap;holdings_v1,barrid=INDAGI1
+INE002A01018,RELIANCE,Reliance Industries Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDABV1
+INE003A01024,SIEMENS,Siemens Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDABY1
+INE007A01025,CRISIL,CRISIL Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDBS91
+INE007B01023,GEOJITFSL,Geojit Financial Services Ltd.,2012-04-02,2016-06-30,holdings_v1,
+INE008A01015,IDBI,IDBI Bank Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDBOE1
+INE008I01026,COX&KINGS,Cox & Kings Ltd.,2012-04-02,2018-06-29,alpha_lab_gap;holdings_symbol_mapped,barrid=INDGAK1;isin_from_nse_spell
+INE009A01021,INFY,Infosys Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDAVD1
+INE010A01011,PRSMJOHNSN,Prism Johnson Ltd.,2012-04-02,2024-09-30,alpha_lab_gap;holdings_v1,barrid=INDB5G2
+INE010B01027,ZYDUSLIFE,Zydus Lifesciences Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDDDQ1
+INE011A01019,ESSAROIL,Essar Oil Ltd.,2012-04-02,2014-03-31,holdings_symbol_mapped,isin_from_nse_spell
+INE012A01025,ACC,ACC Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDACF1
+INE013A01015,RELCAPITAL,Reliance Capital Ltd.,2012-04-02,2017-09-05,alpha_lab_gap;holdings_symbol_mapped,barrid=INDBEZ1;isin_from_nse_spell
+INE015A01028,RANBAXY,Ranbaxy Laboratories Ltd.- (Amalgamation),2012-04-02,2014-12-31,holdings_v1,
+INE016A01026,DABUR,Dabur India Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDBTH1
+INE017A01032,GESHIP,The Great Eastern Shipping Company Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDACG1
+INE018A01030,LT,Larsen & Toubro Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDABG1
+INE018I01017,MINDTREE,Mindtree Ltd. - (Amalgamated),2012-04-02,2022-09-30,alpha_lab_gap;holdings_v1,barrid=INDEAT1
+INE019A01038,JSWSTEEL,JSW Steel Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDBYQ1
+INE020B01018,RECLTD,REC Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDEHO1
+INE021A01026,ASIANPAINT,Asian Paints Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDAAB1
+INE026A01025,GSFC,Gujarat State Fertilizers & Chemicals Ltd.,2012-04-02,2025-04-01,alpha_lab_gap;holdings_v1,barrid=INDAAS1
+INE027A01015,RCF,Rashtriya Chemicals and Fertilizers Ltd.,2012-04-02,2026-04-01,alpha_lab_gap;holdings_v1,barrid=INDB6D1
+INE028A01039,BANKBARODA,Bank Of Baroda,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDBOR1
+INE029A01011,BPCL,Bharat Petroleum Corporation Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDAHE1
+INE030A01027,HINDUNILVR,Hindustan Unilever Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDAAW1
+INE032A01023,BOMDYEING,Bombay Dyeing And Manufacturing Company Ltd.,2012-04-02,2021-03-31,alpha_lab_gap;holdings_v1,barrid=INDAAE1
+INE034A01011,ARVIND,Arvind Ltd.,2012-04-02,2015-03-31,holdings_v1,
+INE036A01016,RELINFRA,Reliance Infrastructure Ltd.,2012-04-02,2020-06-30,alpha_lab_gap;holdings_v1,barrid=INDAGB1
+INE036B01030,GAEL,Gujarat Ambuja Exports Ltd.,2012-04-02,2012-10-01,holdings_v1,
+INE036D01028,KARURVYSYA,Karur Vysya Bank Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDBY01
+INE038A01020,HINDALCO,Hindalco Industries Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDAAV1
+INE038F01029,TVTODAY,TV Today Network Ltd.,2012-04-02,2012-10-01,holdings_v1,
+INE039A01010,IFCI,IFCI Ltd.,2012-04-02,2020-09-30,alpha_lab_gap;holdings_v1,barrid=INDAVB1
+INE039E01020,ERAINFRA,Era Infra Engineering Ltd.,2012-04-02,2014-09-30,holdings_v1,
+INE040A01034,HDFCBANK,HDFC Bank Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDBOF1
+INE040H01021,SUZLON,Suzlon Energy Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDDVN1
+INE041A01016,DHAMPURSUG,Dhampur Sugar Mills Ltd.,2012-04-02,2012-07-02,holdings_v1,
+INE042A01014,ESCORTS,Escorts Kubota Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDAAL1
+INE043A01012,GTL,GTL Ltd.,2012-04-02,2013-07-01,holdings_v1,
+INE043D01016,IDFC,IDFC Ltd. - (Amalgamated),2012-04-02,2015-06-30,holdings_v1,
+INE044A01036,SUNPHARMA,Sun Pharmaceutical Industries Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDCA11
+INE045B01015,NELCO,Nelco Ltd.,2012-04-02,2012-07-02,holdings_v1,
+INE046A01015,RIIL,Reliance Industrial Infrastructure Ltd.,2012-04-02,2017-09-29,alpha_lab_gap;holdings_v1,barrid=INDB6Q1
+INE047A01021,GRASIM,Grasim Industries Ltd.,2012-04-02,2017-05-26,alpha_lab_gap;holdings_v1,barrid=INDAAT1
+INE049A01027,HIMATSEIDE,Himatsingka Seide Ltd.,2012-04-02,2020-09-30,alpha_lab_gap;holdings_v1,barrid=INDATN1
+INE049B01025,WOCKPHARMA,Wockhardt Ltd.,2012-04-02,2012-07-02,holdings_v1,
+INE053A01029,INDHOTEL,The Indian Hotels Company Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDAFN1
+INE054A01027,VIPIND,VIP Industries Ltd.,2012-04-02,2025-04-01,alpha_lab_gap;holdings_v1,barrid=INDBLT1
+INE055A01016,CENTURYTEX,Aditya Birla Real Estate Ltd.,2012-04-02,2018-12-28,alpha_lab_gap;holdings_v1,barrid=INDAAH1
+INE056C01010,TATAMETALI,Tata Metaliks Ltd. - (Amalgamated),2012-04-02,2012-07-02,holdings_v1,
+INE058A01010,SANOFI,Sanofi India Ltd.,2012-04-02,2025-04-01,alpha_lab_gap;holdings_v1,barrid=INDADE1
+INE059A01026,CIPLA,Cipla Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDANX1
+INE059B01024,SIMPLEXINF,Simplex Infrastructures Ltd.,2012-04-02,2017-03-31,alpha_lab_gap;holdings_v1,barrid=INDDYU1
+INE060A01024,NAVNETEDUL,Navneet Education Ltd.,2012-04-02,2016-06-30,holdings_v1,
+INE061F01013,FORTIS,Fortis Healthcare Ltd.,2012-04-02,2018-02-05,alpha_lab_gap;holdings_v1,barrid=INDEBO1
+INE062A01020,SBIN,State Bank Of India,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDAHM1
+INE066A01021,EICHERMOT,Eicher Motors Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDAPR1
+INE067A01029,CGPOWER,CG Power and Industrial Solutions Ltd.,2012-04-02,2015-09-30,holdings_v1,
+INE067H01016,ABGSHIP,ABG Shipyard Ltd.,2012-04-02,2016-09-30,holdings_symbol_mapped,isin_from_nse_spell
+INE068D01021,CASTEXTECH,Amtek India Ltd.,2012-04-02,2016-09-30,holdings_symbol_mapped,isin_from_nse_spell
+INE069A01017,ABIRLANUVO,Aditya Birla Nuvo Ltd. - (Amalgamated),2012-04-02,2015-12-31,holdings_v1,
+INE069I01010,EMBDL,Embassy Developments Ltd.,2012-04-02,2023-10-03,alpha_lab_gap;holdings_v1,barrid=INDDZM1
+INE070A01015,SHREECEM,Shree Cement Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDCI41
+INE070D01027,JAICORPLTD,Jai Corp Ltd.,2012-04-02,2021-03-31,alpha_lab_gap;holdings_v1,barrid=INDEBE1
+INE074A01025,PRAJIND,Praj Industries Ltd.,2012-04-02,2021-03-31,alpha_lab_gap;holdings_v1,barrid=INDB421
+INE075A01022,WIPRO,Wipro Ltd.,2012-04-02,2013-07-01,holdings_v1,
+INE077A01010,DENABANK,Dena Bank - (Amalgamated),2012-04-02,2019-04-01,alpha_lab_gap;holdings_v1,barrid=INDBOQ1
+INE079A01024,AMBUJACEM,Ambuja Cements Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDAEU1
+INE081A01020,TATASTEEL,Tata Steel Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDACC1
+INE084A01016,BANKINDIA,Bank Of India,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDBOS1
+INE085A01013,CHAMBLFERT,Chambal Fertilisers and Chemicals Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDANN1
+INE086A01029,ELECTCAST,Electrosteel Castings Ltd.,2012-04-02,2016-09-30,holdings_v1,
+INE087A01019,KESORAMIND,Kesoram Industries Ltd.,2012-04-02,2015-09-30,holdings_v1,
+INE087H01022,RENUKA,Shree Renuka Sugars Ltd.,2012-04-02,2020-09-30,alpha_lab_gap;holdings_v1,barrid=INDDXT1
+INE089A01031,DRREDDY,Dr. Reddy's Laboratories Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDAPK1
+INE089C01029,STLTECH,Sterlite Technologies Ltd.,2012-04-02,2016-03-31,holdings_v1,
+INE090A01021,ICICIBANK,ICICI Bank Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDBOT1
+INE091G01026,JAIBALAJI,Jai Balaji Industries Ltd.,2012-04-02,2013-07-01,holdings_v1,
+INE092A01019,TATACHEM,Tata Chemicals Ltd.,2012-04-02,2019-12-31,alpha_lab_gap;holdings_v1,barrid=INDACA1
+INE093A01041,HEXT,Hexaware Technologies Ltd.,2012-04-02,2020-09-30,alpha_lab_gap;holdings_v1,barrid=INDBP21
+INE093I01010,OBEROIRLTY,Oberoi Realty Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDGUH1
+INE094A01015,HINDPETRO,Hindustan Petroleum Corporation Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDAHG1
+INE095A01012,INDUSINDBK,IndusInd Bank Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDCIR1
+INE099J01015,JPINFRATEC,Jaypee Infratech Ltd.,2012-04-02,2017-03-31,alpha_lab_gap;holdings_symbol_mapped,barrid=INDGPZ1;isin_from_nse_spell
+INE100A01010,ATUL,Atul Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDAFA1
+INE101A01026,M&M,Mahindra & Mahindra Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDABI1
+INE102A01024,HLVLTD,HLV Ltd.,2012-04-02,2015-09-30,holdings_v1,
+INE102D01028,GODREJCP,Godrej Consumer Products Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDDME1
+INE102I01027,ADSL,Allied Digital Services Ltd.,2012-04-02,2012-07-02,holdings_v1,
+INE103A01014,MRPL,Mangalore Refinery And Petrochemicals Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDAHH2
+INE107A01015,TNPL,Tamil Nadu Newsprint & Papers Ltd.,2012-04-02,2019-09-30,alpha_lab_gap;holdings_v1,barrid=INDCBV1
+INE109A01011,SCI,Shipping Corporation Of India Ltd.,2012-04-02,2019-09-30,alpha_lab_gap;holdings_v1,barrid=INDAIE1
+INE110D01013,GUJNRECOKE,Gujarat NRE Coke Ltd.,2012-04-02,2015-09-30,holdings_symbol_mapped,isin_from_nse_spell
+INE111A01025,CONCOR,Container Corporation Of India Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDCIB1
+INE111B01023,63MOONS,63 Moons Technologies Ltd.,2012-04-02,2016-09-30,holdings_v1,
+INE112A01023,CORPBANK,Corporation Bank - (Amalgamated),2012-04-02,2018-04-02,alpha_lab_gap;holdings_v1,barrid=INDBS21
+INE113A01013,GNFC,Gujarat Narmada Valley Fertilizers & Chemicals Ltd,2012-04-02,2016-06-30,holdings_v1,
+INE114A01011,SAIL,Steel Authority Of India Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDAHY1
+INE115A01026,LICHSGFIN,LIC Housing Finance Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDBZL1
+INE118A01012,BAJAJHLDNG,Bajaj Holdings & Investment Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDAAC1
+INE119A01028,BALRAMCHIN,Balrampur Chini Mills Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDBRE1
+INE120A01034,CARBORUNIV,Carborundum Universal Ltd.,2012-04-02,2016-06-30,holdings_v1,
+INE121A01024,CHOLAFIN,Cholamandalam Investment and Finance Company Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDBSS1
+INE121E01018,JSWENERGY,JSW Energy Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDGAL1
+INE122H01027,TULIP,Tulip Telecom Ltd.,2012-04-02,2014-03-31,holdings_symbol_mapped,isin_from_nse_spell
+INE124G01033,DELTACORP,Delta Corp Ltd.,2012-04-02,2024-04-01,alpha_lab_gap;holdings_v1,barrid=INDEOH1
+INE126A01031,EIDPARRY,E.I.D. - Parry (India) Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDACW1
+INE129A01019,GAIL,GAIL (India) Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDBVP1
+INE131A01031,GMDCLTD,Gujarat Mineral Development Corporation Ltd.,2012-04-02,2012-10-01,holdings_v1,
+INE133A01011,JSWDULUX,JSW Dulux Ltd.,2012-04-02,2021-09-30,alpha_lab_gap;holdings_v1,barrid=INDADG1
+INE134E01011,PFC,Power Finance Corporation Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDEAC1
+INE136A01022,JSWISPAT,JSW ISPAT Steel Ltd.(Amalgamation),2012-04-02,2013-07-01,holdings_v1,
+INE136B01020,CYIENT,Cyient Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDCMJ1
+INE138A01028,PENINLAND,Peninsula Land Ltd.,2012-04-02,2016-06-30,holdings_v1,
+INE139A01034,NATIONALUM,National Aluminium Company Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDAID1
+INE140A01024,PEL,Piramal Enterprises Ltd. - (Amalgamated),2012-04-02,2022-09-30,alpha_lab_gap;holdings_v1,barrid=INDAHX1
+INE141A01014,ORIENTBANK,Oriental Bank Of Commerce - (Amalgamated),2012-04-02,2019-12-31,alpha_lab_gap;holdings_v1,barrid=INDBBR1
+INE143A01010,OSWALGREEN,Oswal Greentech Ltd.,2012-04-02,2016-06-30,holdings_v1,
+INE143H01015,KSK,KSK Energy Ventures Ltd.,2012-04-02,2016-09-30,holdings_v1,
+INE149A01033,TUBEINVEST,Cholamandalam Financial Holdings Ltd.,2012-04-02,2017-05-26,alpha_lab_gap;holdings_v1,barrid=INDBKW1
+INE151A01013,TATACOMM,Tata Communications Ltd.,2012-04-02,2018-06-29,alpha_lab_gap;holdings_v1,barrid=INDAHO1
+INE152A01029,THERMAX,Thermax Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDBOG1
+INE153A01019,MTNL,Mahanagar Telephone Nigam Ltd.,2012-04-02,2014-03-31,holdings_v1,
+INE154A01025,ITC,ITC Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDAAY1
+INE155A01022,TMPV,Tata Motors Passenger Vehicles Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDACB1
+INE155G01029,NDTV,New Delhi Television Ltd.,2012-04-02,2012-07-02,holdings_v1,
+INE156A01020,INDORAMA,Indo Rama Synthetics (India) Ltd.,2012-04-02,2013-07-01,holdings_v1,
+INE158A01026,HEROMOTOCO,Hero MotoCorp Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDATI1
+INE159A01016,GLAXO,Glaxosmithkline Pharmaceuticals Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDAFH1
+INE160A01022,PNB,Punjab National Bank,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDDQX1
+INE161A01038,NIITLTD,NIIT Ltd.,2012-04-02,2016-06-30,holdings_v1,
+INE162A01010,GIPCL,Gujarat Industries Power Company Ltd.,2012-04-02,2016-06-30,holdings_v1,
+INE164A01016,BALMLAWRIE,Balmer Lawrie & Company Ltd.,2012-04-02,2021-09-30,alpha_lab_gap;holdings_v1,barrid=INDBRD1
+INE166A01011,INGVYSYABK,ING Vysya Bank Ltd.(Amalgamated),2012-04-02,2015-03-31,holdings_v1,
+INE168A01041,J&KBANK,The Jammu & Kashmir Bank Ltd.,2012-04-02,2021-03-31,alpha_lab_gap;holdings_v1,barrid=INDCXX1
+INE169A01031,COROMANDEL,Coromandel International Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDAOH1
+INE171A01029,FEDERALBNK,The Federal Bank Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDAQO2
+INE172A01027,CASTROLIND,Castrol India Ltd.,2012-04-02,2014-03-31,holdings_v1,
+INE175A01038,JISLJALEQS,Jain Irrigation Systems Ltd.,2012-04-02,2020-06-30,alpha_lab_gap;holdings_v1,barrid=INDAVT1
+INE176A01028,BATAINDIA,Bata India Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDAGW1
+INE176B01034,HAVELLS,Havells India Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDDCI1
+INE177A01018,INGERRAND,Ingersoll-Rand (India) Ltd.,2012-04-02,2017-03-31,alpha_lab_gap;holdings_v1,barrid=INDABD1
+INE178A01016,CHENNPETRO,Chennai Petroleum Corporation Ltd.,2012-04-02,2021-03-31,alpha_lab_gap;holdings_v1,barrid=INDAYV1
+INE179A01014,PGHH,Procter & Gamble Hygiene and Health Care Ltd.,2012-04-02,2025-04-01,alpha_lab_gap;holdings_v1,barrid=INDBDV1
+INE180A01020,MFSL,Max Financial Services Ltd.,2012-04-02,2015-09-30,holdings_v1,
+INE180K01011,BHARATFIN,Bharat Financial Inclusion Ltd. - (Amalgamated),2012-04-02,2018-12-28,alpha_lab_gap;holdings_v1,barrid=INDGTI1
+INE181G01025,AJRINFRA,AJR Infra and Tolling Ltd.,2012-04-02,2016-06-30,holdings_v1,
+INE182A01018,PFIZER,Pfizer Ltd.,2012-04-02,2024-04-01,alpha_lab_gap;holdings_v1,barrid=INDABS1
+INE183A01024,FINPIPE,Finolex Industries Ltd.,2012-04-02,2026-04-01,alpha_lab_gap;holdings_v1,barrid=INDAHQ1
+INE184H01027,EKC,Everest Kanto Cylinder Ltd.,2012-04-02,2012-10-01,holdings_v1,
+INE186A01019,GUJALKALI,Gujarat Alkalies And Chemicals Ltd.,2012-04-02,2016-06-30,holdings_v1,
+INE191A01027,ORCHPHARMA,Orchid Pharma Ltd.,2012-04-02,2015-09-30,holdings_v1,
+INE191B01025,WELCORP,Welspun Corp Ltd.,2012-04-02,2013-12-31,holdings_v1,
+INE191I01012,HDIL,Housing Development And Infrastructure Ltd.,2012-04-02,2018-09-28,alpha_lab_gap;holdings_v1,barrid=INDEDI1
+INE192A01025,TATACONSUM,Tata Consumer Products Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDACD1
+INE193E01025,BAJAJELEC,Bajaj Electricals Ltd.,2012-04-02,2023-06-30,alpha_lab_gap;holdings_v1,barrid=INDBQ61
+INE195A01028,SUPREMEIND,Supreme Industries Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDBIP1
+INE196A01026,MARICO,Marico Ltd.,2012-04-02,2013-12-31,holdings_v1,
+INE197A01024,JYOTISTRUC,Jyoti Structures Ltd.,2012-04-02,2016-06-30,holdings_v1,
+INE197D01010,JINDALPOLY,Jindal Poly Films Ltd.,2012-04-02,2013-09-30,holdings_v1,
+INE199A01012,PGHL,Procter & Gamble Health Ltd.,2012-04-02,2023-03-31,alpha_lab_gap;holdings_v1,barrid=INDAPP1
+INE199G01027,JAGRAN,Jagran Prakashan Ltd.,2012-04-02,2021-03-31,alpha_lab_gap;holdings_v1,barrid=INDDYG1
+INE203A01020,ASTRAZEN,Astrazeneca Pharma India Ltd.,2012-04-02,2018-04-02,alpha_lab_gap;holdings_v1,barrid=INDAKJ1
+INE203G01027,IGL,Indraprastha Gas Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDDUZ1
+INE205A01025,VEDL,Vedanta Ltd.,2012-04-02,2020-09-30,alpha_lab_gap;holdings_v1,barrid=INDADR1
+INE206B01013,ZODIACLOTH,Zodiac Clothing Company Ltd.,2012-04-02,2014-03-31,holdings_v1,
+INE208A01029,ASHOKLEY,Ashok Leyland Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDAAA1
+INE209A01019,SUNDROP,Sundrop Brands Ltd.,2012-04-02,2016-06-30,holdings_v1,
+INE211B01039,PHOENIXLTD,The Phoenix Mills Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDDIM1
+INE212H01026,AIAENG,AIA Engineering Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDDYC1
+INE213A01029,ONGC,Oil & Natural Gas Corporation Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDB201
+INE213C01025,BANCOINDIA,Banco Products (India) Ltd.,2012-04-02,2013-07-01,holdings_v1,
+INE216A01030,BRITANNIA,Britannia Industries Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDACP1
+INE216H01027,EDUCOMP,Educomp Solutions Ltd.,2012-04-02,2015-03-31,holdings_v1,
+INE217A01012,ZUARIIND,Zuari Industries Ltd.,2012-04-02,2012-07-02,holdings_v1,
+INE217B01036,KAJARIACER,Kajaria Ceramics Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDAWR1
+INE220B01022,KPIL,Kalpataru Projects International Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDDXC1
+INE220G01021,JSL,Jindal Stainless Ltd.,2012-04-02,2015-06-30,holdings_v1,
+INE220J01025,FCONSUMER,Future Consumer Ltd.,2012-04-02,2013-07-01,holdings_v1,
+INE221B01012,DYNAMATECH,Dynamatic Technologies Ltd.,2012-04-02,2014-03-31,holdings_v1,
+INE221H01019,GTLINFRA,GTL Infrastructure Ltd.,2012-04-02,2012-10-01,holdings_v1,
+INE224A01026,GREAVESCOT,Greaves Cotton Ltd.,2012-04-02,2022-03-31,alpha_lab_gap;holdings_v1,barrid=INDASJ1
+INE226A01021,VOLTAS,Voltas Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDADZ1
+INE226H01026,SADBHAV,Sadbhav Engineering Ltd.,2012-04-02,2020-09-30,alpha_lab_gap;holdings_v1,barrid=INDDYH1
+INE228A01035,USHAMART,Usha Martin Ltd.,2012-04-02,2016-06-30,holdings_v1,
+INE230A01023,EIHOTEL,EIH Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDAEO1
+INE233A01035,GODREJIND,Godrej Industries Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDAHF1
+INE233B01017,BLUEDART,Blue Dart Express Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDBR41
+INE235A01022,FINCABLES,Finolex Cables Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDAGF1
+INE236A01020,HCL-INSYS,HCL Infosystems Ltd.,2012-04-02,2019-04-01,alpha_lab_gap;holdings_v1,barrid=INDBWV1
+INE237A01036,KOTAKBANK,Kotak Mahindra Bank Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDAXQ1
+INE238A01034,AXISBANK,Axis Bank Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDCWV1
+INE242A01010,IOC,Indian Oil Corporation Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDBOP1
+INE242C01024,ANANTRAJ,Anant Raj Ltd.,2012-04-02,2017-09-29,alpha_lab_gap;holdings_v1,barrid=INDDWL1
+INE243D01012,BFUTILITIE,BF Utilities Ltd.,2012-04-02,2018-09-28,alpha_lab_gap;holdings_v1,barrid=INDDWH1
+INE244B01030,PATELENG,Patel Engineering Ltd.,2012-04-02,2016-06-30,holdings_v1,
+INE245A01021,TATAPOWER,Tata Power Company Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDADW1
+INE246F01010,GSPL,Gujarat State Petronet Ltd. - (Amalgamation),2012-04-02,2026-06-01,alpha_lab_gap;holdings_v1,barrid=INDDWQ1
+INE247G01024,COREEDUTEC,CORE Education & Technologies Ltd.,2012-04-02,2014-09-30,holdings_symbol_mapped,isin_from_nse_spell
+INE251H01024,GVKPIL,GVK Power & Infrastructure Ltd.,2012-04-02,2019-04-01,alpha_lab_gap;holdings_v1,barrid=INDDWN1
+INE255A01020,ESSELPACK,EPL Ltd.,2012-04-02,2018-04-02,alpha_lab_gap;holdings_v1,barrid=INDAQG1
+INE256A01028,ZEEL,Zee Entertainment Enterprises Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDBNX1
+INE257A01026,BHEL,Bharat Heavy Electricals Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDAIC1
+INE258A01024,BEML,BEML Ltd.,2012-04-02,2022-06-30,alpha_lab_gap;holdings_v1,barrid=INDBRN1
+INE258B01022,FDC,FDC Ltd.,2012-04-02,2017-09-29,alpha_lab_gap;holdings_v1,barrid=INDBU01
+INE259A01022,COLPAL,Colgate-Palmolive (India) Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDAAJ1
+INE259B01020,GAMMONIND,Gammon India Ltd.,2012-04-02,2015-09-30,holdings_v1,
+INE260B01028,GODFRYPHLP,Godfrey Phillips India Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDBV21
+INE262H01021,PERSISTENT,Persistent Systems Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDGJB1
+INE263A01024,BEL,Bharat Electronics Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDBRO1
+INE264A01014,GSKCONS,Glaxosmithkline Consumer Healthcare Ltd. - (Amalgamated),2012-04-02,2019-09-30,alpha_lab_gap;holdings_v1,barrid=INDAAU1
+INE265F01028,ENIL,Entertainment Network (India) Ltd.,2012-04-02,2016-06-30,holdings_v1,
+INE266F01018,APTECHT,Aptech Ltd.,2012-04-02,2014-09-30,holdings_v1,
+INE267A01025,HINDZINC,Hindustan Zinc Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDBOD1
+INE267I01010,ARSSINFRA,ARSS Infrastructure Projects Ltd.,2012-04-02,2012-10-01,holdings_v1,
+INE268A01049,STER,Sterlite Industries (India) Ltd.(Merged),2012-04-02,2012-10-01,holdings_v1,
+INE269A01021,SONATSOFTW,Sonata Software Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDCXV3
+INE269B01029,LMW,LMW Ltd.,2012-04-02,2024-04-01,alpha_lab_gap;holdings_v1,barrid=INDAYB1
+INE270A01029,ALOKTEXT,Alok Industries Ltd.,2012-04-02,2017-03-31,alpha_lab_gap;holdings_v1,barrid=INDCX01
+INE271B01025,MAHSEAMLES,Maharashtra Seamless Ltd.,2012-04-02,2016-06-30,holdings_v1,
+INE271C01023,DLF,DLF Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDECL1
+INE274B01011,MONSANTO,Monsanto India Ltd. - (Amalgamated),2012-04-02,2018-04-02,alpha_lab_gap;holdings_v1,barrid=INDDNJ1
+INE274G01010,DHANI,Dhani Services Ltd. - (Amalgamated),2012-04-02,2016-06-30,holdings_v1,
+INE274J01014,OIL,Oil India Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDFCR1
+INE275B01026,HUHTAMAKI,Huhtamaki India Ltd.,2012-04-02,2012-07-02,holdings_v1,
+INE277A01016,SWARAJENG,Swaraj Engines Ltd.,2012-04-02,2016-06-30,holdings_v1,
+INE280A01028,TITAN,Titan Company Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDAGO1
+INE284A01012,ESABINDIA,Esab India Ltd.,2012-04-02,2016-06-30,holdings_v1,
+INE285A01027,ELGIEQUIP,Elgi Equipments Ltd.,2012-04-02,2016-09-30,holdings_v1,
+INE293A01013,ROLTA,Rolta India Ltd.,2012-04-02,2017-09-29,alpha_lab_gap;holdings_symbol_mapped,barrid=INDBFF1;isin_from_nse_spell
+INE294A01037,BALLARPUR,Ballarpur Industries Ltd.,2012-04-02,2018-09-28,alpha_lab_gap;holdings_v1,barrid=INDAFB1
+INE296A01032,BAJFINANCE,Bajaj Finance Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDAAC2
+INE298A01020,CUMMINSIND,Cummins India Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDABF1
+INE299C01024,KGL,Karuturi Global Ltd.,2012-04-02,2014-03-31,holdings_v1,
+INE301A01014,RAYMOND,Raymond Ltd.,2012-04-02,2021-09-30,alpha_lab_gap;holdings_v1,barrid=INDADQ1
+INE302A01020,EXIDEIND,Exide Industries Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDAAI1
+INE306A01021,BAJAJHIND,Bajaj Hindusthan Sugar Ltd.,2012-04-02,2018-09-28,alpha_lab_gap;holdings_v1,barrid=INDBQ71
+INE310A01015,NILKAMAL,Nilkamal Ltd.,2012-04-02,2013-07-01,holdings_v1,
+INE312H01016,INOXLEISUR,Inox Leisure Ltd. - (Amalgamated),2012-04-02,2012-07-02,holdings_v1,
+INE314A01017,CMC,CMC Ltd.(Amalgamated),2012-04-02,2015-03-31,holdings_v1,
+INE317A01028,SHASUNPHAR,Shasun Pharmaceuticals Ltd.- (Amalgamation),2012-04-02,2015-03-31,holdings_v1,
+INE318A01026,PIDILITIND,Pidilite Industries Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDBCZ1
+INE322A01010,GILLETTE,Gillette India Ltd.,2012-04-02,2022-03-31,alpha_lab_gap;holdings_v1,barrid=INDBXZ1
+INE323A01026,BOSCHLTD,Bosch Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDABL1
+INE323I01011,PURVA,Puravankara Ltd.,2012-04-02,2016-09-30,holdings_v1,
+INE324A01032,JINDALSAW,Jindal Saw Ltd.,2012-04-02,2016-06-30,holdings_v1,
+INE326A01037,LUPIN,Lupin Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDBZT1
+INE330H01018,RCOM,Reliance Communications Ltd.,2012-04-02,2019-09-30,alpha_lab_gap;holdings_v1,barrid=INDDVV1
+INE331A01037,RAMCOCEM,The Ramco Cements Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDAFP1
+INE332A01027,THOMASCOOK,Thomas Cook (India) Ltd.,2012-04-02,2019-09-30,alpha_lab_gap;holdings_v1,barrid=INDBKE1
+INE333I01044,NEUEON,Neueon Corporation Ltd.,2012-04-02,2013-09-30,holdings_v1,
+INE335A01020,SURYAROSNI,Surya Roshni Ltd.,2012-04-02,2012-07-02,holdings_v1,
+INE338I01027,MOTILALOFS,Motilal Oswal Financial Services Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDEEL1
+INE340A01012,BIRLACORPN,Birla Corporation Ltd.,2012-04-02,2025-04-01,alpha_lab_gap;holdings_v1,barrid=INDAFD1
+INE343B01030,RAJESHEXPO,Rajesh Exports Ltd.,2012-04-02,2025-04-01,alpha_lab_gap;holdings_v1,barrid=INDDIN1
+INE345A01011,HINDOILEXP,Hindustan Oil Exploration Company Ltd.,2012-04-02,2015-09-30,holdings_v1,
+INE346H01014,GITANJALI,Gitanjali Gems Ltd.,2012-04-02,2016-06-30,holdings_v1,
+INE347G01014,PETRONET,Petronet LNG Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDDUS1
+INE348B01021,CENTURYPLY,Century Plyboards (India) Ltd.,2012-04-02,2013-09-30,holdings_v1,
+INE351A01035,UNICHEMLAB,Unichem Laboratories Ltd.,2012-04-02,2019-04-01,alpha_lab_gap;holdings_v1,barrid=INDBLC1
+INE351F01018,JPPOWER,Jaiprakash Power Ventures Ltd.,2012-04-02,2017-03-31,alpha_lab_gap;holdings_v1,barrid=INDDXK1
+INE356A01018,MPHASIS,Mphasis Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDBRL1
+INE361B01024,DIVISLAB,Divi's Laboratories Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDDUJ1
+INE364A01020,JAYSREETEA,Jay Shree Tea & Industries Ltd.,2012-04-02,2012-10-01,holdings_v1,
+INE369I01014,IL&FSENGG,IL&FS Engineering and Construction Company Ltd.,2012-04-02,2015-03-31,holdings_v1,
+INE371A01025,GRAPHITE,Graphite India Ltd.,2012-04-02,2016-06-30,holdings_v1,
+INE373A01013,BASF,BASF India Ltd.,2012-04-02,2023-10-03,alpha_lab_gap;holdings_v1,barrid=INDAKS1
+INE374A01029,GUJRATGAS,Gujarat Gas Company Ltd. - (Amalgamation),2012-04-02,2015-03-31,holdings_v1,
+INE376G01013,BIOCON,Biocon Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDDSR1
+INE378A01012,WYETH,Wyeth Ltd.- (Amalgamated),2012-04-02,2014-06-30,holdings_v1,
+INE383A01012,INDIACEM,The India Cements Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDAFL1
+INE385B01031,REIAGROLTD,Rei Agro Ltd.,2012-04-02,2015-03-31,holdings_symbol_mapped,isin_from_nse_spell
+INE385W01011,DISHMAN,Dishman Carbogen Amcis Ltd.,2012-04-02,2017-01-23,alpha_lab_gap;holdings_symbol_mapped,barrid=INDDSU1;isin_from_nse_spell
+INE386A01023,VESUVIUS,Vesuvius India Ltd.,2012-04-02,2016-06-30,holdings_v1,
+INE387A01021,SUNDRMFAST,Sundram Fasteners Ltd.,2012-04-02,2025-04-01,alpha_lab_gap;holdings_v1,barrid=INDAGU1
+INE389H01022,KEC,KEC International Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDDYL1
+INE397D01024,BHARTIARTL,Bharti Airtel Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDDMX1
+INE398A01010,VENKEYS,Venky'S (India) Ltd.,2012-04-02,2015-03-31,holdings_v1,
+INE399K01017,RTNPOWER,RattanIndia Power Ltd.,2012-04-02,2015-09-30,holdings_v1,
+INE406A01037,AUROPHARMA,Aurobindo Pharma Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDDAS2
+INE415A01038,HSIL,AGI Greenpac Ltd.,2012-04-02,2018-12-28,alpha_lab_gap;holdings_v1,barrid=INDATY1
+INE418H01029,ALLCARGO,Allcargo Logistics Ltd.,2012-04-02,2020-12-31,alpha_lab_gap;holdings_v1,barrid=INDDZC1
+INE421A01028,ABAN,Aban Offshore Ltd.,2012-04-02,2018-09-28,alpha_lab_gap;holdings_v1,barrid=INDAIJ1
+INE422C01014,TINPLATE,Tinplate Company Of India Ltd. - (Amalgamated),2012-04-02,2014-09-30,holdings_v1,
+INE423A01024,ADANIENT,Adani Enterprises Ltd.,2012-04-02,2015-06-30,holdings_v1,
+INE424H01027,SUNTV,Sun TV Network Ltd.,2012-04-02,,alpha_lab_fill;alpha_lab_gap;holdings_v1,barrid=INDDWD1;nse_confirmed;al_date=2013-06-28;barrid=INDDWD1
+INE428A01015,ALBK,Allahabad Bank - (Amalgamated),2012-04-02,2019-12-31,alpha_lab_gap;holdings_v1,barrid=INDDUH1
+INE429C01035,SINTEX,Sintex Industries Ltd.,2012-04-02,2017-03-31,alpha_lab_gap;holdings_symbol_mapped,barrid=INDB9E1;isin_from_nse_spell
+INE434A01013,ANDHRABANK,Andhra Bank - (Amalgamated),2012-04-02,2019-12-31,alpha_lab_gap;holdings_v1,barrid=INDDSN1
+INE436A01026,ANSALAPI,Ansal Properties & Infrastructure Ltd.,2012-04-02,2015-09-30,holdings_v1,
+INE437A01024,APOLLOHOSP,Apollo Hospitals Enterprise Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDAJQ2
+INE438A01022,APOLLOTYRE,Apollo Tyres Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDAET1
+INE439A01020,ASAHIINDIA,Asahi India Glass Ltd.,2012-04-02,2016-06-30,holdings_v1,
+INE449A01011,AUTOAXLES,Automotive Axles Ltd.,2012-04-02,2016-06-30,holdings_v1,
+INE455F01025,JPASSOCIAT,Jaiprakash Associates Ltd.,2012-04-02,2019-09-30,alpha_lab_gap;holdings_symbol_mapped,barrid=INDDTB1;isin_from_nse_spell
+INE459A01010,BANARISUG,Bannari Amman Sugars Ltd.,2012-04-02,2013-09-30,holdings_v1,
+INE463A01038,BERGEPAINT,Berger Paints India Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDALQ1
+INE465A01025,BHARATFORG,Bharat Forge Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDAFE1
+INE466H01028,UNITY,Unity Infraprojects Ltd.,2012-04-02,2013-07-01,holdings_v1,
+INE467B01029,TCS,Tata Consultancy Services Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDDTA1
+INE470A01017,3MINDIA,3M India Ltd.,2012-04-02,,alpha_lab_fill;alpha_lab_gap;holdings_v1,barrid=INDAMH1;nse_confirmed;al_date=2013-06-28;barrid=INDAMH1
+INE472A01039,BLUESTARCO,Blue Star Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDAMP1
+INE473A01011,LINDEINDIA,Linde India Ltd.,2012-04-02,2016-06-30,holdings_v1,
+INE474B01017,PSL,PSL Ltd.,2012-04-02,2014-03-31,holdings_symbol_mapped,isin_from_nse_spell
+INE476A01022,CANBK,Canara Bank,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDDSC1
+INE477A01020,CANFINHOME,Can Fin Homes Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDANE1
+INE481G01011,ULTRACEMCO,Ultratech Cement Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDDSZ1
+INE483A01010,CENTRALBK,Central Bank Of India,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDECZ1
+INE484J01027,GODREJPROP,Godrej Properties Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDGAM1
+INE485A01015,CENTENKA,Century Enka Ltd.,2012-04-02,2016-06-30,holdings_v1,
+INE486A01021,CESC,CESC Ltd.,2012-04-02,2018-02-05,alpha_lab_gap;holdings_v1,barrid=INDACS1
+INE491A01021,CUB,City Union Bank Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDCYZ1
+INE492A01029,SUDARCOLOR,Sudarshan Colorants India Ltd.,2012-04-02,2016-09-30,holdings_v1,
+INE493A01027,TATACOFFEE,Tata Coffee Ltd. - (Amalgamated),2012-04-02,2019-09-30,alpha_lab_gap;holdings_v1,barrid=INDDTY1
+INE494B01023,TVSMOTOR,TVS Motor Company Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDBJI1
+INE498B01024,SHOPERSTOP,Shoppers Stop Ltd.,2012-04-02,2017-03-31,alpha_lab_gap;holdings_v1,barrid=INDDVB1
+INE498L01015,LTF,L&T Finance Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDHAZ1
+INE499A01024,DCMSHRIRAM,DCM Shriram Ltd.,2012-04-02,2024-09-30,alpha_lab_gap;holdings_v1,barrid=INDAOY1
+INE500A01029,DCW,DCW Ltd.,2012-04-02,2015-03-31,holdings_v1,
+INE501A01019,DEEPAKFERT,Deepak Fertilisers And Petrochemicals Corporation Ltd.,2012-04-02,2019-09-30,alpha_lab_gap;holdings_v1,barrid=INDAAK1
+INE501G01024,HTMEDIA,HT Media Ltd.,2012-04-02,2018-06-29,alpha_lab_gap;holdings_v1,barrid=INDDXN1
+INE503A01015,DCBBANK,DCB Bank Ltd.,2012-04-02,2022-03-31,alpha_lab_gap;holdings_v1,barrid=INDDZD1
+INE506A01018,DREDGECORP,Dredging Corporation Of India Ltd.,2012-04-02,2019-04-01,alpha_lab_gap;holdings_v1,barrid=INDDSV1
+INE510A01028,ENGINERSIN,Engineers India Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDDMI1
+INE513A01022,SCHAEFFLER,Schaeffler India Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDAQL1
+INE516A01017,UFLEX,Uflex Ltd.,2012-04-02,2023-10-03,alpha_lab_gap;holdings_v1,barrid=INDAQX1
+INE517F01014,GPPL,Gujarat Pipavav Port Ltd.,2012-04-02,2025-09-30,alpha_lab_gap;holdings_v1,barrid=INDGTL1
+INE517H01028,ADVANTA,Advanta Ltd. - (Amalgamated),2012-04-02,2016-06-30,holdings_v1,
+INE520A01027,ZENSARTECH,Zensar Technologies Ltd.,2012-04-02,2018-04-02,alpha_lab_gap;holdings_v1,barrid=INDBVG1
+INE522F01014,COALINDIA,Coal India Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDGUL1
+INE528G01035,YESBANK,Yes Bank Ltd.,2012-04-02,2020-03-31,alpha_lab_gap;holdings_v1,barrid=INDDVF1
+INE529A01010,FMGOETZE,Federal-Mogul Goetze (India) Ltd.,2012-04-02,2016-06-30,holdings_v1,
+INE530B01024,IIFL,IIFL Finance Ltd.,2012-04-02,2017-06-23,alpha_lab_gap;holdings_v1,barrid=INDDXL1
+INE531A01024,KANSAINER,Kansai Nerolac Paints Ltd.,2012-04-02,2025-09-30,alpha_lab_gap;holdings_v1,barrid=INDASD1
+INE532F01054,EDELWEISS,Edelweiss Financial Services Ltd.,2012-04-02,2023-06-30,alpha_lab_gap;holdings_v1,barrid=INDEHI1
+INE538A01037,GFLLIMITED,GFL Ltd.,2012-04-02,2019-07-01,alpha_lab_gap;holdings_v1,barrid=INDBWI1
+INE538H01024,SHREEASHTA,Shree Ashtavinayak Cine Vision Ltd.,2012-04-02,2014-03-31,holdings_symbol_mapped,isin_from_nse_spell
+INE539A01019,GHCL,GHCL Ltd.,2012-04-02,2016-06-30,holdings_v1,
+INE542F01020,SWANDEF,Swan Defence and Heavy Industries Ltd.,2012-04-02,2019-04-01,alpha_lab_gap;holdings_v1,barrid=INDGAI1
+INE545A01024,HEG,HEG Ltd.,2012-04-02,2016-06-30,holdings_v1,
+INE548A01028,HFCL,HFCL Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDBW21
+INE548C01032,EMAMILTD,Emami Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDCZ81
+INE549A01026,HCC,Hindustan Construction Company Ltd.,2012-04-02,2019-04-01,alpha_lab_gap;holdings_v1,barrid=INDBW61
+INE560A01023,INDIAGLYCO,India Glycols Ltd.,2012-04-02,2014-09-30,holdings_v1,
+INE561H01026,PARSVNATH,Parsvnath Developers Ltd.,2012-04-02,2016-09-30,holdings_v1,
+INE562A01011,INDIANB,Indian Bank,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDEAN1
+INE565A01014,IOB,Indian Overseas Bank,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDDSO1
+INE571A01038,IPCALAB,Ipca Laboratories Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDBYA1
+INE572A01036,JBCHEPHARM,JB Chemicals & Pharmaceuticals Ltd. - (Amalgamated),2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDBYL1
+INE573A01042,JKTYRE,JK Tyre & Industries Ltd.,2012-04-02,2022-03-31,alpha_lab_gap;holdings_v1,barrid=INDAEJ1
+INE575G01010,FKONCO,Fresenius Kabi Oncology Ltd.,2012-04-02,2013-12-31,holdings_symbol_mapped,isin_from_nse_spell
+INE584A01023,NMDC,NMDC Ltd.,2012-04-02,2022-09-30,alpha_lab_gap;holdings_v1,barrid=INDC0Z1
+INE585B01010,MARUTI,Maruti Suzuki India Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDDSF1
+INE586B01026,TAJGVK,Taj GVK Hotels & Resorts Ltd.,2012-04-02,2012-10-01,holdings_v1,
+INE589A01014,NLCINDIA,NLC India Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDB181
+INE589G01011,BRFL,Bombay Rayon Fashions Ltd.,2012-04-02,2014-03-31,holdings_v1,
+INE592A01026,ORIENTPPR,Orient Paper & Industries Ltd.,2012-04-02,2013-04-01,holdings_v1,
+INE613A01020,RALLIS,Rallis India Ltd.,2012-04-02,2024-04-01,alpha_lab_gap;holdings_v1,barrid=INDADP1
+INE614A01028,RAMCOIND,Ramco Industries Ltd.,2012-04-02,2015-09-30,holdings_v1,
+INE614B01018,KTKBANK,The Karnataka Bank Ltd.,2012-04-02,2021-03-31,alpha_lab_gap;holdings_v1,barrid=INDCU01
+INE614G01033,RPOWER,Reliance Power Ltd.,2012-04-02,2020-06-30,alpha_lab_gap;holdings_v1,barrid=INDEGT1
+INE619A01035,RUCHISOYA,Patanjali Foods Ltd.,2012-04-02,2017-09-29,alpha_lab_gap;holdings_v1,barrid=INDBFL1
+INE621H01010,RELIGARE,Religare Enterprises Ltd.,2012-04-02,2016-06-30,holdings_v1,
+INE623B01027,FEL,Future Enterprises Ltd.,2012-04-02,2013-07-01,holdings_v1,
+INE628A01036,UPL,UPL Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDB791
+INE628H01015,ORBITCORP,Orbit Corporation Ltd.,2012-04-02,2014-09-30,holdings_symbol_mapped,isin_from_nse_spell
+INE631A01022,SHANTIGEAR,Shanthi Gears Ltd.,2012-04-02,2016-06-30,holdings_v1,
+INE633A01028,SHRENUJ,Shrenuj & Co. Ltd.,2012-04-02,2016-06-30,holdings_symbol_mapped,isin_from_nse_spell
+INE640A01023,SKFINDIA,SKF India Ltd.,2012-04-02,2025-12-31,alpha_lab_gap;holdings_v1,barrid=INDABW1
+INE643A01035,JTEKTINDIA,JTEKT India Ltd.,2012-04-02,2013-07-01,holdings_v1,
+INE647A01010,SRF,SRF Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDCAC1
+INE648A01026,SBBJ,State Bank Of Bikaner and Jaipur - (Amalgamated),2012-04-02,2017-03-16,alpha_lab_gap;holdings_v1,barrid=INDDUK1
+INE654A01024,SBT,State Bank Of Travancore - (Amalgamated),2012-04-02,2016-06-30,holdings_v1,
+INE655A01013,STCINDIA,The State Trading Corporation Of India Ltd.,2012-04-02,2012-07-02,holdings_v1,
+INE660A01013,SUNDARMFIN,Sundaram Finance Ltd.,2012-04-02,2017-11-13,alpha_lab_gap;holdings_v1,barrid=INDEGF1
+INE661I01014,BGRENERGY,BGR Energy Systems Ltd.,2012-04-02,2015-09-30,holdings_v1,
+INE663A01033,SPLPETRO,Supreme Petrochem Ltd.,2012-04-02,2016-06-30,holdings_v1,
+INE663F01032,NAUKRI,Info Edge (India) Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDDZP1
+INE667A01018,SYNDIBANK,Syndicate Bank - (Amalgamated),2012-04-02,2019-12-31,alpha_lab_gap;holdings_v1,barrid=INDDTU1
+INE669C01036,TECHM,Tech Mahindra Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDDYT1
+INE669E01016,IDEA,Vodafone Idea Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDEAB1
+INE670A01012,TATAELXSI,Tata Elxsi Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDCB21
+INE671A01010,HONAUT,Honeywell Automation India Ltd.,2012-04-02,2017-09-29,alpha_lab_gap;holdings_v1,barrid=INDCB41
+INE671H01015,SOBHA,Sobha Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDEAJ1
+INE672A01026,TATAINVEST,Tata Investment Corporation Ltd.,2012-04-02,2016-06-30,holdings_v1,
+INE674A01014,TATASTLLP,Tata Steel Long Products Ltd. - (Amalgamated),2012-04-02,2019-04-01,alpha_lab_gap;holdings_v1,barrid=INDCB71
+INE680A01011,DHANBANK,Dhanlaxmi Bank Ltd.,2012-04-02,2016-06-30,holdings_v1,
+INE681B01017,INDRAMEDCO,Indraprastha Medical Corporation Ltd.,2012-04-02,2014-09-30,holdings_v1,
+INE683A01023,SOUTHBANK,The South Indian Bank Ltd.,2012-04-02,2021-03-31,alpha_lab_gap;holdings_v1,barrid=INDCVC1
+INE684F01012,FSL,Firstsource Solutions Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDEAL1
+INE685A01028,TORNTPHARM,Torrent Pharmaceuticals Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDCCT2
+INE686F01025,UBL,United Breweries Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDDUG1
+INE688I01017,CAPF,Capital First Ltd. - (Amalgamated),2012-04-02,2018-12-28,alpha_lab_gap;holdings_v1,barrid=INDEHS1
+INE691A01018,UCOBANK,UCO Bank,2012-04-02,2022-09-30,alpha_lab_gap;holdings_v1,barrid=INDDUO1
+INE692A01016,UNIONBANK,Union Bank Of India,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDDSG1
+INE694A01020,UNITECH,Unitech Ltd.,2012-04-02,2018-09-28,alpha_lab_gap;holdings_v1,barrid=INDCDP1
+INE694C01018,LAKSHVILAS,The Lakshmi Vilas Bank Ltd. - (Amalgamation),2012-04-02,2020-06-30,alpha_lab_gap;holdings_v1,barrid=INDEGH1
+INE699A01011,UTTAMSTL,Uttam Galva Steels Ltd.,2012-04-02,2016-06-30,holdings_symbol_mapped,isin_from_nse_spell
+INE700A01033,JUBLPHARMA,Jubilant Pharmova Ltd.,2012-04-02,2020-09-30,alpha_lab_gap;holdings_v1,barrid=INDADY1
+INE701B01021,PUNJLLOYD,Punj Lloyd Ltd.,2012-04-02,2017-09-29,alpha_lab_gap;holdings_v1,barrid=INDDWC1
+INE702A01013,VARUNSHIP,Varun Shipping Company Ltd.-(Merged),2012-04-02,2013-09-30,holdings_v1,
+INE703A01011,VIDEOIND,Videocon Industries Ltd.,2012-04-02,2018-03-13,alpha_lab_gap;holdings_v1,barrid=INDCEK1
+INE703H01016,HUBTOWN,Hubtown Ltd.,2012-04-02,2015-03-31,holdings_v1,
+INE705A01016,VIJAYABANK,Vijaya Bank - (Amalgamated),2012-04-02,2019-04-01,alpha_lab_gap;holdings_v1,barrid=INDDSY1
+INE710A01016,VSTIND,VST Industries Ltd.,2012-04-02,2017-09-29,alpha_lab_gap;holdings_v1,barrid=INDBLW1
+INE721A01047,SHRIRAMFIN,Shriram Finance Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDB832
+INE725A01030,NAVA,Nava Ltd.,2012-04-02,2016-06-30,holdings_v1,
+INE725E01024,ORISSAMINE,The Orissa Minerals Development Company Ltd.,2012-04-02,2017-09-29,alpha_lab_gap;holdings_v1,barrid=INDGUJ1
+INE727D01022,KSOILS,KS Oils Ltd.,2012-04-02,2013-07-01,holdings_v1,
+INE733E01010,NTPC,NTPC Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDDTC1
+INE738I01010,ECLERX,eClerx Services Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDEGP1
+INE742F01042,ADANIPORTS,Adani Ports and Special Economic Zone Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDEGB1
+INE743C01021,JSWISPL,JSW Ispat Special Products Ltd. - (Amalgamation),2012-04-02,2015-09-30,holdings_v1,
+INE748C01038,3IINFOLTD,3I Infotech Ltd.,2012-04-02,2012-10-01,holdings_v1,
+INE749A01030,JINDALSTEL,Jindal Steel Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDDSP1
+INE750A01020,ORIENTHOT,Oriental Hotels Ltd.,2012-04-02,2013-07-01,holdings_v1,
+INE752E01010,POWERGRID,Power Grid Corporation Of India Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDEEI1
+INE759A01021,MASTEK,Mastek Ltd.,2012-04-02,2015-03-31,holdings_v1,
+INE761H01022,PAGEIND,Page Industries Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDEMA1
+INE763A01023,POLARIS,Polaris Financial Technology Ltd.,2012-04-02,2014-09-30,holdings_symbol_mapped,isin_from_nse_spell
+INE768C01028,ZYDUSWELL,Zydus Wellness Ltd.,2012-04-02,2017-09-29,alpha_lab_gap;holdings_v1,barrid=INDCJY1
+INE769A01020,AARTIIND,Aarti Industries Ltd.,2012-04-02,2019-04-01,alpha_lab_gap;holdings_v1,barrid=INDDTD1
+INE772A01016,SKUMARSYNF,S. Kumars Nationwide Ltd.,2012-04-02,2014-09-30,holdings_symbol_mapped,isin_from_nse_spell
+INE774D01024,M&MFIN,Mahindra & Mahindra Financial Services Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDDWB1
+INE775A01035,MOTHERSON,Samvardhana Motherson International Ltd.,2012-04-02,2021-06-30,alpha_lab_gap;holdings_v1,barrid=INDB021
+INE776C01039,GMRAIRPORT,GMR Airports Ltd.,2012-04-02,2021-12-31,alpha_lab_gap;holdings_v1,barrid=INDDYS1
+INE780C01023,JMFINANCIL,JM Financial Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDBYS1
+INE781B01015,NOIDATOLL,Noida Toll Bridge Company Ltd.,2012-04-02,2016-06-30,holdings_v1,
+INE785C01048,LITL,Lanco Infratech Ltd.,2012-04-02,2017-03-31,alpha_lab_gap;holdings_symbol_mapped,barrid=INDEAP1;isin_from_nse_spell
+INE791I01019,BRIGADE,Brigade Enterprises Ltd.,2012-04-02,2017-03-31,alpha_lab_gap;holdings_v1,barrid=INDEHL1
+INE794B01026,BALAJITELE,Balaji Telefilms Ltd.,2012-04-02,2012-07-02,holdings_v1,
+INE797A01021,GEOMETRIC,Geometric Ltd. - (Amalgamated),2012-04-02,2016-06-30,holdings_v1,
+INE797F01020,JUBLFOOD,Jubilant FoodWorks Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDGAT1
+INE800H01010,OMAXE,Omaxe Ltd.,2012-04-02,2021-03-31,alpha_lab_gap;holdings_v1,barrid=INDEDO1
+INE802G01018,JETAIRWAYS,Jet Airways (India) Ltd.,2012-04-02,2013-09-30,holdings_v1,
+INE805C01028,KCP,KCP Ltd.,2012-04-02,2016-06-30,holdings_v1,
+INE805D01034,SUNTECK,Sunteck Realty Ltd.,2012-04-02,2024-09-30,alpha_lab_gap;holdings_v1,barrid=INDENE1
+INE808B01016,OPTOCIRCUI,Opto Circuits (India) Ltd.,2012-04-02,2016-06-30,holdings_v1,
+INE811K01011,PRESTIGE,Prestige Estates Projects Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDGUK1
+INE813A01018,MAHLIFE,Mahindra Lifespace Developers Ltd.,2012-04-02,2017-03-31,alpha_lab_gap;holdings_v1,barrid=INDDEB1
+INE813H01021,TORNTPOWER,Torrent Power Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDEBL1
+INE814H01029,ADANIPOWER,Adani Power Ltd.,2012-04-02,2014-09-30,holdings_v1,
+INE821I01022,IRB,IRB Infrastructure Developers Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDEII1
+INE824B01021,BHUSANSTL,Tata Steel BSL Ltd.,2012-04-02,2018-09-28,alpha_lab_gap;holdings_symbol_mapped,barrid=INDCH21;isin_from_nse_spell
+INE824G01012,JSWHL,JSW Holdings Ltd.,2012-04-02,2017-03-31,alpha_lab_gap;holdings_v1,barrid=INDDVH1
+INE836A01035,KPIT,Birlasoft Ltd.,2012-04-02,2018-09-28,alpha_lab_gap;holdings_v1,barrid=INDDUD1
+INE836F01026,DISHTV,Dish TV India Ltd.,2012-04-02,2013-09-30,holdings_v1,
+INE848E01016,NHPC,NHPC Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDEXX1
+INE849A01020,TRENT,Trent Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDAXZ1
+INE852F01015,GDL,Gateway Distriparks Ltd. - (Amalgamated),2012-04-02,2019-09-30,alpha_lab_gap;holdings_v1,barrid=INDDVA1
+INE854D01024,UNITDSPR,United Spirits Ltd.,2012-04-02,2014-09-30,holdings_v1,
+INE860A01027,HCLTECH,HCL Technologies Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDDBX1
+INE868B01028,NCC,NCC Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDB1J1
+INE870D01012,NFL,National Fertilizers Ltd.,2012-04-02,2012-07-02,holdings_v1,
+INE870H01013,NETWORK18,Network 18 Media & Investments Ltd.,2012-04-02,2020-06-30,alpha_lab_gap;holdings_v1,barrid=INDEAI1
+INE872A01014,SREINFRA,SREI Infrastructure Finance Ltd.,2012-04-02,2019-09-30,alpha_lab_gap;holdings_v1,barrid=INDCVE1
+INE875A01025,IVRCLINFRA,IVRCL Ltd.,2012-04-02,2016-06-30,holdings_v1,
+INE877F01012,PTC,PTC India Ltd.,2012-04-02,2021-03-31,alpha_lab_gap;holdings_v1,barrid=INDDSX1
+INE878A01011,GVPIL,GE Power India Ltd.,2012-04-02,2021-09-30,alpha_lab_gap;holdings_v1,barrid=INDDDZ2
+INE879I01012,DBREALTY,Valor Estate Ltd.,2012-04-02,2018-09-28,alpha_lab_gap;holdings_v1,barrid=INDGAZ1
+INE881D01027,OFSS,Oracle Financial Services Software Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDDQY1
+INE883A01011,MRF,MRF Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDADL1
+INE885A01032,ARE&M,Amara Raja Energy & Mobility Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDBPI1
+INE886H01027,TV18BRDCST,TV18 Broadcast Ltd. - (Amalgamated),2012-04-02,2024-12-31,alpha_lab_gap;holdings_v1,barrid=INDEBI1
+INE891D01026,REDINGTON,Redington Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDEAM1
+INE892H01017,GTOFFSHORE,GOL Offshore Ltd.,2012-04-02,2014-09-30,holdings_symbol_mapped,isin_from_nse_spell
+INE894F01025,INDIABULLS,Indiabulls Financial Services Ltd.,2012-04-02,2013-04-01,holdings_v1,
+INE910H01017,CAIRN,Cairn India Ltd. (Amalgamated),2012-04-02,2017-01-02,holdings_v1,
+INE915B01019,INDSWFTLAB,Ind-Swift Laboratories Ltd.,2012-04-02,2013-07-01,holdings_v1,
+INE917I01010,BAJAJ-AUTO,Bajaj Auto Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDEHM1
+INE918I01026,BAJAJFINSV,Bajaj Finserv Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDEGX1
+INE922A01025,BEPL,Bhansali Engineering Polymers Ltd.,2012-04-02,2013-07-01,holdings_v1,
+INE922B01023,PANACEABIO,Panacea Biotec Ltd.,2012-04-02,2012-07-02,holdings_v1,
+INE934B01028,MERCATOR,Mercator Ltd.,2012-04-02,2016-06-30,holdings_v1,
+INE935A01035,GLENMARK,Glenmark Pharmaceuticals Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDDTV1
+INE939A01011,STAR,Strides Pharma Science Ltd.,2012-04-02,2018-02-05,alpha_lab_gap;holdings_v1,barrid=INDDUV1
+INE942G01012,MCLEODRUSS,Mcleod Russel India Ltd.,2012-04-02,2019-04-01,alpha_lab_gap;holdings_v1,barrid=INDDXM1
+INE944F01028,RADICO,Radico Khaitan Ltd.,2012-04-02,,alpha_lab_gap;holdings_v1,barrid=INDDTQ1
+INE975A01015,ELDERPHARM,Elder Pharmaceuticals Ltd.,2012-04-02,2015-03-31,holdings_symbol_mapped,isin_from_nse_spell
+INE976A01021,WSTCSTPAPR,West Coast Paper Mills Ltd.,2012-04-02,2014-09-30,holdings_v1,
+INE982F01036,HATHWAY,Hathway Cable & Datacom Ltd.,2012-04-02,2019-12-31,alpha_lab_gap;holdings_v1,barrid=INDGBA1
+INE990B01012,KEMROCK,Kemrock Industries and Exports Ltd.,2012-04-02,2013-09-30,holdings_symbol_mapped,isin_from_nse_spell
+INE992B01026,LAKSHMIEFL,Lakshmi Energy & Foods Ltd.,2012-04-02,2012-07-02,holdings_v1,
+INE999A01023,KSB,KSB Ltd.,2012-04-02,2016-06-30,holdings_v1,
+INE040M01013,TREEHOUSE,Tree House Education & Accessories Ltd.,2012-07-02,2016-09-30,holdings_v1,
+INE200A01026,GVT&D,GE Vernova T&D India Ltd.,2012-07-02,2020-09-30,alpha_lab_gap;holdings_v1,barrid=INDBVR1
+INE306B01029,ICSA,ICSA (India) Ltd.,2012-07-02,2012-10-01,holdings_v1,
+INE414G01012,MUTHOOTFIN,Muthoot Finance Ltd.,2012-07-02,,alpha_lab_gap;holdings_v1,barrid=INDGZK1
+INE416L01017,EROSMEDIA,Eros International Media Ltd.,2012-07-02,2019-04-01,alpha_lab_gap;holdings_v1,barrid=INDGUY1
+INE419M01027,TDPOWERSYS,TD Power Systems Ltd.,2012-07-02,2016-06-30,holdings_v1,
+INE420C01059,PAISALO,Paisalo Digital Ltd.,2012-07-02,2016-06-30,holdings_v1,
+INE576I01022,JKIL,J Kumar Infraprojects Ltd.,2012-07-02,2019-04-01,alpha_lab_gap;holdings_v1,barrid=INDEHR1
+INE597L01014,LOVABLE,Lovable Lingerie Ltd.,2012-07-02,2015-03-31,holdings_v1,
+INE603A01013,PRAKASH,Prakash Industries Ltd.,2012-07-02,2016-06-30,holdings_v1,
+INE696A01025,UBHOLDINGS,United Breweries (Holdings) Ltd.,2012-07-02,2014-03-31,holdings_symbol_mapped,isin_from_nse_spell
+INE725G01011,ICRA,ICRA Ltd.,2012-07-02,2018-04-02,alpha_lab_gap;holdings_v1,barrid=INDECQ1
+INE775B01025,KWALITY,Kwality Ltd.,2012-07-02,2013-07-01,holdings_symbol_mapped,isin_from_nse_spell
+INE874I01013,RAMKY,Ramky Infrastructure Ltd.,2012-07-02,2013-09-30,holdings_v1,
+INE949H01023,MANINFRA,Man InfraConstruction Ltd.,2012-07-02,2014-09-30,holdings_v1,
+INE968D01022,ARSHIYA,Arshiya Ltd.,2012-07-02,2013-09-30,holdings_v1,
+INE050A01025,BBTC,Bombay Burmah Trading Corporation Ltd.,2012-10-01,,alpha_lab_gap;holdings_v1,barrid=INDAMS1
+INE051B01021,VAKRANGEE,Vakrangee Ltd.,2012-10-01,2022-09-30,alpha_lab_gap;holdings_v1,barrid=INDDJB1
+INE060J01017,FLEXITUFF,Flexituff Ventures International Ltd.,2012-10-01,2016-06-30,holdings_v1,
+INE087J01028,GBGLOBAL,GB Global Ltd.,2012-10-01,2015-12-31,holdings_v1,
+INE152B01027,GATI,Allcargo Gati Ltd. - (Amalgamated),2012-10-01,2018-09-28,alpha_lab_gap;holdings_v1,barrid=INDDYQ1
+INE187A01017,JBFIND,JBF Industries Ltd.,2012-10-01,2018-09-28,alpha_lab_gap;holdings_v1,barrid=INDBYM1
+INE367G01038,PFOCUS,Prime Focus Ltd.,2012-10-01,2015-03-31,holdings_v1,
+INE550H01011,SUPREMEINF,Supreme Infrastructure India Ltd.,2012-10-01,2016-06-30,holdings_v1,
+INE558B01017,MANGCHEFER,Mangalore Chemicals & Fertilizers Ltd. - (Amalgamated),2012-10-01,2015-09-30,holdings_v1,
+INE690A01028,TTKPRESTIG,TTK Prestige Ltd.,2012-10-01,2024-04-01,alpha_lab_gap;holdings_v1,barrid=INDCC81
+INE718H01014,AUTOIND,Autoline Industries Ltd.,2012-10-01,2013-09-30,holdings_v1,
+INE722A01011,SHRIRAMCIT,Shriram City Union Finance Ltd. -  (Amalgamated),2012-10-01,2022-09-30,alpha_lab_gap;holdings_v1,barrid=INDEHZ1
+INE787D01026,BALKRISIND,Balkrishna Industries Ltd.,2012-10-01,2015-03-31,holdings_v1,
+INE191H01014,PVRINOX,PVR Inox Ltd.,2013-04-01,,alpha_lab_gap;holdings_v1,barrid=INDDXU1
+INE232I01014,SPARC,Sun Pharma Advanced Research Company Ltd.,2013-04-01,2013-09-30,holdings_v1,
+INE490G01020,MOIL,MOIL Ltd.,2013-04-01,2023-03-31,alpha_lab_gap;holdings_v1,barrid=INDGVM1
+INE049B01025,WOCKPHARMA,Wockhardt Ltd.,2013-07-01,2023-03-31,alpha_lab_gap;holdings_v1,barrid=INDDDP1
+INE117A01022,ABB,ABB India Ltd.,2013-07-01,2019-09-30,alpha_lab_fill;alpha_lab_gap;holdings_v1,barrid=INDAFZ1;nse_confirmed;al_date=2013-06-28;barrid=INDAFZ1
+INE121J01017,INDUSTOWER,Indus Towers Ltd.,2013-07-01,,alpha_lab_gap;holdings_v1,barrid=INDHHL1
+INE130C01021,AMTEKAUTO,Amtek Auto Ltd.,2013-07-01,2017-09-29,alpha_lab_fill;alpha_lab_gap,barrid=INDBPQ1;nse_confirmed;al_date=2013-06-28;barrid=INDBPQ1;nse_confirmed;al_date=2013-09-30;barrid=INDBPQ1;nse_confirmed;al_date=2013-12-31;barrid=INDBPQ1;nse_confirmed;al_date=2014-03-31;barrid=I
+INE131A01031,GMDCLTD,Gujarat Mineral Development Corporation Ltd.,2013-07-01,2021-03-31,alpha_lab_fill;alpha_lab_gap;holdings_v1,barrid=INDCX41;nse_confirmed;al_date=2013-06-28;barrid=INDCX41
+INE192B01031,WELSPUNLIV,Welspun Living Ltd.,2013-07-01,,alpha_lab_gap;holdings_v1,barrid=INDCFC1
+INE202B01038,DHFL,Piramal Finance Ltd.,2013-07-01,2019-01-01,alpha_lab_fill;alpha_lab_gap,barrid=INDDVO1;nse_confirmed;al_date=2013-06-28;barrid=INDDVO1;nse_confirmed;al_date=2013-09-30;barrid=INDDVO1;nse_confirmed;al_date=2013-12-31;barrid=INDDVO1;nse_confirmed;al_date=2014-03-31;barrid=I
+INE221H01019,GTLINFRA,GTL Infrastructure Ltd.,2013-07-01,2016-06-30,holdings_v1,
+INE285K01026,TECHNO,Techno Electric & Engineering Company Ltd.,2013-07-01,2018-08-08,alpha_lab_fill;alpha_lab_gap,barrid=INDCCA2;nse_confirmed;al_date=2013-06-28;barrid=INDCCA2;nse_confirmed;al_date=2013-09-30;barrid=INDCCA2;nse_confirmed;al_date=2013-12-31;barrid=INDCCA2;nse_confirmed;al_date=2014-03-31;barrid=I
+INE342J01019,ZFCVINDIA,ZF Commercial Vehicle Control Systems India Ltd.,2013-07-01,,alpha_lab_fill;alpha_lab_gap;holdings_v1,barrid=INDEJT1;nse_confirmed;al_date=2013-06-28;barrid=INDEJT1
+INE371D01029,GEODESIC,Geodesic Ltd.,2013-07-01,2013-09-30,holdings_symbol_mapped,isin_from_nse_spell
+INE524A01029,GABRIEL,Gabriel India Ltd.,2013-07-01,2016-06-30,holdings_v1,
+INE531E01026,HINDCOPPER,Hindustan Copper Ltd.,2013-07-01,,alpha_lab_gap;holdings_v1,barrid=INDENW1
+INE549I01011,INNOIND,Innoventive Industries Ltd.,2013-07-01,2014-03-31,alpha_lab_fill,nse_confirmed;al_date=2013-06-28;barrid=INDGZP1;nse_confirmed;al_date=2013-09-30;barrid=INDGZP1;nse_confirmed;al_date=2013-12-31;barrid=INDGZP1
+INE580B01029,GRUH,Gruh Finance Ltd. - (Amalgamated),2013-07-01,2019-09-30,alpha_lab_gap;holdings_v1,barrid=INDDMD1
+INE591G01025,COFORGE,Coforge Ltd.,2013-07-01,,alpha_lab_gap;holdings_v1,barrid=INDDUW1
+INE665A01038,SWANCORP,Swan Corp Ltd.,2013-07-01,2021-09-30,alpha_lab_gap;holdings_v1,barrid=INDCBM1
+INE716A01013,WHIRLPOOL,Whirlpool Of India Ltd.,2013-07-01,,alpha_lab_fill;alpha_lab_gap;holdings_v1,barrid=INDAWY1;nse_confirmed;al_date=2013-06-28;barrid=INDAWY1
+INE748C01038,3IINFOLTD,3I Infotech Ltd.,2013-07-01,2013-09-30,holdings_v1,
+INE760L01018,TBZ,Tribhovandas Bhimji Zaveri Ltd.,2013-07-01,2016-09-30,holdings_v1,
+INE912L01015,ONELIFECAP,Onelife Capital Advisors Ltd.,2013-07-01,2013-09-30,holdings_v1,
+INE919H01018,IMFA,Indian Metals & Ferro Alloys Ltd.,2013-07-01,2015-03-31,holdings_v1,
+INE928K01013,DRDATSONS,Dr. Datsons Labs Ltd.,2013-07-01,2014-03-31,holdings_symbol_mapped,isin_from_nse_spell
+INE947J01015,DEN,Den Networks Ltd.,2013-07-01,2019-04-01,alpha_lab_gap;holdings_v1,barrid=INDGAQ1
+INE950I01011,DBCORP,D.B. Corp Ltd.,2013-07-01,2021-03-31,alpha_lab_gap;holdings_v1,barrid=INDGAN1
+INE975G01012,IL&FSTRANS,IL&FS Transportation Networks Ltd.,2013-07-01,2019-04-01,alpha_lab_gap;holdings_v1,barrid=INDGIY1
+INE978A01027,HERITGFOOD,Heritage Foods Ltd.,2013-07-01,2016-06-30,holdings_v1,
+INE075A01022,WIPRO,Wipro Ltd.,2013-09-30,,alpha_lab_gap;holdings_v1,barrid=INDBNR1
+INE094I01018,KOLTEPATIL,Kolte-Patil Developers Ltd.,2013-09-30,2021-03-31,alpha_lab_gap;holdings_v1,barrid=INDEHD1
+INE123F01029,MMTC,MMTC Ltd.,2013-09-30,,alpha_lab_gap;holdings_v1,barrid=INDCT91
+INE288A01013,MAHSCOOTER,Maharashtra Scooters Ltd.,2013-09-30,2016-06-30,holdings_v1,
+INE401H01017,KKCL,Kewal Kiran Clothing Ltd.,2013-09-30,2016-06-30,holdings_v1,
+INE455I01029,KSCL,Kaveri Seed Company Ltd.,2013-09-30,2022-03-31,alpha_lab_gap;holdings_v1,barrid=INDELS1
+INE472M01018,MTEDUCARE,MT Educare Ltd.,2013-09-30,2016-06-30,holdings_v1,
+INE486J01014,INFINITE,Infinite Computer Solutions (India) Ltd,2013-09-30,2014-09-30,holdings_symbol_mapped,isin_from_nse_spell
+INE511C01022,POONAWALLA,Poonawalla Fincorp Ltd.,2013-09-30,2020-06-30,alpha_lab_gap;holdings_v1,barrid=INDEMV1
+INE786A01032,JKLAKSHMI,JK Lakshmi Cement Ltd.,2013-09-30,2025-04-01,alpha_lab_gap;holdings_v1,barrid=INDADT1
+INE825A01020,VTL,Vardhman Textiles Ltd.,2013-09-30,,alpha_lab_gap;holdings_v1,barrid=INDAZA1
+INE825H01017,ESSDEE,Ess Dee Aluminium Ltd.,2013-09-30,2016-09-30,holdings_symbol_mapped,isin_from_nse_spell
+INE904G01038,RASOYPR,Rasoya Proteins Ltd.,2013-09-30,2015-09-30,holdings_symbol_mapped,isin_from_nse_spell
+INE993A01026,MANINDS,Man Industries (India) Ltd.,2013-09-30,2014-09-30,holdings_v1,
+INE998I01010,MHRIL,Mahindra Holidays & Resorts India Ltd.,2013-09-30,2024-09-30,alpha_lab_gap;holdings_v1,barrid=INDESY1
+INE155G01029,NDTV,New Delhi Television Ltd.,2013-12-31,2014-03-31,holdings_v1,
+INE623B01027,FEL,Future Enterprises Ltd.,2013-12-31,2015-12-31,holdings_v1,
+INE952H01027,RAJTV,Raj Television Network Ltd.,2013-12-31,2015-03-31,holdings_v1,
+INE064C01022,TRIDENT,Trident Ltd.,2014-03-31,,alpha_lab_gap;holdings_v1,barrid=INDDSL1
+INE095N01031,NBCC,NBCC (India) Ltd.,2014-03-31,,alpha_lab_gap;holdings_v1,barrid=INDHFE1
+INE148I01020,SAMMAANCAP,Sammaan Capital Ltd.,2014-03-31,,alpha_lab_gap;holdings_v1,barrid=INDDVM1
+INE232I01014,SPARC,Sun Pharma Advanced Research Company Ltd.,2014-03-31,2025-04-01,alpha_lab_gap;holdings_v1,barrid=INDEBA1
+INE312H01016,INOXLEISUR,Inox Leisure Ltd. - (Amalgamated),2014-03-31,2023-03-31,alpha_lab_gap;holdings_v1,barrid=INDDXV1
+INE560K01014,PFS,PTC India Financial Services Ltd.,2014-03-31,2019-04-01,alpha_lab_gap;holdings_v1,barrid=INDGZC1
+INE599M01018,JUSTDIAL,Just Dial Ltd.,2014-03-31,2025-09-30,alpha_lab_gap;holdings_v1,barrid=INDHIS1
+INE603J01030,PIIND,PI Industries Ltd.,2014-03-31,,alpha_lab_gap;holdings_v1,barrid=INDEVP1
+INE643A01035,JTEKTINDIA,JTEKT India Ltd.,2014-03-31,2016-06-30,holdings_v1,
+INE668F01031,JYOTHYLAB,Jyothy Labs Ltd.,2014-03-31,2026-04-01,alpha_lab_gap;holdings_v1,barrid=INDEHK1
+INE752H01013,CARERATING,Care Ratings Ltd.,2014-03-31,2021-03-31,alpha_lab_gap;holdings_v1,barrid=INDHHK1
+INE850A01010,MAHINDUGIN,Mahindra Ugine Steel Company Ltd.(Amalgamated),2014-03-31,2014-06-30,holdings_v1,
+INE884A01027,VAIBHAVGBL,Vaibhav Global Ltd.,2014-03-31,2016-09-30,holdings_v1,
+INE933K01021,BAJAJCON,Bajaj Consumer Care Ltd.,2014-03-31,2022-03-31,alpha_lab_gap;holdings_v1,barrid=INDGTJ1
+INE196A01026,MARICO,Marico Ltd.,2014-06-30,,alpha_lab_gap;holdings_v1,barrid=INDB0E2
+INE855B01025,RAIN,Rain Industries Ltd.,2014-06-30,2024-04-01,alpha_lab_gap;holdings_v1,barrid=INDB5H1
+INE006I01046,ASTRAL,Astral Ltd.,2014-09-30,,alpha_lab_gap;holdings_v1,barrid=INDELZ1
+INE031B01049,AJANTPHARM,Ajanta Pharma Ltd.,2014-09-30,,alpha_lab_gap;holdings_v1,barrid=INDDJD1
+INE038F01029,TVTODAY,TV Today Network Ltd.,2014-09-30,2021-03-31,alpha_lab_gap;holdings_v1,barrid=INDDUR1
+INE163A01018,NOCIL,Nocil Ltd.,2014-09-30,2016-06-30,holdings_v1,
+INE172A01027,CASTROLIND,Castrol India Ltd.,2014-09-30,,alpha_lab_gap;holdings_v1,barrid=INDABC1
+INE191B01025,WELCORP,Welspun Corp Ltd.,2014-09-30,,alpha_lab_gap;holdings_v1,barrid=INDCJD1
+INE348B01021,CENTURYPLY,Century Plyboards (India) Ltd.,2014-09-30,2026-04-01,alpha_lab_gap;holdings_v1,barrid=INDECC1
+INE372A01015,APARINDS,Apar Industries Ltd.,2014-09-30,2018-04-02,alpha_lab_gap;holdings_v1,barrid=INDDDS1
+INE442H01029,ASHOKA,Ashoka Buildcon Ltd.,2014-09-30,2022-03-31,alpha_lab_gap;holdings_v1,barrid=INDGUC1
+INE489H01020,NITINFIRE,Nitin Fire Protection Industries Ltd.,2014-09-30,2017-09-29,alpha_lab_gap;holdings_v1,barrid=INDEDM1
+INE602G01020,KITEX,Kitex Garments Ltd.,2014-09-30,2018-09-28,alpha_lab_gap;holdings_v1,barrid=INDEZP1
+INE612J01015,REPCOHOME,Repco Home Finance Ltd.,2014-09-30,2020-09-30,alpha_lab_gap;holdings_v1,barrid=INDHIB1
+INE703B01027,RATNAMANI,Ratnamani Metals & Tubes Ltd.,2014-09-30,2016-09-30,holdings_v1,
+INE715A01015,WHEELS,Wheels India Ltd.,2014-09-30,2016-06-30,holdings_v1,
+INE901L01018,APLLTD,Alembic Pharmaceuticals Ltd.,2014-09-30,2026-04-01,alpha_lab_gap;holdings_v1,barrid=INDHBV1
+INE956G01038,WABAG,VA Tech Wabag Ltd.,2014-09-30,2020-06-30,alpha_lab_gap;holdings_v1,barrid=INDGTW1
+INE133E01013,TI,Tilaknagar Industries Ltd.,2014-12-31,2015-03-31,holdings_v1,
+INE040D01038,MAYURUNIQ,Mayur Uniquoters Ltd.,2015-03-31,2017-03-31,alpha_lab_gap;holdings_v1,barrid=INDFEZ1
+INE059D01020,LAOPALA,La Opala RG Ltd.,2015-03-31,2017-03-31,alpha_lab_gap;holdings_v1,barrid=INDCNR1
+INE155G01029,NDTV,New Delhi Television Ltd.,2015-03-31,2016-06-30,holdings_v1,
+INE220J01025,FCONSUMER,Future Consumer Ltd.,2015-03-31,2021-09-30,alpha_lab_gap;holdings_v1,barrid=INDGZM1
+INE221B01012,DYNAMATECH,Dynamatic Technologies Ltd.,2015-03-31,2017-03-31,alpha_lab_gap;holdings_v1,barrid=INDBUC1
+INE337A01034,LGBBROSLTD,LG Balakrishnan & Bros Ltd.,2015-03-31,2016-06-30,holdings_v1,
+INE410B01037,VINATIORGA,Vinati Organics Ltd.,2015-03-31,2024-04-01,alpha_lab_gap;holdings_v1,barrid=INDEXA1
+INE495B01038,SUVEN,Suven Life Sciences Ltd.,2015-03-31,2020-03-31,alpha_lab_gap;holdings_v1,barrid=INDDMW1
+INE559A01017,IFBIND,IFB Industries Ltd.,2015-03-31,2015-09-30,holdings_v1,
+INE577A01027,MUNJALSHOW,Munjal Showa Ltd.,2015-03-31,2016-06-30,holdings_v1,
+INE634I01029,KNRCON,KNR Constructions Ltd.,2015-03-31,2016-06-30,holdings_v1,
+INE635Q01029,GULFOILLUB,Gulf Oil Lubricants India Ltd.,2015-03-31,2021-09-30,alpha_lab_gap;holdings_v1,barrid=INDHPA1
+INE686A01026,CEMPRO,Cemindia Projects Ltd.,2015-03-31,2016-06-30,holdings_v1,
+INE750C01026,MARKSANS,Marksans Pharma Ltd.,2015-03-31,2018-09-28,alpha_lab_gap;holdings_v1,barrid=INDCSI1
+INE823G01014,JKCEMENT,JK Cement Ltd.,2015-03-31,,alpha_lab_gap;holdings_v1,barrid=INDDWM1
+INE854D01024,UNITDSPR,United Spirits Ltd.,2015-03-31,,alpha_lab_gap;holdings_v1,barrid=INDDSM1
+INE912H01013,MBLINFRA,MBL Infrastructure Ltd.,2015-03-31,2016-06-30,holdings_v1,
+INE930H01031,KPRMILL,K.P.R. Mill Ltd.,2015-03-31,2020-09-30,alpha_lab_gap;holdings_v1,barrid=INDEHT1
+INE932A01024,PENIND,Pennar Industries Ltd.,2015-03-31,2016-06-30,holdings_v1,
+INE370E01029,VIVIDHA,Visagar Polytex Ltd.,2015-06-30,2016-06-30,holdings_v1,
+INE482A01020,CEATLTD,Ceat Ltd.,2015-06-30,,alpha_lab_gap;holdings_v1,barrid=INDAEN1
+INE987B01026,NATCOPHARM,Natco Pharma Ltd.,2015-06-30,,alpha_lab_gap;holdings_v1,barrid=INDB1U1
+INE001B01026,KRBL,KRBL Ltd.,2015-09-30,2024-09-30,alpha_lab_gap;holdings_v1,barrid=INDDWO1
+INE052I01032,CAMLINFINE,Camlin Fine Sciences Ltd.,2015-09-30,2016-06-30,holdings_v1,
+INE066P01011,INOXWIND,Inox Wind Ltd.,2015-09-30,2019-09-30,alpha_lab_gap;holdings_v1,barrid=INDHUC1
+INE128A01029,EVEREADY,Eveready Industries India Ltd.,2015-09-30,2019-04-01,alpha_lab_gap;holdings_v1,barrid=INDBUW1
+INE172N01012,IMAGICAA,Imagicaaworld Entertainment Ltd.,2015-09-30,2016-06-30,holdings_v1,
+INE209B01025,RICOAUTO,Rico Auto Industries Ltd.,2015-09-30,2016-06-30,holdings_v1,
+INE225D01027,SYMPHONY,Symphony Ltd.,2015-09-30,2023-03-31,alpha_lab_gap;holdings_v1,barrid=INDCBQ1
+INE366I01010,VRLLOG,VRL Logistics Ltd.,2015-09-30,2021-03-31,alpha_lab_gap;holdings_v1,barrid=INDHUP1
+INE369I01014,IL&FSENGG,IL&FS Engineering and Construction Company Ltd.,2015-09-30,2016-06-30,holdings_v1,
+INE425A01011,METALFORGE,Metalyst Forgings Ltd.,2015-09-30,2016-06-30,holdings_v1,
+INE452O01016,FLFL,Future Lifestyle Fashions Ltd.,2015-09-30,2017-03-31,alpha_lab_gap;holdings_v1,barrid=INDHKA1
+INE787D01026,BALKRISIND,Balkrishna Industries Ltd.,2015-09-30,,alpha_lab_gap;holdings_v1,barrid=INDBRC1
+INE814H01029,ADANIPOWER,Adani Power Ltd.,2015-09-30,2020-09-30,alpha_lab_gap;holdings_v1,barrid=INDEXW1
+INE876N01018,ORIENTCEM,Orient Cement Ltd.,2015-09-30,2021-03-31,alpha_lab_gap;holdings_v1,barrid=INDHJD1
+INE943C01027,SRIPIPES,Srikalahasthi Pipes Ltd.,2015-09-30,2016-06-30,holdings_symbol_mapped,isin_from_nse_spell
+INE965H01011,SITINET,Siti Networks Ltd.,2015-09-30,2017-03-31,alpha_lab_gap;holdings_v1,barrid=INDDZJ1
+INE034A01011,ARVIND,Arvind Ltd.,2015-12-31,2018-06-29,alpha_lab_gap;holdings_v1,barrid=INDAEZ1
+INE195J01029,PNCINFRA,PNC Infratech Ltd.,2015-12-31,2025-09-30,alpha_lab_gap;holdings_v1,barrid=INDHU91
+INE336H01023,GAYAPROJ,Gayatri Projects Ltd.,2015-12-31,2017-11-20,alpha_lab_gap;holdings_v1,barrid=INDEDF1
+INE839M01018,SCHNEIDER,Schneider Electric Infrastructure Ltd.,2016-03-31,2018-04-02,alpha_lab_gap;holdings_v1,barrid=INDHEZ1
+IN9155A01020,TATAMTRDVR,Tata Motors Ltd. - DVR Ordinary,2016-06-30,2024-09-30,alpha_lab_gap;holdings_v1,barrid=INDEKY1
+INE002L01015,SJVN,SJVN Ltd.,2016-06-30,,alpha_lab_gap;holdings_v1,barrid=INDGQA1
+INE043D01016,IDFC,IDFC Ltd. - (Amalgamated),2016-06-30,2024-12-31,alpha_lab_gap;holdings_v1,barrid=INDDVK1
+INE066O01014,WONDERLA,Wonderla Holidays Ltd.,2016-06-30,2017-09-29,alpha_lab_gap;holdings_v1,barrid=INDHMX1
+INE087A01019,KESORAMIND,Kesoram Industries Ltd.,2016-06-30,2018-09-28,alpha_lab_gap;holdings_v1,barrid=INDAFO1
+INE101D01020,GRANULES,Granules India Ltd.,2016-06-30,,alpha_lab_gap;holdings_v1,barrid=INDEJL1
+INE102A01024,HLVLTD,HLV Ltd.,2016-06-30,2016-09-30,holdings_v1,
+INE122R01018,MANPASAND,Manpasand Beverages Ltd.,2016-06-30,2019-04-01,alpha_lab_gap;holdings_symbol_mapped,barrid=INDHVT1;isin_from_nse_spell
+INE131B01039,RELAXO,Relaxo Footwears Ltd.,2016-06-30,2017-09-29,alpha_lab_gap;holdings_v1,barrid=INDCQA1
+INE142I01023,TAKE,Take Ltd.,2016-06-30,2020-09-30,alpha_lab_gap;holdings_v1,barrid=INDEEA1
+INE146L01010,KIRLOSENG,Kirloskar Oil Engines Ltd.,2016-06-30,2016-09-30,holdings_v1,
+INE152M01016,TRITURBINE,Triveni Turbine Ltd.,2016-06-30,2017-09-29,alpha_lab_gap;holdings_v1,barrid=INDHCS1
+INE153A01019,MTNL,Mahanagar Telephone Nigam Ltd.,2016-06-30,2018-09-28,alpha_lab_gap;holdings_v1,barrid=INDAHI1
+INE188B01013,IGARASHI,Igarashi Motors India Ltd.,2016-06-30,2018-04-02,alpha_lab_gap;holdings_v1,barrid=INDEKF1
+INE189B01011,STYRENIX,Styrenix Performance Materials Ltd.,2016-06-30,2016-09-30,holdings_v1,
+INE197D01010,JINDALPOLY,Jindal Poly Films Ltd.,2016-06-30,2018-09-28,alpha_lab_gap;holdings_v1,barrid=INDBYP1
+INE208C01025,AEGISLOG,Aegis Logistics Ltd.,2016-06-30,,alpha_lab_gap;holdings_v1,barrid=INDBO01
+INE221J01015,SHARDACROP,Sharda Cropchem Ltd.,2016-06-30,2018-04-02,alpha_lab_gap;holdings_v1,barrid=INDHPX1
+INE246B01019,RAMCOSYS,Ramco Systems Ltd.,2016-06-30,2018-09-28,alpha_lab_gap;holdings_v1,barrid=INDDKO1
+INE262A01018,HMT,HMT Ltd.,2016-06-30,2016-09-30,holdings_v1,
+INE278M01019,NAVKARCORP,Navkar Corporation Ltd.,2016-06-30,2019-04-01,alpha_lab_gap;holdings_v1,barrid=INDHXA1
+INE294B01019,SMLISUZU,SML Mahindra Ltd.,2016-06-30,2018-09-28,alpha_lab_gap;holdings_v1,barrid=INDCBO1
+INE306R01017,INTELLECT,Intellect Design Arena Ltd.,2016-06-30,2020-09-30,alpha_lab_gap;holdings_v1,barrid=INDHRS1
+INE325A01013,TIMKEN,Timken India Ltd.,2016-06-30,,alpha_lab_gap;holdings_v1,barrid=INDBJV1
+INE343H01029,SOLARINDS,Solar Industries India Ltd.,2016-06-30,,alpha_lab_gap;holdings_v1,barrid=INDEIV1
+INE355A01028,SOMANYCERA,Somany Ceramics Ltd.,2016-06-30,2018-04-02,alpha_lab_gap;holdings_v1,barrid=INDDBC1
+INE365D01021,ASHIANA,Ashiana Housing Ltd.,2016-06-30,2016-09-30,holdings_v1,
+INE398R01022,SYNGENE,Syngene International Ltd.,2016-06-30,,alpha_lab_gap;holdings_v1,barrid=INDHWM1
+INE399G01023,RKFORGE,Ramkrishna Forgings Ltd.,2016-06-30,2019-09-30,alpha_lab_gap;holdings_v1,barrid=INDECE1
+INE399K01017,RTNPOWER,RattanIndia Power Ltd.,2016-06-30,2018-09-28,alpha_lab_gap;holdings_v1,barrid=INDFKG1
+INE416D01022,BLISSGVS,Bliss GVS Pharma Ltd.,2016-06-30,2021-09-30,alpha_lab_gap;holdings_v1,barrid=INDBR21
+INE421C01016,TVSSRICHAK,TVS Srichakra Ltd.,2016-06-30,2019-04-01,alpha_lab_gap;holdings_v1,barrid=INDCDB1
+INE421D01022,CCL,CCL Products (India) Ltd.,2016-06-30,,alpha_lab_gap;holdings_v1,barrid=INDDWR1
+INE423A01024,ADANIENT,Adani Enterprises Ltd.,2016-06-30,2018-04-02,alpha_lab_gap;holdings_v1,barrid=INDCGH1
+INE435A01051,IPAPPM,Andhra Paper Ltd.,2016-06-30,2017-03-31,alpha_lab_gap;holdings_v1,barrid=INDAJM1
+INE435G01025,DHANUKA,Dhanuka Agritech Ltd.,2016-06-30,2018-04-02,alpha_lab_gap;holdings_v1,barrid=INDBT11
+INE439L01019,DALMIABHA,Dalmia Bharat Ltd. - (Amalgamated),2016-06-30,2018-04-02,holdings_v1;nse_fill,dalmia_bharat;nse_lists_it_alpha_lab_does_not
+INE446C01013,GLOBOFFS,Garware Offshore Services Ltd.,2016-06-30,2016-09-30,holdings_v1,
+INE461C01038,GREENPLY,Greenply Industries Ltd.,2016-06-30,2019-04-01,alpha_lab_gap;holdings_v1,barrid=INDEMT1
+INE475E01026,CAPLIPOINT,Caplin Point Laboratories Ltd.,2016-06-30,2023-03-31,alpha_lab_gap;holdings_v1,barrid=INDDRV1
+INE483B01026,ICIL,Indo Count Industries Ltd.,2016-06-30,2019-04-01,alpha_lab_gap;holdings_v1,barrid=INDBX21
+INE484C01030,TIDEWATER,Veedol Corporation Ltd.,2016-06-30,2017-09-29,alpha_lab_gap;holdings_v1,barrid=INDEPI1
+INE500L01026,SHK,SH Kelkar And Company Ltd.,2016-06-30,2020-06-30,alpha_lab_gap;holdings_v1,barrid=INDHYP1
+INE517B01013,TTML,Tata Teleservices (Maharashtra) Ltd.,2016-06-30,2016-09-30,holdings_v1,
+INE522D01027,MANAPPURAM,Manappuram Finance Ltd.,2016-06-30,,alpha_lab_gap;holdings_v1,barrid=INDEOI1
+INE536A01023,GRINDWELL,Grindwell Norton Ltd.,2016-06-30,2017-09-29,alpha_lab_gap;holdings_v1,barrid=INDBWF1
+INE536H01010,CIEINDIA,CIE Automotive India Ltd.,2016-06-30,2020-09-30,alpha_lab_gap;holdings_v1,barrid=INDDZE1
+INE559A01017,IFBIND,IFB Industries Ltd.,2016-06-30,2016-09-30,holdings_v1,
+INE565L01011,ZEELEARN,Zee Learn Ltd.,2016-06-30,2018-09-28,alpha_lab_gap;holdings_v1,barrid=INDGVW1
+INE578A01017,HEIDELBERG,Heidelberg Cement India Ltd.,2016-06-30,2022-03-31,alpha_lab_gap;holdings_v1,barrid=INDBAG1
+INE589G01011,BRFL,Bombay Rayon Fashions Ltd.,2016-06-30,2017-03-31,alpha_lab_gap;holdings_v1,barrid=INDDXY1
+INE621L01012,TEXRAIL,Texmaco Rail & Engineering Ltd.,2016-06-30,2019-04-01,alpha_lab_gap;holdings_v1,barrid=INDGYM1
+INE647O01011,ABFRL,Aditya Birla Fashion and Retail Ltd.,2016-06-30,,alpha_lab_gap;holdings_v1,barrid=INDHJF1
+INE650K01021,SECURKLOUD,Securekloud Technologies Ltd.,2016-06-30,2019-04-01,alpha_lab_gap;holdings_v1,barrid=INDGVI1
+INE655A01013,STCINDIA,The State Trading Corporation Of India Ltd.,2016-06-30,2017-09-29,alpha_lab_gap;holdings_v1,barrid=INDCAK1
+INE661I01014,BGRENERGY,BGR Energy Systems Ltd.,2016-06-30,2018-09-28,alpha_lab_gap;holdings_v1,barrid=INDEGR1
+INE734N01019,SNOWMAN,Snowman Logistics Ltd.,2016-06-30,2018-04-02,alpha_lab_gap;holdings_v1,barrid=INDHPS1
+INE739E01017,CERA,Cera Sanitaryware Ltd.,2016-06-30,2026-04-01,alpha_lab_gap;holdings_v1,barrid=INDEOU1
+INE758C01029,AHLUCONT,Ahluwalia Contracts (India) Ltd.,2016-06-30,2018-04-02,alpha_lab_gap;holdings_v1,barrid=INDEHE1
+INE763A01023,POLARIS,Polaris Financial Technology Ltd.,2016-06-30,2018-02-05,alpha_lab_gap;holdings_symbol_mapped,barrid=INDDEE1;isin_from_nse_spell
+INE764L01010,SADBHIN,Sadbhav Infrastructure Project Ltd.,2016-06-30,2016-09-30,holdings_v1,
+INE767A01016,AARTIDRUGS,Aarti Drugs Ltd.,2016-06-30,2016-09-30,holdings_v1,
+INE775B01025,KWALITY,Kwality Ltd.,2016-06-30,2018-09-28,alpha_lab_gap;holdings_symbol_mapped,barrid=INDCNP1;isin_from_nse_spell
+INE782A01015,BOSCH-HCIL,Bosch Home Comfort India Ltd.,2016-06-30,2019-04-01,alpha_lab_gap;holdings_v1,barrid=INDBPN1
+INE785M01021,PCJEWELLER,PC Jeweller Ltd.,2016-06-30,2020-06-30,alpha_lab_gap;holdings_v1,barrid=INDHHM1
+INE790G01031,SHILPAMED,Shilpa Medicare Ltd.,2016-06-30,2018-04-02,alpha_lab_gap;holdings_v1,barrid=INDB8L1
+INE802G01018,JETAIRWAYS,Jet Airways (India) Ltd.,2016-06-30,2019-09-30,alpha_lab_gap;holdings_v1,barrid=INDDUY1
+INE836F01026,DISHTV,Dish TV India Ltd.,2016-06-30,2021-09-30,alpha_lab_gap;holdings_v1,barrid=INDDZT1
+INE842C01021,MINDACORP,Minda Corporation Ltd.,2016-06-30,2016-09-30,holdings_v1,
+INE844O01030,GUJGASLTD,Gujarat Energy Ltd.,2016-06-30,2026-04-01,alpha_lab_gap;holdings_symbol_mapped,barrid=INDBWJ1;isin_from_nse_spell
+INE871C01038,AVANTIFEED,Avanti Feeds Ltd.,2016-06-30,2025-04-01,alpha_lab_gap;holdings_v1,barrid=INDBQ31
+INE871K01015,HMVL,Hindustan Media Ventures Ltd.,2016-06-30,2017-09-29,alpha_lab_gap;holdings_v1,barrid=INDGRO1
+INE873D01024,INDOCO,Indoco Remedies Ltd.,2016-06-30,2019-09-30,alpha_lab_gap;holdings_v1,barrid=INDDXH1
+INE931S01010,ADANIENSOL,Adani Energy Solutions Ltd.,2016-06-30,,alpha_lab_gap;holdings_v1,barrid=INDHWI1
+INE951I01027,VGUARD,V-Guard Industries Ltd.,2016-06-30,2026-04-01,alpha_lab_gap;holdings_v1,barrid=INDEJA1
+INE988E01036,JMTAUTOLTD,JMT Auto Ltd.,2016-06-30,2017-09-29,alpha_lab_gap;holdings_symbol_mapped,barrid=INDEKU1;isin_from_nse_spell
+INE048G01026,NAVINFLUOR,Navin Fluorine International Ltd.,2016-09-30,,alpha_lab_gap;holdings_v1,barrid=INDDWZ1
+INE067A01029,CGPOWER,CG Power and Industrial Solutions Ltd.,2016-09-30,2019-12-31,alpha_lab_gap;holdings_v1,barrid=INDH2H1
+INE069A01017,ABIRLANUVO,Aditya Birla Nuvo Ltd. - (Amalgamated),2016-09-30,2017-05-26,alpha_lab_gap;holdings_v1,barrid=INDACH1
+INE092T01019,IDFCFIRSTB,IDFC First Bank Ltd.,2016-09-30,,alpha_lab_gap;holdings_v1,barrid=INDHYN1
+INE120A01034,CARBORUNIV,Carborundum Universal Ltd.,2016-09-30,,alpha_lab_gap;holdings_v1,barrid=INDBSG1
+INE180A01020,MFSL,Max Financial Services Ltd.,2016-09-30,2017-01-23,alpha_lab_gap;holdings_v1,barrid=INDAZG1
+INE290B01025,OCL,OCL India Ltd. - (Amalgamated),2016-09-30,2017-01-23,alpha_lab_gap;holdings_v1,barrid=INDB2Z1
+INE310A01015,NILKAMAL,Nilkamal Ltd.,2016-09-30,2022-03-31,alpha_lab_gap;holdings_v1,barrid=INDB2F1
+INE335K01011,COFFEEDAY,Coffee Day Enterprises Ltd.,2016-09-30,2019-12-31,alpha_lab_gap;holdings_v1,barrid=INDHYJ1
+INE399C01030,SUPRAJIT,Suprajit Engineering Ltd.,2016-09-30,2017-03-31,alpha_lab_gap;holdings_v1,barrid=INDEKI1
+INE410P01011,NH,Narayana Hrudayalaya Ltd.,2016-09-30,,alpha_lab_gap;holdings_v1,barrid=INDHZN1
+INE473A01011,LINDEINDIA,Linde India Ltd.,2016-09-30,2017-03-31,alpha_lab_gap;holdings_v1,barrid=INDBR51
+INE483S01020,CCAVENUE,AvenuesAI Ltd.,2016-09-30,2020-12-31,alpha_lab_gap;holdings_v1,barrid=INDH2X1
+INE540L01014,ALKEM,Alkem Laboratories Ltd.,2016-09-30,,alpha_lab_gap;holdings_v1,barrid=INDHZB1
+INE600L01024,LALPATHLAB,Dr. Lal Pathlabs Ltd.,2016-09-30,,alpha_lab_gap;holdings_v1,barrid=INDHZC1
+INE621H01010,RELIGARE,Religare Enterprises Ltd.,2016-09-30,2018-09-28,alpha_lab_gap;holdings_v1,barrid=INDEHJ1
+INE646L01027,INDIGO,Interglobe Aviation Ltd.,2016-09-30,,alpha_lab_gap;holdings_v1,barrid=INDHYO1
+INE651A01020,MYSOREBANK,State Bank Of Mysore - (Amalgamated),2016-09-30,2017-03-16,alpha_lab_gap;holdings_v1,barrid=INDDTR1
+INE654A01024,SBT,State Bank Of Travancore - (Amalgamated),2016-09-30,2017-03-16,alpha_lab_gap;holdings_v1,barrid=INDDVI1
+INE686A01026,CEMPRO,Cemindia Projects Ltd.,2016-09-30,2020-06-30,alpha_lab_gap;holdings_v1,barrid=INDCCX1
+INE702C01027,APLAPOLLO,APL Apollo Tubes Ltd.,2016-09-30,,alpha_lab_gap;holdings_v1,barrid=INDEYG1
+INE807F01027,SEQUENT,Viyash Scientific Ltd.,2016-09-30,2017-03-31,alpha_lab_gap;holdings_v1,barrid=INDFIB1
+INE935O01010,SFCL,Star Ferro and Cement Ltd. - (Amalgamated),2016-09-30,2017-01-23,alpha_lab_gap;holdings_v1,barrid=INDHKG1
+INE988K01017,EQUITAS,Equitas Holdings Ltd. - (Amalgamated),2016-09-30,2022-09-30,alpha_lab_gap;holdings_v1,barrid=INDH3B1
+INE999A01023,KSBPUMPS,KSB Ltd.,2016-09-30,2017-03-31,alpha_lab_gap;holdings_v1,barrid=INDAGS1
+INE299U01018,CROMPTON,Crompton Greaves Consumer Electricals Ltd.,2017-01-02,,alpha_lab_gap;holdings_v1,barrid=INDAFG1
+INE334L01012,UJJIVAN,Ujjivan Financial Services Ltd. - (Amalgamated),2017-01-23,2022-03-31,alpha_lab_gap;holdings_v1,shifted_from=2017-02-01;interim;barrid=INDH3H1
+INE439A01020,ASAHIINDIA,Asahi India Glass Ltd.,2017-01-23,2017-09-29,alpha_lab_gap,shifted_from=2017-02-01;interim;barrid=INDAKA1
+INE837H01020,ADVENZYMES,Advanced Enzyme Technologies Ltd.,2017-01-23,2022-09-30,alpha_lab_gap;holdings_v1,shifted_from=2017-02-01;interim;barrid=INDH4V1
+INE976G01028,RBLBANK,RBL Bank Ltd.,2017-01-23,,alpha_lab_gap;holdings_v1,shifted_from=2017-02-01;interim;barrid=INDH431
+INE002S01010,MGL,Mahanagar Gas Ltd.,2017-03-16,,alpha_lab_gap;holdings_v1,shifted_from=2017-04-03;interim;barrid=INDH4A1
+INE153U01017,MAXINDIA,Max India Ltd. - (Amalgamated),2017-03-16,2019-12-31,alpha_lab_gap;holdings_v1,shifted_from=2017-04-03;interim;barrid=INDH4G1
+INE752P01024,FRETAIL,Future Retail Ltd.,2017-03-16,2017-10-30,alpha_lab_gap,shifted_from=2017-04-03;interim;barrid=INDDSQ1
+INE010V01017,LTTS,L&T Technology Services Ltd.,2017-03-31,,alpha_lab_gap;holdings_v1,shifted_from=2017-04-03;review;barrid=INDH5J1
+INE060A01024,NAVNETEDUL,Navneet Education Ltd.,2017-03-31,2018-04-02,alpha_lab_gap,shifted_from=2017-04-03;review;barrid=INDCIZ1
+INE089C01029,STLTECH,Sterlite Technologies Ltd.,2017-03-31,2024-09-30,alpha_lab_gap;holdings_v1,shifted_from=2017-04-03;review;barrid=INDDKS1
+INE113A01013,GNFC,Gujarat Narmada Valley Fertilizers & Chemicals Ltd,2017-03-31,2025-09-30,alpha_lab_gap;holdings_v1,shifted_from=2017-04-03;review;barrid=INDAAR1
+INE186A01019,GUJALKALI,Gujarat Alkalies And Chemicals Ltd.,2017-03-31,2024-04-01,alpha_lab_gap;holdings_v1,shifted_from=2017-04-03;review;barrid=INDAAQ1
+INE214T01019,LTM,LTM Ltd.,2017-03-31,,alpha_lab_gap;holdings_v1,shifted_from=2017-04-03;review;barrid=INDH4P1
+INE405E01023,UNOMINDA,UNO Minda Ltd.,2017-03-31,,alpha_lab_gap;holdings_v1,shifted_from=2017-04-03;review;barrid=INDEKJ1
+INE510K01019,SHILPI,Shilpi Cable Tech Ltd. CABLES -,2017-03-31,2017-11-13,alpha_lab_gap,shifted_from=2017-04-03;review;barrid=INDGZF1
+INE529A01010,FMGOETZE,Federal-Mogul Goetze (India) Ltd.,2017-03-31,2017-09-29,alpha_lab_gap,shifted_from=2017-04-03;review;barrid=INDBV31
+INE539A01019,GHCL,GHCL Ltd.,2017-03-31,2021-06-30,alpha_lab_gap;holdings_v1,shifted_from=2017-04-03;review;barrid=INDBWK1
+INE594H01019,THYROCARE,Thyrocare Technologies Ltd.,2017-03-31,2023-03-31,alpha_lab_gap;holdings_v1,shifted_from=2017-04-03;review;barrid=INDH3G1
+INE615P01015,QUESS,Quess Corp Ltd.,2017-03-31,2025-06-30,alpha_lab_gap;holdings_v1,shifted_from=2017-04-03;review;barrid=INDH4E1
+INE634I01029,KNRCON,KNR Constructions Ltd.,2017-03-31,2017-09-29,alpha_lab_gap,shifted_from=2017-04-03;review;barrid=INDEJG1
+INE659A01023,SUDARSCHEM,Sudarshan Chemical Industries Ltd.,2017-03-31,2023-03-31,alpha_lab_gap;holdings_v1,shifted_from=2017-04-03;review;barrid=INDBIH1
+INE672A01026,TATAINVEST,Tata Investment Corporation Ltd.,2017-03-31,2021-09-30,alpha_lab_gap;holdings_v1,shifted_from=2017-04-03;review;barrid=INDCB51
+INE703B01027,RATNAMANI,Ratnamani Metals & Tubes Ltd.,2017-03-31,2017-09-29,alpha_lab_gap,shifted_from=2017-04-03;review;barrid=INDB6G1
+INE725A01030,NAVA,Nava Ltd.,2017-03-31,2020-09-30,alpha_lab_gap;holdings_v1,shifted_from=2017-04-03;review;barrid=INDB1Z1
+INE726G01019,ICICIPRULI,ICICI Prudential Life Insurance Company Ltd.,2017-03-31,,alpha_lab_gap;holdings_v1,shifted_from=2017-04-03;review;barrid=INDH5P1
+INE842C01021,MINDACORP,Minda Corporation Ltd.,2017-03-31,2022-03-31,alpha_lab_gap;holdings_v1,shifted_from=2017-04-03;review;barrid=INDHEX1
+INE883N01014,PARAGMILK,Parag Milk Foods Ltd.,2017-03-31,2020-06-30,alpha_lab_gap;holdings_v1,shifted_from=2017-04-03;review;barrid=INDH3O1
+INE913H01037,ENDURANCE,Endurance Technologies Ltd.,2017-03-31,,alpha_lab_gap;holdings_v1,shifted_from=2017-04-03;review;barrid=INDH571
+INE917M01012,DBL,Dilip Buildcon Ltd.,2017-03-31,2023-03-31,alpha_lab_gap;holdings_v1,shifted_from=2017-04-03;review;barrid=INDH4X1
+INE200M01039,VBL,Varun Beverages Ltd.,2017-05-26,,alpha_lab_gap;holdings_v1,shifted_from=2017-06-01;interim;barrid=INDH6F1
+INE572E01012,PNBHOUSING,PNB Housing Finance Ltd.,2017-05-26,,alpha_lab_gap;holdings_v1,shifted_from=2017-06-01;interim;barrid=INDH6C1
+INE947Q01028,LAURUSLABS,Laurus Labs Ltd.,2017-05-26,,alpha_lab_gap;holdings_v1,shifted_from=2017-06-01;interim;barrid=INDH731
+INE916U01025,SFL,Sheela Foam Ltd.,2017-06-23,2018-09-28,alpha_lab_gap,shifted_from=2017-07-03;interim;barrid=INDH7V1
+INE180A01020,MFSL,Max Financial Services Ltd.,2017-09-05,,alpha_lab_gap;holdings_v1,shifted_from=2017-10-03;interim;barrid=INDAZG1
+INE118H01025,BSE,BSE Ltd.,2017-09-29,,alpha_lab_gap;holdings_v1,shifted_from=2017-10-03;review;barrid=INDH8G1
+INE177A01018,INGERRAND,Ingersoll-Rand (India) Ltd.,2017-09-29,2018-04-02,alpha_lab_gap,shifted_from=2017-10-03;review;barrid=INDABD1
+INE192R01011,DMART,Avenue Supermarts Ltd.,2017-09-29,,alpha_lab_gap;holdings_v1,shifted_from=2017-10-03;review;barrid=INDH8Y1
+INE220G01021,JSL,Jindal Stainless Ltd.,2017-09-29,,alpha_lab_gap;holdings_v1,shifted_from=2017-10-03;review;barrid=INDDUP1
+INE248A01017,ITI,ITI Ltd.,2017-09-29,,alpha_lab_gap;holdings_v1,shifted_from=2017-10-03;review;barrid=INDBX01
+INE274G01010,DHANI,Dhani Services Ltd. - (Amalgamated),2017-09-29,2023-03-31,alpha_lab_gap;holdings_v1,shifted_from=2017-10-03;review;barrid=INDEGY1
+INE324A01032,JINDALSAW,Jindal Saw Ltd.,2017-09-29,2022-03-31,alpha_lab_gap;holdings_v1,shifted_from=2017-10-03;review;barrid=INDBGI1
+INE351F01018,JPPOWER,Jaiprakash Power Ventures Ltd.,2017-09-29,2019-04-01,alpha_lab_gap;holdings_v1,shifted_from=2017-10-03;review;barrid=INDDXK1
+INE353K01014,ITDC,India Tourism Development Corporation Ltd.,2017-09-29,2020-09-30,alpha_lab_gap;holdings_v1,shifted_from=2017-10-03;review;barrid=INDEUL1
+INE386A01023,VESUVIUS,Vesuvius India Ltd.,2017-09-29,2018-04-02,alpha_lab_gap,shifted_from=2017-10-03;review;barrid=INDCEG1
+INE399C01030,SUPRAJIT,Suprajit Engineering Ltd.,2017-09-29,2018-04-02,alpha_lab_gap,shifted_from=2017-10-03;review;barrid=INDEKI1
+INE452O01016,FLFL,Future Lifestyle Fashions Ltd.,2017-09-29,2020-06-30,alpha_lab_gap;holdings_v1,shifted_from=2017-10-03;review;barrid=INDHKA1
+INE455T01018,JSLHISAR,Jindal Stainless (Hisar) Ltd. - (Amalgamated),2017-09-29,2022-06-30,alpha_lab_gap;holdings_v1,shifted_from=2017-10-03;review;barrid=INDHZ61
+INE473A01011,LINDEINDIA,Linde India Ltd.,2017-09-29,2018-04-02,alpha_lab_gap,shifted_from=2017-10-03;review;barrid=INDBR51
+INE498B01024,SHOPERSTOP,Shoppers Stop Ltd.,2017-09-29,2021-09-30,alpha_lab_gap;holdings_v1,shifted_from=2017-10-03;review;barrid=INDDVB1
+INE508G01029,TIMETECHNO,Time Technoplast Ltd.,2017-09-29,2020-09-30,alpha_lab_gap;holdings_v1,shifted_from=2017-10-03;review;barrid=INDEDT1
+INE559A01017,IFBIND,IFB Industries Ltd.,2017-09-29,2023-10-03,alpha_lab_gap;holdings_v1,shifted_from=2017-10-03;review;barrid=INDAUH1
+INE589G01011,BRFL,Bombay Rayon Fashions Ltd.,2017-09-29,2018-09-28,alpha_lab_gap,shifted_from=2017-10-03;review;barrid=INDDXY1
+INE663A01033,SPLPETRO,Supreme Petrochem Ltd.,2017-09-29,2018-04-02,alpha_lab_gap,shifted_from=2017-10-03;review;barrid=INDCBA1
+INE695A01019,UNITEDBNK,United Bank of India - (Amalgamated),2017-09-29,2018-04-02,alpha_lab_gap,shifted_from=2017-10-03;review;barrid=INDGIW1
+INE791I01019,BRIGADE,Brigade Enterprises Ltd.,2017-09-29,,alpha_lab_gap;holdings_v1,shifted_from=2017-10-03;review;barrid=INDEHL1
+INE870D01012,NFL,National Fertilizers Ltd.,2017-09-29,2022-03-31,alpha_lab_gap;holdings_v1,shifted_from=2017-10-03;review;barrid=INDDQT1
+INE895B01021,RUPA,Rupa & Company Ltd.,2017-09-29,2019-09-30,alpha_lab_gap;holdings_v1,shifted_from=2017-10-03;review;barrid=INDHBR1
+INE978A01027,HERITGFOOD,Heritage Foods Ltd.,2017-09-29,2021-03-31,alpha_lab_gap;holdings_v1,shifted_from=2017-10-03;review;barrid=INDDNB1
+INE031A01017,HUDCO,Housing & Urban Development Corporation Ltd.,2017-10-30,,alpha_lab_gap;holdings_v1,shifted_from=2017-11-01;interim;barrid=INDH971
+INE131B01039,RELAXO,Relaxo Footwears Ltd.,2017-11-13,2024-04-01,alpha_lab_gap;holdings_v1,shifted_from=2017-12-01;interim;barrid=INDCQA1
+INE949L01017,AUBANK,AU Small Finance Bank Ltd.,2017-11-13,,alpha_lab_gap;holdings_v1,shifted_from=2017-12-01;interim;barrid=INDIAT1
+INE460H01021,STARCEMENT,Star Cement Ltd.,2017-11-20,2022-03-31,alpha_lab_gap;holdings_v1,shifted_from=2017-12-01;interim;barrid=INDIAI1
+INE013A01015,RELCAPITAL,Reliance Capital Ltd.,2018-02-05,2020-06-30,alpha_lab_gap;holdings_symbol_mapped,isin_from_nse_spell;shifted_from=2018-03-01;interim;barrid=INDBEZ1
+INE149A01033,CHOLAHLDNG,Cholamandalam Financial Holdings Ltd.,2018-02-05,,alpha_lab_gap;holdings_v1,shifted_from=2018-03-01;interim;barrid=INDBKW1
+INE473B01035,HATSUN,Hatsun Agro Product Ltd.,2018-02-05,2023-03-31,alpha_lab_gap;holdings_v1,shifted_from=2018-03-01;interim;barrid=INDC131
+INE704P01025,COCHINSHIP,Cochin Shipyard Ltd.,2018-02-05,,alpha_lab_gap;holdings_v1,shifted_from=2018-03-01;interim;barrid=INDIBJ1
+INE406M01024,ERIS,Eris Lifesciences Ltd.,2018-03-13,2022-09-30,alpha_lab_gap;holdings_v1,shifted_from=2018-04-02;interim;barrid=INDIAO1
+INE019C01026,HSCL,Himadri Speciality Chemical Ltd.,2018-04-02,2021-09-30,alpha_lab_gap;holdings_v1,shifted_from=2018-05-02;review;barrid=INDEBC1
+INE022Q01020,IEX,Indian Energy Exchange Ltd.,2018-04-02,,alpha_lab_gap;holdings_v1,shifted_from=2018-05-02;review;barrid=INDIDF1
+INE047A01021,GRASIM,Grasim Industries Ltd.,2018-04-02,,alpha_lab_gap;holdings_v1,shifted_from=2018-05-02;review;barrid=INDAAT1
+INE123W01016,SBILIFE,SBI Life Insurance Company Ltd.,2018-04-02,,alpha_lab_gap;holdings_v1,shifted_from=2018-05-02;review;barrid=INDICI1
+INE217K01011,RHFL,Reliance Home Finance Ltd.,2018-04-02,2019-09-30,alpha_lab_gap;holdings_v1,shifted_from=2018-05-02;review;barrid=INDIB91
+INE274V01019,SHANKARA,Shankara Building Products Ltd.,2018-04-02,2019-09-30,alpha_lab_gap;holdings_v1,shifted_from=2018-05-02;review;barrid=INDH9F1
+INE285J01028,SIS,SIS Ltd.,2018-04-02,2023-03-31,alpha_lab_gap;holdings_v1,shifted_from=2018-05-02;review;barrid=INDIBI1
+INE317F01035,NESCO,Nesco Ltd.,2018-04-02,2022-09-30,alpha_lab_gap;holdings_v1,shifted_from=2018-05-02;review;barrid=INDB171
+INE348L01012,MASFIN,MAS Financial Services Ltd.,2018-04-02,2021-09-30,alpha_lab_gap;holdings_v1,shifted_from=2018-05-02;review;barrid=INDIDD1
+INE371A01025,GRAPHITE,Graphite India Ltd.,2018-04-02,,alpha_lab_gap;holdings_v1,shifted_from=2018-05-02;review;barrid=INDBSF1
+INE385W01011,DCAL,Dishman Carbogen Amcis Ltd.,2018-04-02,2021-09-30,alpha_lab_gap;holdings_v1,shifted_from=2018-05-02;review;barrid=INDDSU1
+INE439A01020,ASAHIINDIA,Asahi India Glass Ltd.,2018-04-02,2018-09-28,alpha_lab_gap,shifted_from=2018-05-02;review;barrid=INDAKA1
+INE481Y01014,GICRE,General Insurance Corporation of India,2018-04-02,,alpha_lab_gap;holdings_v1,shifted_from=2018-05-02;review;barrid=INDIDG1
+INE501W01021,SPTL,Sintex Plastics Technology Ltd.,2018-04-02,2019-09-30,alpha_lab_gap;holdings_symbol_mapped,isin_from_nse_spell;shifted_from=2018-05-02;review;barrid=INDB9E1
+INE530B01024,IIFL,IIFL Finance Ltd.,2018-04-02,2018-12-28,alpha_lab_gap,shifted_from=2018-05-02;review;barrid=INDDXL1
+INE545A01024,HEG,HEG Ltd.,2018-04-02,,alpha_lab_gap;holdings_v1,shifted_from=2018-05-02;review;barrid=INDKNS1
+INE634I01029,KNRCON,KNR Constructions Ltd.,2018-04-02,2025-09-30,alpha_lab_gap;holdings_v1,shifted_from=2018-05-02;review;barrid=INDEJG1
+INE671A01010,HONAUT,Honeywell Automation India Ltd.,2018-04-02,,alpha_lab_gap;holdings_v1,shifted_from=2018-05-02;review;barrid=INDCB41
+INE674K01013,ABCAPITAL,Aditya Birla Capital Ltd.,2018-04-02,,alpha_lab_gap;holdings_v1,shifted_from=2018-05-02;review;barrid=INDIBT1
+INE736A01011,CDSL,Central Depository Services (India) Ltd.,2018-04-02,,alpha_lab_gap;holdings_v1,shifted_from=2018-05-02;review;barrid=INDIAP1
+INE764L01010,SADBHIN,Sadbhav Infrastructure Project Ltd.,2018-04-02,2019-04-01,alpha_lab_gap;holdings_v1,shifted_from=2018-05-02;review;barrid=INDHXH1
+INE765G01017,ICICIGI,ICICI Lombard General Insurance Company Ltd.,2018-04-02,,alpha_lab_gap;holdings_v1,shifted_from=2018-05-02;review;barrid=INDICD1
+INE850D01014,GODREJAGRO,Godrej Agrovet Ltd.,2018-04-02,2023-10-03,alpha_lab_gap;holdings_v1,shifted_from=2018-05-02;review;barrid=INDIDA1
+INE935N01020,DIXON,Dixon Technologies (India) Ltd.,2018-04-02,,alpha_lab_gap;holdings_v1,shifted_from=2018-05-02;review;barrid=INDIB41
+INE752P01024,FRETAIL,Future Retail Ltd.,2018-06-29,2022-03-31,alpha_lab_gap;holdings_v1,shifted_from=2018-07-02;interim;barrid=INDDSQ1
+INE880L01014,KIOCL,KIOCL Ltd.,2018-06-29,2019-09-30,alpha_lab_gap;holdings_v1,shifted_from=2018-07-02;interim;barrid=INDH6K1
+INE914M01019,ASTERDM,Aster DM Quality Care Ltd.,2018-06-29,,alpha_lab_gap;holdings_v1,shifted_from=2018-07-02;interim;barrid=INDIFL1
+INE974X01010,TIINDIA,Tube Investments of India Ltd.,2018-06-29,,alpha_lab_gap;holdings_v1,shifted_from=2018-07-02;interim;barrid=INDIDJ1
+INE171Z01026,BDL,Bharat Dynamics Ltd.,2018-08-08,,alpha_lab_gap;holdings_v1,shifted_from=2018-09-03;interim;barrid=INDIGI1
+INE066F01020,HAL,Hindustan Aeronautics Ltd.,2018-09-28,,alpha_lab_gap;holdings_v1,shifted_from=2018-10-01;review;barrid=INDIGO1
+INE150G01020,LUXIND,Lux Industries Ltd.,2018-09-28,2024-04-01,alpha_lab_gap;holdings_v1,shifted_from=2018-10-01;review;barrid=INDHYW1
+INE223G01017,EXCELCROP,Excel Crop Care Ltd. - (Amalgamated),2018-09-28,2019-07-01,alpha_lab_gap;holdings_v1,shifted_from=2018-10-01;review;barrid=INDDUQ1
+INE258B01022,FDC,FDC Ltd.,2018-09-28,2024-09-30,alpha_lab_gap;holdings_v1,shifted_from=2018-10-01;review;barrid=INDBU01
+INE274B01011,MONSANTO,Monsanto India Ltd. - (Amalgamated),2018-09-28,2019-07-01,alpha_lab_gap;holdings_v1,shifted_from=2018-10-01;review;barrid=INDDNJ1
+INE285A01027,ELGIEQUIP,Elgi Equipments Ltd.,2018-09-28,,alpha_lab_gap;holdings_v1,shifted_from=2018-10-01;review;barrid=INDDJS1
+INE298J01013,NAM-INDIA,Nippon Life India Asset Management Ltd.,2018-09-28,,alpha_lab_gap;holdings_v1,shifted_from=2018-10-01;review;barrid=INDIDK1
+INE336H01023,GAYAPROJ,Gayatri Projects Ltd.,2018-09-28,2020-06-30,alpha_lab_gap;holdings_v1,shifted_from=2018-10-01;review;barrid=INDEDF1
+INE398A01010,VENKEYS,Venky'S (India) Ltd.,2018-09-28,2022-09-30,alpha_lab_gap;holdings_v1,shifted_from=2018-10-01;review;barrid=INDCFF2
+INE470Y01017,NIACL,The New India Assurance Company Ltd.,2018-09-28,,alpha_lab_gap;holdings_v1,shifted_from=2018-10-01;review;barrid=INDIDM1
+INE473A01011,LINDEINDIA,Linde India Ltd.,2018-09-28,,alpha_lab_gap;holdings_v1,shifted_from=2018-10-01;review;barrid=INDBR51
+INE520A01027,ZENSARTECH,Zensar Technologies Ltd.,2018-09-28,,alpha_lab_gap;holdings_v1,shifted_from=2018-10-01;review;barrid=INDBVG1
+INE536A01023,GRINDWELL,Grindwell Norton Ltd.,2018-09-28,2025-04-01,alpha_lab_gap;holdings_v1,shifted_from=2018-10-01;review;barrid=INDBWF1
+INE545U01014,BANDHANBNK,Bandhan Bank Ltd.,2018-09-28,,alpha_lab_gap;holdings_v1,shifted_from=2018-10-01;review;barrid=INDIGN1
+INE600K01018,GALAXYSURF,Galaxy Surfactants Ltd.,2018-09-28,2024-04-01,alpha_lab_gap;holdings_v1,shifted_from=2018-10-01;review;barrid=INDIE51
+INE602A01031,PCBL,PCBL Chemical Ltd.,2018-09-28,,alpha_lab_gap;holdings_v1,shifted_from=2018-10-01;review;barrid=INDB4K1
+INE660A01013,SUNDARMFIN,Sundaram Finance Ltd.,2018-09-28,,alpha_lab_gap;holdings_v1,shifted_from=2018-10-01;review;barrid=INDEGF1
+INE665J01013,VMART,V-Mart Retail Ltd.,2018-09-28,2024-04-01,alpha_lab_gap;holdings_v1,shifted_from=2018-10-01;review;barrid=INDHHU1
+INE763G01038,ISEC,ICICI Securities Ltd.,2018-09-28,2025-04-01,alpha_lab_gap;holdings_symbol_mapped,isin_from_nse_spell;shifted_from=2018-10-01;review;barrid=INDIGX1
+INE766P01016,MAHLOG,Mahindra Logistics Ltd.,2018-09-28,2023-10-03,alpha_lab_gap;holdings_v1,shifted_from=2018-10-01;review;barrid=INDIDL1
+INE768C01028,ZYDUSWELL,Zydus Wellness Ltd.,2018-09-28,2024-04-01,alpha_lab_gap;holdings_v1,shifted_from=2018-10-01;review;barrid=INDCJY1
+INE790G01031,SHILPAMED,Shilpa Medicare Ltd.,2018-09-28,2020-06-30,alpha_lab_gap;holdings_v1,shifted_from=2018-10-01;review;barrid=INDB8L1
+INE795G01014,HDFCLIFE,HDFC Life Insurance Company Ltd.,2018-09-28,,alpha_lab_gap;holdings_v1,shifted_from=2018-10-01;review;barrid=INDIDQ1
+INE939A01011,STAR,Strides Pharma Science Ltd.,2018-09-28,2022-09-30,alpha_lab_gap;holdings_v1,shifted_from=2018-10-01;review;barrid=INDDUV1
+INE970X01018,LEMONTREE,Lemon Tree Hotels Ltd.,2018-09-28,2022-03-31,alpha_lab_gap;holdings_v1,shifted_from=2018-10-01;review;barrid=INDIG41
+INE985S01024,TEAMLEASE,TeamLease Services Ltd.,2018-09-28,2024-04-01,alpha_lab_gap;holdings_v1,shifted_from=2018-10-01;review;barrid=INDH1K1
+INE061F01013,FORTIS,Fortis Healthcare Ltd.,2018-12-28,,alpha_lab_gap;holdings_v1,shifted_from=2019-01-01;interim;barrid=INDEBO1
+INE320J01015,RITES,Rites Ltd.,2018-12-28,,alpha_lab_gap;holdings_v1,shifted_from=2019-01-01;interim;barrid=INDIIP1
+INE364U01010,ADANIGREEN,Adani Green Energy Ltd.,2018-12-28,,alpha_lab_gap;holdings_v1,shifted_from=2019-01-01;interim;barrid=INDIIE1
+INE665L01035,VARROC,Varroc Engineering Ltd.,2018-12-28,2025-04-01,alpha_lab_gap;holdings_v1,shifted_from=2019-01-01;interim;barrid=INDIIR1
+INE916U01025,SFL,Sheela Foam Ltd.,2018-12-28,2023-03-31,alpha_lab_gap;holdings_v1,shifted_from=2019-01-01;interim;barrid=INDH7V1
+INE008I01026,COX&KINGS,Cox & Kings Ltd.,2019-04-01,2019-12-31,holdings_symbol_mapped,isin_from_nse_spell
+INE039C01032,JAMNAAUTO,Jamna Auto Industries Ltd.,2019-04-01,2024-04-01,holdings_v1,
+INE112A01023,CORPBANK,Corporation Bank - (Amalgamated),2019-04-01,2019-12-31,holdings_v1,
+INE126M01010,IBULLSLTD,Indiabulls Ltd.,2019-04-01,2020-06-30,holdings_v1,
+INE127D01025,HDFCAMC,HDFC Asset Management Company Ltd.,2019-04-01,,holdings_v1,
+INE142Z01019,ORIENTELEC,Orient Electric Ltd.,2019-04-01,2024-04-01,holdings_v1,
+INE146L01010,KIRLOSENG,Kirloskar Oil Engines Ltd.,2019-04-01,2020-06-30,holdings_v1,
+INE152M01016,TRITURBINE,Triveni Turbine Ltd.,2019-04-01,2019-09-30,holdings_v1,
+INE202B01038,DHFL,Piramal Finance Ltd.,2019-04-01,2020-06-30,alpha_lab_fill,nse_confirmed;al_date=2019-03-29;barrid=INDDVO1;nse_confirmed;al_date=2019-06-28;barrid=INDDVO1;nse_confirmed;al_date=2019-09-30;barrid=INDDVO1;nse_confirmed;al_date=2019-12-31;barrid=INDDVO1;nse_conf
+INE203A01020,ASTRAZEN,Astrazeneca Pharma India Ltd.,2019-04-01,2023-03-31,holdings_v1,
+INE216P01012,AAVAS,Aavas Financiers Ltd.,2019-04-01,,holdings_v1,
+INE221J01015,SHARDACROP,Sharda Cropchem Ltd.,2019-04-01,2019-09-30,holdings_v1,
+INE255A01020,EPL,EPL Ltd.,2019-04-01,2024-09-30,holdings_v1,
+INE271B01025,MAHSEAMLES,Maharashtra Seamless Ltd.,2019-04-01,2021-09-30,holdings_v1,
+INE288A01013,MAHSCOOTER,Maharashtra Scooters Ltd.,2019-04-01,2021-09-30,holdings_v1,
+INE288B01029,DEEPAKNTR,Deepak Nitrite Ltd.,2019-04-01,,holdings_v1,
+INE399C01030,SUPRAJIT,Suprajit Engineering Ltd.,2019-04-01,2024-04-01,holdings_v1,
+INE457A01014,MAHABANK,Bank Of Maharashtra,2019-04-01,,holdings_v1,
+INE486A01021,CESC,CESC Ltd.,2019-04-01,,holdings_v1,
+INE686Y01026,FINEORG,Fine Organic Industries Ltd.,2019-04-01,2025-04-01,holdings_v1,
+INE710A01016,VSTIND,VST Industries Ltd.,2019-04-01,2021-09-30,holdings_v1,
+INE725G01011,ICRA,ICRA Ltd.,2019-04-01,2021-03-31,holdings_v1,
+INE741K01010,CREDITACC,CreditAccess Grameen Ltd.,2019-04-01,,holdings_v1,
+INE778U01029,TCNSBRANDS,TCNS Clothing Co. Ltd. - (Amalgamated),2019-04-01,2023-10-03,holdings_v1,
+INE789E01012,JKPAPER,JK Paper Ltd.,2019-04-01,2024-09-30,holdings_v1,
+INE878B01027,KEI,KEI Industries Ltd.,2019-04-01,,holdings_v1,
+INE896L01010,INDOSTAR,Indostar Capital Finance Ltd.,2019-04-01,2020-09-30,holdings_v1,
+INE962Y01021,IRCON,Ircon International Ltd.,2019-04-01,2022-09-30,holdings_v1,
+INE00R701025,DALBHARAT,Dalmia Bharat Ltd.,2019-07-01,,holdings_v1,
+INE105A01035,TVSHLTD,TVS Holdings Ltd.,2019-07-01,2020-06-30,holdings_v1,
+INE427F01016,CHALET,Chalet Hotels Ltd.,2019-07-01,2020-06-30,holdings_v1,
+INE04I401011,KPITTECH,KPIT Technologies Ltd.,2019-09-30,2020-09-30,holdings_v1,
+INE112L01020,METROPOLIS,Metropolis Healthcare Ltd.,2019-09-30,2026-04-01,holdings_v1,
+INE180C01042,CGCL,Capri Global Capital Ltd.,2019-09-30,2022-03-31,holdings_v1,
+INE239A01024,NESTLEIND,Nestle India Ltd.,2019-09-30,,holdings_v1,
+INE276A01018,GARFIBRES,Garware Technical Fibres Ltd.,2019-09-30,2023-10-03,holdings_v1,
+INE285K01026,TECHNOE,Techno Electric & Engineering Company Ltd.,2019-09-30,2020-06-30,holdings_v1,
+INE358A01014,ABBOTINDIA,Abbott India Ltd.,2019-09-30,,holdings_v1,
+INE371P01015,AMBER,Amber Enterprises India Ltd.,2019-09-30,,holdings_v1,
+INE399L01023,ATGL,Adani Total Gas Ltd.,2019-09-30,,holdings_v1,
+INE415G01027,RVNL,Rail Vikas Nigam Ltd.,2019-09-30,,holdings_v1,
+INE455K01017,POLYCAB,Polycab India Ltd.,2019-09-30,,holdings_v1,
+INE462A01022,BAYERCROP,Bayer CropScience Ltd.,2019-09-30,,holdings_v1,
+INE529A01010,FMGOETZE,Federal-Mogul Goetze (India) Ltd.,2019-09-30,2020-06-30,holdings_v1,
+INE530B01024,IIFL,IIFL Finance Ltd.,2019-09-30,,holdings_v1,
+INE586V01016,TCIEXP,TCI Express Ltd.,2019-09-30,2023-10-03,holdings_v1,
+INE703B01027,RATNAMANI,Ratnamani Metals & Tubes Ltd.,2019-09-30,2025-04-01,holdings_v1,
+INE743M01012,RHIM,RHI Magnesita India Ltd.,2019-09-30,,holdings_v1,
+INE745G01043,MCX,Multi Commodity Exchange Of India Ltd.,2019-09-30,,holdings_v1,
+INE782A01015,BOSCH-HCIL,Bosch Home Comfort India Ltd.,2019-09-30,2022-03-31,holdings_v1,
+INE836A01035,BSOFT,Birlasoft Ltd.,2019-09-30,,holdings_v1,
+INE884A01027,VAIBHAVGBL,Vaibhav Global Ltd.,2019-09-30,2024-09-30,holdings_v1,
+INE947J01015,DEN,Den Networks Ltd.,2019-09-30,2019-12-31,holdings_v1,
+INE955V01021,ARVINDFASN,Arvind Fashions Ltd.,2019-09-30,2020-09-30,holdings_v1,
+INE00WC01027,AFFLE,Affle 3i Ltd.,2019-12-31,,holdings_v1,
+INE099Z01011,MIDHANI,Mishra Dhatu Nigam Ltd.,2019-12-31,2022-03-31,holdings_v1,
+INE152M01016,TRITURBINE,Triveni Turbine Ltd.,2019-12-31,2020-06-30,holdings_v1,
+INE274F01020,WESTLIFE,Westlife Foodworld Ltd,2019-12-31,2025-09-30,holdings_v1,
+INE285B01017,SPICEJET,SpiceJet Ltd.,2019-12-31,2022-09-30,holdings_v1,
+INE439A01020,ASAHIINDIA,Asahi India Glass Ltd.,2019-12-31,2020-09-30,holdings_v1,
+INE488B01017,TASTYBITE,Tasty Bite Eatables Ltd.,2019-12-31,2022-03-31,holdings_v1,
+INE572J01011,SPANDANA,Spandana Sphoorty Financial Ltd.,2019-12-31,2020-09-30,holdings_v1,
+INE688D01026,RESPONIND,Responsive Industries Ltd.,2019-12-31,2020-06-30,holdings_v1,
+INE717A01029,KENNAMET,Kennametal India Ltd.,2019-12-31,2020-06-30,holdings_v1,
+INE769A01020,AARTIIND,Aarti Industries Ltd.,2019-12-31,2022-06-30,holdings_v1,
+INE933S01016,INDIAMART,Indiamart Intermesh Ltd.,2019-12-31,,holdings_v1,
+INE00M201021,SWSOLAR,Sterling and Wilson Renewable Energy Ltd.,2020-03-31,2025-09-30,holdings_v1,
+INE824B01021,TATASTLBSL,Tata Steel BSL Ltd.,2020-03-31,2021-06-30,holdings_symbol_mapped,isin_from_nse_spell
+INE055A01016,ABREL,Aditya Birla Real Estate Ltd.,2020-06-30,,holdings_v1,
+INE059D01020,LAOPALA,La Opala RG Ltd.,2020-06-30,2022-03-31,holdings_v1,
+INE09N301011,FLUOROCHEM,Gujarat Fluorochemicals Ltd.,2020-06-30,,holdings_v1,
+INE109A01011,SCI,Shipping Corporation Of India Ltd.,2020-06-30,2023-01-02,holdings_v1,
+INE117A01022,ABB,ABB India Ltd.,2020-06-30,,holdings_v1,
+INE150B01039,ALKYLAMINE,Alkyl Amines Chemicals Ltd.,2020-06-30,2026-04-01,holdings_v1,
+INE151A01013,TATACOMM,Tata Communications Ltd.,2020-06-30,,holdings_v1,
+INE177A01018,INGERRAND,Ingersoll-Rand (India) Ltd.,2020-06-30,2022-03-31,holdings_v1,
+INE205C01021,POLYMED,Poly Medicure Ltd.,2020-06-30,,holdings_v1,
+INE258G01013,SUMICHEM,Sumitomo Chemical India Ltd.,2020-06-30,,holdings_v1,
+INE284A01012,ESABINDIA,Esab India Ltd.,2020-06-30,2021-03-31,holdings_v1,
+INE335Y01020,IRCTC,Indian Railway Catering And Tourism Corporation Ltd.,2020-06-30,,holdings_v1,
+INE382Z01011,GRSE,Garden Reach Shipbuilders & Engineers Ltd.,2020-06-30,2021-09-30,holdings_v1,
+INE386A01023,VESUVIUS,Vesuvius India Ltd.,2020-06-30,2020-09-30,holdings_v1,
+INE435G01025,DHANUKA,Dhanuka Agritech Ltd.,2020-06-30,2022-03-31,holdings_v1,
+INE466L01038,360ONE,360 One Wam Ltd.,2020-06-30,,holdings_v1,
+INE541A01023,GMMPFAUDLR,GMM Pfaudler Ltd.,2020-06-30,2024-09-30,holdings_v1,
+INE551W01018,UJJIVANSFB,Ujjivan Small Finance Bank Ltd.,2020-06-30,2022-03-31,holdings_v1,
+INE679A01013,CSBBANK,CSB Bank Ltd.,2020-06-30,2024-09-30,holdings_v1,
+INE807F01027,VIYASH,Viyash Scientific Ltd.,2020-06-30,2022-09-30,holdings_v1,
+INE838B01021,BHARATRAS,Bharat Rasayan Ltd.,2020-06-30,2022-03-31,holdings_v1,
+INE839M01018,SCHNEIDER,Schneider Electric Infrastructure Ltd.,2020-06-30,2022-03-31,holdings_v1,
+INE873D01024,INDOCO,Indoco Remedies Ltd.,2020-06-30,2023-03-31,holdings_v1,
+INE982F01036,HATHWAY,Hathway Cable & Datacom Ltd.,2020-06-30,2021-03-31,holdings_v1,
+INE999A01023,KSB,KSB Ltd.,2020-06-30,2022-03-31,holdings_v1,
+INE018E01016,SBICARD,SBI Cards And Payment Services Ltd.,2020-09-30,,holdings_v1,
+INE036B01030,GAEL,Gujarat Ambuja Exports Ltd.,2020-09-30,2025-04-01,holdings_v1,
+INE03QK01018,COHANCE,Cohance Lifesciences Ltd.,2020-09-30,,holdings_v1,
+INE060A01024,NAVNETEDUL,Navneet Education Ltd.,2020-09-30,2021-03-31,holdings_v1,
+INE07Y701011,POWERINDIA,Hitachi Energy India Ltd.,2020-09-30,,holdings_v1,
+INE092A01019,TATACHEM,Tata Chemicals Ltd.,2020-09-30,,holdings_v1,
+INE163A01018,NOCIL,Nocil Ltd.,2020-09-30,2023-10-03,holdings_v1,
+INE270A01029,ALOKINDS,Alok Industries Ltd.,2020-09-30,2023-03-31,holdings_v1,
+INE275B01026,HUHTAMAKI,Huhtamaki India Ltd.,2020-09-30,2021-09-30,holdings_v1,
+INE277A01016,SWARAJENG,Swaraj Engines Ltd.,2020-09-30,2021-03-31,holdings_v1,
+INE423A01024,ADANIENT,Adani Enterprises Ltd.,2020-09-30,,holdings_v1,
+INE426A01027,ALEMBICLTD,Alembic Ltd.,2020-09-30,2022-03-31,holdings_v1,
+INE427F01016,CHALET,Chalet Hotels Ltd.,2020-09-30,,holdings_v1,
+INE485C01029,IOLCP,IOL Chemicals And Pharmaceuticals Ltd.,2020-09-30,2022-03-31,holdings_v1,
+INE488V01015,PSPPROJECT,PSP Projects Ltd.,2020-09-30,2021-03-31,holdings_v1,
+INE493A01027,TATACOFFEE,Tata Coffee Ltd. - (Amalgamated),2020-09-30,2023-03-31,holdings_v1,
+INE528G01035,YESBANK,Yes Bank Ltd.,2020-09-30,,holdings_v1,
+INE624Z01016,SOLARA,Solara Active Pharma Sciences Ltd.,2020-09-30,2022-09-30,holdings_v1,
+INE633B01018,POLYPLEX,Polyplex Corporation Ltd.,2020-09-30,2024-04-01,holdings_v1,
+INE643A01035,JTEKTINDIA,JTEKT India Ltd.,2020-09-30,2021-09-30,holdings_v1,
+INE663A01033,SPLPETRO,Supreme Petrochem Ltd.,2020-09-30,2022-06-30,holdings_v1,
+INE767A01016,AARTIDRUGS,Aarti Drugs Ltd.,2020-09-30,2024-04-01,holdings_v1,
+INE790G01031,SHILPAMED,Shilpa Medicare Ltd.,2020-09-30,2023-03-31,holdings_v1,
+INE536H01010,CIEINDIA,CIE Automotive India Ltd.,2020-12-31,2025-04-01,holdings_v1,
+INE870H01013,NETWORK18,Network 18 Media & Investments Ltd.,2020-12-31,2025-09-30,holdings_v1,
+INE027H01010,MAXHEALTH,Max Healthcare Institute Ltd.,2021-03-31,,holdings_v1,
+INE02A801020,ROSSARI,Rossari Biotech Ltd.,2021-03-31,2024-04-01,holdings_v1,
+INE04I401011,KPITTECH,KPIT Technologies Ltd.,2021-03-31,,holdings_v1,
+INE050E01027,BALAMINES,Balaji Amines Ltd.,2021-03-31,2025-04-01,holdings_v1,
+INE094J01016,UTIAMC,UTI Asset Management Company Ltd.,2021-03-31,,holdings_v1,
+INE0AJG01018,HEMIPROP,Hemisphere Properties India Ltd.,2021-03-31,2022-09-30,holdings_v1,
+INE105A01035,TVSHLTD,TVS Holdings Ltd.,2021-03-31,2021-09-30,holdings_v1,
+INE152M01016,TRITURBINE,Triveni Turbine Ltd.,2021-03-31,,holdings_v1,
+INE205A01025,VEDL,Vedanta Ltd.,2021-03-31,,holdings_v1,
+INE221J01015,SHARDACROP,Sharda Cropchem Ltd.,2021-03-31,2022-03-31,holdings_v1,
+INE249Z01020,MAZDOCK,Mazagon Dock Shipbuilders Ltd.,2021-03-31,,holdings_v1,
+INE306R01017,INTELLECT,Intellect Design Arena Ltd.,2021-03-31,,holdings_v1,
+INE419U01012,HAPPSTMNDS,Happiest Minds Technologies Ltd.,2021-03-31,2026-04-01,holdings_v1,
+INE439A01020,ASAHIINDIA,Asahi India Glass Ltd.,2021-03-31,,holdings_v1,
+INE450U01017,ROUTE,Route Mobile Ltd.,2021-03-31,2025-09-30,holdings_v1,
+INE483B01026,ICIL,Indo Count Industries Ltd.,2021-03-31,2022-09-30,holdings_v1,
+INE483C01032,TANLA,Tanla Platforms Ltd.,2021-03-31,2025-09-30,holdings_v1,
+INE565V01010,VALIANTORG,Valiant Organics Ltd.,2021-03-31,2022-03-31,holdings_v1,
+INE572J01011,SPANDANA,Spandana Sphoorty Financial Ltd.,2021-03-31,2022-03-31,holdings_v1,
+INE596I01020,CAMS,Computer Age Management Services Ltd.,2021-03-31,,holdings_v1,
+INE688D01026,RESPONIND,Responsive Industries Ltd.,2021-03-31,2021-09-30,holdings_v1,
+INE689W01016,PRINCEPIPE,Prince Pipes and Fittings Ltd.,2021-03-31,2024-09-30,holdings_v1,
+INE732I01021,ANGELONE,Angel One Ltd.,2021-03-31,,holdings_v1,
+INE930H01031,KPRMILL,K.P.R. Mill Ltd.,2021-03-31,,holdings_v1,
+INE068V01023,GLAND,Gland Pharma Ltd.,2021-06-30,,holdings_v1,
+INE07T201019,RBA,Restaurant Brands Asia Ltd.,2021-06-30,2024-09-30,holdings_v1,
+INE483S01020,CCAVENUE,AvenuesAI Ltd.,2021-06-30,2024-04-01,holdings_v1,
+INE053F01010,IRFC,Indian Railway Finance Corporation Ltd.,2021-09-30,,holdings_v1,
+INE063P01018,EQUITASBNK,Equitas Small Finance Bank Ltd.,2021-09-30,2025-04-01,holdings_v1,
+INE067A01029,CGPOWER,CG Power and Industrial Solutions Ltd.,2021-09-30,,holdings_v1,
+INE074A01025,PRAJIND,Praj Industries Ltd.,2021-09-30,2026-04-01,holdings_v1,
+INE09VQ01012,INDIGOPNTS,Indigo Paints Ltd.,2021-09-30,2024-09-30,holdings_v1,
+INE0BY001018,JUBLINGREA,Jubilant Ingrevia Ltd.,2021-09-30,,holdings_v1,
+INE0DD101019,RAILTEL,Railtel Corporation Of India Ltd.,2021-09-30,2022-09-30,holdings_v1,
+INE170I01016,HGS,Hinduja Global Solutions Ltd.,2021-09-30,2023-10-03,holdings_v1,
+INE188A01015,FACT,The Fertilisers And Chemicals Travancore Ltd.,2021-09-30,,holdings_v1,
+INE303R01014,KALYANKJIL,Kalyan Jewellers India Ltd.,2021-09-30,,holdings_v1,
+INE418L01047,NAZARA,Nazara Technologies Ltd.,2021-09-30,2024-04-01,holdings_v1,
+INE475B01022,HIKAL,Hikal Ltd.,2021-09-30,2023-10-03,holdings_v1,
+INE481N01025,HOMEFIRST,Home First Finance Company India Ltd.,2021-09-30,,holdings_v1,
+INE511C01022,POONAWALLA,Poonawalla Fincorp Ltd.,2021-09-30,,holdings_v1,
+INE517B01013,TTML,Tata Teleservices (Maharashtra) Ltd.,2021-09-30,,holdings_v1,
+INE576O01020,LXCHEM,Laxmi Organic Industries Ltd.,2021-09-30,2024-09-30,holdings_v1,
+INE670K01029,LODHA,Lodha Developers Ltd.,2021-09-30,,holdings_v1,
+INE674A01014,TATASTLLP,Tata Steel Long Products Ltd. - (Amalgamated),2021-09-30,2022-09-30,holdings_v1,
+INE700A01033,JUBLPHARMA,Jubilant Pharmova Ltd.,2021-09-30,,holdings_v1,
+INE759A01021,MASTEK,Mastek Ltd.,2021-09-30,2025-09-30,holdings_v1,
+INE930P01018,ANURAS,Anupam Rasayan India Ltd.,2021-09-30,2024-09-30,holdings_v1,
+INE982F01036,HATHWAY,Hathway Cable & Datacom Ltd.,2021-09-30,2022-09-30,holdings_v1,
+INE073K01018,SONACOMS,Sona BLW Precision Forgings Ltd.,2021-12-31,,holdings_v1,
+INE03Q201024,ALIVUS,Alivus Life Sciences Ltd.,2022-03-31,2022-09-30,holdings_v1,
+INE043W01024,VIJAYA,Vijaya Diagnostic Centre Ltd.,2022-03-31,,holdings_v1,
+INE07O001026,EASEMYTRIP,Easy Trip Planners Ltd.,2022-03-31,2025-04-01,holdings_v1,
+INE087H01022,RENUKA,Shree Renuka Sugars Ltd.,2022-03-31,2025-09-30,holdings_v1,
+INE0BJS01011,GOCOLORS,Go Fashion (India) Ltd.,2022-03-31,2024-04-01,holdings_v1,
+INE0BV301023,MAPMYINDIA,CE Info Systems Ltd.,2022-03-31,,holdings_v1,
+INE0I7C01011,LATENTVIEW,Latent View Analytics Ltd.,2022-03-31,,holdings_v1,
+INE118D01016,NUVOCO,Nuvoco Vistas Corporation Ltd.,2022-03-31,2025-04-01,holdings_v1,
+INE201P01022,GRINFRA,GR Infraprojects Ltd.,2022-03-31,2024-04-01,holdings_v1,
+INE227W01023,CLEAN,Clean Science And Technology Ltd.,2022-03-31,,holdings_v1,
+INE317I01021,METROBRAND,Metro Brands Ltd.,2022-03-31,2025-04-01,holdings_v1,
+INE388Y01029,NYKAA,FSN E-Commerce Ventures Ltd.,2022-03-31,,holdings_v1,
+INE404A01024,ABSLAMC,Aditya Birla Sun Life AMC Ltd.,2022-03-31,2023-03-31,holdings_v1,
+INE417T01026,POLICYBZR,PB Fintech Ltd.,2022-03-31,,holdings_v1,
+INE418H01029,ALLCARGO,Allcargo Logistics Ltd.,2022-03-31,2023-01-02,holdings_v1,
+INE425B01027,BCG,Brightcom Group Ltd.,2022-03-31,2024-04-01,holdings_v1,
+INE461D01028,HLEGLAS,HLE Glascoat Ltd.,2022-03-31,2024-04-01,holdings_v1,
+INE488A01050,CHEMPLASTS,Chemplast Sanmar Ltd.,2022-03-31,2025-04-01,holdings_v1,
+INE575P01011,STARHEALTH,Star Health and Allied Insurance Company Ltd.,2022-03-31,,holdings_v1,
+INE666D01022,BORORENEW,Borosil Renewables Ltd.,2022-03-31,2024-09-30,holdings_v1,
+INE672A01026,TATAINVEST,Tata Investment Corporation Ltd.,2022-03-31,,holdings_v1,
+INE758T01015,ETERNAL,Eternal Ltd.,2022-03-31,,holdings_v1,
+INE804L01022,MEDPLUS,Medplus Health Services Ltd.,2022-03-31,2024-09-30,holdings_v1,
+INE806T01020,SAPPHIRE,Sapphire Foods India Ltd.,2022-03-31,,holdings_v1,
+INE810G01011,SHYAMMETL,Shyam Metalics And Energy Ltd.,2022-03-31,,holdings_v1,
+INE834M01019,RTNINDIA,RattanIndia Enterprises Ltd.,2022-03-31,2025-09-30,holdings_v1,
+INE852O01025,APTUS,Aptus Value Housing Finance India Ltd.,2022-03-31,,holdings_v1,
+INE872J01023,DEVYANI,Devyani International Ltd.,2022-03-31,,holdings_v1,
+INE959A01019,PRIVISCL,Privi Speciality Chemicals Ltd.,2022-03-31,2023-03-31,holdings_v1,
+INE967H01025,KIMS,Krishna Institute of Medical Sciences Ltd,2022-03-31,,holdings_v1,
+INE979A01025,SAREGAMA,Saregama India Ltd.,2022-03-31,2023-01-02,holdings_v1,
+INE982J01020,PAYTM,One97 Communications Ltd.,2022-03-31,,holdings_v1,
+INE180C01042,CGCL,Capri Global Capital Ltd.,2022-06-30,,holdings_v1,
+INE256C01024,TRIVENI,Triveni Engineering & Industries Ltd.,2022-06-30,2026-04-01,holdings_v1,
+INE776C01039,GMRAIRPORT,GMR Airports Ltd.,2022-06-30,,holdings_v1,
+INE864I01014,MTARTECH,MTAR Technologies Ltd.,2022-06-30,2024-09-30,holdings_v1,
+INE010J01012,TEJASNET,Tejas Networks Ltd.,2022-09-30,,holdings_v1,
+INE08ZM01014,GREENPANEL,Greenpanel Industries Ltd.,2022-09-30,2023-10-03,holdings_v1,
+INE0BWX01014,AETHER,Aether Industries Ltd.,2022-09-30,2024-09-30,holdings_v1,
+INE0FS801015,MSUMI,Motherson Sumi Wiring India Ltd.,2022-09-30,,holdings_v1,
+INE0J1Y01017,LICI,Life Insurance Corporation of India,2022-09-30,,holdings_v1,
+INE148O01028,DELHIVERY,Delhivery Ltd.,2022-09-30,,holdings_v1,
+INE161A01038,NIITLTD,NIIT Ltd.,2022-09-30,2023-01-02,holdings_v1,
+INE221J01015,SHARDACROP,Sharda Cropchem Ltd.,2022-09-30,2024-04-01,holdings_v1,
+INE260D01016,OLECTRA,Olectra Greentech Ltd.,2022-09-30,,holdings_v1,
+INE278Y01022,CAMPUS,Campus Activewear Ltd.,2022-09-30,2026-04-01,holdings_v1,
+INE301A01014,RAYMOND,Raymond Ltd.,2022-09-30,2025-09-30,holdings_v1,
+INE498B01024,SHOPERSTOP,Shoppers Stop Ltd.,2022-09-30,2024-04-01,holdings_v1,
+INE501A01019,DEEPAKFERT,Deepak Fertilisers And Petrochemicals Corporation Ltd.,2022-09-30,,holdings_v1,
+INE619A01035,PATANJALI,Patanjali Foods Ltd.,2022-09-30,,holdings_v1,
+INE665A01038,SWANCORP,Swan Corp Ltd.,2022-09-30,,holdings_v1,
+INE688A01022,TCI,Transport Corporation Of India Ltd.,2022-09-30,2023-10-03,holdings_v1,
+INE699H01024,AWL,AWL Agri Business Ltd.,2022-09-30,,holdings_v1,
+INE775A01035,MOTHERSON,Samvardhana Motherson International Ltd.,2022-09-30,,holdings_v1,
+INE813A01018,MAHLIFE,Mahindra Lifespace Developers Ltd.,2022-09-30,2025-04-01,holdings_v1,
+INE825V01034,MANYAVAR,Vedant Fashions Ltd.,2022-09-30,2026-04-01,holdings_v1,
+INE838B01021,BHARATRAS,Bharat Rasayan Ltd.,2022-09-30,2023-03-31,holdings_v1,
+INE927D01051,JBMA,JBM Auto Ltd.,2022-09-30,,holdings_v1,
+INE258A01024,BEML,BEML Ltd.,2023-01-02,,holdings_v1,
+INE691A01018,UCOBANK,UCO Bank,2023-01-02,,holdings_v1,
+INE961O01016,RAINBOW,Rainbow Children's Medicare Ltd.,2023-01-02,,holdings_v1,
+INE970X01018,LEMONTREE,Lemon Tree Hotels Ltd.,2023-01-02,,holdings_v1,
+INE00E101023,BIKAJI,Bikaji Foods International Ltd.,2023-03-31,,holdings_v1,
+INE00LO01017,CRAFTSMAN,Craftsman Automation Ltd.,2023-03-31,,holdings_v1,
+INE071N01016,EPIGRAL,Epigral Ltd.,2023-03-31,2024-04-01,holdings_v1,
+INE0DK501011,PPLPHARMA,Piramal Pharma Ltd.,2023-03-31,,holdings_v1,
+INE0IX101010,DATAPATTNS,Data Patterns (India) Ltd.,2023-03-31,,holdings_v1,
+INE128S01021,FIVESTAR,Five-Star Business Finance Ltd.,2023-03-31,,holdings_v1,
+INE128X01021,ACI,Archean Chemical Industries Ltd.,2023-03-31,2025-04-01,holdings_v1,
+INE138Y01010,KFINTECH,KFin Technologies Ltd.,2023-03-31,,holdings_v1,
+INE140A01024,PEL,Piramal Enterprises Ltd. - (Amalgamated),2023-03-31,2025-09-30,holdings_v1,
+INE153T01027,BLS,BLS International Services Ltd.,2023-03-31,,holdings_v1,
+INE177A01018,INGERRAND,Ingersoll-Rand (India) Ltd.,2023-03-31,2024-04-01,holdings_v1,
+INE247D01039,JINDWORLD,Jindal Worldwide Ltd.,2023-03-31,2023-10-03,holdings_v1,
+INE263M01029,RUSTOMJEE,Keystone Realtors Ltd,2023-03-31,2023-10-03,holdings_v1,
+INE372A01015,APARINDS,Apar Industries Ltd.,2023-03-31,,holdings_v1,
+INE474Q01031,MEDANTA,Global Health Ltd.,2023-03-31,,holdings_v1,
+INE584A01023,NMDC,NMDC Ltd.,2023-03-31,,holdings_v1,
+INE668A01016,TMB,Tamilnad Mercantile Bank Ltd.,2023-03-31,2023-10-03,holdings_v1,
+INE717A01029,KENNAMET,Kennametal India Ltd.,2023-03-31,2023-10-03,holdings_v1,
+INE769A01020,AARTIIND,Aarti Industries Ltd.,2023-03-31,,holdings_v1,
+INE814H01029,ADANIPOWER,Adani Power Ltd.,2023-03-31,,holdings_v1,
+INE999A01023,KSB,KSB Ltd.,2023-03-31,2025-04-01,holdings_v1,
+INE0NNS01018,NSLNISP,NMDC Steel Ltd.,2023-06-30,,holdings_v1,
+INE406M01024,ERIS,Eris Lifesciences Ltd.,2023-06-30,,holdings_v1,
+INE03Q201024,ALIVUS,Alivus Life Sciences Ltd.,2023-10-03,2024-09-30,holdings_v1,
+INE0DYJ01015,SYRMA,Syrma SGS Technology Ltd.,2023-10-03,,holdings_v1,
+INE177H01039,GPIL,Godawari Power And Ispat Ltd.,2023-10-03,,holdings_v1,
+INE199A01012,PGHL,Procter & Gamble Health Ltd.,2023-10-03,2024-04-01,holdings_v1,
+INE225D01027,SYMPHONY,Symphony Ltd.,2023-10-03,2024-04-01,holdings_v1,
+INE228A01035,USHAMART,Usha Martin Ltd.,2023-10-03,,holdings_v1,
+INE270A01029,ALOKINDS,Alok Industries Ltd.,2023-10-03,2026-04-01,holdings_v1,
+INE322A01010,GILLETTE,Gillette India Ltd.,2023-10-03,,holdings_v1,
+INE324A01032,JINDALSAW,Jindal Saw Ltd.,2023-10-03,,holdings_v1,
+INE418H01029,ALLCARGO,Allcargo Logistics Ltd.,2023-10-03,2024-09-30,holdings_v1,
+INE429E01023,SAFARI,Safari Industries (India) Ltd.,2023-10-03,2024-09-30,holdings_v1,
+INE551W01018,UJJIVANSFB,Ujjivan Small Finance Bank Ltd.,2023-10-03,2025-04-01,holdings_v1,
+INE634S01028,MANKIND,Mankind Pharma Ltd.,2023-10-03,,holdings_v1,
+INE842C01021,MINDACORP,Minda Corporation Ltd.,2023-10-03,,holdings_v1,
+INE884B01025,KIRLFER,Kirloskar Ferrous Industries Ltd.,2023-10-03,2024-01-01,holdings_v1,
+INE916U01025,SFL,Sheela Foam Ltd.,2023-10-03,2024-04-01,holdings_v1,
+INE918Z01012,KAYNES,Kaynes Technology India Ltd.,2023-10-03,,holdings_v1,
+INE962Y01021,IRCON,Ircon International Ltd.,2023-10-03,,holdings_v1,
+INE979A01025,SAREGAMA,Saregama India Ltd.,2023-10-03,,holdings_v1,
+INE338H01029,CONCORDBIO,Concord Biotech Ltd.,2024-01-01,,holdings_v1,
+INE019C01026,HSCL,Himadri Speciality Chemical Ltd.,2024-04-01,,holdings_v1,
+INE066P01011,INOXWIND,Inox Wind Ltd.,2024-04-01,,holdings_v1,
+INE091G01026,JAIBALAJI,Jai Balaji Industries Ltd.,2024-04-01,2024-09-30,holdings_v1,
+INE0DD101019,RAILTEL,Railtel Corporation Of India Ltd.,2024-04-01,,holdings_v1,
+INE0J5401028,HONASA,Honasa Consumer Ltd.,2024-04-01,,holdings_v1,
+INE0LMW01024,CELLO,Cello World Ltd.,2024-04-01,2025-04-01,holdings_v1,
+INE131A01031,GMDCLTD,Gujarat Mineral Development Corporation Ltd.,2024-04-01,,holdings_v1,
+INE142M01025,TATATECH,Tata Technologies Ltd.,2024-04-01,,holdings_v1,
+INE168A01041,J&KBANK,The Jammu & Kashmir Bank Ltd.,2024-04-01,,holdings_v1,
+INE178A01016,CHENNPETRO,Chennai Petroleum Corporation Ltd.,2024-04-01,,holdings_v1,
+INE203A01020,ASTRAZEN,Astrazeneca Pharma India Ltd.,2024-04-01,2026-04-01,holdings_v1,
+INE205B01031,ELECON,Elecon Engineering Company Ltd.,2024-04-01,,holdings_v1,
+INE209L01016,JWL,Jupiter Wagons Ltd.,2024-04-01,,holdings_v1,
+INE271B01025,MAHSEAMLES,Maharashtra Seamless Ltd.,2024-04-01,2026-04-01,holdings_v1,
+INE281B01032,LLOYDSME,Lloyds Metals & Energy Ltd.,2024-04-01,,holdings_v1,
+INE292B01021,HBLENGINE,HBL Engineering Ltd.,2024-04-01,,holdings_v1,
+INE321T01012,DOMS,DOMS Industries Ltd.,2024-04-01,,holdings_v1,
+INE330T01021,HAPPYFORGE,Happy Forgings Ltd.,2024-04-01,2024-09-30,holdings_v1,
+INE382Z01011,GRSE,Garden Reach Shipbuilders & Engineers Ltd.,2024-04-01,,holdings_v1,
+INE395N01027,TVSSCS,TVS Supply Chain Solutions Ltd.,2024-04-01,2025-04-01,holdings_v1,
+INE399G01023,RKFORGE,Ramkrishna Forgings Ltd.,2024-04-01,,holdings_v1,
+INE423Y01016,SBFC,SBFC Finance Ltd.,2024-04-01,,holdings_v1,
+INE463V01026,ANANDRATHI,Anand Rathi Wealth Ltd.,2024-04-01,,holdings_v1,
+INE475E01026,CAPLIPOINT,Caplin Point Laboratories Ltd.,2024-04-01,,holdings_v1,
+INE531F01023,NUVAMA,Nuvama Wealth Management Ltd.,2024-04-01,,holdings_v1,
+INE615H01020,TITAGARH,Titagarh Rail Systems Ltd.,2024-04-01,,holdings_v1,
+INE668A01016,TMB,Tamilnad Mercantile Bank Ltd.,2024-04-01,2024-09-30,holdings_v1,
+INE731H01025,ACE,Action Construction Equipment Ltd.,2024-04-01,,holdings_v1,
+INE758E01017,JIOFIN,JIO Financial Services Ltd.,2024-04-01,,holdings_v1,
+INE777K01022,RRKABEL,RR Kabel Ltd.,2024-04-01,,holdings_v1,
+INE839M01018,SCHNEIDER,Schneider Electric Infrastructure Ltd.,2024-04-01,,holdings_v1,
+INE880J01026,JSWINFRA,JSW Infrastructure Ltd.,2024-04-01,,holdings_v1,
+INE903U01023,SIGNATURE,Signatureglobal (India) Ltd.,2024-04-01,,holdings_v1,
+INE039A01010,IFCI,IFCI Ltd.,2024-09-30,,holdings_v1,
+INE03JT01014,GODIGIT,Go Digit General Insurance Ltd.,2024-09-30,,holdings_v1,
+INE065X01017,INDGN,Indegene Ltd.,2024-09-30,,holdings_v1,
+INE0NT901020,NETWEB,Netweb Technologies India Ltd.,2024-09-30,,holdings_v1,
+INE109A01011,SCI,Shipping Corporation Of India Ltd.,2024-09-30,,holdings_v1,
+INE146L01010,KIRLOSENG,Kirloskar Oil Engines Ltd.,2024-09-30,,holdings_v1,
+INE182A01018,PFIZER,Pfizer Ltd.,2024-09-30,,holdings_v1,
+INE200A01026,GVT&D,GE Vernova T&D India Ltd.,2024-09-30,,holdings_v1,
+INE201P01022,GRINFRA,GR Infraprojects Ltd.,2024-09-30,2025-04-01,holdings_v1,
+INE202E01016,IREDA,Indian Renewable Energy Development Agency Ltd.,2024-09-30,,holdings_v1,
+INE242C01024,ANANTRAJ,Anant Raj Ltd.,2024-09-30,,holdings_v1,
+INE285K01026,TECHNOE,Techno Electric & Engineering Company Ltd.,2024-09-30,,holdings_v1,
+INE343G01021,BHARTIHEXA,Bharti Hexacom Ltd.,2024-09-30,,holdings_v1,
+INE351F01018,JPPOWER,Jaiprakash Power Ventures Ltd.,2024-09-30,,holdings_v1,
+INE373A01013,BASF,BASF India Ltd.,2024-09-30,2026-04-01,holdings_v1,
+INE404A01024,ABSLAMC,Aditya Birla Sun Life AMC Ltd.,2024-09-30,,holdings_v1,
+INE410B01037,VINATIORGA,Vinati Organics Ltd.,2024-09-30,2025-04-01,holdings_v1,
+INE573A01042,JKTYRE,JK Tyre & Industries Ltd.,2024-09-30,,holdings_v1,
+INE596F01018,PTCIL,PTC Industries Ltd.,2024-09-30,,holdings_v1,
+INE616N01034,INOXINDIA,Inox India Ltd.,2024-09-30,2026-04-01,holdings_v1,
+INE619B01017,NEWGEN,Newgen Software Technologies Ltd.,2024-09-30,,holdings_v1,
+INE673O01025,TBOTEK,TBO Tek Ltd.,2024-09-30,,holdings_v1,
+INE732A01036,KIRLOSBROS,Kirloskar Brothers Ltd.,2024-09-30,2026-04-01,holdings_v1,
+INE850D01014,GODREJAGRO,Godrej Agrovet Ltd.,2024-09-30,2026-04-01,holdings_v1,
+INE879I01012,DBREALTY,Valor Estate Ltd.,2024-09-30,2026-04-01,holdings_v1,
+INE883F01010,AADHARHFC,Aadhar Housing Finance Ltd.,2024-09-30,,holdings_v1,
+INE980O01024,JYOTICNC,Jyoti CNC Automation Ltd.,2024-09-30,,holdings_v1,
+INE09XN01023,AKUMS,Akums Drugs & Pharmaceuticals Ltd.,2024-12-31,2026-04-01,holdings_v1,
+INE168P01015,EMCURE,Emcure Pharmaceuticals Ltd.,2024-12-31,,holdings_v1,
+INE00H001014,SWIGGY,Swiggy Ltd.,2025-04-01,,holdings_v1,
+INE01EA01019,VMM,Vishal Mega Mart Ltd.,2025-04-01,,holdings_v1,
+INE024L01027,GRAVITA,Gravita India Ltd.,2025-04-01,,holdings_v1,
+INE02ID01020,RAYMONDLSL,Raymond Lifestyle Ltd.,2025-04-01,2025-09-30,holdings_v1,
+INE02RE01045,FIRSTCRY,Brainbees Solutions Ltd.,2025-04-01,,holdings_v1,
+INE03Q201024,ALIVUS,Alivus Life Sciences Ltd.,2025-04-01,2025-09-30,holdings_v1,
+INE049B01025,WOCKPHARMA,Wockhardt Ltd.,2025-04-01,,holdings_v1,
+INE0BS701011,PREMIERENE,Premier Energies Ltd.,2025-04-01,,holdings_v1,
+INE0LXG01040,OLAELEC,OLA Electric Mobility Ltd.,2025-04-01,,holdings_v1,
+INE0ONG01011,NTPCGREEN,NTPC Green Energy Ltd.,2025-04-01,,holdings_v1,
+INE0Q9301021,IGIL,International Gemological Institute Ltd.,2025-04-01,,holdings_v1,
+INE0V6F01027,HYUNDAI,Hyundai Motor India Ltd.,2025-04-01,,holdings_v1,
+INE0W2G01015,SAGILITY,Sagility Ltd.,2025-04-01,,holdings_v1,
+INE101I01011,AFCONS,Afcons Infrastructure Ltd.,2025-04-01,,holdings_v1,
+INE115Q01022,IKS,Inventurus Knowledge Solutions Ltd.,2025-04-01,,holdings_v1,
+INE206F01022,AIIL,Authum Investment & Infrastructure Ltd.,2025-04-01,,holdings_v1,
+INE251B01027,ZENTEC,Zen Technologies Ltd.,2025-04-01,,holdings_v1,
+INE377N01017,WAAREEENER,Waaree Energies Ltd.,2025-04-01,,holdings_v1,
+INE377Y01014,BAJAJHFL,Bajaj Housing Finance Ltd.,2025-04-01,,holdings_v1,
+INE385C01021,SARDAEN,Sarda Energy & Minerals Ltd.,2025-04-01,,holdings_v1,
+INE457L01029,PGEL,PG Electroplast Ltd.,2025-04-01,,holdings_v1,
+INE499A01024,DCMSHRIRAM,DCM Shriram Ltd.,2025-04-01,,holdings_v1,
+INE570L01029,SAILIFE,Sai Life Sciences Ltd.,2025-04-01,,holdings_v1,
+INE614G01033,RPOWER,Reliance Power Ltd.,2025-04-01,,holdings_v1,
+INE622W01025,ACMESOLAR,Acme Solar Holdings Ltd.,2025-04-01,,holdings_v1,
+INE725A01030,NAVA,Nava Ltd.,2025-04-01,,holdings_v1,
+INE763I01026,TARIL,Transformers & Rectifiers (India) Ltd.,2025-04-01,,holdings_v1,
+INE794A01010,NEULANDLAB,Neuland Laboratories Ltd.,2025-04-01,,holdings_v1,
+INE818H01020,LTFOODS,LT Foods Ltd.,2025-04-01,,holdings_v1,
+INE824G01012,JSWHL,JSW Holdings Ltd.,2025-04-01,2025-09-30,holdings_v1,
+INE995S01015,NIVABUPA,Niva Bupa Health Insurance Company Ltd.,2025-04-01,,holdings_v1,
+INE1SY401010,RAYMONDREL,Raymond Realty Ltd.,2025-06-30,2025-09-30,holdings_v1,
+INE387A01021,SUNDRMFAST,Sundram Fasteners Ltd.,2025-06-30,2026-04-01,holdings_v1,
+INE013P01021,ONESOURCE,Onesource Specialty Pharma Ltd.,2025-09-30,,holdings_v1,
+INE036A01016,RELINFRA,Reliance Infrastructure Ltd.,2025-09-30,2026-04-01,holdings_v1,
+INE093A01041,HEXT,Hexaware Technologies Ltd.,2025-09-30,,holdings_v1,
+INE0AQ201015,THELEELA,Leela Palaces Hotels & Resorts Ltd.,2025-09-30,,holdings_v1,
+INE0INX01018,AEGISVOPAK,Aegis Vopak Terminals Ltd.,2025-09-30,,holdings_v1,
+INE0KBH01020,BLUEJET,Blue Jet Healthcare Ltd.,2025-09-30,,holdings_v1,
+INE0LEZ01016,ATHERENERG,Ather Energy Ltd.,2025-09-30,,holdings_v1,
+INE102B01014,CHOICEIN,Choice International Ltd.,2025-09-30,,holdings_v1,
+INE118D01016,NUVOCO,Nuvoco Vistas Corporation Ltd.,2025-09-30,,holdings_v1,
+INE133A01011,JSWDULUX,JSW Dulux Ltd.,2025-09-30,,holdings_v1,
+INE14LE01019,ABLBL,Aditya Birla Lifestyle Brands Ltd.,2025-09-30,,holdings_v1,
+INE179A01014,PGHH,Procter & Gamble Hygiene and Health Care Ltd.,2025-09-30,2026-04-01,holdings_v1,
+INE1NPP01017,ENRIN,Siemens Energy India Ltd.,2025-09-30,,holdings_v1,
+INE288A01013,MAHSCOOTER,Maharashtra Scooters Ltd.,2025-09-30,2026-04-01,holdings_v1,
+INE28GN01010,ADVENTHTL,Advent Hotels International Ltd.,2025-09-30,2025-12-31,holdings_v1,
+INE379A01028,ITCHOTELS,ITC Hotels Ltd.,2025-09-30,,holdings_v1,
+INE451A01017,FORCEMOT,Force Motors Ltd.,2025-09-30,,holdings_v1,
+INE781S01027,VENTIVE,Ventive Hospitality Ltd.,2025-09-30,2026-04-01,holdings_v1,
+INE943P01029,AGARWALEYE,Dr. Agarwal's Health Care Ltd.,2025-09-30,2026-04-01,holdings_v1,
+INE999A01023,KSB,KSB Ltd.,2025-09-30,2026-04-01,holdings_v1,
+INE2KCE01013,KWIL,Kwality Wall's (India) Ltd.,2025-12-31,2026-04-01,holdings_v1,
+INE718I01012,JSWCEMENT,JSW Cement Ltd.,2025-12-31,,holdings_v1,
+INE00FF01025,ACUTAAS,Acutaas Chemicals Ltd.,2026-04-01,,holdings_v1,
+INE011K01018,TEGA,Tega Industries Ltd.,2026-04-01,,holdings_v1,
+INE01TY01017,CANHLIFE,Canara HSBC Life Insurance Company Ltd.,2026-04-01,,holdings_v1,
+INE088F01024,PARADEEP,Paradeep Phosphates Ltd.,2026-04-01,,holdings_v1,
+INE0CAZ01013,URBANCO,Urban Company Ltd.,2026-04-01,,holdings_v1,
+INE0CZ201020,ANTHEM,Anthem Biosciences Ltd.,2026-04-01,,holdings_v1,
+INE0HOQ01053,GROWW,Billionbrains Garage Ventures Ltd.,2026-04-01,,holdings_v1,
+INE0LP301011,PWL,Physicswallah Ltd.,2026-04-01,,holdings_v1,
+INE0VDM01015,MEESHO,Meesho Ltd.,2026-04-01,,holdings_v1,
+INE0YD401026,JAINREC,Jain Resource Recycling Ltd.,2026-04-01,,holdings_v1,
+INE103V01028,TRAVELFOOD,Travel Food Services Ltd.,2026-04-01,,holdings_v1,
+INE15B701018,PINELABS,Pine Labs Ltd.,2026-04-01,,holdings_v1,
+INE19RI01016,TENNIND,Tenneco Clean Air India Ltd.,2026-04-01,,holdings_v1,
+INE1C6T01020,EMMVEE,Emmvee Photovoltaic Power Ltd.,2026-04-01,,holdings_v1,
+INE1TAE01010,TMCV,Tata Motors Ltd.,2026-04-01,,holdings_v1,
+INE202B01038,PIRAMALFIN,Piramal Finance Ltd.,2026-04-01,,holdings_v1,
+INE290S01011,CARTRADE,CarTrade Tech Ltd.,2026-04-01,,holdings_v1,
+INE297H01019,GALLANTT,Gallantt Ispat Ltd.,2026-04-01,,holdings_v1,
+INE324D01010,LGEINDIA,LG Electronics India Ltd.,2026-04-01,,holdings_v1,
+INE346A01027,ICICIAMC,ICICI Prudential Asset Management Company Ltd.,2026-04-01,,holdings_v1,
+INE524A01029,GABRIEL,Gabriel India Ltd.,2026-04-01,,holdings_v1,
+INE552Z01027,ABDL,Allied Blenders And Distillers Ltd.,2026-04-01,,holdings_v1,
+INE663A01033,SPLPETRO,Supreme Petrochem Ltd.,2026-04-01,,holdings_v1,
+INE686A01026,CEMPRO,Cemindia Projects Ltd.,2026-04-01,,holdings_v1,
+INE756I01012,HDBFS,HDB Financial Services Ltd.,2026-04-01,,holdings_v1,
+INE768C01028,ZYDUSWELL,Zydus Wellness Ltd.,2026-04-01,,holdings_v1,
+INE819V01029,CPPLUS,Aditya Infotech Ltd.,2026-04-01,,holdings_v1,
+INE894V01022,BELRISE,Belrise Industries Ltd.,2026-04-01,,holdings_v1,
+INE930P01018,ANURAS,Anupam Rasayan India Ltd.,2026-04-01,,holdings_v1,
+INE956O01016,LENSKART,Lenskart Solutions Ltd.,2026-04-01,,holdings_v1,
+INE976I01016,TATACAP,Tata Capital Ltd.,2026-04-01,,holdings_v1,
+INE1CDF01017,VAML,Vedanta Aluminium Metal Ltd.,2026-06-01,,holdings_v1,
+INE1CLE01013,VISL,Vedanta Iron And Steel Ltd.,2026-06-01,,holdings_v1,
+INE536H01010,CIEINDIA,CIE Automotive India Ltd.,2026-06-01,,holdings_v1,
+INE694L01019,VEDPOWER,Vedanta Power Ltd.,2026-06-01,,holdings_v1,
+INE704J01044,VOGL,Vedanta Oil and Gas Ltd.,2026-06-01,,holdings_v1,

@@ -1,0 +1,3 @@
+# Quant AI Researcher by Harshil Pahuja
+from,to,count,days,reason
+2026-06-01,2026-10-26,504,102,"holdings workbook snapshot 2026-05-31 lists 504 names; NSE's own list on 2026-05-02 had 504 (demerger placeholders), see nifty500_validation.csv at git 6e09344"

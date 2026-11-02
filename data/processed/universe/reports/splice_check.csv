@@ -1,0 +1,29 @@
+# Quant AI Researcher by Harshil Pahuja
+ticker,isin,company_name,spell_from,spell_to,sessions_in_spell,closes_in_spell,max_gap_days_in_spell,max_abs_move_in_spell,after_spell,verdict
+KSBPUMPS,INE999A01023,KSB Ltd.,2013-06-03,2017-03-31,946,946,6,0.168,,clean inside the spell
+IPAPPM,INE435A01051,Andhra Paper Ltd.,2016-05-02,2017-03-31,230,230,4,0.094,,clean inside the spell
+FAGBEARING,INE513A01022,Schaeffler India Ltd.,2013-06-03,2017-07-31,1028,1027,6,0.088,,clean inside the spell
+NBVENTURES,INE725A01030,Nava Ltd.,2013-06-03,2020-09-30,1812,1812,6,0.2,,clean inside the spell
+ORCHIDCHEM,INE191A01027,Orchid Pharma Ltd.,2013-06-03,2015-09-30,576,576,6,0.2,,clean inside the spell
+PHILIPCARB,INE602A01031,PCBL Chemical Ltd.,2018-10-01,2022-01-12,814,814,4,0.154,,clean inside the spell
+SRTRANSFIN,INE721A01047,Shriram Finance Ltd.,2013-06-03,2023-01-16,2382,2382,6,0.222,,clean inside the spell
+RUCHISOYA,INE619A01035,Patanjali Foods Ltd.,2013-06-03,2017-09-29,1070,1070,6,0.2,,clean inside the spell
+TUBEINVEST,INE149A01033,Cholamandalam Financial Holdings Ltd.,2013-06-03,2017-05-31,986,986,6,0.117,,clean inside the spell
+HEXAWARE,INE093A01041,Hexaware Technologies Ltd.,2013-06-03,2020-09-30,1812,1812,6,0.2,,clean inside the spell
+SUPPETRO,INE663A01033,Supreme Petrochem Ltd.,2013-06-03,2022-04-01,2185,2185,6,0.2,,clean inside the spell
+ALOKTEXT,INE270A01029,Alok Industries Ltd.,2013-06-03,2017-03-31,946,946,6,0.2,,clean inside the spell
+MONNETISPA,INE743C01021,JSW Ispat Special Products Ltd. - (Amalgamation),2013-06-03,2015-09-30,576,576,6,0.2,,clean inside the spell
+MCDOWELL-N,INE854D01024,United Spirits Ltd.,2013-06-03,2024-07-16,2752,2752,6,0.175,,clean inside the spell
+NIITTECH,INE591G01025,Coforge Ltd.,2013-06-03,2020-08-19,1782,1782,6,0.244,,clean inside the spell
+DHFL,INE202B01038,Piramal Finance Ltd.,2013-06-03,2020-06-30,1746,1746,6,0.426,,CHECK
+3IINFOTECH,INE748C01038,3I Infotech Ltd.,2013-07-01,2013-09-30,63,63,4,0.19,,clean inside the spell
+SUJANATOW,INE333I01044,Neueon Corporation Ltd.,2013-06-03,2013-08-30,63,47,3,0.1,,CHECK
+TIDEWATER,INE484C01030,Veedol Corporation Ltd.,2016-05-02,2017-09-29,354,354,4,0.16,,clean inside the spell
+SEINV,INE420C01059,Paisalo Digital Ltd.,2013-06-03,2016-04-29,716,715,6,0.2,,clean inside the spell
+PIPAVAVDOC,INE542F01020,Swan Defence and Heavy Industries Ltd.,2013-06-03,2016-03-17,690,689,6,0.2,,clean inside the spell
+RDEL,INE542F01020,Swan Defence and Heavy Industries Ltd.,2016-03-18,2017-09-15,370,370,5,0.147,,clean inside the spell
+RNAVAL,INE542F01020,Swan Defence and Heavy Industries Ltd.,2017-09-18,2019-03-29,380,380,5,0.329,,clean inside the spell
+MANDHANA,INE087J01028,GB Global Ltd.,2013-06-03,2015-12-31,637,637,6,0.126,,clean inside the spell
+FUTUREVENT,INE220J01025,Future Consumer Ltd.,2013-06-03,2013-06-28,20,14,3,0.005,,CHECK
+IIFLWAM,INE466L01038,360 One Wam Ltd.,2020-07-01,2023-02-16,658,658,5,0.149,,clean inside the spell
+ANGELBRKG,INE732I01021,Angel One Ltd.,2021-04-01,2021-11-10,151,151,4,0.2,,clean inside the spell

@@ -14,6 +14,7 @@ Writes data/universe/reports/shift_table_draft.csv, shift_table_summary.csv, shi
 """
 from __future__ import annotations
 
+import itertools
 import os
 import sys
 
@@ -39,7 +40,7 @@ def events(mem: pd.DataFrame) -> pd.DataFrame:
     days = sorted(mem["date"].unique())
     by = mem.groupby("date")["st"].apply(set)
     rows = []
-    for prev, d in zip(days, days[1:]):
+    for prev, d in itertools.pairwise(days):
         for st in by[d] - by[prev]:
             rows.append((pd.Timestamp(d), "entry", st))
         for st in by[prev] - by[d]:

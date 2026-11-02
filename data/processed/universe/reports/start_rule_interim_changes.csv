@@ -1,0 +1,8 @@
+# Quant AI Researcher by Harshil Pahuja
+effective_date,action,symbol,isin,company_name,entry_type,source
+2013-11-01,IN,NDTV,INE155G01029,NDTV Ltd.,regular,IndexInclExcl.xls: NDTV Ltd.
+2013-11-01,OUT,MARICO,INE196A01026,Marico Ltd.,regular,IndexInclExcl.xls: Marico Ltd.
+2013-11-18,IN,FRL,INE623B01027,Future Retail Ltd.,regular,IndexInclExcl.xls: Future Retail Ltd.
+2013-11-18,IN,RAJTV,INE952H01019,Raj Television Network Ltd.,regular,IndexInclExcl.xls: Raj Television Network Ltd.
+2013-11-18,OUT,FKONCO,INE575G01010,Fresenius Kabi Oncology Ltd.,regular,IndexInclExcl.xls: Fresenius Kabi Oncology Ltd.
+2013-11-18,OUT,WELCORP,INE191B01025,Welspun Corp Ltd.,regular,IndexInclExcl.xls: Welspun Corp Ltd.

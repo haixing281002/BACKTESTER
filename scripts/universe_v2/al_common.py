@@ -14,17 +14,19 @@ import datetime as dt
 import io
 import os
 import subprocess
+import sys
 
 import openpyxl
 import pandas as pd
 
 HOME = os.path.expanduser("~")
-_BASE = "NIFTY500_constituents_weights_alphalab_2013-06-03_to_2026-10-30"
-AL_XLSX = os.environ.get("LIGHTYEAR_ALPHALAB_XLSX") or os.path.join(
-    HOME, "Alpha Alternatives Holdings Private Limited", "Rohit Rakhecha - Ace_Equity_Prices", _BASE + ".xlsx")
-AL_CSV = os.environ.get("LIGHTYEAR_ALPHALAB_CSV") or os.path.join(HOME, "Desktop", "Market & Company Data", _BASE + ".csv")
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-OUT = os.path.join(REPO, "data", "universe")
+sys.path.insert(0, REPO)
+from ros.data import sources
+
+AL_XLSX = sources.ALPHALAB_NIFTY500_XLSX
+AL_CSV = sources.ALPHALAB_NIFTY500_CSV
+OUT = os.path.join(REPO, "data", "processed", "universe")
 REPORTS = os.path.join(OUT, "reports")
 NSE_SPELLS_COMMIT = "6e09344"
 SIGNATURE = "Quant AI Researcher by Harshil Pahuja"
@@ -37,6 +39,14 @@ def write_csv(df: pd.DataFrame, path: str) -> str:
         fh.write(f"# {SIGNATURE}\n")
         df.to_csv(fh, index=False)
     return path
+
+
+def md_table(df: pd.DataFrame) -> str:
+    """A Markdown table without the optional tabulate dependency."""
+    cols = [str(c) for c in df.columns]
+    body = [" | ".join("" if pd.isna(v) else str(v) for v in row) for row in df.itertuples(index=False)]
+    sep = chr(10)
+    return sep.join(["| " + " | ".join(cols) + " |", "|" + "|".join("---" for _ in cols) + "|", *("| " + b + " |" for b in body)])
 
 
 def read_rebalance_membership(path: str = AL_XLSX) -> pd.DataFrame:

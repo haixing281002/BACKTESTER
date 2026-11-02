@@ -1,0 +1,55 @@
+# Quant AI Researcher by Harshil Pahuja
+date,year,al_date_used,existing_rows,existing_truncated,existing_mapped,existing_lost_ids,alpha_lab,overlap,only_alpha_lab,only_existing,nse_members,existing_vs_nse_off,alpha_lab_vs_nse_off,unexplained,reasons
+2013-06-30,2013,2013-06-28,494,False,490,4,499,486,13,4,500,10,7,0,"alpha_lab: missing a name NSE lists = 1; existing: mapping (an unmapped Bloomberg id here) = 10; timing: Alpha Lab lag, NSE already removed it = 3; timing: Alpha Lab lag, entry not yet applied = 3"
+2013-09-30,2013,2013-09-30,500,False,496,4,499,482,17,14,500,4,27,0,"alpha_lab: missing a name NSE lists = 1; existing: mapping (an unmapped Bloomberg id here) = 4; timing: Alpha Lab lag, NSE already removed it = 13; timing: Alpha Lab lag, entry not yet applied = 13"
+2013-12-31,2013,2013-12-31,500,False,496,4,499,495,4,1,500,4,1,0,alpha_lab: missing a name NSE lists = 1; existing: mapping (an unmapped Bloomberg id here) = 4
+2014-03-31,2014,2014-03-31,500,False,497,3,499,483,16,14,500,3,27,0,"existing: mapping (an unmapped Bloomberg id here) = 3; timing: Alpha Lab lag, NSE already removed it = 13; timing: Alpha Lab lag, entry not yet applied = 14"
+2014-06-30,2014,2014-06-30,500,False,497,3,500,496,4,1,500,3,2,0,"existing: mapping (an unmapped Bloomberg id here) = 3; timing: Alpha Lab lag, NSE already removed it = 1; timing: Alpha Lab lag, entry not yet applied = 1"
+2014-09-30,2014,2014-09-30,500,False,497,3,500,482,18,15,500,3,30,0,"existing: mapping (an unmapped Bloomberg id here) = 3; timing: Alpha Lab lag, NSE already removed it = 15; timing: Alpha Lab lag, entry not yet applied = 15"
+2014-12-31,2014,2014-12-31,500,False,497,3,500,497,3,0,500,3,0,0,existing: mapping (an unmapped Bloomberg id here) = 3
+2015-03-31,2015,2015-03-31,500,False,497,3,500,481,19,16,500,3,32,0,"existing: mapping (an unmapped Bloomberg id here) = 3; timing: Alpha Lab lag, NSE already removed it = 16; timing: Alpha Lab lag, entry not yet applied = 16"
+2015-06-30,2015,2015-06-30,500,False,497,3,500,496,4,1,500,3,2,0,"existing: mapping (an unmapped Bloomberg id here) = 3; timing: Alpha Lab lag, NSE already removed it = 1; timing: Alpha Lab lag, entry not yet applied = 1"
+2015-09-30,2015,2015-09-30,500,False,497,3,500,481,19,16,500,3,32,0,"existing: mapping (an unmapped Bloomberg id here) = 3; timing: Alpha Lab lag, NSE already removed it = 16; timing: Alpha Lab lag, entry not yet applied = 16"
+2015-12-31,2015,2015-12-31,500,False,497,3,500,495,5,2,500,3,4,0,"existing: mapping (an unmapped Bloomberg id here) = 3; timing: Alpha Lab lag, NSE already removed it = 2; timing: Alpha Lab lag, entry not yet applied = 2"
+2016-03-31,2016,2016-03-31,500,False,497,3,500,497,3,0,500,3,0,0,existing: mapping (an unmapped Bloomberg id here) = 3
+2016-06-30,2016,2016-06-30,501,False,498,3,500,497,3,1,501,3,1,0,alpha_lab: missing a name NSE lists = 1; existing: mapping (an unmapped Bloomberg id here) = 3
+2016-09-30,2016,2016-09-30,501,False,498,3,500,472,28,26,501,3,51,0,"alpha_lab: missing a name NSE lists = 2; existing: mapping (an unmapped Bloomberg id here) = 3; timing: Alpha Lab lag, NSE already removed it = 25; timing: Alpha Lab lag, entry not yet applied = 24"
+2016-12-31,2016,2016-12-30,501,False,498,3,500,497,3,1,501,3,1,0,alpha_lab: missing a name NSE lists = 1; existing: mapping (an unmapped Bloomberg id here) = 3
+2017-03-31,2017,2017-03-31,501,False,498,3,500,472,28,26,501,3,51,0,"alpha_lab: missing a name NSE lists = 1; existing: mapping (an unmapped Bloomberg id here) = 3; timing: Alpha Lab lag, NSE already removed it = 25; timing: Alpha Lab lag, entry not yet applied = 25"
+2017-06-30,2017,2017-06-30,501,False,498,3,500,496,4,2,501,3,3,0,"alpha_lab: missing a name NSE lists = 1; existing: mapping (an unmapped Bloomberg id here) = 3; timing: Alpha Lab lag, NSE already removed it = 1; timing: Alpha Lab lag, entry not yet applied = 1"
+2017-09-30,2017,2017-09-29,392,True,390,2,500,370,130,20,501,111,51,0,"alpha_lab: missing a name NSE lists = 1; existing: truncated snapshot = 130; timing: Alpha Lab lag, entry not yet applied = 19"
+2017-12-31,2017,2017-12-29,501,False,499,2,500,498,2,1,501,2,1,0,alpha_lab: missing a name NSE lists = 1; existing: mapping (an unmapped Bloomberg id here) = 2
+2018-03-31,2018,2018-03-28,501,False,499,2,500,497,3,2,501,2,3,0,"alpha_lab: missing a name NSE lists = 1; existing: mapping (an unmapped Bloomberg id here) = 2; timing: Alpha Lab lag, NSE already removed it = 1; timing: Alpha Lab lag, entry not yet applied = 1"
+2018-06-30,2018,2018-06-29,353,True,351,2,501,351,150,0,501,158,8,0,existing: truncated snapshot = 150
+2018-09-30,2018,2018-09-28,299,True,298,1,501,284,217,14,501,203,52,0,"existing: truncated snapshot = 217; timing: Alpha Lab lag, entry not yet applied = 14"
+2018-12-31,2018,2018-12-31,501,False,500,1,501,495,6,5,501,1,10,0,"existing: mapping (an unmapped Bloomberg id here) = 1; timing: Alpha Lab lag, NSE already removed it = 5; timing: Alpha Lab lag, entry not yet applied = 5"
+2019-03-31,2019,2019-03-29,501,False,500,1,501,475,26,25,501,1,50,0,"existing: mapping (an unmapped Bloomberg id here) = 1; timing: Alpha Lab lag, NSE already removed it = 25; timing: Alpha Lab lag, entry not yet applied = 25"
+2019-06-30,2019,2019-06-28,501,False,500,1,501,498,3,2,501,1,4,0,"existing: mapping (an unmapped Bloomberg id here) = 1; timing: Alpha Lab lag, NSE already removed it = 2; timing: Alpha Lab lag, entry not yet applied = 2"
+2019-09-30,2019,2019-09-30,501,False,500,1,501,477,24,23,501,1,46,0,"existing: mapping (an unmapped Bloomberg id here) = 1; timing: Alpha Lab lag, NSE already removed it = 23; timing: Alpha Lab lag, entry not yet applied = 23"
+2019-12-31,2019,2019-12-31,501,False,500,1,501,488,13,12,501,1,24,0,"existing: mapping (an unmapped Bloomberg id here) = 1; timing: Alpha Lab lag, NSE already removed it = 12; timing: Alpha Lab lag, entry not yet applied = 12"
+2020-03-31,2020,2020-03-31,501,False,500,1,501,499,2,1,501,1,2,0,"existing: mapping (an unmapped Bloomberg id here) = 1; timing: Alpha Lab lag, NSE already removed it = 1; timing: Alpha Lab lag, entry not yet applied = 1"
+2020-06-30,2020,2020-06-30,501,False,501,0,501,476,25,25,501,0,50,0,"timing: Alpha Lab lag, NSE already removed it = 25; timing: Alpha Lab lag, entry not yet applied = 25"
+2020-09-30,2020,2020-09-30,501,False,501,0,501,479,22,22,501,0,44,0,"timing: Alpha Lab lag, NSE already removed it = 22; timing: Alpha Lab lag, entry not yet applied = 22"
+2020-12-31,2020,2020-12-31,501,False,501,0,501,501,0,0,501,0,0,0,
+2021-03-31,2021,2021-03-31,501,False,501,0,501,477,24,24,501,0,48,0,"timing: Alpha Lab lag, NSE already removed it = 24; timing: Alpha Lab lag, entry not yet applied = 24"
+2021-06-30,2021,2021-06-30,501,False,501,0,500,499,1,2,501,0,3,0,"alpha_lab: missing a name NSE lists = 1; timing: Alpha Lab lag, NSE already removed it = 1; timing: Alpha Lab lag, entry not yet applied = 1"
+2021-09-30,2021,2021-09-30,501,False,501,0,500,478,22,23,501,0,45,0,"alpha_lab: missing a name NSE lists = 1; timing: Alpha Lab lag, NSE already removed it = 22; timing: Alpha Lab lag, entry not yet applied = 22"
+2021-12-31,2021,2021-12-31,501,False,501,0,500,500,0,1,501,0,1,0,alpha_lab: missing a name NSE lists = 1
+2022-03-31,2022,2022-03-31,501,False,501,0,500,468,32,33,501,0,65,0,"alpha_lab: missing a name NSE lists = 1; timing: Alpha Lab lag, NSE already removed it = 32; timing: Alpha Lab lag, entry not yet applied = 32"
+2022-06-30,2022,2022-06-30,501,False,501,0,486,485,1,16,501,0,17,1,"alpha_lab: missing a name NSE lists = 16; unexplained: Alpha Lab lists it, NSE and existing do not = 1"
+2022-09-30,2022,2022-09-30,501,False,501,0,486,467,19,34,501,0,53,1,"alpha_lab: missing a name NSE lists = 15; timing: Alpha Lab lag, NSE already removed it = 18; timing: Alpha Lab lag, entry not yet applied = 19; unexplained: Alpha Lab lists it, NSE and existing do not = 1"
+2022-12-31,2022,2022-12-30,501,False,501,0,487,482,5,19,501,0,24,1,"alpha_lab: missing a name NSE lists = 15; timing: Alpha Lab lag, NSE already removed it = 4; timing: Alpha Lab lag, entry not yet applied = 4; unexplained: Alpha Lab lists it, NSE and existing do not = 1"
+2023-03-31,2023,2023-03-31,501,False,501,0,487,470,17,31,501,0,48,1,"alpha_lab: missing a name NSE lists = 11; timing: Alpha Lab lag, NSE already removed it = 16; timing: Alpha Lab lag, entry not yet applied = 20; unexplained: Alpha Lab lists it, NSE and existing do not = 1"
+2023-06-30,2023,2023-06-30,501,False,501,0,491,491,0,10,501,0,10,0,alpha_lab: missing a name NSE lists = 10
+2023-09-30,2023,2023-09-29,501,False,501,0,493,474,19,27,501,0,46,0,"alpha_lab: missing a name NSE lists = 13; timing: Alpha Lab lag, NSE already removed it = 19; timing: Alpha Lab lag, entry not yet applied = 14"
+2023-12-31,2023,2023-12-29,501,False,501,0,488,488,0,13,501,0,13,0,alpha_lab: missing a name NSE lists = 13
+2024-03-31,2024,2024-03-28,501,False,501,0,488,457,31,44,501,0,75,0,"alpha_lab: missing a name NSE lists = 11; timing: Alpha Lab lag, NSE already removed it = 31; timing: Alpha Lab lag, entry not yet applied = 33"
+2024-06-30,2024,2024-06-28,501,False,501,0,491,491,0,10,501,0,10,0,"alpha_lab: missing a name NSE lists = 9; timing: Alpha Lab lag, entry not yet applied = 1"
+2024-09-30,2024,2024-09-30,500,False,500,0,492,466,26,34,500,0,60,0,"alpha_lab: missing a name NSE lists = 20; timing: Alpha Lab lag, NSE already removed it = 26; timing: Alpha Lab lag, entry not yet applied = 14"
+2024-12-31,2024,2024-12-31,500,False,500,0,478,478,0,22,500,0,22,0,alpha_lab: missing a name NSE lists = 22
+2025-03-31,2025,2025-03-28,500,False,500,0,478,448,30,52,500,0,82,0,"alpha_lab: missing a name NSE lists = 46; timing: Alpha Lab lag, NSE already removed it = 30; timing: Alpha Lab lag, entry not yet applied = 6"
+2025-06-30,2025,2025-06-30,501,False,501,0,454,454,0,47,500,1,46,0,"alpha_lab: missing a name NSE lists = 46; timing: existing ahead of NSE, entry follows = 1"
+2025-09-30,2025,2025-09-30,501,False,501,0,445,431,14,70,500,1,83,0,"timing: Alpha Lab lag, NSE already removed it = 14; timing: Alpha Lab lag, entry not yet applied = 69; timing: existing ahead of NSE, entry follows = 1"
+2025-12-31,2025,2025-12-31,501,False,501,0,497,496,1,5,500,1,5,0,"timing: Alpha Lab lag, NSE already removed it = 1; timing: Alpha Lab lag, entry not yet applied = 4; timing: existing ahead of NSE, entry follows = 1"
+2026-03-31,2026,2026-03-30,500,False,500,0,499,468,31,32,500,0,63,0,"alpha_lab: missing a name NSE lists = 1; timing: Alpha Lab lag, NSE already removed it = 31; timing: Alpha Lab lag, entry not yet applied = 31"
+2026-05-31,2026,2026-05-29,504,False,504,0,499,499,0,5,500,4,1,0,"timing: Alpha Lab lag, entry not yet applied = 1; timing: existing ahead of NSE, entry follows = 4"
