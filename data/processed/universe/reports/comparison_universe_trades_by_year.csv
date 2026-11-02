@@ -1,0 +1,28 @@
+# Quant AI Researcher by Harshil Pahuja
+pair,year,trades_v1,trades_v2,buys_v1,buys_v2,names_only_v2,names_only_v1,gap_years
+"baseline (v1, old start) -> (a) v2, old start",2014,1105,1110,233,233,3,1,
+"baseline (v1, old start) -> (a) v2, old start",2015,697,730,100,102,2,1,
+"baseline (v1, old start) -> (a) v2, old start",2016,667,666,151,153,2,0,
+"baseline (v1, old start) -> (a) v2, old start",2017,927,933,160,163,13,8,yes
+"baseline (v1, old start) -> (a) v2, old start",2018,715,708,109,107,5,6,yes
+"baseline (v1, old start) -> (a) v2, old start",2019,564,570,117,119,1,0,
+"baseline (v1, old start) -> (a) v2, old start",2020,777,759,168,167,1,1,
+"baseline (v1, old start) -> (a) v2, old start",2021,1155,1150,206,205,1,1,
+"baseline (v1, old start) -> (a) v2, old start",2022,835,827,157,157,1,0,
+"baseline (v1, old start) -> (a) v2, old start",2023,856,863,149,149,0,0,
+"baseline (v1, old start) -> (a) v2, old start",2024,1018,1021,203,203,0,0,
+"baseline (v1, old start) -> (a) v2, old start",2025,606,603,118,116,1,4,
+"baseline (v1, old start) -> (a) v2, old start",2026,382,387,75,76,2,1,
+"(b) v1, new start -> final (v2, new start)",2014,1105,1102,235,236,3,2,
+"(b) v1, new start -> final (v2, new start)",2015,745,753,105,106,2,1,
+"(b) v1, new start -> final (v2, new start)",2016,707,701,154,155,1,0,
+"(b) v1, new start -> final (v2, new start)",2017,896,900,163,164,12,9,yes
+"(b) v1, new start -> final (v2, new start)",2018,698,681,105,103,5,5,yes
+"(b) v1, new start -> final (v2, new start)",2019,542,545,116,117,1,0,
+"(b) v1, new start -> final (v2, new start)",2020,792,795,165,166,2,0,
+"(b) v1, new start -> final (v2, new start)",2021,1132,1142,201,204,3,0,
+"(b) v1, new start -> final (v2, new start)",2022,877,876,164,167,5,0,
+"(b) v1, new start -> final (v2, new start)",2023,812,814,141,140,0,0,
+"(b) v1, new start -> final (v2, new start)",2024,1034,1032,190,190,0,0,
+"(b) v1, new start -> final (v2, new start)",2025,599,598,120,119,0,1,
+"(b) v1, new start -> final (v2, new start)",2026,403,404,77,78,0,0,

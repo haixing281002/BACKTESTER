@@ -1,0 +1,10 @@
+# Quant AI Researcher by Harshil Pahuja
+criterion,"baseline (v1, old start)","(a) v2, old start","(b) v1, new start","final (v2, new start)",threshold
+deflated Sharpe clears selection bias,0.00 (FAIL),0.00 (FAIL),0.00 (FAIL),0.00 (FAIL),0.95
+positive Sharpe in every out-of-sample window,-0.26 (FAIL),-0.28 (FAIL),-0.28 (FAIL),-0.29 (FAIL),0.3
+advantage over benchmark is significant,0.029 (PASS),0.046 (PASS),0.045 (PASS),0.058 (FAIL),<=0.05
+differentiated from existing book,NO COMPARISON (FAIL),NO COMPARISON (FAIL),NO COMPARISON (FAIL),NO COMPARISON (FAIL),<=0.8
+improves the book's information ratio,NO COMPARISON (FAIL),NO COMPARISON (FAIL),NO COMPARISON (FAIL),NO COMPARISON (FAIL),>=0.05
+alpha survives the factor fingerprint,1.88 (FAIL),1.70 (FAIL),1.69 (FAIL),1.52 (FAIL),|t|>=2.0
+implementable within mandate,None (PASS),None (PASS),None (PASS),None (PASS),
+turnover within operational tolerance,1030% (FAIL),1031% (FAIL),1031% (FAIL),1033% (FAIL),<=400%

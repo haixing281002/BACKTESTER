@@ -1,0 +1,14 @@
+# Quant AI Researcher by Harshil Pahuja
+pair,symbol,side,first_held,last_held,rebalances_held,pnl_rs
+"baseline (v1, old start) -> (a) v2, old start",GUJENERGY,only in the v2 run,2017-04-25,2021-05-25,42,-797707.300000008
+"baseline (v1, old start) -> (a) v2, old start",MTEDUCARE,only in the v2 run,2014-09-02,2014-10-28,9,22638.70000000178
+"baseline (v1, old start) -> (a) v2, old start",PIRAMALFIN,only in the v2 run,2014-07-15,2017-12-12,37,290290.44999999634
+"baseline (v1, old start) -> (a) v2, old start",NYKAA,only in the v1 run,2025-11-18,2025-12-23,6,-165724.55000001832
+"baseline (v1, old start) -> (a) v2, old start",PTCIL,only in the v1 run,2025-12-30,2026-02-24,9,-1010493.999999978
+"baseline (v1, old start) -> (a) v2, old start",WABAG,only in the v1 run,2017-05-30,2017-06-13,3,1015050.3999999982
+"(b) v1, new start -> final (v2, new start)",GODREJAGRO,only in the v2 run,2018-05-08,2018-05-15,2,-880474.5000000005
+"(b) v1, new start -> final (v2, new start)",GUJENERGY,only in the v2 run,2017-05-02,2021-09-14,45,-2605761.850000004
+"(b) v1, new start -> final (v2, new start)",PIRAMALFIN,only in the v2 run,2014-07-15,2017-12-12,38,-51912.70000000356
+"(b) v1, new start -> final (v2, new start)",RAJTV,only in the v2 run,2014-03-25,2014-04-22,5,-611642.0999999992
+"(b) v1, new start -> final (v2, new start)",FMGOETZE,only in the v1 run,2014-08-12,2014-09-23,7,475355.4499999994
+"(b) v1, new start -> final (v2, new start)",HATHWAY,only in the v1 run,2017-02-14,2017-02-28,3,479080.0000000002
