@@ -704,6 +704,13 @@ def build(run_dir, results, df, title, out_path, hurdle=0.06, holdings=None, tra
             put(st, "A1", t.get("title", ""), F_TITLE)
             put(st, "A2", f"{t['csv']} is empty: nothing to report. {t.get('note', '')}", F_NOTE)
             continue
+        except (pd.errors.ParserError, UnicodeDecodeError, OSError) as e:
+            # a file the model listed that is not a CSV (2026-11-02: out/pit_snapshot.json); the sheet says so, the
+            # workbook is still built
+            st = wb.create_sheet(_sheet_title(t.get("title", "Table"), used))
+            put(st, "A1", t.get("title", ""), F_TITLE)
+            put(st, "A2", f"{t['csv']} could not be read as a table ({type(e).__name__}); open the file itself. {t.get('note', '')}", F_NOTE)
+            continue
         st = wb.create_sheet(_sheet_title(t.get("title", "Table"), used))
         put(st, "A1", t.get("title", ""), F_TITLE)
         put(st, "A2", f"Hardcoded from {t['csv']}. {t.get('note', '')}", F_NOTE)

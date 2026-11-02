@@ -67,3 +67,23 @@ def test_broken_rules_are_reported_as_fail(tmp_path):
     assert any("shares x price" in r for r in failed)   # a cost hidden in the fill
     with open(os.path.join(rd, "spec_audit.json"), encoding="utf-8") as fh:
         assert json.load(fh)["n_fail"] == len(failed)
+
+
+def test_a_first_signal_one_session_before_the_window_is_not_an_out_of_window_trade(tmp_path):
+    """The start rule (card signal.params.first_signal_date, 2026-11-02): the first signal sits one session before the
+    sample start and fills on the start itself, which is before the first daily return. The audit's calendar must know
+    those two sessions, or three rules fail for the wrong reason (as happened on run 20261102-105054-0427)."""
+    rd, card, res = _world(tmp_path)
+    with open(card, encoding="utf-8") as fh:
+        text = fh.read().replace("signal_weekday: Tuesday}", "signal_weekday: Tuesday, first_signal_date: '2023-12-26'}")
+    with open(card, "w", encoding="utf-8") as fh:
+        fh.write(text)
+    tr = pd.read_csv(os.path.join(rd, "trades.csv"), parse_dates=["date", "signal_date", "execution_date", "price_date"])
+    first = tr.iloc[[0]].copy()
+    first[["signal_date"]] = pd.Timestamp("2023-12-26")                     # the Tuesday before the window
+    first[["date", "execution_date", "price_date"]] = pd.Timestamp("2024-01-01")   # the sample start, before the first return
+    pd.concat([first, tr]).to_csv(os.path.join(rd, "trades.csv"), index=False)
+    a = spec_audit.run(rd, card, results=res)
+    failed = [c["rule"] for c in a["checks"] if c["passed"] is False]
+    assert failed == [], failed
+    assert any(c["rule"].startswith("Start rule") and c["passed"] for c in a["checks"])
