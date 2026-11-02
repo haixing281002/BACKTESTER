@@ -66,6 +66,15 @@ INDEXES = {
 _SLEEVE_HEADERS = {"Nifty 50": "in_nifty50", "Nifty Next 50": "in_next50", "Nifty 100": "in_nifty100",
                    "Nifty Midcap 150": "in_midcap150", "Nifty Smallcap 250": "in_smallcap250"}
 MIN_COMPLETE = 480          # a NIFTY 500 snapshot with fewer names is a truncated pull, not a smaller index
+# Membership sources a card may name in universe.membership_source. The loader reads the named one and nothing else.
+MEMBERSHIP_SOURCES = {
+    "holdings_workbook": "quarterly NIFTY 500 snapshots from the holdings workbook (v1; unmapped names left out)",
+    "nifty500_members_v2": ("v2 (built 2026-11-02): the holdings workbook with its own quarterly semantics, every name "
+                            "ISIN-mapped, Alpha Lab membership on NSE effective dates for 2017-2018, NSE-confirmed "
+                            "Alpha Lab fills elsewhere; data/processed/universe/nifty500_members_v2_spells.csv"),
+}
+UNIVERSE_DIR = os.path.join(sources.PROCESSED_DIR, "universe")
+V2_SPELLS = os.path.join(UNIVERSE_DIR, "nifty500_members_v2_spells.csv")
 _ISIN_RE = re.compile(r"IN[A-Z0-9]{10}")
 _UPDATE_NAME = re.compile(r"(\d{4}-\d{2}-\d{2})\.csv$", re.IGNORECASE)
 SNAPSHOT_COLUMNS = ["snapshot_date", "bbg_id", "isin", "symbol", "company_name", "mapped", *_SLEEVE_HEADERS.values(),
@@ -232,9 +241,40 @@ def _flag(index: str) -> tuple[str, ...] | None:
     return None if f is None else (f,) if isinstance(f, str) else tuple(f)
 
 
-def load_membership(index: str = "NIFTY 500", path: str | None = None, **kw) -> pd.DataFrame:
+def load_membership_v2(path: str | None = None) -> pd.DataFrame:
+    """The v2 universe as spells: isin, symbol, company_name, start_date, end_date (exclusive; NaT = carried forward
+    after the last snapshot), source, flags. Built by scripts/universe_v2/step3b_build_v2.py; never fetched."""
+    p = sources.require(path or V2_SPELLS, "NIFTY 500 universe v2 spells")
+    df = pd.read_csv(p, skiprows=1, keep_default_na=False, dtype=str)
+    df["start_date"] = pd.to_datetime(df["start_date"])
+    df["end_date"] = pd.to_datetime(df["end_date"].replace("", None))
+    return df[["isin", "symbol", "company_name", "start_date", "end_date", "source", "flags"]] \
+        .sort_values(["start_date", "isin"]).reset_index(drop=True)
+
+
+def first_signal_universe(name: str) -> pd.DataFrame:
+    """A named NSE list used as the universe on one signal date (a card's signal.params.first_signal_universe), e.g.
+    'nse_review_2013-09-27'. Columns: isin (the Ace-keyed ISIN), nse_isin, symbol, company_name, in_ace_master."""
+    m = re.fullmatch(r"nse_review_(\d{4}-\d{2}-\d{2})", str(name or ""))
+    if not m:
+        raise MembershipError(f"unknown first-signal universe {name!r}; expected nse_review_YYYY-MM-DD")
+    p = sources.require(os.path.join(UNIVERSE_DIR, f"nse_review_{m.group(1)}_members.csv"), f"NSE review list {name}")
+    df = pd.read_csv(p, skiprows=1, keep_default_na=False, dtype=str)
+    df["in_ace_master"] = df["in_ace_master"].str.lower() == "true"
+    return df.rename(columns={"isin_key": "isin"})[["isin", "nse_isin", "symbol", "company_name", "in_ace_master"]]
+
+
+def load_membership(index: str = "NIFTY 500", path: str | None = None, source: str = "holdings_workbook",
+                    **kw) -> pd.DataFrame:
     """Spells: isin, symbol, company_name, start_date, end_date (exclusive; NaT = still a member at the last
-    snapshot). Only ISIN-mapped names, only complete snapshots."""
+    snapshot). `source` is the card's universe.membership_source (MEMBERSHIP_SOURCES). For the workbook: only
+    ISIN-mapped names, only complete snapshots."""
+    if source not in MEMBERSHIP_SOURCES:
+        raise MembershipError(f"unknown membership_source {source!r}; choose from {sorted(MEMBERSHIP_SOURCES)}")
+    if source == "nifty500_members_v2":
+        if index.strip().upper() != "NIFTY 500":
+            raise MembershipError("universe v2 carries NIFTY 500 membership only; sub-index flags come from the workbook")
+        return load_membership_v2(path)
     snaps = load_snapshots(path, **kw)
     flag = _flag(index)
     rows = snaps[snaps["mapped"]]
@@ -349,7 +389,22 @@ def staleness(end_date, path: str | None = None, **kw) -> dict[str, Any]:
             "backtest_end_limit": str((nxt - pd.Timedelta(days=1)).date()), "stale": bool(stale), "message": msg}
 
 
-def provenance(path: str | None = None, **kw) -> dict[str, Any]:
+def provenance(path: str | None = None, source: str = "holdings_workbook", **kw) -> dict[str, Any]:
+    if source == "nifty500_members_v2":
+        p = sources.require(path or V2_SPELLS, "NIFTY 500 universe v2 spells")
+        sp = load_membership_v2(p)
+        base = provenance(None, "holdings_workbook", **kw)
+        return {
+            "loader": "ros.data.nifty500 (membership_source=nifty500_members_v2)", "source": p,
+            "source_sha256": hashlib.sha256(open(p, "rb").read()).hexdigest(), "spells": len(sp),
+            "first_date": str(sp["start_date"].min().date()), "last_snapshot": base["last_snapshot"],
+            "built_from": ["holdings workbook (primary outside 2017-2018)", "Alpha Lab pull 2026-10-30 (2017-2018, NSE dates)",
+                           "NSE-rebuilt spells git 6e09344 (ISIN bridge, effective dates, Dalmia Bharat fill)"],
+            "sources_in_file": sorted(sp["source"].str.split(";").explode().unique()),
+            "pit_status": "point_in_time", "read_at": sources.stamp(),
+            "caveats": ["Unpriced members stay in the universe and cannot be traded; see data/processed/universe/reports/.",
+                        "After the workbook's last snapshot the list is carried forward; see staleness()."],
+        }
     path = sources.require(path or sources.NIFTY500_HOLDINGS_XLSX, "NIFTY 500 holdings workbook")
     summ = snapshot_summary(path, **kw)
     complete = summ[summ["complete"]]

@@ -747,6 +747,9 @@ class Universe:
     assets: list[str] = field(default_factory=list)
     benchmark: str | None = None
     cash_asset: str | None = None
+    # Which index-membership file the run reads (ros.data.nifty500.MEMBERSHIP_SOURCES). Recorded in the manifest and
+    # checked against the approved card, like every other parameter. Default = the holdings workbook (v1).
+    membership_source: str = "holdings_workbook"
 
 
 @dataclass

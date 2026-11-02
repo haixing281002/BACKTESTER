@@ -12,7 +12,8 @@ sys.path.insert(0, REPO)
 SCRIPT = os.path.join(REPO, "scripts", "oceanofpdf_com_stocks_on_the_move_andreas_clenow_india_backtest.py")
 
 FROZEN_SHEETS = ["Performance", "Appendix cost sweep", "Cash-rate sweep", "Sensitivities", "Calendar-year returns", "Walk-forward",
-                 "Sub-period CAGR", "Rebalance log", "Exits by reason", "Worst days", "Contributors", "Cap mix by year", "Gap events", "Checks"]
+                 "Sub-period CAGR", "Rebalance log", "Exits by reason", "Worst days", "Contributors", "Cap mix by year", "Gap events", "Checks",
+                 "Universe coverage"]      # appended 2026-11-02
 
 FROZEN_VALIDATION = [
     "CAGR, strategy", "CAGR, NIFTY 500 price index", "CAGR, equal-weight members (monthly)", "CAGR, NIFTY500 Momentum 50 (backfilled)",
@@ -36,6 +37,9 @@ FROZEN_VALIDATION = [
     "Alpha HAC t without the Momentum 50 sleeve", "Alpha HAC t, no-filter variant",
     "CAGR, Thursday signal / Friday fill", "CAGR, 20% gap limit", "CAGR, 120-day regression", "CAGR with cash at 0%",
     "Look-ahead and accounting checks passed", "Signals (weekly)", "Member-days with a move over the gap limit that coincide with an Ace adjustment change",
+    # appended 2026-11-02 (universe v2 and the start rule)
+    "Universe source (card: universe.membership_source)", "First signal and first fill", "Members at the first signal",
+    "Members with an Ace close at the first signal", "Members never priced over the run (in universe, never tradable)",
 ]
 
 

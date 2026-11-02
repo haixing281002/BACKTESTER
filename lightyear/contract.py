@@ -143,7 +143,8 @@ def check_card_consistency(run_dir, card_path, approval=None, results=None, comp
     - manifest.json exists (written by ros.data.lineage.write_run_manifest with the card among its inputs);
     - the card the script hashed is the card that was approved (approval.card_sha256) and is still on disk unchanged;
     - every parameter the card states and the manifest records agrees: backtest_plan.sample_start/sample_end,
-      costs.spread_bps, n_configs_tried (the run's trial count may only be higher), and each signal.params key;
+      costs.spread_bps, universe.membership_source, n_configs_tried (the run's trial count may only be higher), and
+      each signal.params key (the start rule's first_signal_date and first_signal_universe among them);
     - results.headline_cost_bp equals the card's cost;
     - a comparator or table priced at a DIFFERENT cost from the headline is labelled 'appendix' (Fix 4, 2026-10-30:
       the card decides the headline cost; other costings are allowed only as a clearly labelled appendix).
@@ -185,6 +186,9 @@ def check_card_consistency(run_dir, card_path, approval=None, results=None, comp
         add("window end", bp["sample_end"], params["end"], _same(bp["sample_end"], params["end"]))
     if "cost_bp" in params and costs.get("spread_bps") is not None:
         add("round-trip cost (bp)", costs["spread_bps"], params["cost_bp"], _same(costs["spread_bps"], params["cost_bp"]))
+    if "membership_source" in params:
+        want = (card.get("universe") or {}).get("membership_source") or "holdings_workbook"
+        add("universe.membership_source", want, params["membership_source"], _same(want, params["membership_source"]))
     if "n_trials" in params and card.get("n_configs_tried") is not None:
         ok = _num(params["n_trials"]) is not None and _num(params["n_trials"]) >= float(card["n_configs_tried"])
         add("trials for the deflated Sharpe (run >= card)", card["n_configs_tried"], params["n_trials"], ok)
