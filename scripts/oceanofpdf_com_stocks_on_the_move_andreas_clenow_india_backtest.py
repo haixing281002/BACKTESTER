@@ -276,7 +276,9 @@ def signal_schedule(cal: pd.DatetimeIndex, weekday: int) -> list[tuple[pd.Timest
         if i + 1 >= len(cal) or cal[i + 1] > END:
             continue
         out.append((s, cal[i + 1]))
-    if FIRST_SIGNAL is not None:
+    if FIRST_SIGNAL is not None and weekday == P["signal_weekday"]:
+        # The start rule names the card's signal weekday. A weekday sensitivity (Thursday signal) keeps the same ISO week
+        # and its own weekday, so its first signal falls inside the window and it starts in cash for those sessions.
         assert out and out[0][0] == FIRST_SIGNAL, f"the first signal must be {FIRST_SIGNAL.date()}, got {out[0][0].date() if out else None}"
         assert out[0][1] == cal[cal >= START][0], "the first fill must be the window's first session"
     return out
