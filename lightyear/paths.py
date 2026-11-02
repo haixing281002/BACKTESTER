@@ -1,9 +1,12 @@
+# Quant AI Researcher by Harshil Pahuja
 """Where Lightyear reads and writes. Everything a run produces lives under outputs/lightyear/<run_id>/."""
 import glob
+import hashlib
 import json
 import os
 import re
 import shutil
+import subprocess
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PAPERS = os.path.join(REPO, "docs", "papers")
@@ -31,6 +34,30 @@ def run_dir(run_id: str) -> str:
 def slugify(filename: str) -> str:
     base = os.path.splitext(os.path.basename(filename))[0].lower()
     return re.sub(r"[^a-z0-9]+", "_", base).strip("_")[:90] or "paper"
+
+
+def code_hash() -> str:
+    """Short sha256 of Lightyear's own source (every .py here plus the page): the 'code version' shown on the page and
+    written into every workbook, so a stale server or a stale output is visible at a glance."""
+    here = os.path.dirname(os.path.abspath(__file__))
+    h = hashlib.sha256()
+    for f in sorted(os.listdir(here)):
+        if f.endswith(".py"):
+            with open(os.path.join(here, f), "rb") as fh:
+                h.update(f.encode() + fh.read())
+    page = os.path.join(STATIC, "index.html")
+    if os.path.exists(page):
+        with open(page, "rb") as fh:
+            h.update(fh.read())
+    return h.hexdigest()[:12]
+
+
+def git_commit() -> str:
+    try:
+        return subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=REPO, capture_output=True, text=True,
+                              timeout=5, check=False).stdout.strip() or "unknown"
+    except (OSError, subprocess.SubprocessError):
+        return "unknown"
 
 
 def find_claude() -> str:

@@ -1,3 +1,4 @@
+# Quant AI Researcher by Harshil Pahuja
 """Run state machine and the headless Claude Code driver.
 
 States:  phase_a -> gate_a -> phase_b -> building -> gate_b -> decided
@@ -6,6 +7,11 @@ States:  phase_a -> gate_a -> phase_b -> building -> gate_b -> decided
 Everything about a run is on disk under outputs/lightyear/<run_id>/: state.json, log.jsonl, the hand-off
 files, charts.json and the workbook, so a server restart loses nothing but the live process.
 One run at a time: the backtests are heavy and share one machine.
+
+Gate A -> Gate B hand-off (fixed 2026-10-30 after the audit): every revision an operator asks for at Gate A is kept
+in state.json["revisions"] and, with the approval box, is handed to the Phase B and review sessions and shown on the
+page and in the workbook. Approval pins the card's sha256; build_outputs() refuses a run whose manifest.json disagrees
+with the approved card. A session that ends in error, or a revision that writes nothing, fails the run loudly.
 """
 import csv
 import datetime as dt
@@ -19,8 +25,8 @@ import threading
 import time
 import uuid
 
-from . import charts, contract, gates, prompts, workbook
-from .paths import LEDGER, REPO, RUNS, find_claude, git_bash, rel, run_dir
+from . import changelog, charts, contract, gates, prompts, spec_audit, wording, workbook
+from .paths import LEDGER, REPO, RUNS, code_hash, find_claude, git_bash, git_commit, rel, run_dir
 
 _log = logging.getLogger("lightyear")
 STALL_MINUTES = float(os.environ.get("LIGHTYEAR_STALL_MINUTES", "60"))   # no output from Claude Code for this long = stuck
@@ -50,6 +56,67 @@ _procs = {}            # run_id -> Popen
 
 def now():
     return dt.datetime.now().isoformat(timespec="seconds")
+
+
+def _sha(path):
+    """sha256 of a file, or None when it does not exist (repo-relative paths resolve against REPO)."""
+    p = path if os.path.isabs(path) else os.path.join(REPO, path)
+    if not os.path.isfile(p):
+        return None
+    return contract.sha256_file(p)
+
+
+def operator_notes(st):
+    """Every instruction a human typed at Gate A, in order: each card revision, then the approval box. This is what
+    Phase B and the analyst review receive; before 2026-10-30 only the approval box was handed on."""
+    parts = [f"[card revision {i + 1}, asked {r.get('at', '?')}] {r.get('notes', '')}"
+             for i, r in enumerate(st.get("revisions") or [])]
+    ap = st.get("approval") or {}
+    if ap.get("notes"):
+        parts.append(f"[approval box, {ap.get('at', '?')}] {ap['notes']}")
+    return "\n".join(parts) if parts else "(none)"
+
+
+def provenance(st, boot_hash=None):
+    """What a reader needs to tell a fresh result from a stale one: run id, when it was created, the card and its sha
+    (as approved and as on disk now), the script sha from manifest.json, and the code version (server and disk)."""
+    rid = st["id"]
+    rd = run_dir(rid)
+    card_path = (st.get("phase_a") or {}).get("card_path") or ""
+    man = {}
+    mp = os.path.join(rd, "manifest.json")
+    if os.path.exists(mp):
+        try:
+            man = json.load(open(mp, encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            man = {}
+    return {"run_id": rid, "created": st.get("created"), "rerun_of": st.get("rerun_of"),
+            "card_path": card_path, "card_sha256_approved": (st.get("approval") or {}).get("card_sha256"),
+            "card_sha256_on_disk": _sha(card_path) if card_path else None,
+            "card_sha256_run": ((man.get("inputs") or {}).get("card") or {}).get("sha256"),
+            "script_sha256": (man.get("script") or {}).get("sha256"), "manifest_written_at": man.get("written_at"),
+            "code_hash_server": boot_hash, "code_hash_disk": code_hash(), "git_commit": git_commit(),
+            "workbook": st.get("workbook")}
+
+
+def _load_json_list(path):
+    if not os.path.exists(path):
+        return None
+    try:
+        with open(path, encoding="utf-8") as fh:
+            v = json.load(fh)
+        return v if isinstance(v, list) else None
+    except (json.JSONDecodeError, OSError):
+        return None
+
+
+def revisions_from_log(rid):
+    """Backfill for runs created before revisions were persisted: read them back from log.jsonl's gate events."""
+    out = []
+    for e in read_log(rid)[0]:
+        if e.get("kind") == "gate" and str(e.get("msg", "")).startswith("Revision requested at Gate A: "):
+            out.append({"at": e.get("t"), "notes": e["msg"][len("Revision requested at Gate A: "):], "source": "log.jsonl"})
+    return out
 
 
 # ------------------------------------------------------------------ state on disk
@@ -445,15 +512,32 @@ def _fmt(template, rid, **kw):
                            data_mode=DATA_MODE, **kw)
 
 
-def _after_phase_a(rid, ok, label):
+def _after_phase_a(rid, ok, label, since=None, must_change=None):
+    """Accept a Phase A / revision hand-off only when the session succeeded, phase_a.json is newer than the session,
+    and (for a revision) the card or phase_a.json actually changed. Before 2026-10-30 `ok` was ignored and a crashed
+    revision came back as 'Gate A assembled' with the unrevised card."""
     if load(rid)["status"] == "cancelled":
         return
+    resume = "revising" if label == "Revision" else "phase_a"
+    if not ok:
+        update(rid, status="failed", resume_from=resume,
+               error=f"{label}: the Claude Code session ended with an error, so nothing it may have written was accepted. "
+                     "Check the log, then resume or request the revision again.")
+        log(rid, "error", f"{label}: session failed; the files on disk were NOT accepted as this session's output.")
+        return
     try:
-        pa = contract.check_phase_a(run_dir(rid))
+        pa = contract.check_phase_a(run_dir(rid), since=since)
     except contract.ContractError as e:
-        update(rid, status="failed", error=f"{label} did not hand back a valid phase_a.json: {e}", resume_from="phase_a")
+        update(rid, status="failed", error=f"{label} did not hand back a valid phase_a.json: {e}", resume_from=resume)
         log(rid, "error", str(e))
         return
+    if must_change:
+        after = {p: _sha(p) for p in must_change}
+        if after == must_change:
+            update(rid, status="failed", resume_from="revising",
+                   error=f"{label} changed neither the card nor phase_a.json; the notes were not applied.")
+            log(rid, "error", f"{label}: no file changed; refusing to show the old Gate A as revised.")
+            return
     _finish_stages(rid, [s for s, _ in prompts.STAGES_A])
     if pa["status"] == "stopped":
         update(rid, status="stopped", phase_a=pa, paper_title=pa.get("paper_title"), error=pa.get("reason"))
@@ -466,19 +550,24 @@ def _after_phase_a(rid, ok, label):
 
 
 def phase_a(rid):
+    t0 = time.time()
     ok, _ = run_claude(rid, _fmt(prompts.PHASE_A, rid), "Stages 00-02 + Gate A", IDS_A)
-    _after_phase_a(rid, ok, "Phase A")
+    _after_phase_a(rid, ok, "Phase A", since=t0)
 
 
 def revise_a(rid, notes):
-    st = update(rid, status="revising", current_stage="03m", activity="Revising the card with your notes.")
     with _lock:
         s = load(rid)
+        s["revisions"] = list(s.get("revisions") or []) + [{"at": now(), "notes": notes}]
+        s.update(status="revising", current_stage="03m", activity="Revising the card with your notes.")
         s["stages"]["GA"] = "pending"
         save(s)
-    ok, _ = run_claude(rid, _fmt(prompts.REVISE_A, rid, card=st["phase_a"]["card_path"], notes=notes),
-                       "Card revision + Gate A", IDS_A)
-    _after_phase_a(rid, ok, "Revision")
+    st = s
+    card_path = st["phase_a"]["card_path"]
+    before = {p: _sha(p) for p in (card_path, os.path.join(run_dir(rid), "phase_a.json"))}
+    t0 = time.time()
+    ok, _ = run_claude(rid, _fmt(prompts.REVISE_A, rid, card=card_path, notes=notes), "Card revision + Gate A", IDS_A)
+    _after_phase_a(rid, ok, "Revision", since=t0, must_change=before)
 
 
 def phase_b(rid):
@@ -486,9 +575,15 @@ def phase_b(rid):
     if st.get("current_stage") not in IDS_B:
         update(rid, current_stage=None, activity="Starting the backtest stages.")
     ok, _ = run_claude(rid, _fmt(prompts.PHASE_B, rid, card=st["phase_a"]["card_path"],
-                                 approver=st["approval"]["by"], notes=st["approval"].get("notes") or ""),
+                                 approver=st["approval"]["by"], notes=operator_notes(st)),
                        "Stages 03-07 + Gate B", IDS_B)
     if load(rid)["status"] == "cancelled":
+        return
+    if not ok:
+        update(rid, status="failed", resume_from="phase_b",
+               error="Phase B: the Claude Code session ended with an error; the results on disk were not built "
+                     "into charts or a workbook. Check the log, then resume.")
+        log(rid, "error", "Phase B session failed; build_outputs was not run on possibly stale files.")
         return
     build_outputs(rid)
 
@@ -503,10 +598,69 @@ def build_outputs(rid, review=True):
         update(rid, status="failed", error=f"Phase B did not hand back valid results: {e}", resume_from="phase_b")
         log(rid, "error", str(e))
         return
-    _finish_stages(rid, [s for s, _ in prompts.STAGES_B])
     extra, warn = contract.load_optional(rd, df["date"])
     for w in warn:
         log(rid, "error", f"Hand-off warning: {w}")
+    st = load(rid)
+    # Freshness: every hand-off file must have been written AFTER the card was approved (a rebuild from files left by
+    # an earlier session, or a results.json older than the approval, is a stale result and is refused)
+    approved_at = (st.get("approval") or {}).get("at")
+    if approved_at:
+        t_ok = dt.datetime.fromisoformat(approved_at).timestamp() - 120
+        old = [f for f in ("results.json", "daily_returns.csv", "manifest.json")
+               if os.path.exists(os.path.join(rd, f)) and os.path.getmtime(os.path.join(rd, f)) < t_ok]
+        if old:
+            update(rid, status="failed", resume_from="phase_b",
+                   error=f"Stale hand-off: {', '.join(old)} predate the Gate A approval at {approved_at}; "
+                         "the backtest did not run after the card was approved.")
+            log(rid, "error", f"stale hand-off files refused: {old}")
+            return
+    # Fixed output template (2026-10-30): when the script wrote out/validation_rows.json and out/tables.json, those rows and
+    # sheets come FIRST and never change between runs; the model's own rows are only ever appended (new labels / new CSVs)
+    fixed_v = _load_json_list(os.path.join(rd, "out", "validation_rows.json"))
+    if fixed_v:
+        labels = {r.get("label") for r in fixed_v}
+        model_rows = [r for r in (res.get("validation") or []) if r.get("label") not in labels]
+        res["validation"] = fixed_v + model_rows
+        log(rid, "server", f"Validation sheet: {len(fixed_v)} fixed rows from the run, {len(model_rows)} model rows appended.")
+    fixed_t = _load_json_list(os.path.join(rd, "out", "tables.json"))
+    if fixed_t:
+        csvs = {os.path.normpath(t.get("csv", "")) for t in fixed_t}
+        model_tabs = [t for t in (res.get("tables") or []) if os.path.normpath(t.get("csv", "")) not in csvs]
+        res["tables"] = fixed_t + model_tabs
+        log(rid, "server", f"Table sheets: {len(fixed_t)} fixed from the run, {len(model_tabs)} model tables appended.")
+    # Comparison words follow the numbers ('lower volatility (16.8% against 15.9%)' is corrected, and recorded)
+    corrections = wording.fix_results(res)
+    if corrections:
+        log(rid, "server", "Wording corrected to follow the numbers: " + "; ".join(f"'{c['was']}' -> '{c['now']}'" for c in corrections))
+    # Gate A -> Gate B wiring check: the run must come from the APPROVED card, parameter by parameter
+    try:
+        comp_cols = [c for c in extra["comparators"].columns if c != "date"] if "comparators" in extra else []
+        card_checks = contract.check_card_consistency(rd, (st.get("phase_a") or {}).get("card_path") or "",
+                                                      approval=st.get("approval"), results=res, comparator_columns=comp_cols)
+    except contract.ContractError as e:
+        update(rid, status="failed", error=f"Phase B's run does not match the approved card: {e}", resume_from="phase_b")
+        log(rid, "error", str(e))
+        return
+    log(rid, "server", f"Run checked against the approved card: {len(card_checks)} items agree "
+        f"({', '.join(c['item'] for c in card_checks[:6])}{', ...' if len(card_checks) > 6 else ''}).")
+    # Did the backtest DO what the card says? Independent audit of the run's own files (shown on the page, never hidden)
+    try:
+        audit = spec_audit.run(rd, (st.get("phase_a") or {}).get("card_path") or "", results=res)
+        update(rid, spec_audit=audit)
+        log(rid, "error" if audit["n_fail"] else "server",
+            f"Gate A specification audit of the run's files: {audit['n_pass']} pass, {audit['n_fail']} fail, {audit['n_not_checkable']} not checkable."
+            + ("".join(f" FAIL: {c['rule']} ({c['detail']})" for c in audit["checks"] if c["passed"] is False)))
+    except Exception as e:      # noqa: BLE001  the audit is a report; a crash in it must not lose the run
+        log(rid, "error", f"Specification audit could not run: {type(e).__name__}: {e}")
+    # What changed vs the previous run of this card (card fields, script, metrics) -> state, Notes, page
+    try:
+        cl = changelog.build(st, rd)
+        update(rid, change_log=cl)
+        log(rid, "server", " ".join(cl["lines"]))
+    except Exception as e:      # noqa: BLE001
+        log(rid, "error", f"Change log could not be built: {type(e).__name__}: {e}")
+    _finish_stages(rid, [s for s, _ in prompts.STAGES_B])
     names = {"strategy": res.get("strategy_name") or "Strategy", "benchmark": res.get("benchmark_name") or "NIFTY 500",
              "sleeve": res.get("sleeve_name") or "Sleeve"}
     ch = charts.build(df, names, comparators=extra.get("comparators"))
@@ -515,7 +669,8 @@ def build_outputs(rid, review=True):
         + (" and comparators.csv." if "comparators" in extra else "."))
     recalc = _workbook(rid, res, df, extra, ch["observations"], _load_review(rd))
     res["gate_rows"] = gates.rows(res["gate_b"].get("criteria", []))
-    update(rid, status="gate_b", current_stage="GB", results=res, recalc=recalc, handoff_warnings=warn,
+    update(rid, status="gate_b", current_stage="GB", results=res, recalc=recalc, handoff_warnings=warn, error=None,
+           card_checks=card_checks,
            has_holdings="holdings" in extra, has_trades=("trades" in extra or "holdings" in extra),
            has_comparators="comparators" in extra)
     log(rid, "gate", "Gate B ready. A named human records the decision on the page.")
@@ -539,11 +694,18 @@ def _workbook(rid, res, df, extra, observations, review):
     """Build the workbook and recalculate it. Never loses the run over a workbook problem."""
     st = load(rid)
     rd = run_dir(rid)
-    xlsx = os.path.join(rd, f"{st['slug']}_results.xlsx")
-    title = f"{st.get('paper_title') or st['slug']}: India test"
+    xlsx = os.path.join(rd, f"{st['slug']}_results_{rid}.xlsx")       # the run id is in the file name: no two runs share one
+    title = f"{st.get('paper_title') or st['slug']}: India test (run {rid})"
+    if review:
+        for key in ("strengths", "weaknesses", "red_flags"):
+            review[key] = [wording.fix_sentence(s)[0] if isinstance(s, str) else s for s in (review.get(key) or [])]
+        if isinstance(review.get("verdict"), str):
+            review["verdict"] = wording.fix_sentence(review["verdict"])[0]
     kw = dict(holdings=extra.get("holdings"), trades=extra.get("trades"), comparators=extra.get("comparators"),
               observations=observations, review=review, selection=extra.get("selection"),
-              selection_rule=res.get("selection_rule") or (st.get("phase_a") or {}).get("one_line") or None)
+              selection_rule=(st.get("phase_a") or {}).get("one_line") or None,
+              revisions=st.get("revisions"), approval=st.get("approval"), provenance=provenance(st),
+              change_log=(st.get("change_log") or {}).get("lines"))
     try:
         try:
             workbook.build(rd, res, df, title, xlsx, **kw)
@@ -578,8 +740,9 @@ def analyst_review(rid):
     Runs after Gate B is shown (it never holds the page up) and never decides anything."""
     update(rid, review_status="running")
     log(rid, "server", "Analyst review: Claude is reading the results.")
-    card = ((load(rid).get("phase_a") or {}).get("card_path")) or "(no card)"
-    ok, _ = run_claude(rid, _fmt(prompts.REVIEW, rid, card=card), "Analyst review", [])
+    st = load(rid)
+    card = ((st.get("phase_a") or {}).get("card_path")) or "(no card)"
+    ok, _ = run_claude(rid, _fmt(prompts.REVIEW, rid, card=card, notes=operator_notes(st)), "Analyst review", [])
     rd = run_dir(rid)
     rev = _load_review(rd)
     if not rev:
@@ -600,10 +763,63 @@ def analyst_review(rid):
 
 # ------------------------------------------------------------------ human actions
 def approve(rid, by, notes=""):
-    st = update(rid, approval={"by": by, "at": now(), "notes": notes}, status="phase_b")
-    log(rid, "gate", f"Gate A approved by {by}.")
+    """Record the approval AND pin the card: its sha256 at this moment is what Phase B must run from."""
+    st = load(rid)
+    card_path = (st.get("phase_a") or {}).get("card_path") or ""
+    approval = {"by": by, "at": now(), "notes": notes, "card_path": card_path, "card_sha256": _sha(card_path)}
+    # keep the approved card's CONTENT with the run (not only its sha), so later runs can diff field by field
+    src = card_path if os.path.isabs(card_path) else os.path.join(REPO, card_path)
+    if os.path.isfile(src):
+        with open(src, encoding="utf-8") as fh, open(os.path.join(run_dir(rid), "card_approved.yaml"), "w", encoding="utf-8") as out:
+            out.write(fh.read())
+    st = update(rid, approval=approval, status="phase_b")
+    log(rid, "gate", f"Gate A approved by {by}. Card {card_path} pinned at sha256 {(approval['card_sha256'] or '?')[:12]}; "
+        f"{len(st.get('revisions') or [])} revision(s) on record.")
     start(phase_b, rid)
     return st
+
+
+def rerun_from(src_rid, by, extra_note="", src_dir=None):
+    """A NEW run that starts at Phase B from an existing run's approved card: it inherits the paper, the Gate A
+    hand-off (phase_a.json, paper_facts.json), every revision on record and the approval notes, re-pins the card at
+    its current sha256 and runs stages 03-07 again. Used after a code fix, or after a human edits the card directly
+    (pass the edit as `extra_note`, which is recorded as one more revision). `src_dir` points at an archived run
+    folder when the source run has been moved out of outputs/."""
+    src_dir = src_dir or run_dir(src_rid)
+    with open(os.path.join(src_dir, "state.json"), encoding="utf-8") as fh:
+        src = json.load(fh)
+    if not src.get("phase_a") or not src.get("approval"):
+        raise ValueError("the source run has no approved Gate A to re-run from")
+    rid = create(src["pdf"], src["slug"], src["operator"], src.get("model") or "", False)
+    for f in ("phase_a.json", "paper_facts.json"):
+        p = os.path.join(src_dir, f)
+        if os.path.exists(p):
+            with open(p, encoding="utf-8") as fh, open(os.path.join(run_dir(rid), f), "w", encoding="utf-8") as out:
+                out.write(fh.read())
+    revisions = list(src.get("revisions") or [])
+    if not revisions and os.path.exists(os.path.join(src_dir, "log.jsonl")):
+        with open(os.path.join(src_dir, "log.jsonl"), encoding="utf-8") as fh:
+            for line in fh:
+                try:
+                    e = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if e.get("kind") == "gate" and str(e.get("msg", "")).startswith("Revision requested at Gate A: "):
+                    revisions.append({"at": e.get("t"), "notes": e["msg"][len("Revision requested at Gate A: "):], "source": "log.jsonl"})
+    if extra_note:
+        revisions.append({"at": now(), "notes": extra_note, "by": by, "source": "rerun"})
+    with _lock:
+        st = load(rid)
+        for s, _ in prompts.STAGES_A:
+            st["stages"][s] = "done"
+        st.update(phase_a=src["phase_a"], paper_title=src.get("paper_title"), revisions=revisions,
+                  rerun_of=src_rid, current_stage="GA")
+        save(st)
+    log(rid, "server", f"Re-run of {src_rid} from its approved card; {len(revisions)} revision(s) carried over.")
+    for r in revisions:
+        log(rid, "gate", f"Revision on record (from {src_rid}): {r.get('notes', '')}")
+    approve(rid, by, (src.get("approval") or {}).get("notes") or "")
+    return rid
 
 
 def decide(rid, decision, by, rationale):

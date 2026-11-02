@@ -1,3 +1,4 @@
+# Quant AI Researcher by Harshil Pahuja
 """Prompts for the two headless Claude Code phases, and the file contract each must satisfy.
 
 Each phase announces stages with `LIGHTYEAR-STAGE: <id>` lines (the server also recognises looser forms) and
@@ -43,8 +44,8 @@ Hard rules (from CLAUDE.md, restated):
   for EVERY stage id of this phase, in order, even when a stage is quick.
 - Keep your other messages short and in plain English: the page shows your latest message as "what is
   happening now" to the operator.
-- If something is genuinely impossible (the paper fails triage, or the data does not exist in the two
-  sources), say so plainly in the hand-off file instead of inventing a substitute.
+- If something is genuinely impossible (the paper fails triage, or the data does not exist in the three
+  files), say so plainly in the hand-off file instead of inventing a substitute.
 
 Skills: use the installed skills for the jobs they cover (invoke them with the Skill tool), instead of
 improvising:
@@ -126,21 +127,35 @@ operator reads to approve. Every list item is one or two short sentences.
 
 PHASE_B = _COMMON + """
 YOUR JOB NOW: stages 03 through Gate B assembly for the card  {card}  (paper {pdf}, slug {slug}).
-Gate A was approved on the Lightyear page by {approver}. Operator notes from Gate A (may be empty):
+Gate A was approved on the Lightyear page by {approver}. The APPROVED CARD IS THE SOURCE OF TRUTH. Below is every
+instruction a human typed at Gate A, in order: each card revision they asked for, then the approval box. The card
+was rewritten to honour the revisions; obey both the card and these notes, and if they disagree say so in "notes"
+and follow the card:
 <<<
 {notes}
 >>>
 Stage ids for this phase, in order: 03, 04, 05, 06, 07, GB. Announce each one as described above.
 
 Do the run the way .claude/commands/paper.md steps 7-9 describe (run.md, critique-results.md, gate-b.md).
-If run_pipeline.py cannot run this card's mechanism (an individual-stock or multi-sleeve card usually needs its
-own script, like scripts/lee_swaminathan_1998_india_backtest.py), write scripts/{slug}_india_backtest.py following
-that example's conventions: causal signals (shift >= 1), costs and borrow applied as the approved card states,
-look-ahead tripwires, block-bootstrap Sharpe interval, deflated Sharpe, walk-forward stability, a cost sensitivity,
-the factor fingerprint, and Gate B criteria computed by ros.governance.gates.gate_b().
-COSTS FOLLOW THE CARD: the fund's default is 30bp round trip, but when the approved card or the operator's notes set
-costs to zero, the run is GROSS everywhere: charge nothing, build no cost book, no cost comparator and no cost sweep,
-and write headline_cost_bp = 0. Never add a cost the card removed. Use universal_backtester/clean_charts.py for charts.
+If scripts/{slug}_india_backtest.py ALREADY EXISTS, run it as it is (python scripts/{slug}_india_backtest.py; it reads
+its parameters from the card and writes into this run's folder); edit it only if it fails, and keep every parameter
+read from the card. Otherwise, if run_pipeline.py cannot run this card's mechanism (an individual-stock or
+multi-sleeve card usually needs its own script), write scripts/{slug}_india_backtest.py following
+scripts/lee_swaminathan_1998_india_backtest.py's conventions: causal signals (shift >= 1), costs and borrow applied
+as the approved card states, look-ahead tripwires, block-bootstrap Sharpe interval, deflated Sharpe, walk-forward
+stability, a cost sensitivity, the factor fingerprint, and Gate B criteria computed by ros.governance.gates.gate_b().
+PARAMETERS COME FROM THE CARD, NEVER RETYPED: the script loads the card with ros.cards.schema.load_card and reads
+the window (card.backtest_plan.sample_start / sample_end), the cost (card.costs.spread_bps), every signal parameter
+(card.signal.params, including the signal weekday), the trial count (card.n_configs_tried plus the sensitivities the
+run adds) and the mandate (card.portfolio.mandate_allow_cash). It asserts them, and it records them with
+ros.data.lineage.write_run_manifest(run_dir, __file__, inputs={{..., "card": <card path>}}, params={{...}}) using the
+card's own key names plus "start", "end", "cost_bp" and "n_trials". Lightyear FAILS the run if manifest.json's card
+sha or any parameter disagrees with the approved card. The run folder is {run_dir} (also in $LIGHTYEAR_RUN).
+COSTS FOLLOW THE CARD: the headline (daily_returns.csv strategy column, results.headline_cost_bp, the charts) is at
+exactly the card's costs.spread_bps; when it is zero the headline is GROSS and gross equals net. Other costings (a
+0-100bp sweep, a 30bp house-floor variant) are allowed ONLY as a clearly labelled appendix: every such comparator
+column, table title and chart must contain the word "Appendix" and its cost, e.g. "Appendix: same rules at 30bp".
+Never put a cost the card did not set into the headline. Use universal_backtester/clean_charts.py for charts.
 Keep every number in code; never estimate a statistic in prose. If a script runs for more than a couple of
 minutes, run it in the background and keep announcing progress.
 Shell: shell variables such as $? and command substitution are blocked in this session; do checks in python.
@@ -181,7 +196,9 @@ Then write these hand-off files into {run_dir}/ (the server builds the workbook 
   "evidence_supports": "PROMOTE" | "OBSERVE" | "REJECT",
   "decisive_criterion": "<the Gate B criterion that matters most, named>",
   "strengths": ["<AT MOST 5 positives of THIS strategy, each one sentence with a number from your run. Pick the
-                 5 that matter most for the decision, not every positive you can find.>"],
+                 5 that matter most for the decision, not every positive you can find. When you compare two numbers,
+                 let the numbers choose the word: 'lower' only if the first is smaller, 'higher' only if it is larger
+                 (Lightyear checks and corrects this).>"],
   "weaknesses": ["<AT MOST 5 negatives/risks, same rule: the 5 that matter most, each with a number>"],
   "paper_vs_backtest": [ {{"metric": "<matches a paper_reported metric from phase_a.json where possible>",
                            "paper_value": "<the paper's own number, from phase_a.json paper_reported>",
@@ -210,6 +227,10 @@ Then write these hand-off files into {run_dir}/ (the server builds the workbook 
   "files": ["<repo-relative path of every file this phase wrote or read>"]
 }}
 "tables" should include the sensitivity / walk-forward / comparator CSVs your run wrote.
+FIXED OUTPUT TEMPLATE: if the script wrote {run_dir}/out/validation_rows.json and {run_dir}/out/tables.json, copy them
+into results.json "validation" and "tables" EXACTLY (same labels, same titles, same order) and only APPEND rows or tables
+of your own after them. Lightyear enforces this: those rows and sheet names are the same in every run of this card, so
+two runs can be compared cell by cell. Never rename a fixed sheet or drop a fixed row.
 STOP after the Gate B brief. decision stays PENDING.
 """
 
@@ -221,6 +242,11 @@ strategy is any good, what drove the result, and what in the result could be wro
 Read: {run_dir}/results.json, {run_dir}/charts.json (metrics, observations, comparators),
 {run_dir}/daily_returns.csv, {run_dir}/holdings.csv and trades.csv if present, the Gate B brief named in
 results.json, the card {card}, and the backtest script the run used (named in results.json "files").
+The operator's own instructions at Gate A (card revisions, then the approval box) were:
+<<<
+{notes}
+>>>
+Check that the result honours each of them and say so, item by item, in "verdict" or "red_flags".
 Use python to check things for yourself (concentration per rebalance, the worst days and which stocks caused
 them, how much of the gain came from a few days or a few names, whether simpler alternatives did better, look-
 ahead or survivorship risks, whether a number in the headline disagrees with the daily returns).

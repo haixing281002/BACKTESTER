@@ -1,3 +1,4 @@
+# Quant AI Researcher by Harshil Pahuja
 """Lightyear end to end with a stand-in for Claude Code: upload -> Gate A -> approve -> Gate B -> decision.
 No model, no network, no market data."""
 import importlib
@@ -74,7 +75,7 @@ def test_full_flow(client):
     st = client.get(f"/api/runs/{rid}").json()
     assert st["status"] == "decided" and st["decision"]["decided_by"] == "Tester"
     ledger = os.path.join(os.environ["LIGHTYEAR_RUNS"], "decisions.jsonl")
-    assert json.loads(open(ledger).read().splitlines()[-1])["decision"] == "OBSERVE"
+    assert json.loads(open(ledger, encoding="utf-8").read().splitlines()[-1])["decision"] == "OBSERVE"
 
 
 def test_stage_tracker_moves_forward_only_and_reads_banners(client):
@@ -153,7 +154,7 @@ def test_contract_rejects_percent_returns(tmp_path):
     pd.DataFrame({"date": d, "strategy": np.full(100, 1.2), "benchmark": 0.001}).to_csv(tmp_path / "daily_returns.csv", index=False)
     json.dump({"strategy_name": "s", "benchmark_name": "b", "headline": "h", "evidence_supports": "REJECT",
                "gate_b": {"decision": "PENDING", "criteria": []}, "validation": [], "notes": []},
-              open(tmp_path / "results.json", "w"))
+              open(tmp_path / "results.json", "w", encoding="utf-8"))
     with pytest.raises(contract.ContractError, match="percentages"):
         contract.check_results(str(tmp_path))
 
@@ -164,7 +165,7 @@ def test_contract_rejects_a_model_decision(tmp_path):
     pd.DataFrame({"date": d, "strategy": 0.001, "benchmark": 0.001}).to_csv(tmp_path / "daily_returns.csv", index=False)
     json.dump({"strategy_name": "s", "benchmark_name": "b", "headline": "h", "evidence_supports": "PROMOTE",
                "gate_b": {"decision": "APPROVED", "criteria": []}, "validation": [], "notes": []},
-              open(tmp_path / "results.json", "w"))
+              open(tmp_path / "results.json", "w", encoding="utf-8"))
     with pytest.raises(contract.ContractError, match="PENDING"):
         contract.check_results(str(tmp_path))
 

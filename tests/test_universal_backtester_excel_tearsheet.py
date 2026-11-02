@@ -162,7 +162,7 @@ def test_compute_se_return_analytics_rows_matches_reference_workbook_comprehensi
 
     fixture = os.path.join(os.path.dirname(__file__), "fixtures",
                            "se_return_analytics_reference.json")
-    with open(fixture) as f:
+    with open(fixture, encoding="utf-8") as f:
         d = json.load(f)
     dates = pd.to_datetime(d["dates"])
     strat = pd.Series(d["strat"])
@@ -222,7 +222,7 @@ def test_reference_workbook_against_real_ground_truth():
 
     fixture = os.path.join(os.path.dirname(__file__), "fixtures",
                            "se_return_analytics_reference.json")
-    with open(fixture) as f:
+    with open(fixture, encoding="utf-8") as f:
         d = json.load(f)
     dates = pd.to_datetime(d["dates"])
     strat = pd.Series(d["strat"])
