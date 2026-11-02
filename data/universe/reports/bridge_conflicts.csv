@@ -1,0 +1,4 @@
+# Quant AI Researcher by Harshil Pahuja
+barrid,ticker,valid_from,valid_to,ISIN,match_method,confidence,accord_code,company_name,ace_first,ace_last,ace_overlaps_run,isin_seen_in_nse_spells,conflict,spell_isin,note
+INDCCA2,TECHNO,2013-06-03,2018-08-31,INE285K01026,latest_ticker,low,220869,Techno Electric & Engineering Company Ltd.,2010-11-10,2026-10-26,True,False,,INE286K01024,spell isin INE286K01024 not in master; no such security in the Ace file
+INDDSU1,DISHMAN,2013-06-03,2017-01-31,INE385W01011,latest_ticker,low,228555,Dishman Carbogen Amcis Ltd.,2017-09-21,2026-10-26,False,False,,INE353G01020,spell isin INE353G01020 not in master; no such security in the Ace file
