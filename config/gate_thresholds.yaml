@@ -1,30 +1,32 @@
 # Quant AI Researcher by Harshil Pahuja
-# Gate B v2 thresholds. NOT APPROVED: candidates only, not wired into any run. Phase 4 proposes values; a person approves them.
+# Gate B v2 thresholds. APPROVED by the operator on 2026-11-05, who asked for them to be easier than first proposed.
+# Set from 8,000 simulated strategies (docs/gate_b/calibration/), committed before any named strategy was scored on them.
 gate_version: v2
-status: "CANDIDATE, awaiting approval"
+status: "Approved 2026-11-05"
 capacity:
-  p95_adv_participation_max: 0.10   # candidate: the 10% participation already in ros/validation/portfolio.py
+  p95_adv_participation_max: 0.10   # Not simulated. The 10% participation already in ros/validation/portfolio.py. Waits on AUM.
 data_integrity:
-  min_priced_coverage: 0.95         # candidate, not simulated
+  min_priced_coverage: 0.90         # Not simulated. Placeholder: a window's priced members over all members. Lowered from 95% with the rest.
 bootstrap:
-  p_max: 0.05                       # from the brief
+  p_max: 0.10                       # Eased from 0.05. Pass at true excess Sharpe 0.5: 57% against 43%. Alone it lets 6.9% of no-skill strategies through.
 deflated_sharpe:
-  green_min: 0.95
+  enabled: false                    # Removed from the gate for now, by the operator. Without it the gate has no defence against selection luck.
+  null: benchmark                   # Ruling: if it returns, the bar starts at the benchmark's Sharpe, not zero.
+  green_min: 0.85
   amber_min: 0.80
-  null: benchmark                   # candidate, see the calibration report
-  v_floor: 0.0787                   # candidate: 1 / 12.7, the sampling variance of a yearly Sharpe over 12.7 years
+  v_floor: 0.0787                   # 1 / 12.7 years, the sampling variance of a yearly Sharpe
 sub_period:
-  majority_share: 0.5
-  window_floor: -0.75
-  window_floor_amber: -1.25
+  min_windows_ahead_share: 0.5      # Eased from "more than half": 2 of 4 windows ahead of the benchmark is enough.
+  window_floor: -1.0                # Eased from -0.75: worst Sharpe gap to the benchmark in any window.
+  window_floor_amber: -1.5          # Display only, not simulated
 factor_alpha:
-  t_green_min: 2.0
-  t_amber_min: 1.0
+  t_green_min: 2.0                  # Not eased: below 2.0, no-skill false passes exceed the 5% target.
+  t_amber_min: 1.0                  # Display only, not simulated
 book:
-  corr_green_max: 0.80
-  corr_amber_max: 0.90
-  ir_gain_green_min: 0.05
-  ir_gain_amber_min: 0.0
+  corr_green_max: 0.80              # Reported when a book is supplied. Simulated on a synthetic book only.
+  corr_amber_max: 0.90              # Display only, not simulated
+  ir_gain_green_min: 0.05           # Reported when a book is supplied. Simulated on a synthetic book only.
+  ir_gain_amber_min: 0.0            # Display only, not simulated
 post_publication:
-  edge_green_min: 0.0
-  edge_amber_min: -0.02
+  edge_green_min: 0.0               # Ahead of the benchmark after publication. Not simulated.
+  edge_amber_min: -0.02             # Display only, not simulated

@@ -14,7 +14,7 @@ from ros.validation import gate_evidence as ev
 
 REPO = pathlib.Path(__file__).resolve().parent.parent
 TH = {"status": "test", "capacity": {"p95_adv_participation_max": 0.10}, "data_integrity": {"min_priced_coverage": 0.95}, "bootstrap": {"p_max": 0.05},
-      "deflated_sharpe": {"green_min": 0.90, "amber_min": 0.70}, "sub_period": {"majority_share": 0.5, "window_floor": -0.75, "window_floor_amber": -1.25},
+      "deflated_sharpe": {"enabled": False, "green_min": 0.90, "amber_min": 0.70}, "sub_period": {"min_windows_ahead_share": 0.5, "window_floor": -1.0, "window_floor_amber": -1.5},
       "factor_alpha": {"t_green_min": 2.0, "t_amber_min": 1.0}, "book": {"corr_green_max": 0.80, "corr_amber_max": 0.90, "ir_gain_green_min": 0.05, "ir_gain_amber_min": 0.0},
       "post_publication": {"edge_green_min": 0.0, "edge_amber_min": -0.02}}
 LIMITS = {"long_only": True, "max_cash_share": 0.25, "max_single_weight": 0.10}
@@ -50,14 +50,22 @@ def test_a_positive_alpha_below_the_bar_is_not_green():
     assert _row(g.evaluate(_good(alpha=0.02, alpha_t=1.5), TH, LIMITS), "factor_alpha").status == g.AMBER
 
 
-def test_a_missing_book_gives_incomplete_never_pass():
+def test_a_missing_book_is_shown_as_not_run_and_does_not_hold_the_gate_up():
     res = g.evaluate(_good(book_corr=None, book_ir_gain=None), TH, LIMITS)
-    assert res.status == g.INCOMPLETE
+    assert res.status == g.PASS
     assert _row(res, "book_correlation").status == g.NOT_RUN
+    assert "Correlation to the existing book" in res.tests_not_run
 
 
-def test_a_failed_hard_block_beats_a_missing_book():
+def test_a_failed_hard_block_fails_with_no_book():
     assert g.evaluate(_good(book_corr=None, book_ir_gain=None, bootstrap_p=0.4), TH, LIMITS).status == g.FAIL
+
+
+def test_the_deflated_sharpe_is_out_of_the_gate_until_it_is_enabled():
+    res = g.evaluate(_good(dsr=0.0), TH, LIMITS)
+    assert not [r for r in res.scorecard if r.key == "deflated_sharpe"] and g.all_green(res)
+    th = {**TH, "deflated_sharpe": {"enabled": True, "green_min": 0.9, "amber_min": 0.7}}
+    assert _row(g.evaluate(_good(dsr=0.0), th, LIMITS), "deflated_sharpe").status == g.RED
 
 
 def test_a_card_override_without_a_named_approval_fails():
@@ -72,9 +80,16 @@ def test_a_named_timestamped_override_passes_and_is_shown():
     assert r.status == g.PASS and "A Person" in r.evidence and "2026-11-05" in r.evidence
 
 
-def test_blank_mandate_limits_or_capacity_are_incomplete():
-    assert g.evaluate(_good(), TH, {"long_only": None, "max_cash_share": None, "max_single_weight": None}).status == g.INCOMPLETE
-    assert g.evaluate(_good(capacity={"status": "not computed", "why": "no AUM"}), TH, LIMITS).status == g.INCOMPLETE
+def test_blank_mandate_limits_or_capacity_are_not_run_and_listed():
+    blank = g.evaluate(_good(), TH, {"long_only": None, "max_cash_share": None, "max_single_weight": None})
+    assert blank.status == g.PASS and _row(blank, "mandate").status == g.NOT_RUN and "Implementable within the fund's mandate" in blank.tests_not_run
+    no_aum = g.evaluate(_good(capacity={"status": "not computed", "why": "no AUM"}), TH, LIMITS)
+    assert no_aum.status == g.PASS and _row(no_aum, "capacity").status == g.NOT_RUN
+
+
+def test_a_gate_with_nothing_run_cannot_pass():
+    empty = g.evaluate({}, TH, {"long_only": None, "max_cash_share": None, "max_single_weight": None})
+    assert empty.status == g.FAIL
 
 
 @pytest.mark.parametrize("kw", [{"net_edge": -0.01}, {"bootstrap_p": 0.2}, {"capacity": {"status": "computed", "p95": 0.5}}, {"priced_coverage": 0.5},
@@ -84,7 +99,7 @@ def test_each_hard_block_can_fail_alone(kw):
 
 
 def test_the_scorecard_alone_never_blocks():
-    bad = _good(dsr=0.0, sub_period_positive=0, sub_period_worst=-3.0, alpha=-0.1, alpha_t=-4.0, book_corr=0.99, book_ir_gain=-1.0)
+    bad = _good(sub_period_positive=0, sub_period_worst=-3.0, alpha=-0.1, alpha_t=-4.0, book_corr=0.99, book_ir_gain=-1.0)
     res = g.evaluate(bad, TH, LIMITS)
     assert res.status == g.PASS and not g.all_green(res)
 
@@ -174,6 +189,8 @@ def test_the_shipped_thresholds_load_and_are_marked_with_their_status():
     assert th["gate_version"] == "v2" and th["status"]
     for k in TH:
         assert k in th
+    assert th["deflated_sharpe"]["enabled"] is False and th["deflated_sharpe"]["null"] == "benchmark"
+    assert "Approved" in th["status"]
 
 
 def _load_script(name):
@@ -198,11 +215,11 @@ def test_the_calibration_tables_and_the_gate_give_the_same_answer():
     an = _load_script("analyse")
     cal = _load_script("calibrate")
     rows = pd.DataFrame([cal.one_sim(("level", lv, 1, s, 77)) for lv in (0.0, 1.0) for s in range(12)])
-    c = {"null": "bench", "basis": "active", "floor": "1overT", "dsr_min": 0.9, "window_floor": -0.5, "t_min": 2.0, "boot_p": 0.05, "corr_max": 0.8, "ir_gain_min": 0.05}
-    th = {**TH, "deflated_sharpe": {"green_min": 0.9, "amber_min": 0.7}, "sub_period": {"majority_share": 0.5, "window_floor": -0.5, "window_floor_amber": -1.25}}
+    c = {"window_floor": -1.0, "t_min": 2.0, "boot_p": 0.10, "min_windows": 2, "corr_max": 0.8, "ir_gain_min": 0.05}
+    th = {**TH, "bootstrap": {"p_max": 0.10}}
     table = an.v2_pass(rows, c, book=True)
     for i, r in rows.iterrows():
-        e = _good(net_edge=r["edge"], bootstrap_p=r["boot_p"], dsr=r["dsr_bench_active_1overT"], sub_period_n=r["sp_n"], sub_period_positive=r["sp_pos"], sub_period_worst=r["sp_worst"],
+        e = _good(net_edge=r["edge"], bootstrap_p=r["boot_p"], sub_period_n=r["sp_n"], sub_period_positive=r["sp_pos"], sub_period_worst=r["sp_worst"],
                   alpha=r["alpha"], alpha_t=r["alpha_t"], book_corr=r["book_corr"], book_ir_gain=r["book_ir_gain"])
         res = g.evaluate(e, th, LIMITS)
         assert (res.status == g.PASS and g.all_green(res)) == bool(table[i]), i

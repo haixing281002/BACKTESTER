@@ -1,9 +1,10 @@
 # Quant AI Researcher by Harshil Pahuja
-"""Gate B v2: hard blocks, an evidence scorecard, and a status of PASS, FAIL or INCOMPLETE.
+"""Gate B v2: hard blocks, an evidence scorecard, and a status of PASS or FAIL.
 
 Code computes and reports. The decision stays PENDING until a named human records one, and nothing here can set it.
-Hard blocks must all pass. The scorecard feeds the human and blocks nothing by itself. A test that could not be run is
-INCOMPLETE, never a pass, so a gate with no book can never say PASS.
+Hard blocks that could be run must all pass. The scorecard feeds the human and blocks nothing by itself. A test with
+nothing to run on (no book, no AUM, no mandate limits) is shown as not run and listed beside the status: it never counts
+as a pass, and it does not hold the gate up (operator's ruling, 2026-11-05).
 
 Thresholds come only from config/gate_thresholds.yaml.
 """
@@ -14,7 +15,7 @@ from dataclasses import asdict, dataclass, field
 from typing import Any
 
 GATE_V2 = "v2"
-PASS, FAIL, INCOMPLETE = "PASS", "FAIL", "INCOMPLETE"
+PASS, FAIL = "PASS", "FAIL"
 GREEN, AMBER, RED, NOT_RUN = "green", "amber", "red", "not run"
 
 
@@ -33,6 +34,7 @@ class GateV2Result:
     status: str
     hard_blocks: list[Row] = field(default_factory=list)
     scorecard: list[Row] = field(default_factory=list)
+    tests_not_run: list[str] = field(default_factory=list)
     gate_version: str = GATE_V2
     thresholds_status: str = ""
     decision: str = "PENDING"
@@ -58,9 +60,9 @@ def mandate_row(observed: dict[str, float] | None, limits: dict[str, Any], overr
     and a timestamp, and is shown as evidence."""
     missing = [k for k in ("long_only", "max_cash_share", "max_single_weight") if limits.get(k) is None]
     if missing:
-        return Row("mandate", "Implementable within the fund's mandate", INCOMPLETE, evidence=f"config/mandate.yaml has no value for: {', '.join(missing)}")
+        return Row("mandate", "Implementable within the fund's mandate", NOT_RUN, evidence=f"config/mandate.yaml has no value for: {', '.join(missing)}")
     if not observed:
-        return Row("mandate", "Implementable within the fund's mandate", INCOMPLETE, evidence="the run supplied no positions to check")
+        return Row("mandate", "Implementable within the fund's mandate", NOT_RUN, evidence="the run supplied no positions to check")
     breaches = {}
     if observed["max_cash_share"] > limits["max_cash_share"] + 1e-9:
         breaches["max_cash_share"] = f"cash reached {observed['max_cash_share']:.1%}, limit {limits['max_cash_share']:.1%}"
@@ -76,9 +78,9 @@ def mandate_row(observed: dict[str, float] | None, limits: dict[str, Any], overr
 
 def capacity_row(cap: dict[str, Any] | None, limit: float | None) -> Row:
     if limit is None:
-        return Row("capacity", "Capacity at the fund's AUM", INCOMPLETE, evidence="config/gate_thresholds.yaml has no capacity limit")
+        return Row("capacity", "Capacity at the fund's AUM", NOT_RUN, evidence="config/gate_thresholds.yaml has no capacity limit")
     if not cap or cap.get("status") != "computed":
-        return Row("capacity", "Capacity at the fund's AUM", INCOMPLETE, threshold=limit, evidence=(cap or {}).get("why", "not computed"))
+        return Row("capacity", "Capacity at the fund's AUM", NOT_RUN, threshold=limit, evidence=(cap or {}).get("why", "not computed"))
     names = cap.get("names_above_limit") or []
     return Row("capacity", "Capacity at the fund's AUM", PASS if cap["p95"] <= limit else FAIL, value=cap["p95"], threshold=limit,
                evidence=f"95th percentile of trade size / 20-day traded value; {len(names)} name(s) above the limit, {cap.get('n_no_adv', 0)} with no traded value")
@@ -86,7 +88,7 @@ def capacity_row(cap: dict[str, Any] | None, limit: float | None) -> Row:
 
 def integrity_row(checks: list[dict[str, Any]] | None, reconciles: bool | None, coverage: float | None, unpriced: list[str] | None, min_coverage: float) -> Row:
     if checks is None or reconciles is None or coverage is None:
-        return Row("data_integrity", "Data integrity", INCOMPLETE, threshold=min_coverage, evidence="the run did not supply look-ahead checks, accounting reconciliation and priced-member coverage")
+        return Row("data_integrity", "Data integrity", NOT_RUN, threshold=min_coverage, evidence="the run did not supply look-ahead checks, accounting reconciliation and priced-member coverage")
     failed = [str(c.get("check")) for c in checks if not c.get("passed")]
     ok = not failed and reconciles and coverage >= min_coverage
     bits = [f"priced-member coverage {coverage:.1%}"]
@@ -107,11 +109,11 @@ def evaluate(e: dict[str, Any], th: dict[str, Any], mandate_limits: dict[str, An
         integrity_row(e.get("checks"), e.get("reconciles"), e.get("priced_coverage"), e.get("unpriced"), th["data_integrity"]["min_priced_coverage"]),
     ]
     edge = e.get("net_edge")
-    h.append(Row("net_edge", "Net-of-cost edge over the benchmark", INCOMPLETE if edge is None else (PASS if edge > 0 else FAIL), value=edge, threshold="> 0",
+    h.append(Row("net_edge", "Net-of-cost edge over the benchmark", NOT_RUN if edge is None else (PASS if edge > 0 else FAIL), value=edge, threshold="> 0",
                  evidence="CAGR net of the house cost, minus the benchmark's"))
     p = e.get("bootstrap_p")
     p_max = th["bootstrap"]["p_max"]
-    h.append(Row("bootstrap", "Paired bootstrap, net of cost", INCOMPLETE if p is None else (PASS if p <= p_max else FAIL), value=p, threshold=f"<= {p_max}",
+    h.append(Row("bootstrap", "Paired bootstrap, net of cost", NOT_RUN if p is None else (PASS if p <= p_max else FAIL), value=p, threshold=f"<= {p_max}",
                  evidence="share of draws where the Sharpe gap to the benchmark is at or below zero"))
 
     d = th["deflated_sharpe"]
@@ -124,30 +126,25 @@ def evaluate(e: dict[str, Any], th: dict[str, Any], mandate_limits: dict[str, An
     n_w, n_pos, worst = e.get("sub_period_n"), e.get("sub_period_positive"), e.get("sub_period_worst")
     if not n_w:
         sub = NOT_RUN
-    elif n_pos / n_w > sp["majority_share"] and worst >= sp["window_floor"]:
+    elif n_pos / n_w >= sp["min_windows_ahead_share"] and worst >= sp["window_floor"]:
         sub = GREEN
     elif worst >= sp["window_floor_amber"]:
         sub = AMBER
     else:
         sub = RED
     post = e.get("post_publication_edge")
-    s = [Row("deflated_sharpe", "Deflated Sharpe", _higher(e.get("dsr"), d["green_min"], d["amber_min"]), value=e.get("dsr"), threshold=f">= {d['green_min']}", evidence=e.get("dsr_inputs", "")),
-         Row("sub_period", e.get("sub_period_name", "Sub-period stability"), sub, value=worst, threshold=f"more than {sp['majority_share']:.0%} of windows ahead of the benchmark, none below {sp['window_floor']}",
+    s = [Row("deflated_sharpe", "Deflated Sharpe", _higher(e.get("dsr"), d["green_min"], d["amber_min"]), value=e.get("dsr"), threshold=f">= {d['green_min']}", evidence=e.get("dsr_inputs", ""))] if d.get("enabled") else []
+    s += [Row("sub_period", e.get("sub_period_name", "Sub-period stability"), sub, value=worst, threshold=f"at least {sp['min_windows_ahead_share']:.0%} of windows ahead of the benchmark, none below {sp['window_floor']}",
              evidence=e.get("sub_period_evidence", "")),
          Row("factor_alpha", "Factor alpha, one-sided", _higher(one_sided, fa["t_green_min"], fa["t_amber_min"]), value=t, threshold=f"alpha > 0 and t >= {fa['t_green_min']}", evidence=e.get("alpha_evidence", "")),
          Row("book_correlation", "Correlation to the existing book", _lower(e.get("book_corr"), bk["corr_green_max"], bk["corr_amber_max"]), value=e.get("book_corr"), threshold=f"<= {bk['corr_green_max']}"),
          Row("book_ir_gain", "Gain in the book's information ratio", _higher(e.get("book_ir_gain"), bk["ir_gain_green_min"], bk["ir_gain_amber_min"]), value=e.get("book_ir_gain"), threshold=f">= {bk['ir_gain_green_min']}"),
          Row("post_publication", "Performance after publication", NOT_RUN if post is None else (GREEN if post > pp["edge_green_min"] else (AMBER if post > pp["edge_amber_min"] else RED)), value=post, threshold=f"edge > {pp['edge_green_min']}")]
 
-    statuses = [r.status for r in h]
-    no_book = e.get("book_corr") is None or e.get("book_ir_gain") is None
-    if FAIL in statuses:
-        status = FAIL
-    elif INCOMPLETE in statuses or no_book:
-        status = INCOMPLETE
-    else:
-        status = PASS
-    return GateV2Result(status=status, hard_blocks=h, scorecard=s, thresholds_status=str(th.get("status", "")))
+    # The return-based blocks can always be run, so a PASS always rests on them.
+    status = FAIL if any(r.status == FAIL for r in h) or not any(r.status == PASS for r in h) else PASS
+    not_run = [r.name for r in h + s if r.status == NOT_RUN and r.key != "post_publication"]
+    return GateV2Result(status=status, hard_blocks=h, scorecard=s, tests_not_run=not_run, thresholds_status=str(th.get("status", "")))
 
 
 def all_green(result: GateV2Result, ignore: tuple[str, ...] = ()) -> bool:

@@ -15,7 +15,6 @@ import sys
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, REPO)
 from lightyear.gates import rows
-from ros.versions import GATE_VERSION
 
 FIELDS = ["run_id", "folder", "strategy", "gate_version", "gate_passed", "decision", "criterion", "value", "threshold", "blocking", "result"]
 
@@ -25,7 +24,7 @@ def main() -> int:
     ap.add_argument("--outputs", default=os.path.join(REPO, "outputs"))
     ap.add_argument("--out", default=os.path.join(REPO, "docs", "gate_b", "gate_v1_baseline.csv"))
     a = ap.parse_args()
-    assert GATE_VERSION == "v1", "this file freezes v1 and must not be rewritten by a later gate"
+    assert not os.path.exists(a.out), f"{a.out} is the frozen v1 record and is never rewritten"
     out, without = [], []
     for root in sorted(glob.glob(os.path.join(a.outputs, "lightyear*"))):
         if not os.path.isdir(root):
