@@ -18,7 +18,7 @@ FROZEN_SHEETS = ["Performance", "Appendix cost sweep", "Cash-rate sweep", "Sensi
 FROZEN_VALIDATION = [
     "CAGR, strategy", "CAGR, NIFTY 500 price index", "CAGR, equal-weight members (monthly)", "CAGR, NIFTY500 Momentum 50 (backfilled)",
     "CAGR, same rules without the index filter", "Volatility, strategy", "Volatility, NIFTY 500",
-    "Sharpe over 6% hurdle (card formula), strategy", "Sharpe over 6% hurdle (card formula), NIFTY 500",
+    "Sharpe, strategy", "Sharpe, NIFTY 500",
     "Max drawdown, strategy", "Max drawdown, NIFTY 500",
     "Drawdown in the latest index correction, strategy", "Drawdown in the latest index correction, NIFTY 500",
     "Beta to NIFTY 500", "Information ratio vs NIFTY 500",

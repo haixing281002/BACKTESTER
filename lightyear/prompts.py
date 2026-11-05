@@ -29,7 +29,7 @@ Hard rules (from CLAUDE.md, restated):
        nifty500.backtest_end_limit() (the day before the first NSE review the file has not seen; 2026-09-29 with
        the current file). State the end date you used. Never rebuild an index list from market cap or anything else.
     3. Index levels: data/raw/NSE_Broad_Factor_Indices_Historical_Data.xlsx (ros.data.loaders) for the NIFTY 500
-       benchmark and the factor sleeves; plus a flat 6% hurdle.
+       benchmark and the factor sleeves; plus the cash rate the card declares.
   Key every security by ISIN. Join prices to membership on ISIN. Returns are price returns (no dividends): say so.
   If the card needs data that is not in these three files, do not substitute: mark it 'missing' in the data map
   and the Gate A gaps, and stop with status 'stopped' and the reason if the test cannot be run honestly.
@@ -211,11 +211,13 @@ Then write these hand-off files into {run_dir}/ (the server builds the workbook 
              // Never leave this empty if phase_a.json had any paper_reported entries.
   "gate_b": <gate_b(...).to_dict(), unchanged; its decision must be PENDING>,
   "validation": [{{"label": "...", "value": <number or string>, "format": "pct|num|int|text", "source": "<file or function>",
-                    "group": "returns_risk" | "costs_execution" | "robustness" | "other"}}],
+                    "group": "returns_risk" | "costs_execution" | "robustness" | "diagnostics" | "other"}}],
              // "group" sorts this into one of four blocks on the page instead of one long table -- pick the
              // closest fit. returns_risk = CAGR/vol/Sharpe/drawdown/deflated Sharpe; costs_execution = turnover,
              // concentration, slippage, position counts; robustness = walk-forward, bootstrap CI, p-values,
-             // factor fingerprint; other = anything that does not fit the first three.
+             // factor fingerprint; diagnostics = rows specific to this strategy's rules (buys on big up days, names
+             // removed by a rule, signals with buying shut, sells on leaving the index); other = anything else.
+             // Sharpe is always ros.metrics.core.sharpe over the card's cash rate. Do not report another Sharpe.
   "comparator_notes": [ {{"name": "<must match a column header in comparators.csv exactly>",
                           "what_it_is": "<one plain sentence: what this comparator actually is and why it's here>"}} ],
              // one entry per column of comparators.csv, if you wrote one. Never leave a comparator's name

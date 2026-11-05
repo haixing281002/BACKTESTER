@@ -1,3 +1,4 @@
+# Quant AI Researcher by Harshil Pahuja
 """Step 07 -- PORTFOLIO VALIDATION.
 
 Step 06 asks 'is the result real?'. Step 06 passing is necessary and nowhere near
@@ -18,7 +19,8 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from ros.validation.metrics import ANN
+from ros.metrics import core
+from ros.metrics.core import ANN
 
 # Keep the REAL import failure, the same way ros/cards/extract.py does. An
 # absent statsmodels and a statsmodels whose numpy/scipy underneath it is broken
@@ -52,23 +54,20 @@ def benchmark_relative(strategy_ret: pd.Series, bench_ret: pd.Series,
     rf = rf_daily.reindex(s.index).fillna(0.0) if rf_daily is not None else pd.Series(0.0, index=s.index)
     se, be = s - rf, b - rf
 
-    var_b = float(be.var(ddof=1))
-    beta = float(se.cov(be) / var_b) if var_b > 0 else float("nan")
+    beta = core.beta(s, b, rf)
     alpha_daily = float(se.mean() - beta * be.mean())
     active = s - b
-    te = float(active.std(ddof=1) * np.sqrt(ann))
+    te = core.tracking_error(s, b)
 
-    up = b > 0
-    dn = b < 0
     return {
         "beta": beta,
         "alpha_ann": float((1.0 + alpha_daily) ** ann - 1.0),
         "tracking_error": te,
-        "information_ratio": float(active.mean() * ann / te) if te > 0 else float("nan"),
+        "information_ratio": core.information_ratio(s, b),
         "active_return_ann": float(active.mean() * ann),
         "correlation": float(s.corr(b)),
-        "up_capture": float(s[up].mean() / b[up].mean()) if up.sum() > 20 and b[up].mean() != 0 else float("nan"),
-        "down_capture": float(s[dn].mean() / b[dn].mean()) if dn.sum() > 20 and b[dn].mean() != 0 else float("nan"),
+        "up_capture": core.up_capture(s, b),
+        "down_capture": core.down_capture(s, b),
         "n_obs": len(s),
     }
 
@@ -156,9 +155,7 @@ def incremental_ir(candidate_ret: pd.Series, book_ret: pd.Series,
         return pd.DataFrame([{"error": "insufficient overlap"}])
 
     def ir(x: pd.Series) -> float:
-        a = x - df["m"]
-        sd = a.std(ddof=1)
-        return float(a.mean() * ann / (sd * np.sqrt(ann))) if sd > 0 else float("nan")
+        return core.information_ratio(x, df["m"])
 
     base_ir = ir(df["b"])
     rows = [{"sleeve_weight": 0.0, "blended_ir": base_ir, "delta_ir": 0.0,

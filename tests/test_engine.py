@@ -1,3 +1,4 @@
+# Quant AI Researcher by Harshil Pahuja
 """Engine correctness tests.
 
 These target the properties that, if broken, make every downstream number wrong
@@ -16,7 +17,8 @@ from ros.engine.backtest import (
 )
 from ros.engine.templates import build_allocator
 from ros.validation.metrics import cagr, max_drawdown
-from ros.validation.research import _stationary_bootstrap_index, expected_max_sharpe
+from ros.metrics.legacy_v1 import stationary_bootstrap_index as _stationary_bootstrap_index
+from ros.validation.research import expected_max_sharpe
 
 
 def _prices(n=800, seed=0, drift=0.0003, vol=0.01, k=3):

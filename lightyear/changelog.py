@@ -11,6 +11,8 @@ import json
 import os
 
 import pandas as pd
+
+from ros.metrics import core
 import yaml
 
 from .paths import REPO, RUNS
@@ -78,11 +80,10 @@ def _metrics(rd):
     if not os.path.exists(p):
         return None
     dr = pd.read_csv(p, parse_dates=["date"])
-    years = (dr["date"].max() - dr["date"].min()).days / 365.25
-    nav = (1 + dr["strategy"]).cumprod()
+    r = pd.Series(dr["strategy"].to_numpy(dtype=float), index=pd.DatetimeIndex(dr["date"]))
+    nav = core.value_from_returns(r)
     out = {"rows": len(dr), "first": str(dr["date"].min().date()), "last": str(dr["date"].max().date()),
-           "cagr": float(nav.iloc[-1] ** (1 / years) - 1) if years > 0 else None,
-           "vol": float(dr["strategy"].std() * 252 ** 0.5), "max_dd": float((nav / nav.cummax() - 1).min()),
+           "cagr": core.cagr(nav), "vol": core.ann_vol(r), "max_dd": core.max_drawdown(nav),
            "returns_sha": _sha16(p)}
     t = os.path.join(rd, "trades.csv")
     if os.path.exists(t):

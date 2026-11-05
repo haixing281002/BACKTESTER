@@ -1,3 +1,4 @@
+# Quant AI Researcher by Harshil Pahuja
 """Step 06 -- RESEARCH VALIDATION.
 
 Answers one question: is this result real, or is it a number we manufactured?
@@ -21,13 +22,8 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 
-from ros.validation.metrics import (
-    ANN,
-    ann_vol,
-    cagr,
-    max_drawdown,
-    sharpe_geometric,
-)
+from ros.metrics import core
+from ros.metrics.core import ANN, ann_vol, cagr, max_drawdown, sharpe
 
 
 # ---------------------------------------------------------------------------
@@ -56,11 +52,13 @@ def replication_gap(card, metrics_df: pd.DataFrame,
     rows: list[GapRow] = []
     for t in card.replication_targets:
         ours_name = name_map.get(t.portfolio, t.portfolio)
-        if ours_name not in metrics_df.index or t.metric not in metrics_df.columns:
+        # A paper prints its own Sharpe, on its own definition: compare like with like.
+        col = "sharpe_paper_basis" if t.metric == "sharpe" and "sharpe_paper_basis" in metrics_df.columns else t.metric
+        if ours_name not in metrics_df.index or col not in metrics_df.columns:
             rows.append(GapRow(t.portfolio, t.metric, t.value, float("nan"),
                                float("nan"), float("nan"), t.tolerance, False))
             continue
-        ours = float(metrics_df.loc[ours_name, t.metric])
+        ours = float(metrics_df.loc[ours_name, col])
         ad = abs(ours - t.value)
         rd = ad / abs(t.value) if t.value else float("inf")
         tol = t.absolute_tolerance
@@ -93,14 +91,14 @@ def subperiod_table(results, rf_daily: pd.Series | None = None,
                 continue
             rf = rf_daily.loc[lo:hi] if rf_daily is not None else None
             row[f"{lo.year}-{hi.year}"] = {
-                "sharpe": lambda: sharpe_geometric(v, r, rf),
+                "sharpe": lambda: sharpe(r, rf),
                 "cagr": lambda: cagr(v),
                 "vol": lambda: ann_vol(r),
                 "max_dd": lambda: max_drawdown(v),
             }[metric]()
         v_all, r_all = res.value, res.returns
         row["full"] = {
-            "sharpe": lambda: sharpe_geometric(v_all, r_all, rf_daily),
+            "sharpe": lambda: sharpe(r_all, rf_daily),
             "cagr": lambda: cagr(v_all),
             "vol": lambda: ann_vol(r_all),
             "max_dd": lambda: max_drawdown(v_all),
@@ -134,28 +132,13 @@ def oos_summary(result, splits, rf_daily=None) -> pd.DataFrame:
         rf = rf_daily.loc[lo:hi] if rf_daily is not None else None
         rows.append({"window": f"{lo.date()}..{hi.date()}", "n": len(v),
                      "cagr": cagr(v), "vol": ann_vol(r),
-                     "sharpe": sharpe_geometric(v, r, rf), "max_dd": max_drawdown(v)})
+                     "sharpe": sharpe(r, rf), "max_dd": max_drawdown(v)})
     return pd.DataFrame(rows)
 
 
 # ---------------------------------------------------------------------------
 # Stationary block bootstrap (Politis & Romano 1994)
 # ---------------------------------------------------------------------------
-def _stationary_bootstrap_index(n: int, mean_block: int, rng) -> np.ndarray:
-    """Index series for one replication. Block lengths are Geometric(1/mean_block),
-    so the resample is stationary and short-memory dependence is preserved."""
-    p = 1.0 / mean_block
-    idx = np.empty(n, dtype=np.int64)
-    i = 0
-    while i < n:
-        start = rng.integers(0, n)
-        L = rng.geometric(p)
-        L = min(L, n - i)
-        idx[i:i + L] = (start + np.arange(L)) % n
-        i += L
-    return idx
-
-
 def stationary_bootstrap(
     returns_map: dict[str, pd.Series],
     rf_daily: pd.Series | None = None,
@@ -164,7 +147,8 @@ def stationary_bootstrap(
     seed: int = 7,
     baseline: str | None = None,
 ) -> dict[str, Any]:
-    """Bootstrap CIs for CAGR / Sharpe / maxDD, plus PAIRED Sharpe differences.
+    """Bootstrap CIs for CAGR / Sharpe / maxDD, plus PAIRED Sharpe differences and, as evidence only, paired
+    max-drawdown gaps.
 
     All series are resampled with the SAME index draw in each replication, so the
     contemporaneous correlation between strategies is preserved and the Sharpe
@@ -180,29 +164,14 @@ def stationary_bootstrap(
     rf = (rf_daily.reindex(aligned.index).fillna(0.0).to_numpy(dtype=float)
           if rf_daily is not None else np.zeros(n))
     arr = aligned.to_numpy(dtype=float)
-    years = (aligned.index[-1] - aligned.index[0]).days / 365.25
-    per_year = n / years
+    per_year = n / ((aligned.index[-1] - aligned.index[0]).days / 365.25)
 
-    rng = np.random.default_rng(seed)
-    stats_out = {nm: {"cagr": [], "sharpe": [], "max_dd": []} for nm in names}
-    sharpe_draws = {nm: [] for nm in names}
-
-    for _ in range(n_boot):
-        bi = _stationary_bootstrap_index(n, mean_block, rng)
-        rf_b = rf[bi]
-        rf_total = float(np.prod(1.0 + rf_b))
-        rf_cagr = rf_total ** (per_year / n) - 1.0
-        for k, nm in enumerate(names):
-            r = arr[bi, k]
-            nav = np.cumprod(1.0 + r)
-            g = float(nav[-1]) ** (per_year / n) - 1.0
-            vol = float(np.std(r, ddof=1) * np.sqrt(per_year))
-            sh = (g - rf_cagr) / vol if vol > 0 else np.nan
-            dd = float(-(nav / np.maximum.accumulate(nav) - 1.0).min())
-            stats_out[nm]["cagr"].append(g)
-            stats_out[nm]["sharpe"].append(sh)
-            stats_out[nm]["max_dd"].append(dd)
-            sharpe_draws[nm].append(sh)
+    idx = core.stationary_bootstrap_indices(n, n_boot, mean_block, np.random.default_rng(seed))
+    sharpes, dds, cagrs = {}, {}, {}
+    for k, nm in enumerate(names):
+        sharpes[nm] = core.sharpe_draws(arr[:, k], idx, rf)
+        dds[nm] = core.max_drawdown_draws(arr[:, k], idx)
+        cagrs[nm] = np.exp(np.log1p(arr[:, k][idx]).sum(axis=1) * per_year / n) - 1.0
 
     def ci(v):
         a = np.asarray(v, dtype=float)
@@ -216,28 +185,26 @@ def stationary_bootstrap(
 
     out: dict[str, Any] = {
         "n_boot": n_boot, "mean_block": mean_block, "n_obs": n,
-        "intervals": {nm: {m: ci(v) for m, v in d.items()} for nm, d in stats_out.items()},
+        "intervals": {nm: {"cagr": ci(cagrs[nm]), "sharpe": ci(sharpes[nm]), "max_dd": ci(dds[nm])} for nm in names},
     }
 
     if baseline and baseline in names:
-        base = np.asarray(sharpe_draws[baseline], dtype=float)
-        diffs = {}
+        diffs, dd_gaps = {}, {}
         for nm in names:
             if nm == baseline:
                 continue
-            d = base - np.asarray(sharpe_draws[nm], dtype=float)
+            d = sharpes[baseline] - sharpes[nm]
             d = d[np.isfinite(d)]
             if d.size == 0:
                 diffs[nm] = {"mean_diff": float("nan"),
                              "ci95": [float("nan"), float("nan")],
                              "p_not_positive": float("nan")}
-                continue
-            diffs[nm] = {
-                "mean_diff": float(d.mean()),
-                "ci95": [float(np.percentile(d, 2.5)), float(np.percentile(d, 97.5))],
-                "p_not_positive": float((d <= 0).mean()),
-            }
+            else:
+                diffs[nm] = {"mean_diff": float(d.mean()), "ci95": ci(d), "p_not_positive": float((d <= 0).mean())}
+            g = dds[nm] - dds[baseline]       # positive = the baseline fell less
+            dd_gaps[nm] = {"mean_gap": float(g.mean()), "ci95": ci(g)}
         out["paired_sharpe_diff_vs_" + baseline] = diffs
+        out["paired_max_dd_gap_vs_" + baseline] = dd_gaps
     return out
 
 
@@ -312,7 +279,7 @@ def cost_sensitivity(run_fn: Callable[[float], Any], spreads_bps: Sequence[float
     for s in spreads_bps:
         res = run_fn(float(s))
         rows.append({"spread_bps": s, "cagr": cagr(res.value), "vol": ann_vol(res.returns),
-                     "sharpe": sharpe_geometric(res.value, res.returns, rf_daily),
+                     "sharpe": sharpe(res.returns, rf_daily),
                      "max_dd": max_drawdown(res.value),
                      "turnover": float(res.turnover.mean() * ANN)})
     return pd.DataFrame(rows)
@@ -329,6 +296,6 @@ def lag_sensitivity(run_fn: Callable[[int], Any], lags: Sequence[int],
     for L in lags:
         res = run_fn(int(L))
         rows.append({"lag_days": L, "cagr": cagr(res.value), "vol": ann_vol(res.returns),
-                     "sharpe": sharpe_geometric(res.value, res.returns, rf_daily),
+                     "sharpe": sharpe(res.returns, rf_daily),
                      "max_dd": max_drawdown(res.value)})
     return pd.DataFrame(rows)

@@ -1,0 +1,4 @@
+# Quant AI Researcher by Harshil Pahuja
+# Facts about the fund. A blank value is reported as not computed, and its gate test as INCOMPLETE. Nothing is guessed.
+aum_inr_cr: null        # NOT SET: the fund's AUM in Rs crore, needed for the capacity metric and test
+book_returns_csv: null  # NOT SET: the fund's own daily book returns (columns date, book), needed for gate tests 4 and 5

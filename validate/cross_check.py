@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Quant AI Researcher by Harshil Pahuja
 """Run the engine and the independent implementation side by side.
 
     python validate/cross_check.py
@@ -40,6 +41,7 @@ from ros.data.loaders import load_nse_workbook_combined, synthetic_cash_series
 from ros.engine.backtest import Backtester, rebalance_dates
 from ros.engine.prepare import build_signal_inputs
 from ros.engine.templates import build_allocator
+from ros.metrics import legacy_v1
 from ros.validation import metrics as M
 from validate import independent as ind  # the clean-room side
 
@@ -184,10 +186,10 @@ def main() -> int:
               M.ann_vol(eng_res.returns), ind.ann_vol(ind_res["returns"].to_numpy()))
         check(f"{label}: max drawdown", M.max_drawdown(ev), ind.max_drawdown(iv))
         check(f"{label}: Sharpe (geometric)",
-              M.sharpe_geometric(ev, eng_res.returns, rf_eng),
+              legacy_v1.sharpe_geometric(ev, eng_res.returns, rf_eng),
               ind.sharpe_geometric(iv, ind_res["returns"].to_numpy(), rf_ind.to_numpy()))
         check(f"{label}: Sharpe (conventional)",
-              M.sharpe_conventional(eng_res.returns, rf_eng),
+              M.sharpe(eng_res.returns, rf_eng),
               ind.sharpe_conventional(ind_res["returns"].to_numpy(), rf_ind.to_numpy()))
         results[label] = (eng_res, ind_res)
 
@@ -214,8 +216,8 @@ def main() -> int:
                 "ann_vol": M.ann_vol(eng_res.returns),
                 "max_dd": M.max_drawdown(eng_res.value),
                 "cash_cagr": M.compounded_cash_cagr(rf_eng, eng_res.value.index),
-                "sharpe_geometric": M.sharpe_geometric(eng_res.value, eng_res.returns, rf_eng),
-                "sharpe_conventional": M.sharpe_conventional(eng_res.returns, rf_eng),
+                "sharpe_geometric": legacy_v1.sharpe_geometric(eng_res.value, eng_res.returns, rf_eng),
+                "sharpe_conventional": M.sharpe(eng_res.returns, rf_eng),
                 "total_cost": float(eng_res.costs.sum()),
                 "turnover": float(eng_res.turnover.sum()),
                 "n_rebalances": float(eng_res.meta["n_rebalances"]),

@@ -1,3 +1,4 @@
+# Quant AI Researcher by Harshil Pahuja
 """Checks added with the 2026-10-28 checkup fixes: one Sharpe formula, run lineage, process hygiene."""
 import importlib
 import json
@@ -11,9 +12,8 @@ REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, REPO)
 
 
-def test_workbook_sharpe_is_the_arithmetic_formula_everywhere(tmp_path):
-    """Summary!B14 and the Comparators sheet use (mean daily x 252 - hurdle) / vol, the results.json formula,
-    not (CAGR - hurdle) / vol. Before 2026-10-28 the same label gave 0.47 in the workbook and 0.53 in the report."""
+def test_workbook_sharpe_is_the_one_formula_everywhere(tmp_path):
+    """Summary and the Comparators sheet use mean(r - c) / stdev(r - c) x sqrt(252) over the card's cash rate."""
     import openpyxl
 
     from lightyear import charts, workbook
@@ -23,14 +23,16 @@ def test_workbook_sharpe_is_the_arithmetic_formula_everywhere(tmp_path):
     cmp = pd.DataFrame({"date": d, "Long leg only": rng.normal(6e-4, 0.012, 120)})
     res = {"strategy_name": "S", "benchmark_name": "NIFTY 500", "headline": "h", "evidence_supports": "OBSERVE",
            "gate_b": {"decision": "PENDING", "criteria": []}, "validation": [], "notes": []}
-    ch = charts.build(df, {"strategy": "S"}, comparators=cmp)
+    ch = charts.build(df, {"strategy": "S"}, cash_rate=0.06, comparators=cmp)
     out = tmp_path / "w.xlsx"
-    workbook.build(str(tmp_path), res, df, "t", str(out), comparators=cmp, observations=ch["observations"])
+    workbook.build(str(tmp_path), res, df, "t", str(out), comparators=cmp, observations=ch["observations"], core_metrics=ch)
     wb = openpyxl.load_workbook(out)
-    assert wb["Summary"]["B14"].value == "=(AVERAGE(Ret_Strat)*252-Hurdle)/B13"
-    assert wb["Summary"]["C14"].value == "=(AVERAGE(Ret_Bench)*252-Hurdle)/C13"
-    assert wb["Summary"]["A14"].value.startswith("Sharpe vs hurdle")
-    assert "AVERAGE(" in wb["Comparators"]["D5"].value and "Hurdle" in wb["Comparators"]["D5"].value
+    assert wb["Summary"]["A14"].value == "Sharpe"
+    assert wb["Summary"]["B14"].value == "=(AVERAGE(Ret_Strat)-Cash_Daily)*252/B13"
+    assert wb["Summary"]["C14"].value == "=(AVERAGE(Ret_Bench)-Cash_Daily)*252/C13"
+    assert wb["Summary"]["B4"].value == 0.06
+    assert "Cash_Daily" in wb["Comparators"]["D5"].value
+    assert "Core metrics" in wb.sheetnames
 
 
 def test_run_manifest_round_trip_and_detects_a_changed_input(tmp_path):

@@ -573,7 +573,8 @@ function renderResults(st){
           ${st.spec_audit.checks.map(c=>`<tr><td>${esc(c.rule)}</td><td style="color:${c.passed===true?'var(--green)':c.passed===false?'var(--red)':'inherit'}"><b>${c.passed===true?'PASS':c.passed===false?'FAIL':'n/a'}</b></td><td class="small">${esc(c.detail)}</td></tr>`).join("")}</table></div>`:""}
         <p style="margin:8px 0 4px">${key}</p>
         <p class="muted" style="margin:6px 0 14px">${esc(r.headline)}</p>
-        <div class="kpis" id="kpis"></div><div class="small muted">Big number = the strategy. Orange line = NIFTY 500 over exactly the same days. Sharpe is measured over a flat 6% hurdle rate (a yardstick, not income the strategy earns).</div></div>
+        <div class="kpis" id="kpis"></div><div class="small muted">Big number = the strategy. Orange line = NIFTY 500 over exactly the same days. Sharpe is over the cash rate on this run's card. The benchmark is the price index, which flatters every relative figure.</div></div>
+      <div class="card" id="corecard"><h2>Core performance</h2><table class="t" id="coretab"></table><div id="coremore" class="small muted" style="margin-top:8px"></div></div>
       <div id="reviewcard"></div>
       <div class="card"><h2>Positives and negatives</h2>
         <div class="pn"><div class="pos"><h3 style="color:var(--green)">▲ What works</h3><ul id="pos"></ul></div>
@@ -633,7 +634,7 @@ function fillPN(){
 }
 
 const VAL_GROUPS = [["returns_risk","Returns & risk"],["costs_execution","Costs & execution"],
-                     ["robustness","Statistical robustness"],["other","Other"]];
+                     ["robustness","Statistical robustness"],["diagnostics","Diagnostics (specific to this strategy's rules)"],["other","Other"]];
 function valGroup(v){
   if(v.group) return v.group;
   const l = (v.label||"").toLowerCase();
@@ -665,6 +666,23 @@ function fillPVB(){
       rows.map(x=>`<tr><td><b>${esc(x.metric)}</b></td><td>${esc(x.paper_value)}</td><td>${esc(x.our_value)}</td><td class="small muted">${esc(x.why_different||"")}</td></tr>`).join("")
     : `<tr><td class="small muted">Not available for this run.</td></tr>`;
 }
+function fillCore(c){
+  if(!$("#coretab")) return;
+  const m = c.metrics, s = m.strategy, b = m.benchmark, net = c.net, n = net ? net.metrics : {};
+  const f = (v,fmt) => (v==null||Number.isNaN(v)) ? "–" : fmt==="pct" ? pct(v,2) : fmt==="int" ? Math.round(v) : num(v);
+  const R = [["CAGR","cagr","pct"],["Volatility","vol","pct"],["Sharpe","sharpe","num"],["Sortino","sortino","num"],["Calmar","calmar","num"],["Maximum drawdown","max_dd","pct"],
+    ["Drawdown duration (trading days)","dd_duration_days","int"],["95% CVaR (daily loss)","cvar_95","pct"],["Skew","skew","num"],["CAGR without the 10 best days","best_days_removed_cagr","pct"],
+    ["Beta","beta","num"],["Tracking error","tracking_error","pct"],["Information ratio","information_ratio","num"],["Up capture (monthly)","up_capture","num"],["Down capture (monthly)","down_capture","num"],["Rolling one-year periods behind","rolling_behind","pct"]];
+  $("#coretab").innerHTML = `<tr><th>Metric</th><th>Strategy, as run</th><th>${net?`Strategy, net at ${num(net.house_bp,0)}bp`:"Net of house cost"}</th><th>${esc(c.names.benchmark)}</th></tr>` +
+    R.map(([l,k,t])=>`<tr><td>${l}</td><td>${f(s[k],t)}</td><td>${net?f(n[k],t):"not computed"}</td><td>${f(b[k],t)}</td></tr>`).join("");
+  const pp = c.post_publication, cp = c.capacity || {};
+  $("#coremore").innerHTML = [
+    net ? `Two-way turnover ${num(net.annual_turnover)} times capital a year. Net = the house cost charged on this run's trades.` : `Net of cost not computed: this run wrote no trades or holdings.`,
+    pp ? `After publication (from ${esc(pp.from)}): CAGR ${pct(pp.cagr,2)} against ${pct(pp.benchmark_cagr,2)} for the benchmark, Sharpe ${num(pp.sharpe)} against ${num(pp.benchmark_sharpe)}, worst fall ${pct(pp.max_dd,2)}.` : "",
+    cp.status==="computed" ? `Capacity at Rs ${num(cp.aum_inr_cr,0)} crore: trade size against 20-day traded value, median ${pct(cp.median,2)}, 95th percentile ${pct(cp.p95,2)}, largest ${pct(cp.max,2)}; ${cp.names_above_limit.length} name(s) above the limit.` : `Capacity not computed: ${esc(cp.why||"this run predates it")}.`,
+    c.cash_rate==null ? `Sharpe and Sortino are blank: this run's card has no cash rate.` : `Cash rate ${pct(c.cash_rate,2)}, from the card.`
+  ].filter(Boolean).map(x=>`<div>${x}</div>`).join("");
+}
 async function drawCharts(force){
   if(!ST?.results || (CHARTED===CUR && !force)) return;
   if(!$("#c_growth")) return;
@@ -672,8 +690,9 @@ async function drawCharts(force){
   CHARTED = CUR; CH = c;
   fillPN();
   fillPVB();
-  const m = c.metrics, K = [["CAGR (a year)","cagr",pct],["Volatility (a year)","vol",pct],["Sharpe (6% hurdle)","sharpe",num],["Worst fall from peak","max_dd",pct],["100 became","final",v=>num(v,1)]];
+  const m = c.metrics, K = [["CAGR (a year)","cagr",pct],["Volatility (a year)","vol",pct],["Sharpe","sharpe",num],["Worst fall from peak","max_dd",pct],["100 became","final",v=>num(v,1)]];
   $("#kpis").innerHTML = K.map(([l,k,f]) => `<div class="kpi"><div class="l">${l}</div><div class="v">${f(m.strategy[k])}</div><div class="b">${esc(c.names.benchmark)}: ${f(m.benchmark[k])}</div></div>`).join("");
+  fillCore(c);
   if(!window.Plotly){ document.querySelectorAll(".chart").forEach(el => el.innerHTML = `<p class="muted small">Chart library did not load.</p>`); return }
   const col = {strategy:"#1f4e79", benchmark:"#d98324", sleeve:"#6a994e"};
   const label = k => k==="strategy" ? "Strategy: "+c.names.strategy : k==="benchmark" ? "Benchmark: "+c.names.benchmark : "Sleeve: "+c.names.sleeve;
@@ -704,7 +723,7 @@ async function drawCharts(force){
     const cm = c.comparators.metrics, notes = {}; (ST.results.comparator_notes||[]).forEach(n=>notes[n.name]=n.what_it_is);
     const missing = c.comparators.names.filter(nm=>!notes[nm]);
     $("#cmpnote").innerHTML = missing.length ? `<p class="small muted">${missing.length===c.comparators.names.length?"What each of these is wasn't recorded for this run.":`What "${missing.join(', ')}" is wasn't recorded for this run.`}</p>` : "";
-    $("#cmptab").innerHTML = `<tr><th>Series</th><th>What it is</th><th>CAGR</th><th>Volatility</th><th>Sharpe (6% hurdle)</th><th>Worst fall</th><th>vs strategy CAGR</th></tr>
+    $("#cmptab").innerHTML = `<tr><th>Series</th><th>What it is</th><th>CAGR</th><th>Volatility</th><th>Sharpe</th><th>Worst fall</th><th>vs strategy CAGR</th></tr>
       <tr><td><b>Strategy: ${esc(c.names.strategy)}</b></td><td class="small muted">The strategy being tested${costTag(ST.results).replace(/^ \((.*)\)$/, ", $1")}.</td><td>${pct(m.strategy.cagr)}</td><td>${pct(m.strategy.vol)}</td><td>${num(m.strategy.sharpe)}</td><td>${pct(m.strategy.max_dd)}</td><td>–</td></tr>
       ${c.comparators.names.map(nm=>{const x=cm[nm], d=x.cagr-m.strategy.cagr; return `<tr><td>${esc(nm)}</td><td class="small muted">${esc(notes[nm]||"–")}</td><td>${pct(x.cagr)}</td><td>${pct(x.vol)}</td><td>${num(x.sharpe)}</td><td>${pct(x.max_dd)}</td><td style="color:${d>0?'var(--red)':'var(--green)'}">${d>0?"beat the strategy by ":"behind by "}${pct(Math.abs(d))}</td></tr>`}).join("")}`;
   }

@@ -1,0 +1,3 @@
+# Quant AI Researcher by Harshil Pahuja
+# The house trading cost. A round trip is one buy plus one sell. Net-of-cost metrics and every blocking gate test use this.
+house_round_trip_bp: 30    # source: CLAUDE.md, "Costs are 30bp round trip"

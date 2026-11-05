@@ -1,53 +1,33 @@
-"""Performance metrics computed from a BacktestResult."""
+# Quant AI Researcher by Harshil Pahuja
+"""Performance metrics computed from a BacktestResult. Every definition is in ros.metrics.core."""
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 from typing import Any
 
-import numpy as np
 import pandas as pd
 
-ANN = 252
+from ros.metrics import core
+
+ANN = core.ANN
+drawdown_series = core.drawdown_series
+max_drawdown = core.max_drawdown
 
 
 def cagr(value: pd.Series, ann: int = ANN) -> float:
-    v = value.dropna()
-    if len(v) < 2 or v.iloc[0] <= 0:
-        return float("nan")
-    years = (v.index[-1] - v.index[0]).days / 365.25
-    if years <= 0:
-        return float("nan")
-    return float((v.iloc[-1] / v.iloc[0]) ** (1.0 / years) - 1.0)
+    return core.cagr(value)
 
 
 def ann_vol(returns: pd.Series, ann: int = ANN) -> float:
-    r = returns.dropna()
-    return float(r.std(ddof=1) * np.sqrt(ann)) if len(r) > 2 else float("nan")
+    return core.ann_vol(returns)
 
 
-def sharpe(value: pd.Series, returns: pd.Series, rf_daily: pd.Series | None = None,
-           ann: int = ANN) -> float:
-    """Arithmetic-mean-excess-return / std, annualised (the conventional definition)."""
-    r = returns.dropna()
-    if len(r) < 3:
-        return float("nan")
-    ex = r - (rf_daily.reindex(r.index).fillna(0.0) if rf_daily is not None else 0.0)
-    sd = ex.std(ddof=1)
-    return float(ex.mean() / sd * np.sqrt(ann)) if sd > 0 else float("nan")
-
-
-def drawdown_series(value: pd.Series) -> pd.Series:
-    return value / value.cummax() - 1.0
-
-
-def max_drawdown(value: pd.Series) -> float:
-    return float(-drawdown_series(value).min())
+def sharpe(value: pd.Series, returns: pd.Series, rf_daily: pd.Series | None = None, ann: int = ANN) -> float:
+    return core.sharpe(returns, rf_daily)
 
 
 def ann_turnover(turnover: pd.Series, ann: int = ANN) -> float:
-    days = (turnover.index[-1] - turnover.index[0]).days
-    years = days / 365.25 if days > 0 else float("nan")
-    return float(turnover.sum() / years) if years and years > 0 else float("nan")
+    return core.annual_turnover(turnover)
 
 
 @dataclass

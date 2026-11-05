@@ -25,6 +25,12 @@ import threading
 import time
 import uuid
 
+import pandas as pd
+
+from ros import config
+from ros.cards.schema import load_card
+from ros.metrics import core
+
 from . import changelog, charts, contract, gates, prompts, spec_audit, wording, workbook
 from .paths import LEDGER, REPO, RUNS, code_hash, find_claude, git_bash, git_commit, rel, run_dir
 
@@ -671,11 +677,15 @@ def build_outputs(rid, review=True):
     _finish_stages(rid, [s for s, _ in prompts.STAGES_B])
     names = {"strategy": res.get("strategy_name") or "Strategy", "benchmark": res.get("benchmark_name") or "NIFTY 500",
              "sleeve": res.get("sleeve_name") or "Sleeve"}
-    ch = charts.build(df, names, comparators=extra.get("comparators"))
+    extras, warn_core = _core_inputs(st, res, df, extra)
+    warn = list(warn) + warn_core
+    ch = charts.build(df, names, comparators=extra.get("comparators"), **extras)
+    ch["capacity"] = _capacity(rid, df, extra)
+    ch["benchmark_basis"] = "price" if not res.get("benchmark_is_total_return") else "total_return"
     json.dump(ch, open(os.path.join(rd, "charts.json"), "w", encoding="utf-8"), default=float)
     log(rid, "server", "Interactive chart series built from daily_returns.csv"
         + (" and comparators.csv." if "comparators" in extra else "."))
-    recalc = _workbook(rid, res, df, extra, ch["observations"], _load_review(rd))
+    recalc = _workbook(rid, res, df, extra, ch["observations"], _load_review(rd), ch)
     res["gate_rows"] = gates.rows(res["gate_b"].get("criteria", []))
     update(rid, status="gate_b", current_stage="GB", results=res, recalc=recalc, handoff_warnings=warn, error=None,
            card_checks=card_checks,
@@ -690,6 +700,46 @@ def build_outputs(rid, review=True):
             log(rid, "error", f"Analyst review failed: {e}")
 
 
+def _core_inputs(st, res, df, extra):
+    """What ros.metrics.core needs from the card and the hand-off files, and a plain warning for whatever is missing."""
+    warn, out = [], {"house_bp": config.house_cost_bp(), "charged_bp": float(res.get("headline_cost_bp") or 0.0)}
+    path = (st.get("phase_a") or {}).get("card_path") or ""
+    try:
+        card = load_card(path if os.path.isabs(path) else os.path.join(REPO, path))
+        out["publication_date"] = card.paper.date
+        out["cash_rate"] = core.cash_rate_from_card(card)
+    except core.MissingCashRate as e:
+        warn.append(f"Sharpe and Sortino left blank: {e}")
+    except Exception as e:  # noqa: BLE001  an unreadable card must not lose the run; the warning is on the page
+        warn.append(f"Card not read for the core metrics ({type(e).__name__}: {e}); Sharpe and Sortino left blank.")
+    tr = extra.get("trades")
+    if tr is None and "holdings" in extra:
+        tr = workbook.derive_trades(extra["holdings"])
+    if tr is not None and len(tr):
+        out["turnover"] = core.two_way_turnover_from_trades(tr, pd.DatetimeIndex(df["date"]))
+    else:
+        warn.append("Net-of-cost metrics not computed: the run wrote no trades.csv or holdings.csv to charge the house cost on.")
+    return out, warn
+
+
+def _capacity(rid, df, extra):
+    """Trade size at the fund's AUM as a share of 20-day ADV. Not computed, and says why, until fund.yaml has an AUM."""
+    aum = config.fund().get("aum_inr_cr")
+    if not aum:
+        return {"status": "not computed", "why": "config/fund.yaml has no aum_inr_cr"}
+    tr = extra.get("trades")
+    if tr is None or "isin" not in tr.columns:
+        return {"status": "not computed", "why": "trades.csv has no isin column"}
+    try:
+        from ros.data import ace
+        value = ace.wide("value_cr").loc[df["date"].min() - pd.Timedelta(days=60):df["date"].max()]
+        limit = (config.gate_thresholds().get("capacity") or {}).get("p95_adv_participation_max")
+        return {"status": "computed", "aum_inr_cr": aum, **core.capacity(tr, core.adv_20(value), float(aum), limit)}
+    except Exception as e:  # noqa: BLE001  a report; the failure is shown, and the run is not lost
+        log(rid, "error", f"Capacity not computed: {type(e).__name__}: {e}")
+        return {"status": "not computed", "why": f"{type(e).__name__}: {e}"}
+
+
 def _load_review(rd):
     p = os.path.join(rd, "review.json")
     try:
@@ -698,7 +748,7 @@ def _load_review(rd):
         return None
 
 
-def _workbook(rid, res, df, extra, observations, review):
+def _workbook(rid, res, df, extra, observations, review, ch=None):
     """Build the workbook and recalculate it. Never loses the run over a workbook problem."""
     st = load(rid)
     rd = run_dir(rid)
@@ -713,6 +763,7 @@ def _workbook(rid, res, df, extra, observations, review):
               observations=observations, review=review, selection=extra.get("selection"),
               selection_rule=(st.get("phase_a") or {}).get("one_line") or None,
               revisions=st.get("revisions"), approval=st.get("approval"), provenance=provenance(st),
+              core_metrics=ch,
               change_log=(st.get("change_log") or {}).get("lines"))
     try:
         try:
@@ -761,7 +812,7 @@ def analyst_review(rid):
         res, df = contract.check_results(rd)
         extra, _ = contract.load_optional(rd, df["date"])
         ch = json.load(open(os.path.join(rd, "charts.json"), encoding="utf-8"))
-        recalc = _workbook(rid, res, df, extra, ch.get("observations"), rev)
+        recalc = _workbook(rid, res, df, extra, ch.get("observations"), rev, ch)
         update(rid, review_status="done", recalc=recalc)
     except Exception as e:
         update(rid, review_status="done")
