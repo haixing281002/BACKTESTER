@@ -258,7 +258,8 @@ def annual_turnover(two_way_turnover: pd.Series) -> float:
 def two_way_turnover_from_trades(trades: pd.DataFrame, index: pd.DatetimeIndex) -> pd.Series:
     """Daily two-way turnover from a run's trades.csv: |weight_after - weight_before| summed by execution date."""
     date = "execution_date" if "execution_date" in trades.columns else "date"
-    dates = pd.to_datetime(trades[date])
+    # The first book can be bought on the day before the first return. It still traded: count it on the first day.
+    dates = pd.to_datetime(trades[date]).clip(lower=index[0])
     t = (trades["weight_after"].astype(float) - trades["weight_before"].astype(float)).abs().groupby(dates).sum()
     return t.reindex(index).fillna(0.0)
 

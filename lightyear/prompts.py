@@ -218,6 +218,9 @@ Then write these hand-off files into {run_dir}/ (the server builds the workbook 
              // factor fingerprint; diagnostics = rows specific to this strategy's rules (buys on big up days, names
              // removed by a rule, signals with buying shut, sells on leaving the index); other = anything else.
              // Sharpe is always ros.metrics.core.sharpe over the card's cash rate. Do not report another Sharpe.
+             // Lightyear's Core performance table already shows CAGR, volatility, Sharpe, Sortino, Calmar, drawdown and its
+             // duration, CVaR, skew, CAGR without the 10 best days, beta, tracking error, information ratio, capture and
+             // rolling one-year periods behind. Do not add your own version of these under a similar name: one metric, one value.
   "comparator_notes": [ {{"name": "<must match a column header in comparators.csv exactly>",
                           "what_it_is": "<one plain sentence: what this comparator actually is and why it's here>"}} ],
              // one entry per column of comparators.csv, if you wrote one. Never leave a comparator's name

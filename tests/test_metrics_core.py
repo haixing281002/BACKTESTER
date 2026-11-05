@@ -148,3 +148,9 @@ def test_bootstrap_draws_match_the_plain_sharpe_on_the_same_days():
     for k in range(5):
         assert draws[k] == pytest.approx(core.sharpe(pd.Series(x[idx[k]]), CASH))
     assert core.max_drawdown_draws(x, idx)[0] == pytest.approx(core.max_drawdown(pd.Series(np.cumprod(1 + x[idx[0]]))))
+
+
+def test_turnover_counts_the_first_book_bought_before_the_first_return():
+    t = pd.DataFrame({"date": ["2024-01-01", "2024-01-03"], "weight_before": [0.0, 1.0], "weight_after": [1.0, 0.5]})
+    out = core.two_way_turnover_from_trades(t, D)
+    assert out.iloc[0] == pytest.approx(1.0) and out.iloc[1] == pytest.approx(0.5) and out.sum() == pytest.approx(1.5)
