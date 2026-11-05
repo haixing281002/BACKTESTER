@@ -14,7 +14,16 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.platypus import BaseDocTemplate, Frame, KeepTogether, PageTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.platypus import (
+    BaseDocTemplate,
+    Frame,
+    KeepTogether,
+    PageTemplate,
+    Paragraph,
+    Spacer,
+    Table,
+    TableStyle,
+)
 
 NEW, TESTS = sys.argv[1], sys.argv[2]
 RN = f"outputs/lightyear/{NEW}"
@@ -28,8 +37,8 @@ with open("outputs/tmp/dash_check.json", encoding="utf8") as fh:
     dash = json.load(fh)
 res = state["results"]
 g = res["gate_v2"]
-commits = [ln.split("|", 1) for ln in subprocess.run(["git", "log", "--reverse", "--format=%h|%s", "gate-v1..HEAD"], capture_output=True, text=True).stdout.splitlines()]
-stat = subprocess.run(["git", "diff", "--shortstat", "gate-v1..HEAD"], capture_output=True, text=True).stdout.strip()
+commits = [ln.split("|", 1) for ln in subprocess.run(["git", "log", "--reverse", "--format=%h|%s", "gate-v1..HEAD"], capture_output=True, text=True, check=False).stdout.splitlines()]
+stat = subprocess.run(["git", "diff", "--shortstat", "gate-v1..HEAD"], capture_output=True, text=True, check=False).stdout.strip()
 vv = pd.read_csv("docs/gate_b/v1_vs_v2.csv")
 t = pd.read_csv("docs/gate_b/calibration/power_table_approved.csv")
 sweep = pd.read_csv(RN + "/out/cost_sweep.csv")
@@ -84,11 +93,11 @@ def footer(c, d):
 
 
 def pc(x):
-    return "n/a" if x is None or x != x else f"{x:.2%}"
+    return "n/a" if pd.isna(x) else f"{x:.2%}"
 
 
 def nm(x, d=3):
-    return "n/a" if x is None or x != x else f"{x:.{d}f}"
+    return "n/a" if pd.isna(x) else f"{x:.{d}f}"
 
 
 def rate(test, case):
@@ -134,7 +143,7 @@ assert n_ok == n_all
 
 E = [P("Gate B v2 and metrics: change log", "title"), P("What changed, why, what the re-run showed, and what the dashboard now shows.", "sub"),
      BOX([P("<b>Where this stands.</b> All six phases are done on the branch gate-b-v2-and-metrics-consolidation. It is not pushed, as you asked, and not merged, so this shows on port 8101 only.", "body"),
-          P(f"<b>Cost and cash now come only from the card.</b> The backtest always ran at your 0bp. The 30bp was added afterwards, to Gate v2 and a \"net\" column, by a rule in the brief that I applied over your Gate A ruling. That is removed, along with every other cost or cash number in the code.", "body"),
+          P("<b>Cost and cash now come only from the card.</b> The backtest always ran at your 0bp. The 30bp was added afterwards, to Gate v2 and a \"net\" column, by a rule in the brief that I applied over your Gate A ruling. That is removed, along with every other cost or cash number in the code.", "body"),
           P(f"<b>Clenow's latest run ({NEW}) now reads {g['status']} on Gate v2, at your {ch['card_bp']:g}bp.</b> Bootstrap P {nm(sm['bootstrap_p'])} clears the eased 0.10, but would miss the original 0.05. Factor alpha is {hr['factor_alpha']['status']} at t {nm(sm['alpha_t'], 2)}. At 0bp nothing here tests what trading {ch['annual_turnover']:.1f} times capital a year would cost: the sweep below does that.", "body")], WARN),
      P("Your rulings", "H2"),
      TBL([["You said", "What I did"],
