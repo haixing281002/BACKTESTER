@@ -576,7 +576,7 @@ def revise_a(rid, notes):
     _after_phase_a(rid, ok, "Revision", since=t0, must_change=before)
 
 
-DIAGNOSTIC_LABEL = re.compile(r"leaving the|membership-forced|gap exits|gap rule|eligible names|first fill|index gate|buying shut|band proxy|resize fills|fewer than 5 names", re.I)
+DIAGNOSTIC_LABEL = re.compile(r"leaving the|membership-forced|gap exits|gap rule|eligible names|first fill|index gate|buying shut|band proxy|resize fills|fewer than 5 names", re.IGNORECASE)
 
 
 def phase_b(rid):

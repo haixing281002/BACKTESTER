@@ -16,7 +16,7 @@ import pandas as pd
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, REPO)
-from lightyear import contract, gate_run, workbook  # noqa: E402
+from lightyear import contract, gate_run, workbook
 
 
 def row_for(d: str, folder: str) -> dict | None:

@@ -12,7 +12,6 @@ from ros.data.sources import NSE_INDEX_WORKBOOK
 from ros.metrics import core
 from ros.validation.portfolio import factor_fingerprint, incremental_ir
 
-
 # Investable factors with size included. Where the workbook has the series. Backfilled before launch, and price-only.
 INVESTABLE_FACTORS = {"market": "NIFTY 500", "midcap150": "NIFTY MIDCAP 150", "smallcap250": "NIFTY SMALLCAP 250", "momentum": "NIFTY500 MOMENTUM 50",
                       "value": "NIFTY500 VALUE 50", "quality": "NIFTY500 QUALITY 50", "low_vol": "NIFTY500 LOW VOLATILITY 50"}

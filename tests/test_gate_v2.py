@@ -223,3 +223,39 @@ def test_the_calibration_tables_and_the_gate_give_the_same_answer():
                   alpha=r["alpha"], alpha_t=r["alpha_t"], book_corr=r["book_corr"], book_ir_gain=r["book_ir_gain"])
         res = g.evaluate(e, th, LIMITS)
         assert (res.status == g.PASS and g.all_green(res)) == bool(table[i]), i
+
+
+def _run_folder(tmp_path, strategy, bench):
+    from lightyear import gate_run
+    card = tmp_path / "card.yaml"
+    card.write_text("x", encoding="utf-8")
+    df = pd.DataFrame({"date": strategy.index, "strategy": strategy.to_numpy(), "benchmark": bench.to_numpy()})
+    return gate_run, str(card), df
+
+
+def test_a_run_folder_scores_end_to_end_on_net_returns(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+    b = _series(4e-4, 0.01, 1)
+    strong = b + _series(1.2e-3, 0.003, 2)
+    gate_run, card, df = _run_folder(tmp_path, strong, b)
+    fake = SimpleNamespace(universe=SimpleNamespace(cash_asset="CASH_PROXY_CONSTANT_6PCT"), fits_parameters=False, paper=SimpleNamespace(date="2015"))
+    monkeypatch.setattr(gate_run, "load_card", lambda p: fake)
+    monkeypatch.setattr(gate_run.ev, "factor_returns", lambda idx: pd.DataFrame({"market": b.reindex(idx), "size": _series(5e-4, 0.012, 9).reindex(idx)}))
+    t = pd.DataFrame({"date": [b.index[100]] * 2, "isin": ["A", "B"], "weight_before": [0.0, 1.0], "weight_after": [1.0, 0.0]})
+    net = gate_run.score(str(tmp_path), card, 0.0, df, t)
+    gross = gate_run.score(str(tmp_path), card, 0.0, df, t, use_net=False)
+    assert net["status"] == "PASS" and net["decision"] == "PENDING" and net["gate_version"] == "v2"
+    assert "net of the house cost" in net["basis"] and gross["basis"] == "returns as run"
+    assert net["summary"]["net_edge"] < gross["summary"]["net_edge"]
+    assert any("book" in x for x in net["tests_not_run"])
+    # a run with no edge after costs fails on the same path
+    gate_run2, card2, df2 = _run_folder(tmp_path, b - 2e-4, b)
+    assert gate_run2.score(str(tmp_path), card2, 0.0, df2)["status"] == "FAIL"
+
+
+def test_rule_specific_rows_are_diagnostics():
+    from lightyear.jobs import DIAGNOSTIC_LABEL
+    for x in ("Sells forced by a name leaving the NIFTY 500 list", "Share of 15%-gap exits that were in profit", "Buys on days the stock closed up more than 9.5% (band proxy)", "Share of signals with buying shut by the index filter"):
+        assert DIAGNOSTIC_LABEL.search(x), x
+    for x in ("CAGR, strategy", "Two-way turnover a year (x capital)", "Mean cash share of NAV"):
+        assert not DIAGNOSTIC_LABEL.search(x), x
