@@ -233,24 +233,23 @@ def _run_folder(tmp_path, strategy, bench):
     return gate_run, str(card), df
 
 
-def test_a_run_folder_scores_end_to_end_on_net_returns(tmp_path, monkeypatch):
+def test_a_run_folder_scores_at_the_cards_cost_and_no_other(tmp_path, monkeypatch):
     from types import SimpleNamespace
     b = _series(4e-4, 0.01, 1)
     strong = b + _series(1.2e-3, 0.003, 2)
     gate_run, card, df = _run_folder(tmp_path, strong, b)
-    fake = SimpleNamespace(universe=SimpleNamespace(cash_asset="CASH_PROXY_CONSTANT_6PCT"), fits_parameters=False, paper=SimpleNamespace(date="2015"))
+    fake = SimpleNamespace(universe=SimpleNamespace(cash_asset="CASH_PROXY_CONSTANT_6PCT"), fits_parameters=False, paper=SimpleNamespace(date="2015"), costs=SimpleNamespace(spread_bps=0.0))
     monkeypatch.setattr(gate_run, "load_card", lambda p: fake)
     monkeypatch.setattr(gate_run.ev, "factor_returns", lambda idx: pd.DataFrame({"market": b.reindex(idx), "size": _series(5e-4, 0.012, 9).reindex(idx)}))
-    t = pd.DataFrame({"date": [b.index[100]] * 2, "isin": ["A", "B"], "weight_before": [0.0, 1.0], "weight_after": [1.0, 0.0]})
-    net = gate_run.score(str(tmp_path), card, 0.0, df, t)
-    gross = gate_run.score(str(tmp_path), card, 0.0, df, t, use_net=False)
-    assert net["status"] == "PASS" and net["decision"] == "PENDING" and net["gate_version"] == "v2"
-    assert "net of the house cost" in net["basis"] and gross["basis"] == "returns as run"
-    assert net["summary"]["net_edge"] < gross["summary"]["net_edge"]
-    assert any("book" in x for x in net["tests_not_run"])
-    # a run with no edge after costs fails on the same path
+    heavy = pd.DataFrame({"date": list(b.index[:500]), "isin": ["A"] * 500, "weight_before": [0.0] * 500, "weight_after": [1.0] * 500})
+    res = gate_run.score(str(tmp_path), card, df, heavy)
+    light = gate_run.score(str(tmp_path), card, df)
+    assert res["status"] == "PASS" and res["decision"] == "PENDING" and res["gate_version"] == "v2"
+    assert "0bp" in res["basis"]
+    assert res["summary"]["net_edge"] == light["summary"]["net_edge"]     # however heavy the trading, a 0bp card is charged nothing
+    assert any("book" in x for x in res["tests_not_run"])
     gate_run2, card2, df2 = _run_folder(tmp_path, b - 2e-4, b)
-    assert gate_run2.score(str(tmp_path), card2, 0.0, df2)["status"] == "FAIL"
+    assert gate_run2.score(str(tmp_path), card2, df2)["status"] == "FAIL"
 
 
 def test_rule_specific_rows_are_diagnostics():

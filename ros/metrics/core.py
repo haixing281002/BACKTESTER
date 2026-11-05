@@ -239,11 +239,11 @@ def max_drawdown_draws(values: np.ndarray, idx: np.ndarray) -> np.ndarray:
 
 
 # ---------------------------------------------------------------------------------------------- costs and capacity
-def net_returns(gross_or_charged: pd.Series, two_way_turnover: pd.Series, house_bp: float, charged_bp: float = 0.0) -> pd.Series:
-    """Daily returns at the house round-trip cost. A round trip is one buy plus one sell, so each unit of two-way
-    turnover pays half of it. `charged_bp` is what the series already carries, so nothing is charged twice."""
-    t = two_way_turnover.reindex(gross_or_charged.index).fillna(0.0)
-    return gross_or_charged - t * (house_bp - charged_bp) / 2.0 / 1e4
+def returns_at_cost(returns: pd.Series, two_way_turnover: pd.Series, cost_bp: float, charged_bp: float) -> pd.Series:
+    """The same trades at another round-trip cost. A round trip is one buy plus one sell, so each unit of two-way turnover
+    pays half of it. `charged_bp` is what the series already carries, so nothing is charged twice."""
+    t = two_way_turnover.reindex(returns.index).fillna(0.0)
+    return returns - t * (cost_bp - charged_bp) / 2.0 / 1e4
 
 
 def annual_turnover(two_way_turnover: pd.Series) -> float:

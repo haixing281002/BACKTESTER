@@ -1,5 +1,6 @@
 # Quant AI Researcher by Harshil Pahuja
-"""Fund-level settings the code reads and never types: house cost, AUM, the mandate and the gate's thresholds."""
+"""Fund-level settings the code reads and never types: sweep grids, AUM, the mandate and the gate's thresholds.
+A run's own cost and cash rate are not here: they come only from its card."""
 from __future__ import annotations
 
 import os
@@ -16,8 +17,16 @@ def _load(name: str) -> dict[str, Any]:
         return yaml.safe_load(fh) or {}
 
 
-def house_cost_bp() -> float:
-    return float(_load("costs.yaml")["house_round_trip_bp"])
+def cost_sweep_bp() -> list[float]:
+    return [float(x) for x in _load("costs.yaml")["sweep_round_trip_bp"]]
+
+
+def cash_rate_sweep() -> list[float]:
+    return [float(x) for x in _load("fund.yaml")["cash_rate_sweep"]]
+
+
+def calibration() -> dict[str, Any]:
+    return _load("calibration.yaml")
 
 
 def fund() -> dict[str, Any]:
@@ -25,12 +34,13 @@ def fund() -> dict[str, Any]:
 
 
 def cash_rate_for(card) -> tuple[float, str]:
-    """The annual cash rate and where it came from. The card's own rate wins; a card that names none uses the fund's."""
+    """The annual cash rate and where it came from. Only the card sets it. A card naming none gets no invented rate: Sharpe
+    is then simply over zero, and the page says so."""
     from ros.metrics import core
     try:
         return core.cash_rate_from_card(card), "the card"
     except core.MissingCashRate:
-        return float(fund()["default_cash_rate"]), "config/fund.yaml, because the card names no rate"
+        return 0.0, "nowhere: the card names no rate, so Sharpe here is over zero"
 
 
 def mandate() -> dict[str, Any]:

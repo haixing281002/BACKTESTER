@@ -1,3 +1,4 @@
+# Quant AI Researcher by Harshil Pahuja
 """Agentic orchestration for steps 00-08.
 
 The contract this module enforces, and the reason it is worth reading before
@@ -45,7 +46,7 @@ No shorting, no leverage, no derivatives.
 Held data: NSE factor index daily closes only (no volumes, no constituents,
 no fundamentals, no Indian risk-free series). All index history is BACKFILLED
 and price-return, not total-return.
-Realistic round-trip cost for factor-sleeve rotation is ~30bp, not 5bp."""
+State the round-trip cost on the card for a human to confirm at Gate A; do not copy the paper's."""
 
 TEMPLATE_DOCS = """\
 fixed_weight              constant target weights

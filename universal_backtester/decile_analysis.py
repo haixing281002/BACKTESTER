@@ -79,7 +79,8 @@ def summarize_deciles(
     decile_results: dict[int, BacktestResult],
     start: pd.Timestamp | None = None,
     end: pd.Timestamp | None = None,
-    cash_rate: float = 0.06,
+    *,
+    cash_rate: float,
 ) -> pd.DataFrame:
     """One row per decile: cagr, vol, sharpe, max_dd -- the table a fund
     reads to check whether the size effect is monotonic across all ten

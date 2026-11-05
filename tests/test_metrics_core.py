@@ -63,17 +63,17 @@ def test_cagr_without_best_days_drops_the_best_day_over_the_same_span():
     assert v == pytest.approx(kept ** (1 / years) - 1)
 
 
-def test_net_returns_charge_half_a_round_trip_per_unit_of_two_way_turnover():
+def test_a_cost_charges_half_a_round_trip_per_unit_of_two_way_turnover():
     t = pd.Series(0.0, index=D)
     t.iloc[0] = 2.0     # sold everything, bought everything
-    net = core.net_returns(R, t, house_bp=30)
+    net = core.returns_at_cost(R, t, cost_bp=30, charged_bp=0)
     assert net.iloc[0] == pytest.approx(0.01 - 2.0 * 15 / 1e4)
     assert net.iloc[1] == R.iloc[1]
 
 
-def test_net_returns_never_charge_twice():
+def test_a_cost_is_never_charged_twice():
     t = pd.Series(1.0, index=D)
-    assert core.net_returns(R, t, house_bp=30, charged_bp=30).equals(R)
+    assert core.returns_at_cost(R, t, cost_bp=30, charged_bp=30).equals(R)
 
 
 def test_annual_turnover_is_sum_per_calendar_year():

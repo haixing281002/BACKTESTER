@@ -1,3 +1,4 @@
+# Quant AI Researcher by Harshil Pahuja
 """How complete is this card, measured against the standard a good one sets.
 
 WHY SCORE A CARD AT ALL
@@ -213,10 +214,9 @@ def assess(card) -> Completeness:
           "different questions and both are needed")
 
     # ---- costs ----------------------------------------------------------
-    check("costs", "cost not copied from the paper", card.costs.spread_bps >= 20.0, 3,
-          f"{card.costs.spread_bps:.0f}bp",
-          "a US paper's 5bp is the single most common way an Indian backtest "
-          "lies; 30bp is this fund's floor for sleeve rotation")
+    check("costs", "cost stated for a human to confirm at Gate A", card.costs.spread_bps is not None, 3,
+          f"{card.costs.spread_bps}bp",
+          "a run is charged only what its card states, so the card has to state it")
 
     # ---- evidence and honesty ------------------------------------------
     n_req = len(card.data_requirements)

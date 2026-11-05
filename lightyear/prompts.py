@@ -152,9 +152,9 @@ ros.data.lineage.write_run_manifest(run_dir, __file__, inputs={{..., "card": <ca
 card's own key names plus "start", "end", "cost_bp" and "n_trials". Lightyear FAILS the run if manifest.json's card
 sha or any parameter disagrees with the approved card. The run folder is {run_dir} (also in $LIGHTYEAR_RUN).
 COSTS FOLLOW THE CARD: the headline (daily_returns.csv strategy column, results.headline_cost_bp, the charts) is at
-exactly the card's costs.spread_bps; when it is zero the headline is GROSS and gross equals net. Other costings (a
-0-100bp sweep, a 30bp house-floor variant) are allowed ONLY as a clearly labelled appendix: every such comparator
-column, table title and chart must contain the word "Appendix" and its cost, e.g. "Appendix: same rules at 30bp".
+exactly the card's costs.spread_bps; when it is zero the headline is GROSS and gross equals net. Other costings (the sweep
+in config/costs.yaml) are allowed ONLY as a clearly labelled appendix: every such comparator column, table title and
+chart must contain the word "Appendix" and its cost. Never write a cost or cash number into code: read them from the card.
 Never put a cost the card did not set into the headline. Use universal_backtester/clean_charts.py for charts.
 Keep every number in code; never estimate a statistic in prose. If a script runs for more than a couple of
 minutes, run it in the background and keep announcing progress.

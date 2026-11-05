@@ -1,3 +1,4 @@
+# Quant AI Researcher by Harshil Pahuja
 """Universe translation: what the paper studied -> what we can test in India.
 
 THE PROBLEM THIS SOLVES
@@ -70,9 +71,9 @@ INDIA_EQUITY_CAVEATS = [
     "routinely use 1926 onward. A twenty-year Indian sample contains far fewer "
     "independent regimes, so the same t-statistic carries less evidence.",
 
-    "COSTS: STT, stamp duty, exchange charges and impact. 30bp round trip is a "
-    "floor for index sleeves and optimistic for single-stock rotation at "
-    "mid-cap depth. A paper's 5bp assumption never transfers.",
+    "COSTS: STT, stamp duty, exchange charges and impact. The card states the round-trip "
+    "cost and a human confirms it at Gate A. Single-stock rotation at mid-cap depth costs "
+    "more than index sleeves, and a paper's cost assumption never transfers.",
 
     "MEMBERSHIP HISTORY: NIFTY 500 constituents come from quarterly snapshots "
     "(ros/data/nifty500.py), not daily effective dates, and names that delisted "

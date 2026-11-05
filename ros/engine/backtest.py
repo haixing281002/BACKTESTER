@@ -1,3 +1,4 @@
+# Quant AI Researcher by Harshil Pahuja
 """Step 05 -- BUILD + EXECUTE. Deterministic daily portfolio accounting.
 
 Implements the paper's appendix A accounting exactly, generalised so any card can
@@ -82,7 +83,8 @@ class Backtester:
         prices: pd.DataFrame,
         assets: list[str],
         rf_daily: pd.Series | None = None,
-        spread_bps: float = 5.0,
+        *,
+        spread_bps: float,
         lag_days: int = 0,
         allow_cash: bool = True,
         ann: int = 252,

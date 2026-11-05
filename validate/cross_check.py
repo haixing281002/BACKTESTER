@@ -17,8 +17,8 @@ metric are confirmed by a second implementation that shares no code, uses unit-
 and-cash accounting instead of weights, and parses the workbook with a different
 library.
 
-Does NOT prove: that the assumptions are right. Both implementations charge 30bp
-because the card says 30bp. Both use a flat 6% cash proxy because there is no
+Does NOT prove: that the assumptions are right. Both implementations charge the
+card's cost. Both use the card's flat cash rate because there is no
 Indian risk-free series. Both inherit the backfill bias in the indices. Two
 implementations agreeing on a wrong assumption agree precisely and are precisely
 wrong. Those questions belong to Gate A and Gate B, and no cross-check retires
@@ -37,6 +37,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # The engine under test.
 from ros.cards.schema import load_card
+from ros.config import cash_rate_for
 from ros.data.loaders import load_nse_workbook_combined, synthetic_cash_series
 from ros.engine.backtest import Backtester, rebalance_dates
 from ros.engine.prepare import build_signal_inputs
@@ -73,7 +74,7 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--card", default=CARD)
     ap.add_argument("--xlsx", default=XLSX)
-    ap.add_argument("--cash-rate", type=float, default=0.06)
+    ap.add_argument("--cash-rate", type=float, default=None, help="overrides the card's cash rate")
     ap.add_argument("--excel", action="store_true",
                     help="also write an Excel workbook with live formulas")
     args = ap.parse_args()
@@ -109,8 +110,9 @@ def main() -> int:
     # ---- 2. shared inputs ---------------------------------------------
     prices = eng_frame[assets].dropna()
     idx = prices.index
-    rf_eng = synthetic_cash_series(idx, args.cash_rate)
-    rf_ind = ind.cash_series(idx, args.cash_rate)
+    cash_rate = args.cash_rate if args.cash_rate is not None else cash_rate_for(card)[0]
+    rf_eng = synthetic_cash_series(idx, cash_rate)
+    rf_ind = ind.cash_series(idx, cash_rate)
     check("cash proxy: daily rate", float(rf_eng.iloc[0]), float(rf_ind.iloc[0]))
 
     lookback = card.signal.lookback_days or 21
@@ -155,6 +157,8 @@ def main() -> int:
         eng_bt = Backtester(prices=prices, assets=assets, rf_daily=rf_eng,
                             spread_bps=spread, lag_days=lag, allow_cash=allow_cash)
         p = dict(params)
+        if template == "markowitz_l1":
+            p.setdefault("spread_bps", spread)
         if p.get("weights") == "equal":
             p["weights"] = {a: 1.0 / len(assets) for a in assets}
         eng_res = eng_bt.run(allocator=build_allocator(template, assets, **p),
@@ -260,8 +264,8 @@ def main() -> int:
     print("  rebalancing and all five headline metrics are confirmed by an")
     print("  implementation that shares no code with it.")
     print()
-    print("  What it leaves open: the ASSUMPTIONS. Both sides charge 30bp because")
-    print("  the card says so, both use a flat 6% cash proxy, both inherit the")
+    print("  What it leaves open: the ASSUMPTIONS. Both sides charge the cost because")
+    print("  the card says so, both use the card's flat cash rate, both inherit the")
     print("  backfill bias in these indices. Agreeing on a wrong assumption is")
     print("  still wrong. That is Gate A and Gate B's job, and it stays theirs.")
     return 0

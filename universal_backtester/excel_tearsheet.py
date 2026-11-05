@@ -59,7 +59,6 @@ from universal_backtester.tearsheet import (
     financial_year_label,
 )
 
-DEFAULT_RISK_FREE_RATE = 0.05
 DEFAULT_OMEGA_THRESHOLD = 0.01
 DEFAULT_DRAWDOWN_LIMIT = 0.0
 
@@ -119,7 +118,8 @@ def write_se_return_analytics_workbook(
     benchmark_returns: pd.Series,
     strategy_name: str = "Strategy",
     benchmark_name: str = "Nifty 500 TRI",
-    risk_free_rate: float = DEFAULT_RISK_FREE_RATE,
+    *,
+    risk_free_rate: float,
     omega_threshold: float = DEFAULT_OMEGA_THRESHOLD,
     drawdown_limit: float = DEFAULT_DRAWDOWN_LIMIT,
 ) -> None:
@@ -510,7 +510,8 @@ def compute_se_return_analytics_rows(
     monthly_dates: pd.DatetimeIndex,
     strategy_returns: pd.Series,
     benchmark_returns: pd.Series,
-    risk_free_rate: float = DEFAULT_RISK_FREE_RATE,
+    *,
+    risk_free_rate: float,
     omega_threshold: float = DEFAULT_OMEGA_THRESHOLD,
 ) -> list:
     """The exact same ratios as write_se_return_analytics_workbook's Excel
@@ -673,7 +674,8 @@ def write_se_return_analytics_csv(
     benchmark_returns: pd.Series,
     strategy_name: str = "Strategy",
     benchmark_name: str = "Nifty 500 TRI",
-    risk_free_rate: float = DEFAULT_RISK_FREE_RATE,
+    *,
+    risk_free_rate: float,
     omega_threshold: float = DEFAULT_OMEGA_THRESHOLD,
 ) -> None:
     """CSV twin of write_se_return_analytics_workbook: same sections, same
@@ -681,6 +683,6 @@ def write_se_return_analytics_csv(
     formulas (see compute_se_return_analytics_rows) so the two files never
     disagree with each other on a number."""
     rows = compute_se_return_analytics_rows(
-        monthly_dates, strategy_returns, benchmark_returns, risk_free_rate, omega_threshold)
+        monthly_dates, strategy_returns, benchmark_returns, risk_free_rate=risk_free_rate, omega_threshold=omega_threshold)
     out = pd.DataFrame(rows, columns=["section", "metric", strategy_name, benchmark_name, "is_percent"])
     out.drop(columns=["is_percent"]).to_csv(path, index=False)

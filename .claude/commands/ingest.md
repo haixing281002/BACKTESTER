@@ -1,3 +1,4 @@
+<!-- Quant AI Researcher by Harshil Pahuja -->
 ---
 description: "Stage 01 — read a paper, decide the universe, and reconstruct the strategy"
 argument-hint: "<paper.pdf>"
@@ -358,7 +359,7 @@ print(derive(load_card('cards/<slug>.yaml')).render())"
 ```
 
 Those rules are a floor. They fire whatever anyone thinks, and you cannot lower
-them: `lag_days >= 1` and the 30bp cost are not negotiable by argument.
+them: `lag_days >= 1` is not negotiable by argument, and the cost is a human's to confirm at Gate A.
 
 What they cannot do is read. The matching is keyword-based, so it is deaf to
 anything particular to THIS paper in THIS market. That is your half, and there

@@ -668,21 +668,21 @@ function fillPVB(){
 }
 function fillCore(c){
   if(!$("#coretab")) return;
-  if(!("net" in c)){
+  if(!("card_bp" in c)){
     $("#coretab").innerHTML = "";
-    $("#coremore").innerHTML = "This run's numbers were built before the metrics changed, so its Sharpe is the old (CAGR - 6%) / volatility. Press Rebuild to redo them from its own files with no new backtest.";
+    $("#coremore").innerHTML = `This run's numbers were built before the metrics changed, so its Sharpe uses the old ${c.hurdle!=null?pct(c.hurdle,0)+" hurdle":"formula"}, and any net figures use a cost that was not on its card. Press Rebuild to redo them from its own files with no new backtest.`;
     return;
   }
-  const m = c.metrics, s = m.strategy, b = m.benchmark, net = c.net, n = net ? net.metrics : {};
+  const m = c.metrics, s = m.strategy, b = m.benchmark, bp = c.card_bp, g = c.gross;
   const f = (v,fmt) => (v==null||Number.isNaN(v)) ? "–" : fmt==="pct" ? pct(v,2) : fmt==="int" ? Math.round(v) : num(v);
   const R = [["CAGR","cagr","pct"],["Volatility","vol","pct"],["Sharpe","sharpe","num"],["Sortino","sortino","num"],["Calmar","calmar","num"],["Maximum drawdown","max_dd","pct"],
     ["Drawdown duration (trading days)","dd_duration_days","int"],["95% CVaR (daily loss)","cvar_95","pct"],["Skew","skew","num"],["CAGR without the 10 best days","best_days_removed_cagr","pct"],
     ["Beta","beta","num"],["Tracking error","tracking_error","pct"],["Information ratio","information_ratio","num"],["Up capture (monthly)","up_capture","num"],["Down capture (monthly)","down_capture","num"],["Rolling one-year periods behind","rolling_behind","pct"]];
-  $("#coretab").innerHTML = `<tr><th>Metric</th><th>Strategy, as run</th><th>${net?`Strategy, net at ${num(net.house_bp,0)}bp`:"Net of house cost"}</th><th>${esc(c.names.benchmark)}</th></tr>` +
-    R.map(([l,k,t])=>`<tr><td>${l}</td><td>${f(s[k],t)}</td><td>${net?f(n[k],t):"not computed"}</td><td>${f(b[k],t)}</td></tr>`).join("");
+  $("#coretab").innerHTML = `<tr><th>Metric</th>${g?`<th>Strategy, gross</th>`:""}<th>Strategy, at the card's ${num(bp,0)}bp${g?" (net)":" (gross = net)"}</th><th>${esc(c.names.benchmark)}</th></tr>` +
+    R.map(([l,k,t])=>`<tr><td>${l}</td>${g?`<td>${f(g[k],t)}</td>`:""}<td>${f(s[k],t)}</td><td>${f(b[k],t)}</td></tr>`).join("");
   const pp = c.post_publication, cp = c.capacity || {};
   $("#coremore").innerHTML = [
-    net ? `Two-way turnover ${num(net.annual_turnover)} times capital a year. Net = the house cost charged on this run's trades.` : `Net of cost not computed: this run wrote no trades or holdings.`,
+    c.annual_turnover!=null ? `Two-way turnover ${num(c.annual_turnover)} times capital a year. The cost is the one on this run's card, approved at Gate A.` : `Turnover not computed: this run wrote no trades or holdings.`,
     pp ? `After publication (from ${esc(pp.from)}): CAGR ${pct(pp.cagr,2)} against ${pct(pp.benchmark_cagr,2)} for the benchmark, Sharpe ${num(pp.sharpe)} against ${num(pp.benchmark_sharpe)}, worst fall ${pct(pp.max_dd,2)}.` : "",
     cp.status==="computed" ? `Capacity at Rs ${num(cp.aum_inr_cr,0)} crore: trade size against 20-day traded value, median ${pct(cp.median,2)}, 95th percentile ${pct(cp.p95,2)}, largest ${pct(cp.max,2)}; ${cp.names_above_limit.length} name(s) above the limit.` : `Capacity not computed: ${esc(cp.why||"this run predates it")}.`,
     c.cash_rate==null ? `Sharpe and Sortino are blank: this run's card could not be read.` : `Cash rate ${pct(c.cash_rate,2)}, from ${esc(c.cash_source||"the card")}.`
@@ -695,7 +695,7 @@ async function drawCharts(force){
   CHARTED = CUR; CH = c;
   fillPN();
   fillPVB();
-  const legacy = !("net" in c), shLabel = legacy ? "Sharpe (old 6% hurdle)" : "Sharpe";
+  const legacy = !("card_bp" in c), shLabel = legacy ? `Sharpe (old ${c.hurdle!=null?pct(c.hurdle,0)+" hurdle":"formula"})` : "Sharpe";
   const m = c.metrics, K = [["CAGR (a year)","cagr",pct],["Volatility (a year)","vol",pct],[shLabel,"sharpe",num],["Worst fall from peak","max_dd",pct],["100 became","final",v=>num(v,1)]];
   $("#kpis").innerHTML = K.map(([l,k,f]) => `<div class="kpi"><div class="l">${l}</div><div class="v">${f(m.strategy[k])}</div><div class="b">${esc(c.names.benchmark)}: ${f(m.benchmark[k])}</div></div>`).join("");
   fillCore(c);

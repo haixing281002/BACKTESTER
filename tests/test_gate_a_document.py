@@ -1,3 +1,4 @@
+# Quant AI Researcher by Harshil Pahuja
 """Gate A is the strategy card, displayed. Nothing else.
 
 The output kept drifting into a tour of the pipeline -- which stage produced
@@ -228,13 +229,13 @@ def test_the_sheet_and_the_card_cannot_disagree(card, sheet, doc):
 
 
 def test_india_non_negotiables_are_not_on_the_decision_sheet(card, sheet, wiring):
-    """lag >= 1 and the 30bp floor are enforced, not decided.
+    """lag >= 1 and the cost requirement are enforced, not decided.
 
     They were briefly ranked as items 1 and 2 -- padding the sheet with two
     things nobody rules on, above the things they do.
     """
     assert "lag_days >= 1" not in sheet
-    assert flat(sheet).count("30bp round trip, the fund's floor") == 0
+    assert flat(sheet).count("A round-trip cost stated on the card") == 0
 
 
 def _numbered(out):

@@ -1,3 +1,4 @@
+# Quant AI Researcher by Harshil Pahuja
 """Pipeline driver: card in, governed verdict out.
 
 Runs steps 01-08 for ANY card. Nothing in this module knows about any particular
@@ -75,7 +76,7 @@ class RunSet:
 def execute_card(
     card: StrategyCard,
     snapshot: Snapshot,
-    cash_rate: float = 0.06,
+    cash_rate: float | None = None,
     reference_assets: list[str] | None = None,
     spread_bps_override: float | None = None,
     lag_override: int | None = None,
@@ -88,6 +89,9 @@ def execute_card(
     lag = lag_override if lag_override is not None else card.signal.lag_days
     lookback = card.signal.lookback_days or 21
 
+    if cash_rate is None:
+        from ros.config import cash_rate_for
+        cash_rate = cash_rate_for(card)[0]
     rf = synthetic_cash_series(prices.index, cash_rate)
 
     sp = card.signal.params or {}
@@ -108,7 +112,10 @@ def execute_card(
 
     def run_one(template: str, params: dict[str, Any], name: str, rebalance: str,
                 allow_cash: bool, spread_bps: float = None, lag_days: int = None) -> BacktestResult:
-        alloc = build_allocator(template, assets, **_resolve_params(params, assets))
+        resolved = _resolve_params(params, assets)
+        if template == "markowitz_l1":      # its turnover penalty charges the card's cost unless the card sets one for it
+            resolved.setdefault("spread_bps", spread if spread_bps is None else spread_bps)
+        alloc = build_allocator(template, assets, **resolved)
         bt = make_engine(allow_cash,
                          spread if spread_bps is None else spread_bps,
                          lag if lag_days is None else lag_days)

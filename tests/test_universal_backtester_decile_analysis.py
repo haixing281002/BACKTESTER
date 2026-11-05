@@ -1,3 +1,4 @@
+# Quant AI Researcher by Harshil Pahuja
 """compute_decile_membership / run_decile_backtests / summarize_deciles /
 write_decile_membership_log -- the full NIFTY 500 decile deep-dive, not
 just the top/bottom decile pair."""
@@ -77,7 +78,7 @@ def test_run_decile_backtests_produces_one_result_per_decile():
     for k, r in results.items():
         assert len(r.value.dropna()) > 10
 
-    summary = summarize_deciles(results)
+    summary = summarize_deciles(results, cash_rate=0.06)
     assert list(summary["decile"]) == list(range(1, 11))
     assert {"cagr", "vol", "sharpe", "max_dd"}.issubset(summary.columns)
 

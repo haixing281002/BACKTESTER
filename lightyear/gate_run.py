@@ -52,8 +52,8 @@ def _positions(holdings):
     return {"max_cash_share": float(max(0.0, 1.0 - gross.min())), "max_single_weight": float(holdings["weight"].abs().max()), "min_weight": float(holdings["weight"].min())}
 
 
-def score(rd, card_path, charged_bp, df, trades=None, holdings=None, spec_failures=None, use_net=True) -> dict:
-    """Gate v2 for a run. `use_net=False` scores the returns as run, to show what the house cost changes.
+def score(rd, card_path, df, trades=None, holdings=None, spec_failures=None) -> dict:
+    """Gate v2 for a run, on its daily returns exactly as run: that is, at the cost on its approved card and nothing else.
     `spec_failures` is the audit's count of rules not honoured; None when no audit ran."""
     th = config.gate_thresholds()
     idx = pd.DatetimeIndex(df["date"])
@@ -64,11 +64,8 @@ def score(rd, card_path, charged_bp, df, trades=None, holdings=None, spec_failur
     e["priced_coverage"], e["unpriced"] = _coverage(rd)
     e["capacity"] = capacity(df, trades)
 
-    net_note = "returns as run"
     series = r
-    if use_net and trades is not None and len(trades):
-        series = core.net_returns(r, core.two_way_turnover_from_trades(trades, idx), config.house_cost_bp(), float(charged_bp or 0.0))
-        net_note = f"net of the house cost, {config.house_cost_bp():g}bp round trip"
+    basis = f"daily returns at the card's cost, {float(card.costs.spread_bps):g}bp round trip"
     cash = core.daily_cash(config.cash_rate_for(card)[0])
     e["net_edge"] = core.cagr(core.value_from_returns(series)) - core.cagr(core.value_from_returns(b))
     boot = ev.paired_bootstrap(series, b, cash)
@@ -88,6 +85,6 @@ def score(rd, card_path, charged_bp, df, trades=None, holdings=None, spec_failur
         bk = pd.read_csv(book_path, parse_dates=["date"]).set_index("date")["book"]
         e.update(ev.book_tests(series, bk, b))
     res = gate_v2.evaluate(e, th, config.mandate()).to_dict()
-    res["basis"] = net_note
+    res["basis"] = basis
     res["summary"] = {k: e.get(k) for k in ("net_edge", "bootstrap_p", "bootstrap_max_dd_gap", "alpha", "alpha_t", "sub_period_positive", "sub_period_n", "sub_period_worst", "post_publication_edge")}
     return res

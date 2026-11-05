@@ -1,5 +1,5 @@
 # Quant AI Researcher by Harshil Pahuja
 # Facts about the fund. A blank value is reported as not computed, and its gate test as INCOMPLETE. Nothing is guessed.
-default_cash_rate: 0.06  # Used only when a card names no rate (a fully invested card may set cash_asset: null). Source: CASH_PROXY_CONSTANT_6PCT, ros/data/firm_registry.py
+cash_rate_sweep: [0.0, 0.04, 0.08]   # Rates an appendix sweep tries beside the card's own. Never reaches a headline or a gate.
 aum_inr_cr: null        # NOT SET: the fund's AUM in Rs crore, needed for the capacity metric and test
 book_returns_csv: null  # NOT SET: the fund's own daily book returns (columns date, book), needed for gate tests 4 and 5

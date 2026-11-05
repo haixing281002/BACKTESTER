@@ -2,6 +2,7 @@
 """A metric name means one thing. This fails if any two code paths give different values for the same name."""
 import json
 import os
+import re
 import subprocess
 import sys
 from types import SimpleNamespace
@@ -118,19 +119,19 @@ def test_the_workbook_formulas_agree_with_the_dashboard_after_recalculation(data
 
 def test_lightyear_reads_the_cash_rate_from_the_card(tmp_path, monkeypatch):
     from lightyear import jobs
-    card = SimpleNamespace(paper=SimpleNamespace(date="2015"), universe=SimpleNamespace(cash_asset="CASH_PROXY_CONSTANT_8PCT"))
+    card = SimpleNamespace(paper=SimpleNamespace(date="2015"), universe=SimpleNamespace(cash_asset="CASH_PROXY_CONSTANT_8PCT"), costs=SimpleNamespace(spread_bps=0.0))
     monkeypatch.setattr(jobs, "load_card", lambda p: card)
     df = pd.DataFrame({"date": pd.bdate_range("2024-01-01", periods=70), "strategy": 0.001, "benchmark": 0.001})
     out, warn = jobs._core_inputs({"phase_a": {"card_path": "cards/x.yaml"}}, {"headline_cost_bp": 0}, df, {})
     assert out["cash_rate"] == 0.08 and out["cash_source"] == "the card" and out["publication_date"] == "2015"
-    assert any("Net-of-cost" in w for w in warn)
-    assert out["house_bp"] == 30
+    assert out["card_bp"] == 0.0
+    assert any("Turnover not computed" in w for w in warn)
 
 
-def test_a_card_with_no_rate_uses_the_funds_and_says_so():
+def test_a_card_with_no_rate_gets_no_invented_rate_and_says_so():
     from ros import config
     rate, src = config.cash_rate_for(SimpleNamespace(universe=SimpleNamespace(cash_asset=None)))
-    assert rate == config.fund()["default_cash_rate"] and "config/fund.yaml" in src
+    assert rate == 0.0 and "names no rate" in src
     assert config.cash_rate_for(SimpleNamespace(universe=SimpleNamespace(cash_asset="CASH_PROXY_CONSTANT_8PCT"))) == (0.08, "the card")
 
 
@@ -149,3 +150,28 @@ def test_no_other_python_file_defines_its_own_sharpe_formula():
                     if rel not in allowed and ("def sharpe" in txt or "def _sharpe" in txt):
                         bad.append(rel)
     assert not bad, bad
+
+
+def test_at_zero_on_the_card_gross_is_the_only_number_and_no_other_cost_appears(data):
+    r, b = data
+    t = pd.Series(0.05, index=r.index)
+    zero = charts.build(_frame(r, b), {"strategy": "S"}, cash_rate=RATE, turnover=t, card_bp=0.0)
+    assert zero["card_bp"] == 0.0 and zero["gross"] is None
+    assert zero["metrics"]["strategy"]["sharpe"] == pytest.approx(core.sharpe(r, CASH), rel=1e-12)
+    costed = charts.build(_frame(r, b), {"strategy": "S"}, cash_rate=RATE, turnover=t, card_bp=30.0)
+    assert costed["gross"]["cagr"] > costed["metrics"]["strategy"]["cagr"]
+    assert costed["metrics"]["strategy"]["sharpe"] == pytest.approx(core.sharpe(r, CASH), rel=1e-12)    # as run is the card's cost
+
+
+def test_no_cost_or_cash_number_is_written_into_live_code():
+    """The card sets a run's cost and cash; config holds only appendix grids. Anything else is what this repo once charged by mistake."""
+    bad = re.compile(r"house_(bp|cost|round)|default_cash_rate|DEFAULT_RISK_FREE|\b\d+bp (round trip|house)|\bhouse floor\b|SPREAD_BPS\s*=|spread_bps\s*[:=]\s*(float\s*=\s*)?\d|cash_rate\s*:\s*float\s*=\s*\d|--cash-rate\", type=float, default=\d")
+    hits = []
+    for root in ("ros", "lightyear", "universal_backtester", "validate", "scripts", "config"):
+        for dp, dn, fn in os.walk(os.path.join(REPO, root)):
+            dn[:] = [d for d in dn if d not in ("vendor", "__pycache__", "universe_v2", "gate_v2")]
+            for f in fn:
+                if f.endswith((".py", ".yaml", ".html")):
+                    with open(os.path.join(dp, f), encoding="utf-8", errors="replace") as fh:
+                        hits += [f"{f}: {m.group(0)}" for m in bad.finditer(fh.read())]
+    assert not hits, hits

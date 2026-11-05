@@ -1,3 +1,4 @@
+# Quant AI Researcher by Harshil Pahuja
 """What it takes to backtest THIS strategy in India, honestly.
 
 Gate A used to say "you are missing nifty500_constituent_prices". True, and
@@ -19,8 +20,8 @@ WHAT IS DELIBERATELY NOT HERE
 Current statutory rates. STT, stamp duty and exchange charges change, and a
 number baked into a repo is a number that goes quietly stale and gets trusted
 anyway. The cost rules name the COMPONENTS and require the desk to supply its
-own current figures. The one number that is stated is the 30bp sleeve floor,
-because CLAUDE.md already fixes it as a non-negotiable for this fund.
+own current figures. No cost is stated here at all: the card states it, and a human confirms it at
+Gate A.
 """
 from __future__ import annotations
 
@@ -364,17 +365,17 @@ def derive(card, translation_check: Any | None = None) -> IndiaRequirements:
 
     # ---------------- COST --------------------------------------------
     if sleeves:
-        add(COST, "30bp round trip, the fund's floor for index-sleeve rotation",
-            "Fixed as a non-negotiable for this fund. A US paper's 5bp does not "
-            "transfer and copying it is the commonest way an Indian backtest lies.",
+        add(COST, "A round-trip cost stated on the card and confirmed at Gate A",
+            "The card's cost is the only cost a run is charged. A paper's cost does "
+            "not transfer by default, so the card has to state one for Indian trading.",
             triggered_by="sleeve-level trading")
     else:
         add(COST, "A single-stock cost stack the desk supplies: STT, stamp duty, "
                   "exchange and SEBI charges, brokerage, and IMPACT",
             "Deliberately not a number in this repo. Statutory rates change and a "
             "baked-in figure goes stale while still being trusted. What does not "
-            "change is that single-stock rotation costs materially more than the "
-            "30bp sleeve floor, and that impact -- the part that scales with your "
+            "change is that single-stock rotation costs materially more than "
+            "index-sleeve rotation, and that impact -- the part that scales with your "
             "size and the name's depth -- is usually larger than every statutory "
             "component combined.",
             triggered_by="trading individual securities")

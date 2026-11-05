@@ -25,6 +25,7 @@ import pandas as pd
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, REPO)
+from ros import config
 from ros.metrics import core, legacy_v1
 from ros.validation import gate_evidence as ev
 from ros.validation.portfolio import factor_fingerprint
@@ -32,7 +33,7 @@ from ros.validation.research import walk_forward_split
 
 OUT = os.path.join(REPO, "docs", "gate_b", "calibration")
 DAYS = round(12.7 * 252)
-CASH_ANNUAL = 0.06                      # the simulation's own cash rate; returns are simulated above it
+CASH_ANNUAL = float(config.calibration()["cash_annual"])    # the simulation's own cash level; returns are simulated above it
 CASH = core.daily_cash(CASH_ANNUAL)
 BENCH_VOL, BENCH_EXCESS = 0.16, 0.07    # benchmark: 16% vol, 7% a year above cash
 STRAT_VOL, RHO = 0.17, 0.80             # the brief: about 17% vol, about 0.8 correlation to the benchmark

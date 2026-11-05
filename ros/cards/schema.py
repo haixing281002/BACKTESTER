@@ -398,7 +398,7 @@ class IndiaNote:
     ros/india_requirements.py derives requirements mechanically from properties
     of the reconstructed strategy -- does it rank securities, does it read a
     fundamental, how fast does it trade. That is the floor, and it is a floor
-    precisely because no model can argue it away: `lag_days >= 1` and the 30bp
+    precisely because no model can argue it away: `lag_days >= 1` and the stated cost
     cost fire whatever anyone thinks.
 
     But the matching is keyword-based, so it is deaf to anything a paper does
@@ -783,7 +783,7 @@ class PortfolioSpec:
 
 @dataclass
 class CostSpec:
-    spread_bps: float = 5.0        # full bid-ask spread in bps; charged at half
+    spread_bps: float | None = None   # full round-trip cost in bps; charged at half. Only the card sets it: no default
     cost_model: str = "half_spread"
     impact_bps_per_pct_adv: float | None = None
     borrow_bps: float | None = None
@@ -924,6 +924,8 @@ class StrategyCard:
             errs.append("universe.assets is empty")
         if self.signal.lag_days < 0:
             errs.append("signal.lag_days must be >= 0")
+        if self.costs.spread_bps is None:
+            errs.append("costs.spread_bps must be stated on the card")
         if self.n_configs_tried < 1:
             errs.append("n_configs_tried must be >= 1")
         if self.n_configs_selected_from is not None and self.n_configs_selected_from < 1:
@@ -1102,9 +1104,9 @@ class StrategyCard:
                 "two different strategies, not two views of one",
                 owner="pm", flag=DECIDE, ref="portfolio.mandate_allow_cash")
         add("COSTS", "charged",
-            f"{self.costs.spread_bps:.0f}bp round trip ({self.costs.cost_model})",
+            f"{self.costs.spread_bps}bp round trip ({self.costs.cost_model})",
             "a US paper's 5bp is the commonest way an Indian backtest lies",
-            owner="researcher", flag=DECIDE if self.costs.spread_bps < 20 else "",
+            owner="researcher", flag=DECIDE,
             ref="costs.spread_bps")
 
         dp = self.data_plan
@@ -1241,7 +1243,7 @@ class StrategyCard:
                      else self.portfolio.rebalance)
         benchmark = self.universe.benchmark or unset
         costs = (f"{self.costs.spread_bps:.0f}bp round trip ({self.costs.cost_model})"
-                 if self.costs.spread_bps else unset)
+                 if self.costs.spread_bps is not None else unset)
 
         n_amb = len(self.ambiguities)
         unresolved = len(self.unresolved_ambiguities)

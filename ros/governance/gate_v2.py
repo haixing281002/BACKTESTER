@@ -102,18 +102,18 @@ def integrity_row(checks: list[dict[str, Any]] | None, reconciles: bool | None, 
 
 
 def evaluate(e: dict[str, Any], th: dict[str, Any], mandate_limits: dict[str, Any], overrides: list[dict[str, Any]] | None = None) -> GateV2Result:
-    """`e` is the evidence (ros.validation.gate_evidence), `th` the loaded thresholds file. Every blocking number is net of the house cost."""
+    """`e` is the evidence (ros.validation.gate_evidence), `th` the loaded thresholds file. Every number is at the cost on the run's card."""
     h: list[Row] = [
         mandate_row(e.get("mandate_observed"), mandate_limits, overrides),
         capacity_row(e.get("capacity"), th["capacity"]["p95_adv_participation_max"]),
         integrity_row(e.get("checks"), e.get("reconciles"), e.get("priced_coverage"), e.get("unpriced"), th["data_integrity"]["min_priced_coverage"]),
     ]
     edge = e.get("net_edge")
-    h.append(Row("net_edge", "Net-of-cost edge over the benchmark", NOT_RUN if edge is None else (PASS if edge > 0 else FAIL), value=edge, threshold="> 0",
-                 evidence="CAGR net of the house cost, minus the benchmark's"))
+    h.append(Row("net_edge", "Edge over the benchmark, at the card's cost", NOT_RUN if edge is None else (PASS if edge > 0 else FAIL), value=edge, threshold="> 0",
+                 evidence="CAGR at the card's cost, minus the benchmark's"))
     p = e.get("bootstrap_p")
     p_max = th["bootstrap"]["p_max"]
-    h.append(Row("bootstrap", "Paired bootstrap, net of cost", NOT_RUN if p is None else (PASS if p <= p_max else FAIL), value=p, threshold=f"<= {p_max}",
+    h.append(Row("bootstrap", "Paired bootstrap, at the card's cost", NOT_RUN if p is None else (PASS if p <= p_max else FAIL), value=p, threshold=f"<= {p_max}",
                  evidence="share of draws where the Sharpe gap to the benchmark is at or below zero"))
 
     d = th["deflated_sharpe"]

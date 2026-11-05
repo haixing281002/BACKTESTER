@@ -1,3 +1,4 @@
+# Quant AI Researcher by Harshil Pahuja
 """Gate A must say what it takes to run THIS strategy in India.
 
 "You are missing nifty500_constituent_prices" names a file, not a specification.
@@ -199,7 +200,7 @@ def test_a_long_short_source_asks_what_the_short_leg_earned():
 # ---------------------------------------------------------------------------
 def test_sleeve_trading_carries_the_thirty_bp_floor():
     r = derive(_card(cross_sectional=False, target="NSE factor sleeves"))
-    assert _says(r, "30bp", COST)
+    assert _says(r, "stated on the card", COST)
 
 
 def test_single_stock_costs_name_components_rather_than_a_rate():

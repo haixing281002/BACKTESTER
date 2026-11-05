@@ -112,7 +112,7 @@ def _blank_nans(x):
 
 
 def build(df: pd.DataFrame, names: dict, cash_rate=None, comparators: pd.DataFrame = None, turnover: pd.Series = None,
-          house_bp=None, charged_bp=0.0, publication_date=None, cash_source=None):
+          card_bp=None, publication_date=None, cash_source=None):
     df = df.sort_values("date").reset_index(drop=True)
     cols = [c for c in ("strategy", "benchmark", "sleeve") if c in df.columns]
     d = df["date"]
@@ -154,12 +154,13 @@ def build(df: pd.DataFrame, names: dict, cash_rate=None, comparators: pd.DataFra
     strat = pd.Series(df["strategy"].fillna(0.0).to_numpy(dtype=float), index=idx)
     bench = pd.Series(df["benchmark"].fillna(0.0).to_numpy(dtype=float), index=idx)
     cash = core.daily_cash(cash_rate) if cash_rate is not None else None
-    if turnover is not None and house_bp is not None:
-        net = core.net_returns(strat, turnover, house_bp, charged_bp)
-        out["net"] = {"house_bp": house_bp, "charged_bp": charged_bp, "annual_turnover": core.annual_turnover(turnover),
-                      "metrics": metrics(pd.Series(net.to_numpy()), d, cash_rate, df["benchmark"])}
-    else:
-        out["net"] = None
+    # daily_returns.csv is at the card's cost. Gross is those trades with that cost put back. At 0bp the two are one number.
+    out["card_bp"] = card_bp
+    out["annual_turnover"] = core.annual_turnover(turnover) if turnover is not None else None
+    out["gross"] = None
+    if turnover is not None and card_bp:
+        gross = core.returns_at_cost(strat, turnover, 0.0, card_bp)
+        out["gross"] = metrics(pd.Series(gross.to_numpy()), d, cash_rate, df["benchmark"])
     out["post_publication"] = core.post_publication(strat, bench, cash, publication_date) if cash is not None else None
     wd = core.worst_days(strat)
     out["worst_days"] = [{"date": str(k.date()), "return": float(v)} for k, v in wd.items()]

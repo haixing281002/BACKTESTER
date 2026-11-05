@@ -1,3 +1,4 @@
+# Quant AI Researcher by Harshil Pahuja
 """Stage 01 now decides two things that dominate everything downstream: which
 universe a paper is tested on, and what the strategy actually is.
 
@@ -800,12 +801,14 @@ def test_a_card_that_merely_validates_scores_badly():
     assert len(r.serious) >= 8
 
 
-def test_completeness_catches_a_cost_copied_from_the_paper():
+def test_completeness_catches_a_card_that_states_no_cost():
     card = load_card(EXEMPLAR)
-    card.costs.spread_bps = 5.0
+    card.costs.spread_bps = None
     r = card_completeness(card)
-    bad = [c for c in r.missing if "cost not copied" in c.name]
+    bad = [c for c in r.missing if "cost stated" in c.name]
     assert bad and bad[0].weight >= 3
+    card.costs.spread_bps = 0.0
+    assert not [c for c in card_completeness(card).missing if "cost stated" in c.name]    # zero is a stated cost
 
 
 def test_completeness_catches_a_zero_lag():

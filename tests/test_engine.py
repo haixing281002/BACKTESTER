@@ -100,7 +100,7 @@ def test_signal_is_shifted_and_lag_compounds():
     """The engine must consume signals shifted by 1 + lag_days."""
     px = _prices()
     for lag in (0, 1, 5):
-        bt = Backtester(px, list(px.columns), lag_days=lag)
+        bt = Backtester(px, list(px.columns), spread_bps=5.0, lag_days=lag)
         sig = pd.Series(np.arange(len(px), dtype=float), index=px.index)
         assert bt._shift_causal(sig).iloc[10] == 10 - (1 + lag)
 
@@ -138,7 +138,7 @@ def test_markowitz_respects_its_constraints():
     rng = np.random.default_rng(1)
     X = rng.normal(0, 0.01, size=(400, 3))
     cov = np.cov(X, rowvar=False) * 252
-    a = build_allocator("markowitz_l1", ["A0", "A1", "A2"],
+    a = build_allocator("markowitz_l1", ["A0", "A1", "A2"], spread_bps=5.0,
                         strategic_weights={"A0": .5, "A1": .3, "A2": .2},
                         target_vol=0.05, l1_budget=1.0)
     w = a.target_weights(AllocatorContext(
@@ -214,7 +214,7 @@ def test_engine_rejects_nan_prices():
     px = _prices()
     px.iloc[5, 0] = np.nan
     with pytest.raises(ValueError, match="NaN"):
-        Backtester(px, list(px.columns))
+        Backtester(px, list(px.columns), spread_bps=5.0)
 
 
 def test_card_rejects_unknown_keys_and_unresolved_ambiguity(tmp_path):

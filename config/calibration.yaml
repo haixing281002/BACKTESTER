@@ -1,0 +1,4 @@
+# Quant AI Researcher by Harshil Pahuja
+# Assumptions of the threshold simulations and reference strategies only (scripts/gate_v2/). No strategy run reads these.
+cash_annual: 0.06          # the simulation's cash level; simulated returns are set relative to it
+reference_cost_bp: 30      # what the equal-weight and random reference books were charged. They have no card.

@@ -345,15 +345,14 @@ def _gate_v2_sheet(wb, g):
 
 
 def _core_sheet(wb, ch, s_name, b_name):
-    """Core performance, gross beside net at the house cost: the page's table, from ros.metrics.core (blue = computed there)."""
+    """Core performance at the card's cost, with gross beside it when that cost is not zero. The page's table, from ros.metrics.core."""
     wk = wb.create_sheet("Core metrics")
-    net = ch.get("net") or {}
-    nm = net.get("metrics") or {}
+    gross, bp = ch.get("gross"), ch.get("card_bp")
     m, b = ch["metrics"]["strategy"], ch["metrics"]["benchmark"]
     put(wk, "A1", "Core performance", F_TITLE)
-    put(wk, "A2", "Values from ros/metrics/core.py, the same code as the Lightyear page. Net = the house round-trip cost in "
-        f"config/costs.yaml ({net.get('house_bp', 'n/a')}bp), charged on this run's trades. Quant AI Researcher by Harshil Pahuja", F_NOTE)
-    header(wk, 4, ["Metric", f"{s_name}, as run", f"{s_name}, net of house cost", b_name])
+    put(wk, "A2", f"Values from ros/metrics/core.py, the same code as the Lightyear page. The cost is the card's: {bp if bp is not None else 'not read'}bp round trip. "
+        "Quant AI Researcher by Harshil Pahuja", F_NOTE)
+    header(wk, 4, ["Metric", f"{s_name}, at the card's cost" + (" (net)" if gross else " (gross = net)"), f"{s_name}, gross" if gross else "", b_name])
     rows = [("CAGR", "cagr", PCT), ("Volatility", "vol", PCT), ("Sharpe", "sharpe", NUM2), ("Sortino", "sortino", NUM2), ("Calmar", "calmar", NUM2),
             ("Maximum drawdown", "max_dd", PCT), ("Drawdown duration (trading days)", "dd_duration_days", INT), ("95% CVaR (daily loss)", "cvar_95", PCT),
             ("Skew", "skew", NUM2), ("CAGR without the 10 best days", "best_days_removed_cagr", PCT), ("Beta", "beta", NUM2),
@@ -365,11 +364,11 @@ def _core_sheet(wb, ch, s_name, b_name):
 
     for i, (label, key, fmt) in enumerate(rows, start=5):
         put(wk, f"A{i}", label, F_BASE, border=True)
-        for col, src in (("B", m), ("C", nm), ("D", b)):
+        for col, src in (("B", m), ("C", gross or {}), ("D", b)):
             put(wk, f"{col}{i}", cell(src.get(key)), F_INPUT, fmt, border=True)
     r = 6 + len(rows)
     put(wk, f"A{r}", "Two-way turnover a year (x capital)", F_BASE, border=True)
-    put(wk, f"B{r}", cell(net.get("annual_turnover")), F_INPUT, NUM2, border=True)
+    put(wk, f"B{r}", cell(ch.get("annual_turnover")), F_INPUT, NUM2, border=True)
     pp = ch.get("post_publication")
     if pp:
         r += 2

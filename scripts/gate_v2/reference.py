@@ -32,7 +32,7 @@ from ros.validation import gate_evidence as ev
 
 OUT = os.path.join(REPO, "docs", "gate_b", "calibration", "reference.csv")
 START, END = "2014-01-01", "2026-09-18"     # 12.7 years to the benchmark's last close
-CASH_ANNUAL = 0.06                          # declared constant proxy; the house convention, also the simulation's
+CASH_ANNUAL = float(config.calibration()["cash_annual"])     # these books have no card, so the calibration file states it
 CASH = core.daily_cash(CASH_ANNUAL)
 FACTORS = {"market": "NIFTY 500", "midcap150": "NIFTY MIDCAP 150", "smallcap250": "NIFTY SMALLCAP 250", "momentum": "NIFTY500 MOMENTUM 50",
            "value": "NIFTY500 VALUE 50", "quality": "NIFTY500 QUALITY 50", "low_vol": "NIFTY500 LOW VOLATILITY 50"}
@@ -55,7 +55,7 @@ def load():
     return rets, members & priced, idx_rets
 
 
-def book_returns(rets: pd.DataFrame, eligible: pd.DataFrame, house_bp: float, pick) -> pd.Series:
+def book_returns(rets: pd.DataFrame, eligible: pd.DataFrame, cost_bp: float, pick) -> pd.Series:
     """Monthly rebalanced equal-weight book. The signal is each month's last session, the fill the next session's close, so
     a holding earns returns from the day after its fill. `pick(names)` chooses from the names eligible at the signal."""
     cal = rets.index
@@ -77,7 +77,7 @@ def book_returns(rets: pd.DataFrame, eligible: pd.DataFrame, house_bp: float, pi
         ids = [col_at[c] for c in chosen]
         w0 = 1.0 / len(ids)
         turnover = sum(abs(w0 - prev.get(c, 0.0)) for c in chosen) + sum(v for c, v in prev.items() if c not in set(chosen))
-        out[i_fill] -= turnover * house_bp / 2.0 / 1e4     # charged on the fill day, whose close is the entry price
+        out[i_fill] -= turnover * cost_bp / 2.0 / 1e4     # charged on the fill day, whose close is the entry price
         hold = arr[i_fill + 1:i_end + 1][:, ids]
         if not len(hold):
             continue
@@ -103,14 +103,14 @@ def stats_row(name: str, r: pd.Series, b: pd.Series, factors: pd.DataFrame, floo
     return row
 
 
-def _init(house_bp):
+def _init(cost_bp):
     rets, elig, idx = load()
-    _S.update(rets=rets, elig=elig, idx=idx, house_bp=house_bp, factors=idx[list(FACTORS.values())].rename(columns={v: k for k, v in FACTORS.items()}))
+    _S.update(rets=rets, elig=elig, idx=idx, cost_bp=cost_bp, factors=idx[list(FACTORS.values())].rename(columns={v: k for k, v in FACTORS.items()}))
 
 
 def _one_random(seed: int) -> dict:
     rng = np.random.default_rng([20261105, seed])
-    r = book_returns(_S["rets"], _S["elig"], _S["house_bp"], lambda names: rng.choice(names, size=min(30, len(names)), replace=False))
+    r = book_returns(_S["rets"], _S["elig"], _S["cost_bp"], lambda names: rng.choice(names, size=min(30, len(names)), replace=False))
     return stats_row(f"Random 30 #{seed}", r, _S["factors"]["market"], _S["factors"], {"1overT": 1 / 12.7})
 
 
@@ -119,16 +119,16 @@ def main() -> int:
     ap.add_argument("--random", type=int, default=200)
     ap.add_argument("--workers", type=int, default=4)
     a = ap.parse_args()
-    house = config.house_cost_bp()
-    _init(house)
+    cost_bp = float(config.calibration()["reference_cost_bp"])
+    _init(cost_bp)
     b = _S["factors"]["market"]
     fl = {"1overT": 1 / 12.7}
     rows = [stats_row("Benchmark (NIFTY 500)", b, b, _S["factors"], fl),
-            stats_row("Equal-weight NIFTY 500 members, monthly, net", book_returns(_S["rets"], _S["elig"], house, lambda names: names), b, _S["factors"], fl),
+            stats_row("Equal-weight NIFTY 500 members, monthly, net", book_returns(_S["rets"], _S["elig"], cost_bp, lambda names: names), b, _S["factors"], fl),
             stats_row("NSE NIFTY500 Momentum 50 index", _S["factors"]["momentum"], b, _S["factors"], fl)]
     if a.random:
         from multiprocessing import Pool
-        with Pool(a.workers, initializer=_init, initargs=(house,)) as p:
+        with Pool(a.workers, initializer=_init, initargs=(cost_bp,)) as p:
             rows += p.map(_one_random, range(a.random), chunksize=4)
     pd.DataFrame(rows).to_csv(OUT, index=False, float_format="%.6g")
     print(pd.DataFrame(rows).head(6).T.round(3).to_string())

@@ -23,7 +23,7 @@ FROZEN_VALIDATION = [
     "Drawdown in the latest index correction, strategy", "Drawdown in the latest index correction, NIFTY 500",
     "Beta to NIFTY 500", "Information ratio vs NIFTY 500",
     "Deflated Sharpe, repo default (unit variance)", "Deflated Sharpe, variance of the variants' Sharpes",
-    "Two-way turnover a year (x capital)", "CAGR at 30bp round trip (house floor, appendix)", "Edge over NIFTY 500 at 100bp round trip (appendix)",
+    "Two-way turnover a year (x capital)", "Breakeven round-trip cost vs NIFTY 500 (bp; beyond the sweep if blank)",
     "Names held per rebalance, mean", "Rebalances with fewer than 5 names", "Largest single weight at any rebalance",
     "Different stocks held over the run", "Top-2 stocks' share of gross gains", "Mean cash share of NAV",
     "Share of signals with buying shut by the index filter", "Median holding period (days)",

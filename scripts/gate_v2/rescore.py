@@ -44,8 +44,7 @@ def row_for(d: str, folder: str) -> dict | None:
     if tr is None and "holdings" in extra:
         tr = workbook.derive_trades(extra["holdings"])
     spec = (st.get("spec_audit") or {}).get("n_fail")
-    g = gate_run.score(d, card, res.get("headline_cost_bp"), df, tr, extra.get("holdings"), spec)
-    gross = gate_run.score(d, card, res.get("headline_cost_bp"), df, tr, extra.get("holdings"), spec, use_net=False)
+    g = gate_run.score(d, card, df, tr, extra.get("holdings"), spec)
     s = g["summary"]
     failed_v2 = [r["name"] for r in g["hard_blocks"] if r["status"] == "FAIL"]
     red = [r["name"] for r in g["scorecard"] if r["status"] == "red"]
@@ -58,7 +57,7 @@ def row_for(d: str, folder: str) -> dict | None:
         why = "Fails: " + ", ".join(failed_v2) + "."
     if red:
         why += " Red on the scorecard: " + ", ".join(red) + "."
-    return {**out, "v2": g["status"], "v2_gross": gross["status"], "basis": g["basis"], "net_edge": s["net_edge"], "bootstrap_p": s["bootstrap_p"], "gross_edge": gross["summary"]["net_edge"], "gross_bootstrap_p": gross["summary"]["bootstrap_p"],
+    return {**out, "v2": g["status"], "basis": g["basis"], "cost_bp": res.get("headline_cost_bp"), "edge": s["net_edge"], "bootstrap_p": s["bootstrap_p"],
             "alpha": s["alpha"], "alpha_t": s["alpha_t"], "windows_ahead": s["sub_period_positive"], "worst_window": s["sub_period_worst"], "post_publication_edge": s["post_publication_edge"],
             "scorecard_green": "; ".join(green), "scorecard_red": "; ".join(red), "tests_not_run": "; ".join(g["tests_not_run"]), "why": why}
 
@@ -81,7 +80,7 @@ def main() -> int:
                 if r:
                     seen.add(rid)
                     rows.append(r)
-                    print(rid, r.get("v1"), r.get("v2"), r.get("v2_gross", ""), flush=True)
+                    print(rid, r.get("v1"), r.get("v2"), flush=True)
     t = pd.DataFrame(rows).sort_values("run")
     out = os.path.join(REPO, "docs", "gate_b", "v1_vs_v2.csv")
     t.to_csv(out, index=False, float_format="%.4f")

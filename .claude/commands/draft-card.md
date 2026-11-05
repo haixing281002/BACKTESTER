@@ -1,3 +1,4 @@
+<!-- Quant AI Researcher by Harshil Pahuja -->
 ---
 description: "Stage 02 — draft a Strategy Card from an ingested analysis"
 argument-hint: "<analysis.json> [quick|replication|adaptation]"
@@ -36,7 +37,7 @@ only:
   instead and keep just the rule.
 - `signal.template` naming a **registered** template
   (`python -c "from ros.engine.templates import list_templates; print(list_templates())"`).
-- The non-negotiables regardless of mode: costs 30bp round trip, `lag_days >= 1`,
+- The non-negotiables regardless of mode: a round-trip cost stated for Gate A, `lag_days >= 1`,
   `mandate_allow_cash: false` unless the mechanism genuinely needs cash.
 
 **Leave `data_plan` and `convertibility` unset** (both are `Optional` on the
@@ -93,7 +94,7 @@ paper is long-only. Hard rules:
   cannot resolve it, it belongs in the human queue instead of half-written.
 - `n_configs_tried` counts what the **paper** tried, appendix sweeps included.
   Understating it is how a lucky draw launders itself through the deflated Sharpe.
-- Costs: 30bp round trip. Do not copy the paper's assumption.
+- Costs: state the round-trip cost for a human to confirm at Gate A. Do not copy the paper's assumption.
 - `lag_days` >= 1. NSE closes publish after the close.
 - Set `mandate_allow_cash: false` — this fund is fully invested. If the mechanism
   needs cash, say so in `open_questions` rather than drafting a second card.
@@ -159,7 +160,7 @@ it can currently be. Say so. One entry per thing, each with:
 - **`unlocks`** — what becomes possible
 - **`without_it`** — **mandatory.** The fallback, and what it costs. A request
   with no fallback is a demand, and a demand at Gate A stops the work instead of
-  informing it. "Declared constant 6% proxy, swept 4-8%, so every cash result is
+  informing it. "Declared constant proxy, swept, so every cash result is
   rate-dependent" lets a human decide. "We need a rate series" does not.
 - **`priority`** — `blocking` only if the test is genuinely impossible without
   it. `blocking` halts Gate A, so use it when that is the honest answer and not
@@ -192,7 +193,7 @@ truncate, and a page of clauses cut mid-sentence is the unreadable gate this
 replaced. Write the line that would make a PM say "wait, that one" — not a
 restatement of the field name:
 
-- good: `"No Indian rate series: cash accrues a flat 6%, swept 4-8%. LOW confidence."`
+- good: `"No Indian rate series: cash accrues the flat rate on this card, swept. LOW confidence."`
 - useless: `"An ambiguity about universe.cash_asset"`
 - worse: the first 90 characters of your resolution paragraph
 
@@ -325,7 +326,7 @@ says whether any of it could become something **this fund could hold**. A card
 can be 99% complete and describe a beautiful test of something unholdable.
 
 Write the chain from Stage 01 into `what_must_be_true`, one link per entry:
-the effect exists; it exists in this segment; it survives 30bp at this turnover;
+the effect exists; it exists in this segment; it survives the card's cost at this turnover;
 it survives long-only; it is implementable at size. Then:
 
 - **`weakest_link`** — which one you least believe, **and why**. A chain whose

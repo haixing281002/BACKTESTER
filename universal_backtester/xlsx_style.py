@@ -1,3 +1,4 @@
+# Quant AI Researcher by Harshil Pahuja
 """Shared workbook styling for every Excel file the pipeline writes (xlsx skill rules).
 
 Colour code, stated on each workbook's Legend:
@@ -70,7 +71,7 @@ def widths(ws, spec):
 
 
 def name(wb, label, ref):
-    """Workbook-level defined name, so formulas read =(CAGR-Hurdle)/Vol instead of cell addresses."""
+    """Workbook-level defined name, so formulas read =(CAGR-Cash_Rate)/Vol instead of cell addresses."""
     wb.defined_names[label] = DefinedName(label, attr_text=ref)
 
 
