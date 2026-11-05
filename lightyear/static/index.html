@@ -573,7 +573,7 @@ function renderResults(st){
           ${st.spec_audit.checks.map(c=>`<tr><td>${esc(c.rule)}</td><td style="color:${c.passed===true?'var(--green)':c.passed===false?'var(--red)':'inherit'}"><b>${c.passed===true?'PASS':c.passed===false?'FAIL':'n/a'}</b></td><td class="small">${esc(c.detail)}</td></tr>`).join("")}</table></div>`:""}
         <p style="margin:8px 0 4px">${key}</p>
         <p class="muted" style="margin:6px 0 14px">${esc(r.headline)}</p>
-        <div class="kpis" id="kpis"></div><div class="small muted">Big number = the strategy. Orange line = NIFTY 500 over exactly the same days. Sharpe is over the cash rate on this run's card. ${r.benchmark_is_total_return?"The benchmark includes dividends.":"The benchmark is the price index, with no dividends, which flatters every relative figure."}</div></div>
+        <div class="kpis" id="kpis"></div><div class="small muted">Big number = the strategy. Orange line = NIFTY 500 over exactly the same days. Sharpe is over the cash rate shown under Core performance. ${r.benchmark_is_total_return?"The benchmark includes dividends.":"The benchmark is the price index, with no dividends, which flatters every relative figure."}</div></div>
       <div class="card" id="corecard"><h2>Core performance</h2><table class="t" id="coretab"></table><div id="coremore" class="small muted" style="margin-top:8px"></div></div>
       <div id="reviewcard"></div>
       <div class="card"><h2>Positives and negatives</h2>
@@ -685,7 +685,7 @@ function fillCore(c){
     net ? `Two-way turnover ${num(net.annual_turnover)} times capital a year. Net = the house cost charged on this run's trades.` : `Net of cost not computed: this run wrote no trades or holdings.`,
     pp ? `After publication (from ${esc(pp.from)}): CAGR ${pct(pp.cagr,2)} against ${pct(pp.benchmark_cagr,2)} for the benchmark, Sharpe ${num(pp.sharpe)} against ${num(pp.benchmark_sharpe)}, worst fall ${pct(pp.max_dd,2)}.` : "",
     cp.status==="computed" ? `Capacity at Rs ${num(cp.aum_inr_cr,0)} crore: trade size against 20-day traded value, median ${pct(cp.median,2)}, 95th percentile ${pct(cp.p95,2)}, largest ${pct(cp.max,2)}; ${cp.names_above_limit.length} name(s) above the limit.` : `Capacity not computed: ${esc(cp.why||"this run predates it")}.`,
-    c.cash_rate==null ? `Sharpe and Sortino are blank: this run's card has no cash rate.` : `Cash rate ${pct(c.cash_rate,2)}, from the card.`
+    c.cash_rate==null ? `Sharpe and Sortino are blank: this run's card could not be read.` : `Cash rate ${pct(c.cash_rate,2)}, from ${esc(c.cash_source||"the card")}.`
   ].filter(Boolean).map(x=>`<div>${x}</div>`).join("");
 }
 async function drawCharts(force){

@@ -442,9 +442,9 @@ def build(run_dir, results, df, title, out_path, holdings=None, trades=None, com
                    f"git {pv.get('git_commit', '?')} · gate_version {GATE_VERSION} · metrics_version {METRICS_VERSION} · "
                    "Quant AI Researcher by Harshil Pahuja"), F_NOTE)
     cash_rate = (core_metrics or {}).get("cash_rate")
-    put(ws, "A4", "Cash rate (from the card)", F_BOLD)
+    put(ws, "A4", f"Cash rate (from {(core_metrics or {}).get('cash_source') or 'the card'})", F_BOLD)
     put(ws, "B4", cash_rate if cash_rate is not None else "not on the card", F_INPUT, PCT, FILL_KEY, border=True,
-        comment="Key assumption: the card's universe.cash_asset, a declared constant proxy. There is no Indian risk-free series.")
+        comment="Key assumption: a declared constant proxy, from the card's universe.cash_asset or config/fund.yaml. There is no Indian risk-free series.")
     put(ws, "C4", "Sharpe = mean(r - c) / stdev(r - c) x sqrt(252), the one definition in ros/metrics/core.py. Change the "
                   "rate and the Sharpe and Sortino rows update.", F_NOTE)
     name(wb, "Cash_Rate", "Summary!$B$4")

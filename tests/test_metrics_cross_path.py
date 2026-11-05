@@ -122,9 +122,16 @@ def test_lightyear_reads_the_cash_rate_from_the_card(tmp_path, monkeypatch):
     monkeypatch.setattr(jobs, "load_card", lambda p: card)
     df = pd.DataFrame({"date": pd.bdate_range("2024-01-01", periods=70), "strategy": 0.001, "benchmark": 0.001})
     out, warn = jobs._core_inputs({"phase_a": {"card_path": "cards/x.yaml"}}, {"headline_cost_bp": 0}, df, {})
-    assert out["cash_rate"] == 0.08 and out["publication_date"] == "2015"
+    assert out["cash_rate"] == 0.08 and out["cash_source"] == "the card" and out["publication_date"] == "2015"
     assert any("Net-of-cost" in w for w in warn)
     assert out["house_bp"] == 30
+
+
+def test_a_card_with_no_rate_uses_the_funds_and_says_so():
+    from ros import config
+    rate, src = config.cash_rate_for(SimpleNamespace(universe=SimpleNamespace(cash_asset=None)))
+    assert rate == config.fund()["default_cash_rate"] and "config/fund.yaml" in src
+    assert config.cash_rate_for(SimpleNamespace(universe=SimpleNamespace(cash_asset="CASH_PROXY_CONSTANT_8PCT"))) == (0.08, "the card")
 
 
 def test_no_other_python_file_defines_its_own_sharpe_formula():
