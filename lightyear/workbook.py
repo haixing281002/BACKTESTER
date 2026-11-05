@@ -25,6 +25,7 @@ from openpyxl.chart import LineChart, Reference
 from openpyxl.formatting.rule import CellIsRule
 from openpyxl.styles import Alignment, PatternFill
 
+from ros.versions import GATE_VERSION, METRICS_VERSION
 from universal_backtester.xlsx_style import (
     DATE,
     F_BASE,
@@ -375,7 +376,8 @@ def build(run_dir, results, df, title, out_path, hurdle=0.06, holdings=None, tra
     put(ws, "A3", (f"Run {pv.get('run_id', '?')} created {str(pv.get('created', '?')).replace('T', ' ')} · card "
                    f"{pv.get('card_path', '?')} sha256 {(pv.get('card_sha256_approved') or pv.get('card_sha256_run') or '?')[:12]} · "
                    f"script sha256 {(pv.get('script_sha256') or '?')[:12]} · Lightyear code {pv.get('code_hash_disk', '?')} · "
-                   f"git {pv.get('git_commit', '?')} · Quant AI Researcher by Harshil Pahuja"), F_NOTE)
+                   f"git {pv.get('git_commit', '?')} · gate_version {GATE_VERSION} · metrics_version {METRICS_VERSION} · "
+                   "Quant AI Researcher by Harshil Pahuja"), F_NOTE)
     put(ws, "A4", "Hurdle rate for Sharpe", F_BOLD)
     put(ws, "B4", hurdle, F_INPUT, PCT, FILL_KEY, border=True,
         comment="Key assumption: flat 6% proxy for the Indian short rate (the repo's convention).")

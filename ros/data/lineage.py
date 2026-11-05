@@ -22,6 +22,7 @@ from typing import Any
 from zoneinfo import ZoneInfo
 
 from ros.data.snapshot import _ENGINE_FILES, code_hash, git_commit
+from ros.versions import GATE_VERSION, METRICS_VERSION
 
 IST = ZoneInfo("Asia/Kolkata")
 SCHEMA = "lightyear-run-manifest/1"
@@ -96,6 +97,8 @@ def write_run_manifest(run_dir: str, script: str, inputs: dict[str, str], params
         "run_dir": _rel(run_dir, repo),
         "script": {"path": _rel(script_abs, repo), "sha256": sha256_file(script_abs)},
         "git_commit": git_commit(repo),
+        "gate_version": GATE_VERSION,
+        "metrics_version": METRICS_VERSION,
         "code_hash": code_hash(list(_ENGINE_FILES) + [_rel(script_abs, repo)], root=repo),
         "python": sys.version.split()[0],
         "platform": platform.platform(),
