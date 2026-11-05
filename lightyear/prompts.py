@@ -210,6 +210,8 @@ Then write these hand-off files into {run_dir}/ (the server builds the workbook 
              // one per metric that both sides report (return, Sharpe, drawdown -- whichever the paper gives).
              // Never leave this empty if phase_a.json had any paper_reported entries.
   "gate_b": <gate_b(...).to_dict(), unchanged; its decision must be PENDING>,
+             // That is the v1 checklist, and the Gate B brief is written from it. Lightyear scores Gate v2 itself after your
+             // hand-off (ros/governance/gate_v2.py). Call the checklist v1 in the brief, and do not predict the v2 status.
   "validation": [{{"label": "...", "value": <number or string>, "format": "pct|num|int|text", "source": "<file or function>",
                     "group": "returns_risk" | "costs_execution" | "robustness" | "diagnostics" | "other"}}],
              // "group" sorts this into one of four blocks on the page instead of one long table -- pick the

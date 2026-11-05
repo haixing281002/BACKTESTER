@@ -112,14 +112,14 @@ def _blank_nans(x):
 
 
 def build(df: pd.DataFrame, names: dict, cash_rate=None, comparators: pd.DataFrame = None, turnover: pd.Series = None,
-          house_bp=None, charged_bp=0.0, publication_date=None):
+          house_bp=None, charged_bp=0.0, publication_date=None, cash_source=None):
     df = df.sort_values("date").reset_index(drop=True)
     cols = [c for c in ("strategy", "benchmark", "sleeve") if c in df.columns]
     d = df["date"]
     t0 = start_date(d)
     dates = [t0.strftime("%Y-%m-%d")] + d.dt.strftime("%Y-%m-%d").tolist()
     out = {"dates": dates, "start": dates[0], "names": {c: names.get(c, c) for c in cols},
-           "growth": {}, "drawdown": {}, "rolling_vol": {}, "metrics": {}, "cash_rate": cash_rate}
+           "growth": {}, "drawdown": {}, "rolling_vol": {}, "metrics": {}, "cash_rate": cash_rate, "cash_source": cash_source}
     for c in cols:
         r = df[c].fillna(0.0)
         v = value_path(r)

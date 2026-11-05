@@ -318,6 +318,32 @@ def derive_trades(h):
     return pd.DataFrame(rows, columns=["date", "symbol", "action", "weight_before", "weight_after"])
 
 
+def _gate_v2_sheet(wb, g):
+    """Gate v2 as Lightyear scored it: hard blocks, then the scorecard. The decision stays PENDING until a named human records one."""
+    w = wb.create_sheet("Gate v2")
+    put(w, "A1", f"Gate B {g['gate_version']}: {g['status']}", F_TITLE)
+    put(w, "A2", f"Computed on {g['basis']}. Thresholds: config/gate_thresholds.yaml ({g['thresholds_status']}). Decision: PENDING until a named human records one. "
+        "Quant AI Researcher by Harshil Pahuja", F_NOTE)
+    row = 4
+    for title, rows in (("Hard blocks", g["hard_blocks"]), ("Evidence scorecard (feeds the decision, does not block)", g["scorecard"])):
+        put(w, f"A{row}", title, F_SUB)
+        row += 1
+        header(w, row, ["Test", "Result", "Value", "Needs", "Evidence"])
+        row += 1
+        for r in rows:
+            v = r.get("value")
+            put(w, f"A{row}", r["name"], F_BASE, border=True)
+            put(w, f"B{row}", r["status"], F_BOLD, border=True)
+            put(w, f"C{row}", v, F_INPUT, NUM2, border=True)
+            put(w, f"D{row}", str(r.get("threshold") if r.get("threshold") is not None else ""), F_BASE, border=True)
+            put(w, f"E{row}", r.get("evidence", ""), F_NOTE, border=True)
+            row += 1
+        row += 1
+    if g.get("tests_not_run"):
+        put(w, f"A{row}", "Not run, so not passed: " + ", ".join(g["tests_not_run"]), F_NOTE)
+    widths(w, [42, 12, 12, 44, 110])
+
+
 def _core_sheet(wb, ch, s_name, b_name):
     """Core performance, gross beside net at the house cost: the page's table, from ros.metrics.core (blue = computed there)."""
     wk = wb.create_sheet("Core metrics")
@@ -453,7 +479,7 @@ def build(run_dir, results, df, title, out_path, holdings=None, trades=None, com
         "sqrt(252). Rows 7 to 17 are formulas over the Returns sheet (green = pulls from another sheet). The benchmark is "
         "the NIFTY 500 PRICE index unless this run supplied a total-return one: relative figures flatter the strategy.", F_NOTE)
 
-    header(ws, 20, ["Gate B criterion (ros/governance/gates.py)", "Result", "Value", "Rule", "Threshold (editable)",
+    header(ws, 20, ["Gate v1 checklist, for comparison (ros/governance/gates.py). Gate v2 is on its own sheet", "Result", "Value", "Rule", "Threshold (editable)",
                     "Counts toward decision"])
     grows = gates.rows(results["gate_b"].get("criteria", []))
     for i, g in enumerate(grows, start=21):
@@ -497,6 +523,9 @@ def build(run_dir, results, df, title, out_path, holdings=None, trades=None, com
     if core_metrics:
         _core_sheet(wb, core_metrics, s_name, b_name)
         used.add("core metrics")
+    if (results.get("gate_v2") or {}).get("status"):
+        _gate_v2_sheet(wb, results["gate_v2"])
+        used.add("gate v2")
 
     # ---------------------------------------------------------------- Comparators (daily)
     if comparators is not None and len(comparators.columns) > 1:
@@ -721,13 +750,19 @@ def build(run_dir, results, df, title, out_path, holdings=None, trades=None, com
     put(wv, "A2", "Blue = hardcoded from results.json; the source column names the file or function.", F_NOTE)
     header(wv, 4, ["Measure", "Value", "Source"])
     row = 5
-    for v in results.get("validation", []) or []:
-        val = _num_or_text(v.get("value"))
-        fmt = FMT.get(v.get("format", "num"), NUM2) if isinstance(val, float) else None
-        put(wv, f"A{row}", v.get("label", ""), border=True)
-        put(wv, f"B{row}", val, F_INPUT, fmt, border=True)
-        put(wv, f"C{row}", v.get("source", ""), F_NOTE, border=True)
-        row += 1
+    all_rows = results.get("validation", []) or []
+    for section, rows in (("", [v for v in all_rows if v.get("group") != "diagnostics"]), ("Diagnostics (specific to this strategy's rules)", [v for v in all_rows if v.get("group") == "diagnostics"])):
+        if section and rows:
+            row += 1
+            put(wv, f"A{row}", section, F_SUB)
+            row += 1
+        for v in rows:
+            val = _num_or_text(v.get("value"))
+            fmt = FMT.get(v.get("format", "num"), NUM2) if isinstance(val, float) else None
+            put(wv, f"A{row}", v.get("label", ""), border=True)
+            put(wv, f"B{row}", val, F_INPUT, fmt, border=True)
+            put(wv, f"C{row}", v.get("source", ""), F_NOTE, border=True)
+            row += 1
     if results.get("assumptions"):
         row += 1
         put(wv, f"A{row}", "Assumptions used by the run", F_SUB)

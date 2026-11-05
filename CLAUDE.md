@@ -1,3 +1,4 @@
+<!-- Quant AI Researcher by Harshil Pahuja -->
 # AI Research Operating System
 
 Long-only Indian equity fund, NIFTY500 universe, benchmarked to NIFTY 500.
@@ -524,6 +525,17 @@ runs headless (no API key) through Gate A, a human approves, Claude Code runs 03
 the interactive charts and the colour-coded workbook from the run's hand-off files. When you are the headless
 session Lightyear launched, the prompt states the hand-off contract: write exactly those files, print
 `LIGHTYEAR-STAGE: <id>` as each stage starts, never record a Gate B decision, never touch git.
+
+## One metrics module, and Gate B v2 (2026-11-05)
+
+Every metric has one definition, in `ros/metrics/core.py`; a test fails if two code paths disagree. Sharpe is
+mean(r - c) / stdev(r - c) x sqrt(252), with the cash rate read from the card. Never write another. `ros/metrics/legacy_v1.py`
+exists only so a paper's printed Sharpe compares on its own basis and v1 stays measurable.
+
+Lightyear scores **Gate v2** (`ros/governance/gate_v2.py`, thresholds in `config/gate_thresholds.yaml`) from each run's files,
+net of the house cost in `config/costs.yaml`. Hard blocks must pass; the scorecard informs and does not block. A test with
+nothing to run on shows as not run: it is not a pass and does not hold the gate up. The deflated Sharpe is out of the gate for
+now, so **v2 does not test for selection luck**. The decision stays PENDING until a named human records one.
 
 ## Non-negotiables when working in this repo
 

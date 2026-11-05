@@ -24,6 +24,15 @@ def fund() -> dict[str, Any]:
     return _load("fund.yaml")
 
 
+def cash_rate_for(card) -> tuple[float, str]:
+    """The annual cash rate and where it came from. The card's own rate wins; a card that names none uses the fund's."""
+    from ros.metrics import core
+    try:
+        return core.cash_rate_from_card(card), "the card"
+    except core.MissingCashRate:
+        return float(fund()["default_cash_rate"]), "config/fund.yaml, because the card names no rate"
+
+
 def mandate() -> dict[str, Any]:
     return _load("mandate.yaml")
 

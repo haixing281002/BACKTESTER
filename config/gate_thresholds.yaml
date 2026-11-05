@@ -11,7 +11,7 @@ bootstrap:
   p_max: 0.10                       # Eased from 0.05. Pass at true excess Sharpe 0.5: 57% against 43%. Alone it lets 6.9% of no-skill strategies through.
 deflated_sharpe:
   enabled: false                    # Removed from the gate for now, by the operator. Without it the gate has no defence against selection luck.
-  null: benchmark                   # Ruling: if it returns, the bar starts at the benchmark's Sharpe, not zero.
+  bar_starts_at: benchmark                   # Ruling: if it returns, the bar starts at the benchmark's Sharpe, not zero.
   green_min: 0.85
   amber_min: 0.80
   v_floor: 0.0787                   # 1 / 12.7 years, the sampling variance of a yearly Sharpe

@@ -7,8 +7,22 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
+from ros.data.loaders import load_nse_workbook_combined
+from ros.data.sources import NSE_INDEX_WORKBOOK
 from ros.metrics import core
 from ros.validation.portfolio import factor_fingerprint, incremental_ir
+
+
+# Investable factors with size included. Where the workbook has the series. Backfilled before launch, and price-only.
+INVESTABLE_FACTORS = {"market": "NIFTY 500", "midcap150": "NIFTY MIDCAP 150", "smallcap250": "NIFTY SMALLCAP 250", "momentum": "NIFTY500 MOMENTUM 50",
+                      "value": "NIFTY500 VALUE 50", "quality": "NIFTY500 QUALITY 50", "low_vol": "NIFTY500 LOW VOLATILITY 50"}
+
+
+def factor_returns(index: pd.DatetimeIndex) -> pd.DataFrame:
+    """Factor index returns on these dates, from the index workbook."""
+    levels, _ = load_nse_workbook_combined(NSE_INDEX_WORKBOOK)
+    have = {k: v for k, v in INVESTABLE_FACTORS.items() if v in levels.columns}
+    return levels[list(have.values())].rename(columns={v: k for k, v in have.items()}).reindex(levels.index.union(index)).ffill().pct_change(fill_method=None).reindex(index)
 
 
 def version_inputs(versions: pd.DataFrame | None, bench: pd.Series, cash: float, n_selected_from: int, v_floor: float) -> dict[str, float]:

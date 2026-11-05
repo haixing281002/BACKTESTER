@@ -1,3 +1,4 @@
+# Quant AI Researcher by Harshil Pahuja
 """Writes a live-formula Excel workbook matching the "SE Return Analytics"
 tab layout (section headers, row labels, glossary column) -- built from
 inspecting the real .xlsb, since pyxlsb only exposes computed VALUES, never
@@ -37,6 +38,8 @@ is a reasonable, documented convention, consistent with Treynor's own
 raw-beta formula on the same sheet, but is NOT a confirmed match --
 flagged here rather than silently claimed as verified.
 """
+# Kept by the operator's ruling of 2026-11-05: the Excel calculation is still needed. It is not a report path of Lightyear,
+# and its ratios are not part of ros/metrics/core.py, so Excel and the dashboard can differ here (monthly data, its own rate).
 from __future__ import annotations
 
 import pandas as pd

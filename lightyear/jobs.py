@@ -31,7 +31,7 @@ from ros import config
 from ros.cards.schema import load_card
 from ros.metrics import core
 
-from . import changelog, charts, contract, gates, prompts, spec_audit, wording, workbook
+from . import changelog, charts, contract, gate_run, gates, prompts, spec_audit, wording, workbook
 from .paths import LEDGER, REPO, RUNS, code_hash, find_claude, git_bash, git_commit, rel, run_dir
 
 _log = logging.getLogger("lightyear")
@@ -576,6 +576,9 @@ def revise_a(rid, notes):
     _after_phase_a(rid, ok, "Revision", since=t0, must_change=before)
 
 
+DIAGNOSTIC_LABEL = re.compile(r"leaving the|membership-forced|gap exits|gap rule|eligible names|first fill|index gate|buying shut|band proxy|resize fills|fewer than 5 names", re.I)
+
+
 def phase_b(rid):
     st = load(rid)
     if st.get("current_stage") not in IDS_B:
@@ -628,6 +631,10 @@ def build_outputs(rid, review=True):
         labels = {r.get("label") for r in fixed_v}
         model_rows = [r for r in (res.get("validation") or []) if r.get("label") not in labels]
         res["validation"] = fixed_v + model_rows
+    # Rows tied to this strategy's rules belong in Diagnostics, whichever step wrote them.
+    for v in res.get("validation") or []:
+        if DIAGNOSTIC_LABEL.search(str(v.get("label", ""))):
+            v["group"] = "diagnostics"
         log(rid, "server", f"Validation sheet: {len(fixed_v)} fixed rows from the run, {len(model_rows)} model rows appended.")
     fixed_t = _load_json_list(os.path.join(rd, "out", "tables.json"))
     if fixed_t:
@@ -680,11 +687,16 @@ def build_outputs(rid, review=True):
     extras, warn_core = _core_inputs(st, res, df, extra)
     warn = list(warn) + warn_core
     ch = charts.build(df, names, comparators=extra.get("comparators"), **extras)
-    ch["capacity"] = _capacity(rid, df, extra)
+    try:
+        ch["capacity"] = gate_run.capacity(df, extra.get("trades"))
+    except Exception as e:  # noqa: BLE001  a report; the failure is shown, and the run is not lost
+        log(rid, "error", f"Capacity not computed: {type(e).__name__}: {e}")
+        ch["capacity"] = {"status": "not computed", "why": f"{type(e).__name__}: {e}"}
     ch["benchmark_basis"] = "price" if not res.get("benchmark_is_total_return") else "total_return"
     json.dump(ch, open(os.path.join(rd, "charts.json"), "w", encoding="utf-8"), default=float)
     log(rid, "server", "Interactive chart series built from daily_returns.csv"
         + (" and comparators.csv." if "comparators" in extra else "."))
+    res["gate_v2"] = _gate_v2(rid, st, res, df, extra)
     recalc = _workbook(rid, res, df, extra, ch["observations"], _load_review(rd), ch)
     res["gate_rows"] = gates.rows(res["gate_b"].get("criteria", []))
     update(rid, status="gate_b", current_stage="GB", results=res, recalc=recalc, handoff_warnings=warn, error=None,
@@ -707,9 +719,7 @@ def _core_inputs(st, res, df, extra):
     try:
         card = load_card(path if os.path.isabs(path) else os.path.join(REPO, path))
         out["publication_date"] = card.paper.date
-        out["cash_rate"] = core.cash_rate_from_card(card)
-    except core.MissingCashRate as e:
-        warn.append(f"Sharpe and Sortino left blank: {e}")
+        out["cash_rate"], out["cash_source"] = config.cash_rate_for(card)
     except Exception as e:  # noqa: BLE001  an unreadable card must not lose the run; the warning is on the page
         warn.append(f"Card not read for the core metrics ({type(e).__name__}: {e}); Sharpe and Sortino left blank.")
     tr = extra.get("trades")
@@ -722,22 +732,19 @@ def _core_inputs(st, res, df, extra):
     return out, warn
 
 
-def _capacity(rid, df, extra):
-    """Trade size at the fund's AUM as a share of 20-day ADV. Not computed, and says why, until fund.yaml has an AUM."""
-    aum = config.fund().get("aum_inr_cr")
-    if not aum:
-        return {"status": "not computed", "why": "config/fund.yaml has no aum_inr_cr"}
+def _gate_v2(rid, st, res, df, extra):
+    """Score Gate v2 from this run's files. A failure is logged and shown; v1 and the run's results are not lost."""
     tr = extra.get("trades")
-    if tr is None or "isin" not in tr.columns:
-        return {"status": "not computed", "why": "trades.csv has no isin column"}
+    if tr is None and "holdings" in extra:
+        tr = workbook.derive_trades(extra["holdings"])
+    audit = load(rid).get("spec_audit") or {}
     try:
-        from ros.data import ace
-        value = ace.wide("value_cr").loc[df["date"].min() - pd.Timedelta(days=60):df["date"].max()]
-        limit = (config.gate_thresholds().get("capacity") or {}).get("p95_adv_participation_max")
-        return {"status": "computed", "aum_inr_cr": aum, **core.capacity(tr, core.adv_20(value), float(aum), limit)}
-    except Exception as e:  # noqa: BLE001  a report; the failure is shown, and the run is not lost
-        log(rid, "error", f"Capacity not computed: {type(e).__name__}: {e}")
-        return {"status": "not computed", "why": f"{type(e).__name__}: {e}"}
+        g = gate_run.score(run_dir(rid), (st.get("phase_a") or {}).get("card_path") or "", res.get("headline_cost_bp"), df, tr, extra.get("holdings"), audit.get("n_fail"))
+        log(rid, "server", f"Gate v2: {g['status']} on {g['basis']}; {len(g['tests_not_run'])} test(s) not run. decision: PENDING.")
+        return g
+    except Exception as e:  # noqa: BLE001
+        log(rid, "error", f"Gate v2 not scored: {type(e).__name__}: {e}")
+        return {"error": f"{type(e).__name__}: {e}"}
 
 
 def _load_review(rd):

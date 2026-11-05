@@ -770,8 +770,25 @@ function renderGateB(st){
   const cls = x => ({"PASS":"PASS","FAIL":"FAIL","FAIL (advisory)":"ADV","not computed":"NA"})[x] || "NA";
   const fv = (g, v) => v==null ? "–" : (/%/.test(String(g.threshold_raw)+String(g.value_raw)) ? pct(v,0) : num(v));
   const nb = rows.filter(g=>g.blocking), np = nb.filter(g=>g.result==="PASS").length;
+  const v2 = r.gate_v2 && r.gate_v2.status ? r.gate_v2 : null;
+  const col = {"PASS":"PASS","FAIL":"FAIL","green":"PASS","amber":"ADV","red":"FAIL","not run":"NA"};
+  const val = g => g.value==null ? "–" : (typeof g.value==="number" ? (Math.abs(g.value)<1 && /edge/i.test(g.key)?pct(g.value,2):num(g.value,3)) : esc(g.value));
+  const v2rows = list => list.map(g=>`<tr><td>${esc(g.name)}${g.evidence?`<div class="small muted">${esc(g.evidence)}</div>`:""}</td><td class="${col[g.status]||"NA"}">${esc(g.status)}</td><td>${val(g)}</td><td class="small">${g.threshold==null?"–":esc(g.threshold)}</td></tr>`).join("");
+  const v2html = v2 ? `<div class="card"><h2>Gate B: investment decision <span class="small muted">(gate_version ${esc(v2.gate_version)})</span></h2>
+      <div class="facts"><div>Status</div><div class="${col[v2.status]}"><b>${esc(v2.status)}</b>${v2.tests_not_run.length?` <span class="small">(${v2.tests_not_run.length} test${v2.tests_not_run.length>1?"s":""} not run, listed below)</span>`:""}</div>
+        <div>Computed on</div><div>${esc(v2.basis)}</div>
+        <div>Evidence supports</div><div><b>${esc(r.evidence_supports)}</b> <span class="small muted">(Claude's written read, not calculated. It was written from the v1 checklist.)</span></div>
+        <div>Decision</div><div><b>${st.decision?esc(st.decision.decision):"PENDING"}</b></div></div>
+      <h3>Hard blocks</h3><p class="small muted" style="margin:0 0 6px">Every one that can be run must pass.</p>
+      <table class="t"><tr><th>Test</th><th style="width:90px">Result</th><th style="width:90px">Value</th><th>Needs</th></tr>${v2rows(v2.hard_blocks)}</table>
+      <h3>Evidence scorecard</h3><p class="small muted" style="margin:0 0 6px">Feeds your decision and does not block by itself. PASS can sit beside a red row here: read both.</p>
+      <table class="t"><tr><th>Test</th><th style="width:90px">Result</th><th style="width:90px">Value</th><th>Needs</th></tr>${v2rows(v2.scorecard)}</table>
+      ${v2.tests_not_run.length?`<p class="small muted"><b>Not run, so not passed:</b> ${v2.tests_not_run.map(esc).join(", ")}.</p>`:""}
+      <p class="small muted">Thresholds: config/gate_thresholds.yaml (${esc(v2.thresholds_status)}). The deflated Sharpe is out of this gate for now, so nothing here tests for selection luck.</p></div>` : "";
+  const v1open = v2 ? `<details class="card"><summary><b>Gate v1 checklist, for comparison</b></summary>` : `<div class="card"><h2>Gate B: investment decision</h2>${r.gate_v2&&r.gate_v2.error?`<div class="banner err">Gate v2 was not scored: ${esc(r.gate_v2.error)}</div>`:`<p class="small muted">This run was built before Gate v2. Press Rebuild on the Results tab to score it.</p>`}`;
   $('[data-p="gateb"]').innerHTML = `
-    <div class="card"><h2>Gate B: investment decision</h2>
+    ${v2html}
+    ${v1open}
       <div class="facts"><div>Blocking criteria passed</div><div><b>${np} of ${nb.length}</b></div>
         <div>Evidence supports</div><div><b>${esc(r.evidence_supports)}</b></div>
         <div>Decisive criterion</div><div>${esc(r.decisive_criterion||"–")}</div>
@@ -780,7 +797,7 @@ function renderGateB(st){
       <table class="t"><tr><th>Criterion</th><th style="width:130px">Result</th><th>Measured</th><th>Needs</th><th>Counts?</th></tr>
         ${rows.map(g=>`<tr><td>${esc(g.name)}${g.evidence?`<div class="small muted">${esc(g.evidence)}</div>`:""}</td><td class="${cls(g.result)}">${esc(g.result)}</td>
           <td>${g.value==null?esc(g.value_raw):fv(g,g.value)}</td><td>${g.op?`${g.abs?"|value| ":""}${esc(g.op)} ${fv(g,g.threshold)}`:esc(g.threshold_raw)}</td><td class="small">${g.blocking?"blocking":"advisory"}</td></tr>`).join("")}</table>
-      <p class="small muted">Blocking criteria must all pass for the evidence to support promotion. Advisory ones are reported but do not block. "Not computed" means there was nothing to compare against in this run.</p></div>
+      <p class="small muted">Blocking criteria must all pass for the evidence to support promotion. Advisory ones are reported but do not block. "Not computed" means there was nothing to compare against in this run.</p>${v2?"</details>":"</div>"}
     ${at?`<div class="card"><h2>Record the decision</h2>
       <p class="small muted">This is the one stop in the chain. No model votes. The record is written to the run folder and to outputs/lightyear/decisions.jsonl.</p>
       <div class="decide">${["APPROVE","OBSERVE","FIX","REJECT"].map(d=>`<button class="d-${d} ${DEC===d?'on':''}" onclick="pickDec('${d}')">${d}</button>`).join("")}</div>
@@ -788,7 +805,7 @@ function renderGateB(st){
       <label>Rationale</label><textarea id="gb_why"></textarea>
       <div class="row" style="margin-top:12px"><button class="primary" onclick="decideB()">Record decision</button><span class="small muted" id="gb_msg"></span></div></div>`
     : st.decision?`<div class="card"><h2>Decision on record</h2><div class="facts"><div>Decision</div><div class="d-${esc(st.decision.decision)}"><b>${esc(st.decision.decision)}</b></div><div>By</div><div>${esc(st.decision.decided_by)}</div><div>When</div><div>${esc(st.decision.at.replace("T"," "))}</div><div>Rationale</div><div>${esc(st.decision.rationale)}</div></div></div>`:""}
-    <div class="card"><h2>Gate B brief</h2><div class="md">${st.gate_b_md?md(st.gate_b_md):"(no brief file)"}</div></div>`;
+    <div class="card"><h2>Gate B brief <span class="small muted">(Claude's note, written from the v1 checklist)</span></h2><div class="md">${st.gate_b_md?md(st.gate_b_md):"(no brief file)"}</div></div>`;
 }
 function pickDec(d){ DEC = d; document.querySelectorAll(".decide button").forEach(b=>b.classList.toggle("on", b.textContent===d)) }
 async function decideB(){

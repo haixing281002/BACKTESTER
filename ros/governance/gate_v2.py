@@ -142,7 +142,8 @@ def evaluate(e: dict[str, Any], th: dict[str, Any], mandate_limits: dict[str, An
          Row("post_publication", "Performance after publication", NOT_RUN if post is None else (GREEN if post > pp["edge_green_min"] else (AMBER if post > pp["edge_amber_min"] else RED)), value=post, threshold=f"edge > {pp['edge_green_min']}")]
 
     # The return-based blocks can always be run, so a PASS always rests on them.
-    status = FAIL if any(r.status == FAIL for r in h) or not any(r.status == PASS for r in h) else PASS
+    required = [r for r in h if r.key in ("net_edge", "bootstrap")]
+    status = FAIL if any(r.status == FAIL for r in h) or any(r.status != PASS for r in required) else PASS
     not_run = [r.name for r in h + s if r.status == NOT_RUN and r.key != "post_publication"]
     return GateV2Result(status=status, hard_blocks=h, scorecard=s, tests_not_run=not_run, thresholds_status=str(th.get("status", "")))
 

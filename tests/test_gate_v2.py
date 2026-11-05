@@ -189,7 +189,7 @@ def test_the_shipped_thresholds_load_and_are_marked_with_their_status():
     assert th["gate_version"] == "v2" and th["status"]
     for k in TH:
         assert k in th
-    assert th["deflated_sharpe"]["enabled"] is False and th["deflated_sharpe"]["null"] == "benchmark"
+    assert th["deflated_sharpe"]["enabled"] is False and th["deflated_sharpe"]["bar_starts_at"] == "benchmark"
     assert "Approved" in th["status"]
 
 
