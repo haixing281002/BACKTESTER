@@ -102,7 +102,7 @@ def test_the_workbook_formulas_agree_with_the_dashboard_after_recalculation(data
            "gate_b": {"decision": "PENDING", "criteria": []}, "validation": [], "notes": []}
     out = tmp_path / "w.xlsx"
     workbook.build(str(tmp_path), res, df, "t", str(out), observations=ch["observations"], core_metrics=ch)
-    p = subprocess.run([sys.executable, os.path.join(REPO, "scripts", "xlsx_recalc_libreoffice.py"), str(out)], capture_output=True, text=True, timeout=300)
+    p = subprocess.run([sys.executable, os.path.join(REPO, "scripts", "xlsx_recalc_libreoffice.py"), str(out)], capture_output=True, text=True, timeout=300, check=False)
     rec = json.loads(p.stdout) if p.stdout.strip().startswith("{") else {}
     if rec.get("status") != "success":
         pytest.skip(f"no recalculation here: {(p.stdout or p.stderr)[:120]}")

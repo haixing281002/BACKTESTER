@@ -174,3 +174,35 @@ def test_the_shipped_thresholds_load_and_are_marked_with_their_status():
     assert th["gate_version"] == "v2" and th["status"]
     for k in TH:
         assert k in th
+
+
+def _load_script(name):
+    import importlib.util
+    import sys
+    spec = importlib.util.spec_from_file_location(name, REPO / "scripts" / "gate_v2" / f"{name}.py")
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules[name] = mod
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def test_one_simulated_strategy_is_reproducible_from_its_seed():
+    cal = _load_script("calibrate")
+    a, b = cal.one_sim(("level", 0.5, 1, 3, 123)), cal.one_sim(("level", 0.5, 1, 3, 123))
+    pd.testing.assert_series_equal(pd.Series(a), pd.Series(b))
+    assert cal.one_sim(("level", 0.5, 1, 4, 123))["sharpe"] != a["sharpe"]
+
+
+def test_the_calibration_tables_and_the_gate_give_the_same_answer():
+    """The power curves are computed on a table for speed. The gate itself must agree on every row."""
+    an = _load_script("analyse")
+    cal = _load_script("calibrate")
+    rows = pd.DataFrame([cal.one_sim(("level", lv, 1, s, 77)) for lv in (0.0, 1.0) for s in range(12)])
+    c = {"null": "bench", "basis": "active", "floor": "1overT", "dsr_min": 0.9, "window_floor": -0.5, "t_min": 2.0, "boot_p": 0.05, "corr_max": 0.8, "ir_gain_min": 0.05}
+    th = {**TH, "deflated_sharpe": {"green_min": 0.9, "amber_min": 0.7}, "sub_period": {"majority_share": 0.5, "window_floor": -0.5, "window_floor_amber": -1.25}}
+    table = an.v2_pass(rows, c, book=True)
+    for i, r in rows.iterrows():
+        e = _good(net_edge=r["edge"], bootstrap_p=r["boot_p"], dsr=r["dsr_bench_active_1overT"], sub_period_n=r["sp_n"], sub_period_positive=r["sp_pos"], sub_period_worst=r["sp_worst"],
+                  alpha=r["alpha"], alpha_t=r["alpha_t"], book_corr=r["book_corr"], book_ir_gain=r["book_ir_gain"])
+        res = g.evaluate(e, th, LIMITS)
+        assert (res.status == g.PASS and g.all_green(res)) == bool(table[i]), i

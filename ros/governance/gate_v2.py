@@ -9,6 +9,7 @@ Thresholds come only from config/gate_thresholds.yaml.
 """
 from __future__ import annotations
 
+import math
 from dataclasses import asdict, dataclass, field
 from typing import Any
 
@@ -41,13 +42,13 @@ class GateV2Result:
 
 
 def _higher(v, green, amber):
-    if v is None or v != v:
+    if v is None or math.isnan(v):
         return NOT_RUN
     return GREEN if v >= green else (AMBER if v >= amber else RED)
 
 
 def _lower(v, green, amber):
-    if v is None or v != v:
+    if v is None or math.isnan(v):
         return NOT_RUN
     return GREEN if v <= green else (AMBER if v <= amber else RED)
 

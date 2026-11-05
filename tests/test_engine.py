@@ -16,8 +16,10 @@ from ros.engine.backtest import (
     rebalance_dates,
 )
 from ros.engine.templates import build_allocator
+from ros.metrics.legacy_v1 import (
+    stationary_bootstrap_index as _stationary_bootstrap_index,
+)
 from ros.validation.metrics import cagr, max_drawdown
-from ros.metrics.legacy_v1 import stationary_bootstrap_index as _stationary_bootstrap_index
 from ros.validation.research import expected_max_sharpe
 
 

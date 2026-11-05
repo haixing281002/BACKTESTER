@@ -14,8 +14,8 @@ import pandas as pd
 from ros.metrics.core import (
     ANN,
     ann_vol,
-    calmar,
     cagr,
+    calmar,
     cvar_95,
     drawdown_duration,
     drawdown_series,

@@ -1,0 +1,29 @@
+{
+ "thresholds": {
+  "null": "bench",
+  "basis": "active",
+  "floor": "1overT",
+  "dsr_min": 0.85,
+  "window_floor": -0.75,
+  "t_min": 2.0,
+  "boot_p": 0.05,
+  "corr_max": 0.8,
+  "ir_gain_min": 0.05
+ },
+ "n_simulated_per_case": 1000,
+ "any_candidate_meets_targets": true,
+ "n_candidates": 384,
+ "n_meeting_targets": 314,
+ "hard_blocks_alone": {
+  "level 0": 0.038,
+  "level 0.25": 0.195,
+  "level 0.5": 0.492,
+  "level 0.75": 0.796,
+  "level 1": 0.935,
+  "pure factor": 0.603,
+  "best of 20": 0.487,
+  "best of 100": 0.861
+ },
+ "false_max": 0.05,
+ "power_min": 0.7
+}

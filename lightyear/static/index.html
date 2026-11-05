@@ -554,7 +554,7 @@ function renderResults(st){
     RES_SIG = sig; CHARTED = null; REV_SIG = null;
     const r = st.results, rc = st.recalc || {}, sn = r.strategy_name, bn = r.benchmark_name;
     const rcText = rc.status ? `${rc.status==="success"?"✓":"!"} recalculated in LibreOffice · ${rc.total_formulas} formulas · ${rc.total_errors} errors` : (rc.error?`recalc: ${esc(rc.error).slice(0,160)}`:"");
-    const key = `<span class="key"><i style="background:#1f4e79"></i>Strategy: ${esc(sn)}${costTag(r)}</span><span class="key"><i style="background:#d98324"></i>Benchmark: ${esc(bn)} (price index)</span>`;
+    const key = `<span class="key"><i style="background:#1f4e79"></i>Strategy: ${esc(sn)}${costTag(r)}</span><span class="key"><i style="background:#d98324"></i>Benchmark: ${esc(bn)} (${r.benchmark_is_total_return?"total return":"price index"})</span>`;
     $('[data-p="results"]').innerHTML = `
       <div class="card" id="pvbcard"><h2>The paper's strategy vs our backtest</h2>
         <p class="small muted" style="margin-top:0">What the paper's own strategy returned, in its own market and period, next to what we measured running the same mechanism on Ace Equity prices. This is the comparison that matters most -- everything else on this page explains it.</p>
@@ -573,7 +573,7 @@ function renderResults(st){
           ${st.spec_audit.checks.map(c=>`<tr><td>${esc(c.rule)}</td><td style="color:${c.passed===true?'var(--green)':c.passed===false?'var(--red)':'inherit'}"><b>${c.passed===true?'PASS':c.passed===false?'FAIL':'n/a'}</b></td><td class="small">${esc(c.detail)}</td></tr>`).join("")}</table></div>`:""}
         <p style="margin:8px 0 4px">${key}</p>
         <p class="muted" style="margin:6px 0 14px">${esc(r.headline)}</p>
-        <div class="kpis" id="kpis"></div><div class="small muted">Big number = the strategy. Orange line = NIFTY 500 over exactly the same days. Sharpe is over the cash rate on this run's card. The benchmark is the price index, which flatters every relative figure.</div></div>
+        <div class="kpis" id="kpis"></div><div class="small muted">Big number = the strategy. Orange line = NIFTY 500 over exactly the same days. Sharpe is over the cash rate on this run's card. ${r.benchmark_is_total_return?"The benchmark includes dividends.":"The benchmark is the price index, with no dividends, which flatters every relative figure."}</div></div>
       <div class="card" id="corecard"><h2>Core performance</h2><table class="t" id="coretab"></table><div id="coremore" class="small muted" style="margin-top:8px"></div></div>
       <div id="reviewcard"></div>
       <div class="card"><h2>Positives and negatives</h2>

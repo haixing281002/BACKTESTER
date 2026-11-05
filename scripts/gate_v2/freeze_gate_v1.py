@@ -14,8 +14,8 @@ import sys
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, REPO)
-from lightyear.gates import rows  # noqa: E402
-from ros.versions import GATE_VERSION  # noqa: E402
+from lightyear.gates import rows
+from ros.versions import GATE_VERSION
 
 FIELDS = ["run_id", "folder", "strategy", "gate_version", "gate_passed", "decision", "criterion", "value", "threshold", "blocking", "result"]
 

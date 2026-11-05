@@ -335,7 +335,7 @@ def _core_sheet(wb, ch, s_name, b_name):
             ("Down capture (monthly)", "down_capture", NUM2), ("Rolling one-year periods behind", "rolling_behind", PCT)]
 
     def cell(x):
-        return None if x is None or (isinstance(x, float) and x != x) else x
+        return None if x is None or pd.isna(x) else x
 
     for i, (label, key, fmt) in enumerate(rows, start=5):
         put(wk, f"A{i}", label, F_BASE, border=True)

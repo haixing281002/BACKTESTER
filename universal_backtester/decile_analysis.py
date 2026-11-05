@@ -22,9 +22,9 @@ import os
 import numpy as np
 import pandas as pd
 
+from ros.metrics import core
 from universal_backtester.allocators import build_allocator
 from universal_backtester.engine import Backtester, BacktestResult
-from ros.metrics import core
 from universal_backtester.metrics import ann_vol, cagr, max_drawdown
 
 

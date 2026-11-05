@@ -11,9 +11,9 @@ import json
 import os
 
 import pandas as pd
+import yaml
 
 from ros.metrics import core
-import yaml
 
 from .paths import REPO, RUNS
 

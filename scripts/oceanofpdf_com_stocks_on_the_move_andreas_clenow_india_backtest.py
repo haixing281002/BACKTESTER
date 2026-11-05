@@ -65,8 +65,8 @@ from ros.data.lineage import sha256_file, write_run_manifest
 from ros.data.loaders import synthetic_cash_series
 from ros.data.sources import ACE_PRICES_CSV, NIFTY500_HOLDINGS_XLSX, NSE_INDEX_WORKBOOK
 from ros.governance.gates import gate_b
-from ros.validation import research
 from ros.metrics.core import ann_vol, cagr, max_drawdown, sharpe
+from ros.validation import research
 from ros.validation.portfolio import benchmark_relative, factor_fingerprint
 from universal_backtester.checkpoint import checkpoint
 from universal_backtester.clean_charts import save_clean_charts
