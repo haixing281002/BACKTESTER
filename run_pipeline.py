@@ -39,6 +39,7 @@ from ros.cards.extract import (
     propose_replication_targets,
 )
 from ros.cards.schema import load_card
+from ros.config import cash_rate_for, cash_rate_sweep
 from ros.data.firm_registry import build_firm_registry
 from ros.data.intake import MANIFEST, describe_shortfall, extend_registry
 from ros.data.loaders import audit_frame, load_nse_workbook_combined
@@ -108,7 +109,7 @@ def main(argv=None) -> int:
     ap.add_argument("--card", required=True)
     ap.add_argument("--data", default="data/raw/NSE_Broad_Factor_Indices_Historical_Data.xlsx")
     ap.add_argument("--outdir", default="outputs")
-    ap.add_argument("--cash-rate", type=float, default=0.06)
+    ap.add_argument("--cash-rate", type=float, default=None, help="overrides the card's cash rate; by default the card sets it")
     ap.add_argument("--book", default="Equal-weight sleeves",
                     help="name of the run representing the fund's EXISTING book")
     ap.add_argument("--aum-cr", type=float, default=1000.0, help="AUM in INR crore")
@@ -299,7 +300,7 @@ def main(argv=None) -> int:
     # ---------------- STEP 05 : BUILD + EXECUTE --------------------------
     R.h("STEP 05  |  BUILD + EXECUTE")
     refs = [c for c in ["NIFTY 500", "NIFTY500 MULTIFACTOR MQVLV 50"] if c in snap.frame.columns]
-    runset = align_runs(execute_card(card, snap, cash_rate=args.cash_rate,
+    runset = align_runs(execute_card(card, snap, cash_rate=args.cash_rate if args.cash_rate is not None else cash_rate_for(card)[0],
                                      reference_assets=refs))
     rf = runset.inputs["rf"]
     results = runset.all_results()
@@ -502,7 +503,7 @@ def main(argv=None) -> int:
     # cash-rate sweep (the declared proxy)
     if any(p_["proxy_for"] == "india_cash_rate" for p_ in snap.proxies_used):
         rows = []
-        for cr in [0.04, 0.05, 0.06, 0.07, 0.08]:
+        for cr in cash_rate_sweep():
             rs2 = align_runs(execute_card(card, snap, cash_rate=cr, reference_assets=[]))
             tgt = rs2.mandate if rs2.mandate is not None else rs2.primary
             rows.append({"cash_rate": cr,

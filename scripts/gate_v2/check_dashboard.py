@@ -113,7 +113,8 @@ def main() -> int:
     chk("Decision PENDING", "PENDING" in gb)
     chk("v1 kept for comparison", "Gate v1 checklist, for comparison" in gb)
     chk("Evidence supports labelled as Claude's", "Claude's written read" in gb)
-    man = json.load(open(os.path.join(rd, "manifest.json"), encoding="utf-8"))
+    with open(os.path.join(rd, "manifest.json"), encoding="utf-8") as fh:
+        man = json.load(fh)
     chk("Manifest records versions", man.get("gate_version") and man.get("metrics_version") == "v2", (man.get("gate_version"), man.get("metrics_version")))
     chk("Workbook records versions", "gate_version v2" in str(s["A3"].value) and "metrics_version v2" in str(s["A3"].value), str(s["A3"].value)[-80:])
     chk("Workbook cash rate is the card's", s["B4"].value == ch["cash_rate"] and "the card" in str(s["A4"].value), s["A4"].value)

@@ -17,6 +17,7 @@ import csv
 import datetime as dt
 import json
 import logging
+import math
 import os
 import re
 import subprocess
@@ -576,6 +577,11 @@ def revise_a(rid, notes):
     _after_phase_a(rid, ok, "Revision", since=t0, must_change=before)
 
 
+def finite_rows(rows):
+    """A value with no finite answer (a breakeven beyond the sweep) shows blank. The page's JSON cannot carry infinity."""
+    return [{**v, "value": None} if isinstance(v.get("value"), float) and not math.isfinite(v["value"]) else v for v in rows or []]
+
+
 DIAGNOSTIC_LABEL = re.compile(r"leaving the|membership-forced|gap exits|gap rule|eligible names|first fill|index gate|buying shut|band proxy|resize fills|fewer than 5 names", re.IGNORECASE)
 
 
@@ -631,6 +637,7 @@ def build_outputs(rid, review=True):
         labels = {r.get("label") for r in fixed_v}
         model_rows = [r for r in (res.get("validation") or []) if r.get("label") not in labels]
         res["validation"] = fixed_v + model_rows
+    res["validation"] = finite_rows(res.get("validation"))
     # Rows tied to this strategy's rules belong in Diagnostics, whichever step wrote them.
     for v in res.get("validation") or []:
         if DIAGNOSTIC_LABEL.search(str(v.get("label", ""))):

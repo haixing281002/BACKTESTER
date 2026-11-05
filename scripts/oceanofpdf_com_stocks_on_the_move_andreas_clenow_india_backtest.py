@@ -58,13 +58,13 @@ from numpy.lib.stride_tricks import sliding_window_view
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from ros import config
 from ros.cards.schema import load_card
 from ros.data import ace, nifty500
 from ros.data.lineage import sha256_file, write_run_manifest
 from ros.data.loaders import synthetic_cash_series
 from ros.data.sources import ACE_PRICES_CSV, NIFTY500_HOLDINGS_XLSX, NSE_INDEX_WORKBOOK
 from ros.governance.gates import gate_b
-from ros import config
 from ros.metrics.core import ann_vol, cagr, max_drawdown, sharpe
 from ros.validation import research
 from ros.validation.portfolio import benchmark_relative, factor_fingerprint
@@ -696,7 +696,7 @@ FIXED_VALIDATION_SPEC = [
     {"label": "Deflated Sharpe, variance of the variants' Sharpes", "group": "returns_risk", "format": "num", "fn": lambda r: r["deflated_sharpe_variants_variance"]["deflated_sharpe_prob"],
      "source": "research.deflated_sharpe(benchmark_sharpe=expected_max_sharpe(n, var))"},
     {"label": "Two-way turnover a year (x capital)", "group": "costs_execution", "format": "num", "fn": lambda r: r["turnover_two_way_annual"], "source": "simulate()"},
-    {"label": "Breakeven round-trip cost vs NIFTY 500 (bp; beyond the sweep if blank)", "group": "costs_execution", "format": "num", "fn": lambda r: r["breakeven_bp"], "source": "out/cost_sweep.csv"},
+    {"label": "Breakeven round-trip cost vs NIFTY 500 (bp; beyond the sweep if blank)", "group": "costs_execution", "format": "num", "fn": lambda r: r["breakeven_bp"] if np.isfinite(r["breakeven_bp"]) else None, "source": "out/cost_sweep.csv"},
     {"label": "Names held per rebalance, mean", "group": "costs_execution", "format": "num", "fn": lambda r: r["holdings_check"]["mean_names"], "source": "out/rebalance_log.csv"},
     {"label": "Rebalances with fewer than 5 names", "group": "diagnostics", "format": "int", "fn": lambda r: r["holdings_check"]["rebalances_under_5_names"], "source": "out/rebalance_log.csv"},
     {"label": "Largest single weight at any rebalance", "group": "costs_execution", "format": "pct", "fn": lambda r: r["holdings_check"]["max_weight"], "source": "out/rebalance_log.csv"},

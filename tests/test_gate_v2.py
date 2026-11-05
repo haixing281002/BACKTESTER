@@ -258,3 +258,12 @@ def test_rule_specific_rows_are_diagnostics():
         assert DIAGNOSTIC_LABEL.search(x), x
     for x in ("CAGR, strategy", "Two-way turnover a year (x capital)", "Mean cash share of NAV"):
         assert not DIAGNOSTIC_LABEL.search(x), x
+
+
+def test_a_value_with_no_finite_answer_shows_blank_and_cannot_break_the_page():
+    import json
+
+    from lightyear.jobs import finite_rows
+    rows = finite_rows([{"label": "Breakeven", "value": float("inf")}, {"label": "CAGR", "value": 0.1}, {"label": "Note", "value": "text"}])
+    assert rows[0]["value"] is None and rows[1]["value"] == 0.1 and rows[2]["value"] == "text"
+    json.dumps(rows, allow_nan=False)

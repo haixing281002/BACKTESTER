@@ -645,7 +645,7 @@ function valGroup(v){
 }
 function renderValidationBlocks(rows){
   if(!rows.length) return "";
-  const vcell = v => typeof v.value==="number" ? (v.format==="pct"?pct(v.value,2):v.format==="int"?Math.round(v.value):num(v.value)) : esc(v.value);
+  const vcell = v => v.value==null ? "–" : typeof v.value==="number" ? (v.format==="pct"?pct(v.value,2):v.format==="int"?Math.round(v.value):num(v.value)) : esc(v.value);
   const blocks = VAL_GROUPS.map(([k,title]) => [title, rows.filter(v=>valGroup(v)===k)]).filter(([,rs])=>rs.length);
   return `<div class="grid2">${blocks.map(([title,rs])=>`
     <div class="card"><h2>${esc(title)}</h2><table class="t"><tr><th>Measure</th><th>Value</th><th>Source</th></tr>
