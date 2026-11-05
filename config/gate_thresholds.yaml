@@ -1,0 +1,30 @@
+# Quant AI Researcher by Harshil Pahuja
+# Gate B v2 thresholds. NOT APPROVED: candidates only, not wired into any run. Phase 4 proposes values; a person approves them.
+gate_version: v2
+status: "CANDIDATE, awaiting approval"
+capacity:
+  p95_adv_participation_max: 0.10   # candidate: the 10% participation already in ros/validation/portfolio.py
+data_integrity:
+  min_priced_coverage: 0.95         # candidate, not simulated
+bootstrap:
+  p_max: 0.05                       # from the brief
+deflated_sharpe:
+  green_min: 0.95
+  amber_min: 0.80
+  null: benchmark                   # candidate, see the calibration report
+  v_floor: 0.0787                   # candidate: 1 / 12.7, the sampling variance of a yearly Sharpe over 12.7 years
+sub_period:
+  majority_share: 0.5
+  window_floor: -0.75
+  window_floor_amber: -1.25
+factor_alpha:
+  t_green_min: 2.0
+  t_amber_min: 1.0
+book:
+  corr_green_max: 0.80
+  corr_amber_max: 0.90
+  ir_gain_green_min: 0.05
+  ir_gain_amber_min: 0.0
+post_publication:
+  edge_green_min: 0.0
+  edge_amber_min: -0.02

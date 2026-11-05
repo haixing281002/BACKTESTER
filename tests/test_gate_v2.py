@@ -1,0 +1,176 @@
+# Quant AI Researcher by Harshil Pahuja
+"""Gate v2 on fixtures with known answers. Thresholds here are the test's own, so no result depends on what is approved."""
+import ast
+import os
+import pathlib
+
+import numpy as np
+import pandas as pd
+import pytest
+
+from ros.governance import gate_v2 as g
+from ros.metrics import core
+from ros.validation import gate_evidence as ev
+
+REPO = pathlib.Path(__file__).resolve().parent.parent
+TH = {"status": "test", "capacity": {"p95_adv_participation_max": 0.10}, "data_integrity": {"min_priced_coverage": 0.95}, "bootstrap": {"p_max": 0.05},
+      "deflated_sharpe": {"green_min": 0.90, "amber_min": 0.70}, "sub_period": {"majority_share": 0.5, "window_floor": -0.75, "window_floor_amber": -1.25},
+      "factor_alpha": {"t_green_min": 2.0, "t_amber_min": 1.0}, "book": {"corr_green_max": 0.80, "corr_amber_max": 0.90, "ir_gain_green_min": 0.05, "ir_gain_amber_min": 0.0},
+      "post_publication": {"edge_green_min": 0.0, "edge_amber_min": -0.02}}
+LIMITS = {"long_only": True, "max_cash_share": 0.25, "max_single_weight": 0.10}
+
+
+def _good(**kw):
+    e = {"mandate_observed": {"max_cash_share": 0.05, "max_single_weight": 0.05, "min_weight": 0.0},
+         "capacity": {"status": "computed", "p95": 0.02, "names_above_limit": [], "n_no_adv": 0},
+         "checks": [{"check": "look-ahead", "passed": True}], "reconciles": True, "priced_coverage": 0.99, "unpriced": [],
+         "net_edge": 0.03, "bootstrap_p": 0.01, "dsr": 0.97, "sub_period_n": 4, "sub_period_positive": 4, "sub_period_worst": 0.1,
+         "alpha": 0.04, "alpha_t": 3.0, "book_corr": 0.5, "book_ir_gain": 0.1, "post_publication_edge": None}
+    e.update(kw)
+    return e
+
+
+def _row(res, key):
+    return next(r for r in res.hard_blocks + res.scorecard if r.key == key)
+
+
+def test_a_clean_result_passes_and_the_decision_stays_pending():
+    res = g.evaluate(_good(), TH, LIMITS)
+    assert res.status == g.PASS and res.decision == "PENDING" and res.gate_version == "v2"
+    assert g.all_green(res)
+
+
+def test_a_negative_alpha_fails_the_factor_test_however_large_its_t():
+    res = g.evaluate(_good(alpha=-0.05, alpha_t=-5.0), TH, LIMITS)
+    assert _row(res, "factor_alpha").status == g.RED
+    assert not g.all_green(res)
+
+
+def test_a_positive_alpha_below_the_bar_is_not_green():
+    assert _row(g.evaluate(_good(alpha=0.02, alpha_t=1.5), TH, LIMITS), "factor_alpha").status == g.AMBER
+
+
+def test_a_missing_book_gives_incomplete_never_pass():
+    res = g.evaluate(_good(book_corr=None, book_ir_gain=None), TH, LIMITS)
+    assert res.status == g.INCOMPLETE
+    assert _row(res, "book_correlation").status == g.NOT_RUN
+
+
+def test_a_failed_hard_block_beats_a_missing_book():
+    assert g.evaluate(_good(book_corr=None, book_ir_gain=None, bootstrap_p=0.4), TH, LIMITS).status == g.FAIL
+
+
+def test_a_card_override_without_a_named_approval_fails():
+    high_cash = _good(mandate_observed={"max_cash_share": 1.0, "max_single_weight": 0.05, "min_weight": 0.0})
+    assert _row(g.evaluate(high_cash, TH, LIMITS), "mandate").status == g.FAIL
+    assert _row(g.evaluate(high_cash, TH, LIMITS, [{"limit": "max_cash_share", "approved_by": "", "approved_at": ""}]), "mandate").status == g.FAIL
+
+
+def test_a_named_timestamped_override_passes_and_is_shown():
+    high_cash = _good(mandate_observed={"max_cash_share": 1.0, "max_single_weight": 0.05, "min_weight": 0.0})
+    r = _row(g.evaluate(high_cash, TH, LIMITS, [{"limit": "max_cash_share", "approved_by": "A Person", "approved_at": "2026-11-05T10:00:00+05:30"}]), "mandate")
+    assert r.status == g.PASS and "A Person" in r.evidence and "2026-11-05" in r.evidence
+
+
+def test_blank_mandate_limits_or_capacity_are_incomplete():
+    assert g.evaluate(_good(), TH, {"long_only": None, "max_cash_share": None, "max_single_weight": None}).status == g.INCOMPLETE
+    assert g.evaluate(_good(capacity={"status": "not computed", "why": "no AUM"}), TH, LIMITS).status == g.INCOMPLETE
+
+
+@pytest.mark.parametrize("kw", [{"net_edge": -0.01}, {"bootstrap_p": 0.2}, {"capacity": {"status": "computed", "p95": 0.5}}, {"priced_coverage": 0.5},
+                                {"reconciles": False}, {"checks": [{"check": "look-ahead", "passed": False}]}])
+def test_each_hard_block_can_fail_alone(kw):
+    assert g.evaluate(_good(**kw), TH, LIMITS).status == g.FAIL
+
+
+def test_the_scorecard_alone_never_blocks():
+    bad = _good(dsr=0.0, sub_period_positive=0, sub_period_worst=-3.0, alpha=-0.1, alpha_t=-4.0, book_corr=0.99, book_ir_gain=-1.0)
+    res = g.evaluate(bad, TH, LIMITS)
+    assert res.status == g.PASS and not g.all_green(res)
+
+
+def _series(mean, sd, seed, n=3000):
+    return pd.Series(np.random.default_rng(seed).normal(mean, sd, n), index=pd.bdate_range("2012-01-01", periods=n))
+
+
+def test_effective_trials_counts_correlated_versions_as_fewer():
+    assert core.effective_trials(10, 0.0) == 10
+    assert core.effective_trials(10, 1.0) == 1
+    assert core.effective_trials(10, 0.5) == pytest.approx(5.5)
+
+
+def test_near_identical_versions_cannot_make_the_bar_trivial():
+    b = _series(4e-4, 0.01, 1)
+    base = _series(5e-4, 0.012, 2)
+    versions = pd.DataFrame({f"v{i}": base + _series(0, 1e-4, 10 + i) for i in range(8)})
+    x = ev.version_inputs(versions, b, 0.0, 8, v_floor=0.08)
+    assert x["v_observed"] < 0.08 and x["v"] == 0.08
+    assert x["n_eff"] == pytest.approx(core.effective_trials(8, x["mean_corr"]))
+
+
+def test_rules_fixed_in_print_mean_n_of_one():
+    x = ev.version_inputs(None, _series(4e-4, 0.01, 1), 0.0, 1, v_floor=0.08)
+    assert x["n_eff"] == 1.0
+    assert core.expected_max_sharpe(1.0, 0.08) == 0.0
+
+
+def test_deflated_sharpe_bar_starts_at_the_benchmark_when_asked():
+    b = _series(5e-4, 0.01, 1)
+    r = _series(5e-4, 0.01, 2)
+    z, m = ev.deflated_sharpe(r, b, 0.0, 1.0, 0.08, null="zero"), ev.deflated_sharpe(r, b, 0.0, 1.0, 0.08, null="benchmark")
+    assert z["bar"] == 0.0 and m["bar"] == pytest.approx(core.sharpe(b, 0.0))
+    assert m["dsr"] < z["dsr"]
+
+
+def test_sub_period_is_named_for_what_it_is():
+    b, r = _series(4e-4, 0.01, 1), _series(6e-4, 0.01, 2)
+    assert ev.sub_period(r, b, 0.0)["name"] == "Sub-period stability"
+    wf = ev.sub_period(r, b, 0.0, fits_parameters=True)
+    assert wf["name"] == "Walk-forward" and wf["windows"][0]["window"] > ev.sub_period(r, b, 0.0)["windows"][0]["window"]
+    w = ev.sub_period(r, b, 0.0)["windows"][0]
+    assert w["gap"] == pytest.approx(w["sharpe"] - w["benchmark_sharpe"])
+
+
+def test_bootstrap_finds_a_real_edge_and_rejects_none_and_is_repeatable():
+    b = _series(4e-4, 0.01, 1)
+    strong = b + _series(1e-3, 0.003, 2)
+    none = b + _series(0, 0.003, 3)
+    assert ev.paired_bootstrap(strong, b, 0.0, n_boot=500)["p"] < 0.05
+    assert ev.paired_bootstrap(none, b, 0.0, n_boot=500)["p"] > 0.05
+    assert ev.paired_bootstrap(strong, b, 0.0, n_boot=200)["p"] == ev.paired_bootstrap(strong, b, 0.0, n_boot=200)["p"]
+
+
+def test_factor_alpha_is_zero_for_a_pure_factor_mix_and_reports_each_factor_left_out():
+    f = pd.DataFrame({"market": _series(4e-4, 0.01, 1), "size": _series(5e-4, 0.012, 2)})
+    r = 0.6 * f["market"] + 0.4 * f["size"] + _series(0, 2e-4, 3)
+    out = ev.factor_alpha(r, f, 0.0)
+    assert abs(out["alpha_t_hac"]) < 3
+    assert set(out["leave_one_out"]) == {"market", "size"}
+    assert ev.factor_alpha(r, f, 0.0, product_cost_bp={"market": 10, "size": 50})["alpha_net_of_products"] > out["alpha_ann"]
+
+
+def test_a_strategy_that_is_a_factor_is_not_regressed_on_itself():
+    f = pd.DataFrame({"market": _series(4e-4, 0.01, 1), "momentum": _series(5e-4, 0.012, 2)})
+    out = ev.factor_alpha(f["momentum"], f, 0.0)
+    assert out["left_out_as_identical"] == ["momentum"] and abs(out["alpha_t_hac"]) < 5
+
+
+def test_no_book_gives_no_book_numbers():
+    assert ev.book_tests(_series(4e-4, 0.01, 1), None, _series(4e-4, 0.01, 2))["book_corr"] is None
+
+
+def test_nothing_in_gate_v2_assigns_a_decision():
+    tree = ast.parse((REPO / "ros" / "governance" / "gate_v2.py").read_text(encoding="utf-8"))
+    for n in ast.walk(tree):
+        if isinstance(n, ast.Assign):
+            for t in n.targets:
+                assert not (isinstance(t, ast.Attribute) and t.attr == "decision"), "gate v2 must not assign a decision"
+
+
+def test_the_shipped_thresholds_load_and_are_marked_with_their_status():
+    import yaml
+    with open(os.path.join(REPO, "config", "gate_thresholds.yaml"), encoding="utf-8") as fh:
+        th = yaml.safe_load(fh)
+    assert th["gate_version"] == "v2" and th["status"]
+    for k in TH:
+        assert k in th

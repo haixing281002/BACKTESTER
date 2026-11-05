@@ -1,3 +1,4 @@
+# Quant AI Researcher by Harshil Pahuja
 """Strategy Card schema -- Step 02 of the pipeline.
 
 The Strategy Card is the ONLY interface between paper interpretation (AI, fallible)
@@ -892,6 +893,11 @@ class StrategyCard:
     # Decides nothing; a `not_convertible` verdict is a finding, not a block.
     convertibility: Convertibility | None = None
     n_configs_tried: int = 1     # feeds the deflated Sharpe ratio; understating it is a lie
+    # Gate v2 separates these. Versions actually chosen between feed the deflated Sharpe; robustness checks never do.
+    n_configs_selected_from: int | None = None
+    n_sensitivities: int = 0
+    rules_fixed_in_print: bool = False    # the paper states the rules: own selection is N = 1, plus a post-publication test
+    fits_parameters: bool = False         # the rules fit parameters to data: then, and only then, a true walk-forward
     notes: str = ""
     card_version: str = "1.0"
 
@@ -920,6 +926,10 @@ class StrategyCard:
             errs.append("signal.lag_days must be >= 0")
         if self.n_configs_tried < 1:
             errs.append("n_configs_tried must be >= 1")
+        if self.n_configs_selected_from is not None and self.n_configs_selected_from < 1:
+            errs.append("n_configs_selected_from must be >= 1")
+        if self.n_sensitivities < 0:
+            errs.append("n_sensitivities must be >= 0")
         for i, d in enumerate(self.data_requirements):
             errs += d.validate(f"data_requirements[{i}]")
         for i, a in enumerate(self.ambiguities):
@@ -1623,7 +1633,8 @@ def load_card(path: str) -> StrategyCard:
 
     known = {"paper", "intent", "universe", "signal", "portfolio", "costs",
              "data_requirements", "ambiguities", "replication_targets",
-             "benchmark_templates", "n_configs_tried", "notes", "card_version",
+             "benchmark_templates", "n_configs_tried", "n_configs_selected_from", "n_sensitivities",
+             "rules_fixed_in_print", "fits_parameters", "notes", "card_version",
              "universe_translation", "strategy", "data_requests",
              "open_questions", "data_plan", "selection", "backtest_plan",
              "no_further_data_needed", "convertibility", "india_notes"}
@@ -1648,6 +1659,10 @@ def load_card(path: str) -> StrategyCard:
                              for i, r in enumerate(blob.get("replication_targets") or [])],
         benchmark_templates=blob.get("benchmark_templates") or [],
         n_configs_tried=blob.get("n_configs_tried", 1),
+        n_configs_selected_from=blob.get("n_configs_selected_from"),
+        n_sensitivities=blob.get("n_sensitivities", 0),
+        rules_fixed_in_print=bool(blob.get("rules_fixed_in_print", False)),
+        fits_parameters=bool(blob.get("fits_parameters", False)),
         notes=blob.get("notes", ""),
         card_version=blob.get("card_version", "1.0"),
         universe_translation=(
