@@ -267,3 +267,9 @@ def test_a_value_with_no_finite_answer_shows_blank_and_cannot_break_the_page():
     rows = finite_rows([{"label": "Breakeven", "value": float("inf")}, {"label": "CAGR", "value": 0.1}, {"label": "Note", "value": "text"}])
     assert rows[0]["value"] is None and rows[1]["value"] == 0.1 and rows[2]["value"] == "text"
     json.dumps(rows, allow_nan=False)
+
+
+def test_no_row_can_name_a_house_cost():
+    from lightyear.jobs import HOUSE_COST_LABEL
+    assert HOUSE_COST_LABEL.search("CAGR at the 30bp house floor (Appendix cost sweep, 30bp round trip)")
+    assert not HOUSE_COST_LABEL.search("Breakeven round-trip cost vs NIFTY 500")

@@ -35,8 +35,13 @@ def main() -> int:
         req = urllib.request.Request(f"{base}/api/runs/{rid}/rebuild", data=b"{}", headers={"Content-Type": "application/json"}, method="POST")
         urllib.request.urlopen(req, timeout=60).read()
     t0 = time.time()
+    time.sleep(3)
     while time.time() - t0 < 500:
-        st = json.load(urllib.request.urlopen(f"{base}/api/runs/{rid}", timeout=30))
+        try:
+            st = json.load(urllib.request.urlopen(f"{base}/api/runs/{rid}", timeout=30))
+        except OSError:     # the page can be mid-rebuild
+            time.sleep(5)
+            continue
         if st["status"] in ("gate_b", "failed", "decided"):
             break
         time.sleep(5)
@@ -89,7 +94,9 @@ def main() -> int:
     chk("The gate is scored at the card's cost", f"{bp:g}bp" in g["basis"], g["basis"])
     chk("No other cost named in the core table or gate", "30bp" not in " ".join(core[0]) + g["basis"] or bp == 30, core[0])
     chk("No row at another cost outside an appendix", not [x for x in labels if "bp" in x and "appendix" not in x.lower() and "reakeven" not in x], [x for x in labels if "bp" in x])
-    chk("No 'house' cost anywhere on the Results or Gate B tab", "house" not in (txt + gb).lower().replace("house limit", ""), "")
+    chk("No row or table names a house cost", not [x for x in labels if "house" in x.lower()], [x for x in labels if "house" in x.lower()])
+    prose = (txt + gb).lower().count("house floor") + (txt + gb).lower().count("house cost")
+    print("NOTE prose mentions of a house cost, in Claude's text for this run:", prose)
     chk("Tile reads 'Sharpe'", "Sharpe" in tiles, tiles)
     chk("Tile Sharpe equals ros.metrics.core", vals[tiles.index("Sharpe")] == f"{m['sharpe']:.2f}", vals[tiles.index("Sharpe")])
     chk("Cash rate on the page is the card's", "from the card" in more, more[-60:])

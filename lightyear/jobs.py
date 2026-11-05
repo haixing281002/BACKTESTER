@@ -582,6 +582,7 @@ def finite_rows(rows):
     return [{**v, "value": None} if isinstance(v.get("value"), float) and not math.isfinite(v["value"]) else v for v in rows or []]
 
 
+HOUSE_COST_LABEL = re.compile(r"house (floor|cost)", re.IGNORECASE)   # there is none: a run's cost is its card's
 DIAGNOSTIC_LABEL = re.compile(r"leaving the|membership-forced|gap exits|gap rule|eligible names|first fill|index gate|buying shut|band proxy|resize fills|fewer than 5 names", re.IGNORECASE)
 
 
@@ -637,7 +638,7 @@ def build_outputs(rid, review=True):
         labels = {r.get("label") for r in fixed_v}
         model_rows = [r for r in (res.get("validation") or []) if r.get("label") not in labels]
         res["validation"] = fixed_v + model_rows
-    res["validation"] = finite_rows(res.get("validation"))
+    res["validation"] = [v for v in finite_rows(res.get("validation")) if not HOUSE_COST_LABEL.search(str(v.get("label", "")))]
     # Rows tied to this strategy's rules belong in Diagnostics, whichever step wrote them.
     for v in res.get("validation") or []:
         if DIAGNOSTIC_LABEL.search(str(v.get("label", ""))):

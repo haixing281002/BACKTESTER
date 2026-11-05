@@ -155,6 +155,7 @@ COSTS FOLLOW THE CARD: the headline (daily_returns.csv strategy column, results.
 exactly the card's costs.spread_bps; when it is zero the headline is GROSS and gross equals net. Other costings (the sweep
 in config/costs.yaml) are allowed ONLY as a clearly labelled appendix: every such comparator column, table title and
 chart must contain the word "Appendix" and its cost. Never write a cost or cash number into code: read them from the card.
+There is no house cost or cost floor. Do not add a row, a note or a sentence that charges or names one, even if an earlier run did.
 Never put a cost the card did not set into the headline. Use universal_backtester/clean_charts.py for charts.
 Keep every number in code; never estimate a statistic in prose. If a script runs for more than a couple of
 minutes, run it in the background and keep announcing progress.
