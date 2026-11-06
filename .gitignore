@@ -14,9 +14,19 @@ __pycache__/
 # library makes a new fund inherit another research programme's trial budget
 # and prior answers. The worked examples are kept, for reference, in
 # examples/outputs/.
-outputs/*
+outputs/**
 !outputs/.gitkeep
 !outputs/README.md
+
+# Third-party and licensed content never goes into git (purged from history 2026-11-06).
+data/processed/**
+data/raw/**
+docs/papers/**
+docs/devanathan_2026_simple_dynamic_sbg.pdf
+docs/*__transcript.txt
+examples/outputs/**/*.parquet
+# Machine-local paths to the data files (see config/local.example.yaml).
+config/local.yaml
 
 # Derived data built from the three sources (ros/data/sources.py): the Parquet copy of the Ace price file
 # (~1 GB), the security master and the membership snapshots. Rebuilt automatically when the source changes.
