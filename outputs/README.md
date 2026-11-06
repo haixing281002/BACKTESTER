@@ -1,3 +1,4 @@
+<!-- Quant AI Researcher -->
 # Run artifacts
 
 **This folder is yours and is not tracked.** Everything here belongs to the run
@@ -25,10 +26,15 @@ confusing. A pre-populated library is wrong.
 ```
 examples/outputs/reports/      the full pipeline report, end to end
 examples/outputs/library/      what a library entry looks like
-examples/outputs/snapshots/    a PIT snapshot and its manifest
+examples/outputs/snapshots/    each snapshot's manifest (the .parquet data is not in git)
 examples/outputs/charts/       the four diagnostic charts
 examples/outputs/backtest_audit.xlsx   the live-formula Excel model
 ```
+
+The snapshot data itself is built from the licensed NSE index workbook, so it is
+not kept in git. With the workbook in `data/raw/` (see SETUP.md), regenerate it
+locally: `python run_pipeline.py --card examples/cards/<card>.yaml --outdir <dir>`
+writes the snapshot and its manifest under `<dir>/snapshots/`.
 
 Read them to see what a finished run produces. Nothing in the code path reads
 them, and `StrategyLibrary` is rooted at `outputs/library` — never at the
