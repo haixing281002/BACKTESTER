@@ -1,16 +1,18 @@
+<!-- Quant AI Researcher -->
 # Data sources: three files, nothing else
 
 Changed 2026-10-30. Every price, membership and index number a run uses comes
 from one of the three files below, named in `ros/data/sources.py`. Nothing is
 downloaded; there is no downloader in the repository. If a file is missing the
-loader raises with the path it tried. Each path can be overridden with an
-environment variable so a second machine points at its own copies.
+loader raises with the path it tried. None of the files is in git. Each path
+comes from an environment variable or, failing that, the matching key in the
+gitignored `config/local.yaml` (copy `config/local.example.yaml`).
 
-| # | What | Default path | Env override | Loader |
+| # | What | Default path | Env variable / `config/local.yaml` key | Loader |
 |---|---|---|---|---|
-| 1 | Ace Equity daily prices, every listed company, 2000 onward | `<DATA_ROOT>\prices_2000_2026_merged.csv` | `LIGHTYEAR_ACE_PRICES` | `ros/data/ace.py` |
-| 2 | NIFTY 500 quarterly constituents since 2012, with sub-index split, plus the Accord/ISIN/symbol master | `C:\Users\harshil.pahuja\Desktop\20261022 Nifty 500 Historical Holdings since 2013.xlsx` | `LIGHTYEAR_NIFTY500_HOLDINGS` | `ros/data/nifty500.py` |
-| 3 | NSE index levels: broad-market and factor sleeves | `data/raw/NSE_Broad_Factor_Indices_Historical_Data.xlsx` | `LIGHTYEAR_INDEX_WORKBOOK` | `ros/data/loaders.py` |
+| 1 | Ace Equity daily prices, every listed company, 2000 onward | none: must be configured | `LIGHTYEAR_ACE_PRICES` / `ace_prices` | `ros/data/ace.py` |
+| 2 | NIFTY 500 quarterly constituents since 2012, with sub-index split, plus the Accord/ISIN/symbol master | none: must be configured | `LIGHTYEAR_NIFTY500_HOLDINGS` / `nifty500_holdings` | `ros/data/nifty500.py` |
+| 3 | NSE index levels: broad-market and factor sleeves | `data/raw/NSE_Broad_Factor_Indices_Historical_Data.xlsx` (not in git; copy it there) | `LIGHTYEAR_INDEX_WORKBOOK` / `nse_index_workbook` | `ros/data/loaders.py` |
 
 ```bash
 python -m ros.data.sources      # present / MISSING, size, last modified (IST)

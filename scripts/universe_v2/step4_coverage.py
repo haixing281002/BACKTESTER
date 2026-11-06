@@ -1,4 +1,4 @@
-# Quant AI Researcher by Harshil Pahuja
+# Quant AI Researcher
 """STEP 4: what the v2 universe covers, with "100%" defined and never rounded up.
 
 For every NSE review date (end-March / end-September effective dates, plus the Sep-2013 review that starts the new
@@ -213,7 +213,7 @@ def main() -> int:
              C.md_table(wr[~wr["warmup_ok"]][["symbol", "isin", "company_name", "closes_last_100", "closes_last_200", "priced_on_signal"]]), "",
              "## Price-history splice check (ISIN-stem matches and DHFL)", "", C.md_table(sc), "",
              "## Note for the data owner", "",
-             ("The folder '<DATA_ROOT_ADJUSTED>' is empty on this machine. The names listed as unpriced above are in the "
+             ("The adjusted-prices folder is empty on this machine. The names listed as unpriced above are in the "
              "universe but have no price in the Ace file for the dates they were index members, so a backtest can neither buy nor hold "
              "them; most are companies that later failed. Price history for them is the only fix for the remaining survivorship bias.")]
     with open(os.path.join(C.REPORTS, "coverage_summary.md"), "w", encoding="utf-8") as fh:

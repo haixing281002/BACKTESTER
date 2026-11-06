@@ -1,3 +1,4 @@
+<!-- Quant AI Researcher -->
 # Setup — running this in VS Code
 
 Ten minutes, and **no API key**.
@@ -68,8 +69,21 @@ reopen the terminal. If `py` is not recognised, install Python from
 Throughout the rest of this file, Windows users read `py` wherever it says
 `python`.
 
-The repository already contains the price workbook and the test-case paper, so
-there is nothing to download or upload.
+The repository holds **no market data and no paper PDFs** (both are licensed or
+third-party). Supply them on each machine; nothing is downloaded:
+
+| File | Put it at, or point to it with | `config/local.yaml` key |
+|---|---|---|
+| Ace Equity daily prices CSV | `LIGHTYEAR_ACE_PRICES` | `ace_prices` |
+| NIFTY 500 holdings workbook (.xlsx) | `LIGHTYEAR_NIFTY500_HOLDINGS` | `nifty500_holdings` |
+| NSE index levels workbook | `data/raw/NSE_Broad_Factor_Indices_Historical_Data.xlsx`, or `LIGHTYEAR_INDEX_WORKBOOK` | `nse_index_workbook` |
+| Universe v2 build inputs (only to rebuild the universe) | `LIGHTYEAR_ALPHALAB_XLSX`, `LIGHTYEAR_ALPHALAB_CSV` | `alphalab_nifty500_xlsx`, `alphalab_nifty500_csv` |
+| Papers | `docs/papers/` | — |
+
+Copy `config/local.example.yaml` to `config/local.yaml` (gitignored) and fill in
+the paths; an environment variable wins over the file. `python -m ros.data.sources`
+shows what it found. Tests that need a file you have not supplied report
+SKIPPED with the reason.
 
 ## 3. Check it works before involving Claude at all
 
@@ -78,7 +92,8 @@ python -m pytest tests/ -q          # Windows: py -m pytest tests/ -q
 python run_pipeline.py --card examples/cards/devanathan_2026_india_factor_adaptation.yaml
 ```
 
-The first should print `41 passed`. The second takes 2–4 minutes and ends at
+The first should end with no failures (tests that need data you have not supplied
+show as skipped). The second needs the NSE index workbook; it takes 2–4 minutes and ends at
 **Gate B PENDING** — that is correct, not an error. The pipeline scores the
 evidence and stops, because the decision belongs to a person.
 

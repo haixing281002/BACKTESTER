@@ -1,3 +1,4 @@
+# Quant AI Researcher
 """The three files this repository reads market data from. Nothing else is a source.
 
     1. ACE_PRICES_CSV          Ace Equity daily prices for every listed Indian company, 2000 onward
@@ -10,8 +11,9 @@
     3. NSE_INDEX_WORKBOOK      NSE index levels (broad-market and factor sleeves). Benchmark and sleeve history.
                                Loader: ros/data/loaders.py
 
-Each path can be overridden with an environment variable (LIGHTYEAR_ACE_PRICES, LIGHTYEAR_NIFTY500_HOLDINGS,
-LIGHTYEAR_INDEX_WORKBOOK), so a second machine points at its own copies without a code change. Derived files
+Each path comes from an environment variable (LIGHTYEAR_ACE_PRICES, LIGHTYEAR_NIFTY500_HOLDINGS,
+LIGHTYEAR_INDEX_WORKBOOK) or, failing that, from the matching key in the gitignored config/local.yaml (see
+config/local.example.yaml and SETUP.md). No machine's own paths are written in the code. Derived files
 (Parquet caches, the security master) go under data/processed/; data/raw/ is never written.
 
 There is no downloader anywhere in the repository. A run never fetches: if a file is missing the loaders raise
@@ -26,24 +28,36 @@ from zoneinfo import ZoneInfo
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 TZ = ZoneInfo("Asia/Kolkata")
 
-ACE_PRICES_CSV = os.environ.get("LIGHTYEAR_ACE_PRICES") or (
-    r"<DATA_ROOT>"
-    r"\prices_2000_2026_merged.csv")
-NIFTY500_HOLDINGS_XLSX = os.environ.get("LIGHTYEAR_NIFTY500_HOLDINGS") or (
-    r"C:\Users\harshil.pahuja\Desktop\20261022 Nifty 500 Historical Holdings since 2013.xlsx")
-NSE_INDEX_WORKBOOK = os.environ.get("LIGHTYEAR_INDEX_WORKBOOK") or os.path.join(
-    REPO, "data", "raw", "NSE_Broad_Factor_Indices_Historical_Data.xlsx")
+LOCAL_CONFIG = os.path.join(REPO, "config", "local.yaml")
+
+
+def _local_config() -> dict:
+    if not os.path.isfile(LOCAL_CONFIG):
+        return {}
+    import yaml
+    with open(LOCAL_CONFIG, encoding="utf-8") as fh:
+        return yaml.safe_load(fh) or {}
+
+
+_LOCAL = _local_config()
+
+
+def _path(env: str, key: str, default: str = "") -> str:
+    """Environment variable, else config/local.yaml, else the default ("" = not configured)."""
+    return os.environ.get(env) or _LOCAL.get(key) or default
+
+
+ACE_PRICES_CSV = _path("LIGHTYEAR_ACE_PRICES", "ace_prices")
+NIFTY500_HOLDINGS_XLSX = _path("LIGHTYEAR_NIFTY500_HOLDINGS", "nifty500_holdings")
+NSE_INDEX_WORKBOOK = _path("LIGHTYEAR_INDEX_WORKBOOK", "nse_index_workbook", os.path.join(
+    REPO, "data", "raw", "NSE_Broad_Factor_Indices_Historical_Data.xlsx"))
 
 PROCESSED_DIR = os.path.join(REPO, "data", "processed")
 # BUILD-TIME source for the NIFTY 500 universe v2 (data/processed/universe/, loader ros.data.nifty500 with
 # membership_source "nifty500_members_v2"): the Alpha Lab constituents pull of 2026-10-30. Read only by
 # scripts/universe_v2/*; a run reads the derived spells CSV and never this file.
-ALPHALAB_NIFTY500_XLSX = os.environ.get("LIGHTYEAR_ALPHALAB_XLSX") or (
-    r"<DATA_ROOT>"
-    r"\NIFTY500_constituents_weights_alphalab_2013-06-03_to_2026-10-30.xlsx")
-ALPHALAB_NIFTY500_CSV = os.environ.get("LIGHTYEAR_ALPHALAB_CSV") or (
-    r"C:\Users\harshil.pahuja\Desktop\Market & Company Data"
-    r"\NIFTY500_constituents_weights_alphalab_2013-06-03_to_2026-10-30.csv")
+ALPHALAB_NIFTY500_XLSX = _path("LIGHTYEAR_ALPHALAB_XLSX", "alphalab_nifty500_xlsx")
+ALPHALAB_NIFTY500_CSV = _path("LIGHTYEAR_ALPHALAB_CSV", "alphalab_nifty500_csv")
 BUILD_SOURCES = {
     "alphalab_nifty500_xlsx": ("Alpha Lab NIFTY 500 constituents workbook (universe v2 build only)", ALPHALAB_NIFTY500_XLSX),
     "alphalab_nifty500_csv": ("Alpha Lab NIFTY 500 row-level pull, dated tickers (universe v2 build only)", ALPHALAB_NIFTY500_CSV),
@@ -70,10 +84,14 @@ def stamp() -> str:
 
 def require(path: str, what: str) -> str:
     """The file, or a FileNotFoundError that says exactly which path was tried and how to point elsewhere."""
+    if not path:
+        raise FileNotFoundError(
+            f"{what} is not configured. Set its environment variable or its key in config/local.yaml "
+            f"(see SETUP.md and config/local.example.yaml).")
     if not os.path.isfile(path):
         raise FileNotFoundError(
             f"{what} not found at {path}. Nothing is downloaded: copy the file there, or set the matching "
-            f"environment variable (see ros/data/sources.py).")
+            f"environment variable or config/local.yaml key (see SETUP.md).")
     return path
 
 

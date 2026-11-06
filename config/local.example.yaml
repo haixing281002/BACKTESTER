@@ -1,0 +1,17 @@
+# Quant AI Researcher
+#
+# Copy this file to config/local.yaml (gitignored) and fill in the paths on THIS machine.
+# An environment variable, when set, wins over the key here.
+#
+#   key                     environment variable
+#   ace_prices              LIGHTYEAR_ACE_PRICES          Ace Equity daily prices CSV
+#   nifty500_holdings       LIGHTYEAR_NIFTY500_HOLDINGS   NIFTY 500 holdings workbook (.xlsx)
+#   nse_index_workbook      LIGHTYEAR_INDEX_WORKBOOK      NSE index levels workbook (default: data/raw/NSE_Broad_Factor_Indices_Historical_Data.xlsx)
+#   alphalab_nifty500_xlsx  LIGHTYEAR_ALPHALAB_XLSX       universe v2 build only
+#   alphalab_nifty500_csv   LIGHTYEAR_ALPHALAB_CSV        universe v2 build only
+
+ace_prices: ""
+nifty500_holdings: ""
+# nse_index_workbook: ""
+alphalab_nifty500_xlsx: ""
+alphalab_nifty500_csv: ""

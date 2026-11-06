@@ -1,4 +1,4 @@
-# Quant AI Researcher by Harshil Pahuja
+# Quant AI Researcher
 """STEP 7: explain every change between Clenow runs: baseline -> (a) universe v2, old start -> (b) universe v1, new start
 -> final (v2, new start). Everything is read from each run's own files (out/results_raw.json, out/*.csv, holdings.csv,
 trades.csv, daily_returns.csv); nothing is estimated.
@@ -203,7 +203,7 @@ def main() -> int:
                  f"{s['never_priced']} names never priced); small-cap NAV share {pct(s['small_cap_share_mean'])}; "
                  f"factor alpha t {num(s['alpha_t'])} headline, {num(s['alpha_t_no_filter'])} no-filter; alpha {pct(s['alpha_ann'])} a year.")
     L += ["", "## Note for the data owner", "",
-          ("The '<DATA_ROOT_ADJUSTED>' folder is empty on this machine. The unpriced names in each run's Notes are in the "
+          ("The adjusted-prices folder is empty on this machine. The unpriced names in each run's Notes are in the "
            "universe but have no Ace price for the dates they were members; price history for them is the only fix for the remaining "
            "survivorship bias. PIRAMALFIN and GUJENERGY in the lists above are the Ace master's current symbols for the DHFL and "
            "GUJGASLTD ISIN keys.")]
