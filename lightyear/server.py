@@ -1,4 +1,4 @@
-# Quant AI Researcher by Harshil Pahuja
+# Quant AI Researcher
 """Lightyear HTTP server. Listens on 127.0.0.1 only: nobody else on the network can reach it."""
 import json
 import os
@@ -78,6 +78,8 @@ def health():
 
 @app.get("/api/papers")
 def papers():
+    if not os.path.isdir(PAPERS):  # papers are not in git; a fresh clone has no docs/papers/
+        return []
     return sorted(f for f in os.listdir(PAPERS) if f.lower().endswith(".pdf"))
 
 
@@ -97,6 +99,7 @@ async def new_run(operator: str = Form(...), model: str = Form(""), auto_continu
             raise HTTPException(400, "Upload a PDF.")
         slug = slugify(pdf.filename)
         dest = os.path.join(PAPERS, f"{slug}.pdf")
+        os.makedirs(PAPERS, exist_ok=True)
         with open(dest, "wb") as f:
             shutil.copyfileobj(pdf.file, f)
     elif existing:

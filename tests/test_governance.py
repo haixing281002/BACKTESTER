@@ -1,3 +1,4 @@
+# Quant AI Researcher
 """Gate A and Gate B are human decisions. These tests exist to keep them that way.
 
 A machine that both scores the evidence and rules on it is not a governed
@@ -17,6 +18,7 @@ import pytest
 
 from ros.cards.schema import load_card
 from ros.governance.gates import Criterion, GateResult, gate_a, gate_b
+from data_needs import needs_nse_workbook
 
 CARD = "examples/cards/devanathan_2026_india_factor_adaptation.yaml"
 
@@ -93,6 +95,7 @@ def test_criteria_are_mechanical_but_separate_from_the_ruling():
 
 
 # ------------------------------------------------------------ end to end
+@needs_nse_workbook
 def test_pipeline_leaves_the_decision_pending_by_default(undecided):
     out, _ = undecided
     assert "decision recorded : PENDING" in out
@@ -102,12 +105,14 @@ def test_pipeline_leaves_the_decision_pending_by_default(undecided):
     assert "evidence supports" in out
 
 
+@needs_nse_workbook
 def test_a_decision_requires_a_named_human():
     r = _run("--decision", "APPROVE")
     assert r.returncode != 0
     assert "requires --decided-by" in (r.stdout + r.stderr)
 
 
+@needs_nse_workbook
 def test_a_recorded_decision_is_stored_with_its_owner(decided):
     out, d = decided
     assert "decision recorded : REJECT  by Test PM" in out
@@ -119,6 +124,7 @@ def test_a_recorded_decision_is_stored_with_its_owner(decided):
     assert gb["decision"] == "REJECT" and "because" in gb["rationale"]
 
 
+@needs_nse_workbook
 def test_undecided_runs_are_identifiable_in_the_library(undecided):
     _, d = undecided
     e = _latest(d)

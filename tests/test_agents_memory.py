@@ -1,3 +1,4 @@
+# Quant AI Researcher
 """The "agents get better with time" loop: StrategyLibrary.relevant_precedent()
 (the read side), ros/agents/analysts.py's _precedent_block() (how it reaches a
 prompt), and AgenticPipeline's deterministic stage-notes extraction + the
@@ -13,6 +14,8 @@ from datetime import UTC, datetime
 
 from ros.agents.analysts import _precedent_block
 from ros.agents.orchestrator import AgenticPipeline
+
+from data_needs import SYNTHETIC_PAPER
 from ros.governance.library import LibraryEntry, StrategyLibrary, make_entry_id
 
 FIX = "ros/agents/fixtures/devanathan_2026.json"
@@ -115,7 +118,7 @@ def test_run_interpretation_extracts_stage_notes_without_any_extra_model_call(tm
     lib = StrategyLibrary(str(tmp_path / "library"))
     pipe = AgenticPipeline(mode="replay", fixtures=fx, library=lib)
     res = pipe.run_interpretation(
-        "docs/devanathan_2026_simple_dynamic_sbg.pdf", "adaptation", str(tmp_path / "cards"))
+        SYNTHETIC_PAPER, "adaptation", str(tmp_path / "cards"))
 
     # card_drafter: derived from the critique's own high-materiality findings
     # and missed_by_first_pass -- both present in the fixture.
@@ -142,7 +145,7 @@ def test_run_interpretation_banks_a_preliminary_agentic_draft_entry(tmp_path):
     lib = StrategyLibrary(str(tmp_path / "library"))
     pipe = AgenticPipeline(mode="replay", fixtures=fx, library=lib)
     res = pipe.run_interpretation(
-        "docs/devanathan_2026_simple_dynamic_sbg.pdf", "adaptation", str(tmp_path / "cards"))
+        SYNTHETIC_PAPER, "adaptation", str(tmp_path / "cards"))
 
     assert res.card_valid, "fixture card must validate for this test to mean anything"
     assert res.library_entry_path is not None
@@ -163,7 +166,7 @@ def test_a_second_run_on_a_similar_paper_receives_the_first_runs_precedent(tmp_p
     lib = StrategyLibrary(str(tmp_path / "library"))
     pipe = AgenticPipeline(mode="replay", fixtures=fx, library=lib)
     first = pipe.run_interpretation(
-        "docs/devanathan_2026_simple_dynamic_sbg.pdf", "adaptation", str(tmp_path / "cards"))
+        SYNTHETIC_PAPER, "adaptation", str(tmp_path / "cards"))
     assert first.stage_notes.get("card_drafter")
 
     precedent = pipe._precedent("card_drafter")
@@ -182,7 +185,7 @@ def test_bank_precedent_is_a_noop_when_there_is_nothing_to_bank(tmp_path):
     lib = StrategyLibrary(str(tmp_path / "library"))
     pipe = AgenticPipeline(mode="replay", fixtures=fx, library=lib)
     res = pipe.run_interpretation(
-        "docs/devanathan_2026_simple_dynamic_sbg.pdf", "adaptation", str(tmp_path / "cards"))
+        SYNTHETIC_PAPER, "adaptation", str(tmp_path / "cards"))
 
     assert not res.card_valid
     assert res.library_entry_path is None

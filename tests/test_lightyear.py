@@ -1,9 +1,10 @@
-# Quant AI Researcher by Harshil Pahuja
+# Quant AI Researcher
 """Lightyear end to end with a stand-in for Claude Code: upload -> Gate A -> approve -> Gate B -> decision.
 No model, no network, no market data."""
 import importlib
 import json
 import os
+import shutil
 import sys
 import time
 
@@ -22,6 +23,10 @@ def client(tmp_path, monkeypatch):
     monkeypatch.setenv("LY_TEST_CARDS", str(tmp_path / "cards"))
     monkeypatch.setenv("LIGHTYEAR_SKIP_RECALC", "1")
     monkeypatch.setenv("LIGHTYEAR_SKIP_REVIEW", "1")
+    papers = tmp_path / "papers"
+    papers.mkdir()
+    shutil.copy(os.path.join(REPO, "tests", "fixtures", "synthetic_paper.pdf"), papers / "synthetic_paper.pdf")
+    monkeypatch.setenv("LIGHTYEAR_PAPERS", str(papers))
     import lightyear.jobs
     import lightyear.paths
     import lightyear.server
@@ -81,7 +86,8 @@ def test_full_flow(client):
 def test_stage_tracker_moves_forward_only_and_reads_banners(client):
     from lightyear import jobs
     paper = client.get("/api/papers").json()[0]
-    rid = jobs.create(f"docs/papers/{paper}", "x", "Tester", "", False)
+    rid = jobs.create(os.path.relpath(os.path.join(os.environ["LIGHTYEAR_PAPERS"], paper), REPO),
+                      "x", "Tester", "", False)
     jobs.update(rid, status="phase_b", current_stage=None)
     B = jobs.IDS_B
     jobs._detect(rid, "LIGHTYEAR-STAGE: 03\nchecking data", B, "text")

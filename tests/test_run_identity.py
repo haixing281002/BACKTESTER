@@ -1,4 +1,4 @@
-# Quant AI Researcher by Harshil Pahuja
+# Quant AI Researcher
 """Every output is tied to a run id and a card sha, nothing is picked by 'latest file', and a stale hand-off is refused.
 
 Two runs with different cards get different run ids and different card shas; the run list shows the newer one first;
@@ -8,6 +8,7 @@ the build; the page's run state carries the provenance block.
 import importlib
 import json
 import os
+import shutil
 import sys
 import time
 
@@ -24,6 +25,10 @@ def client(tmp_path, monkeypatch):
     monkeypatch.setenv("LY_TEST_CARDS", str(tmp_path / "cards"))
     monkeypatch.setenv("LIGHTYEAR_SKIP_RECALC", "1")
     monkeypatch.setenv("LIGHTYEAR_SKIP_REVIEW", "1")
+    papers = tmp_path / "papers"
+    papers.mkdir()
+    shutil.copy(os.path.join(REPO, "tests", "fixtures", "synthetic_paper.pdf"), papers / "synthetic_paper.pdf")
+    monkeypatch.setenv("LIGHTYEAR_PAPERS", str(papers))
     import lightyear.jobs
     import lightyear.paths
     import lightyear.server

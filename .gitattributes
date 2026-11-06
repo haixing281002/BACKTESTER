@@ -1,0 +1,6 @@
+# Quant AI Researcher
+# Binary files are stored and checked out byte for byte, never line-ending converted.
+*.pdf binary
+*.xlsx binary
+*.parquet binary
+*.png binary

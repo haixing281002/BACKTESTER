@@ -1,3 +1,4 @@
+# Quant AI Researcher
 """The engine and the clean-room reimplementation must agree, and the check
 must be capable of disagreeing.
 
@@ -17,6 +18,9 @@ from ros.engine.backtest import Backtester, rebalance_dates
 from ros.engine.templates import build_allocator
 from ros.validation import metrics as M
 from validate import independent as ind
+from data_needs import needs_nse_workbook
+
+pytestmark = needs_nse_workbook
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 XLSX = str(ROOT / "data/raw/NSE_Broad_Factor_Indices_Historical_Data.xlsx")

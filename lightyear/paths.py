@@ -1,4 +1,4 @@
-# Quant AI Researcher by Harshil Pahuja
+# Quant AI Researcher
 """Where Lightyear reads and writes. Everything a run produces lives under outputs/lightyear/<run_id>/."""
 import glob
 import hashlib
@@ -9,7 +9,7 @@ import shutil
 import subprocess
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-PAPERS = os.path.join(REPO, "docs", "papers")
+PAPERS = os.environ.get("LIGHTYEAR_PAPERS") or os.path.join(REPO, "docs", "papers")
 CARDS = os.path.join(REPO, "cards")
 INTERP = os.path.join(REPO, "outputs", "interpretation")
 RUNS = os.environ.get("LIGHTYEAR_RUNS") or os.path.join(REPO, "outputs", "lightyear")

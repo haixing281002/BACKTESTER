@@ -1,3 +1,4 @@
+# Quant AI Researcher
 """Tests for the agent layer.
 
 These target the SAFETY properties, not the prose quality. The question each one
@@ -19,6 +20,8 @@ from ros.agents.client import (
     shared_system,
 )
 from ros.agents.orchestrator import AgenticPipeline, reconcile_feasibility
+
+from data_needs import SYNTHETIC_PAPER
 
 FIX = "ros/agents/fixtures/devanathan_2026.json"
 
@@ -59,7 +62,7 @@ def test_invalid_drafted_card_is_caught_and_queued_not_executed(tmp_path):
     fx["card_drafter"] = dict(fx["card_drafter"])
     fx["card_drafter"]["card_yaml"] = "paper: {id: x}\nnot_a_real_section: 1\n"
     pipe = AgenticPipeline(mode="replay", fixtures=fx)
-    res = pipe.run_interpretation("docs/devanathan_2026_simple_dynamic_sbg.pdf",
+    res = pipe.run_interpretation(SYNTHETIC_PAPER,
                                   "adaptation", str(tmp_path))
     assert res.card_valid is False
     assert res.card_errors
@@ -103,13 +106,13 @@ def test_review_queue_routes_low_confidence_to_humans():
     fx["paper_analyst"] = dict(fx["paper_analyst"])
     fx["paper_analyst"]["overall_confidence"] = "low"
     res = AgenticPipeline(mode="replay", fixtures=fx).run_interpretation(
-        "docs/devanathan_2026_simple_dynamic_sbg.pdf", "adaptation", "/tmp/agq")
+        SYNTHETIC_PAPER, "adaptation", "/tmp/agq")
     assert any("confidence is low" in q for q in res.human_review_queue)
 
 
 def test_material_critic_findings_always_reach_the_queue():
     res = AgenticPipeline(mode="replay", fixtures=_fixtures()).run_interpretation(
-        "docs/devanathan_2026_simple_dynamic_sbg.pdf", "adaptation", "/tmp/agq2")
+        SYNTHETIC_PAPER, "adaptation", "/tmp/agq2")
     material = [f for f in res.critique.findings if f.materiality == S.Materiality.high]
     assert material
     for f in material:
@@ -118,7 +121,7 @@ def test_material_critic_findings_always_reach_the_queue():
 
 def test_multiple_accounting_bases_trigger_a_human_check():
     res = AgenticPipeline(mode="replay", fixtures=_fixtures()).run_interpretation(
-        "docs/devanathan_2026_simple_dynamic_sbg.pdf", "adaptation", "/tmp/agq3")
+        SYNTHETIC_PAPER, "adaptation", "/tmp/agq3")
     assert any("accounting bases" in q for q in res.human_review_queue)
 
 

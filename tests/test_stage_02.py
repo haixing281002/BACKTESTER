@@ -1,3 +1,4 @@
+# Quant AI Researcher
 """Stage 02 is where the work happens. Gate A only verifies.
 
 If a human at Gate A has to work out the sample window, the warmup, the
@@ -10,6 +11,8 @@ stocks from memory produces a plausible, unverifiable list -- and that is worse
 than no list, because it looks checked and a reviewer skips it.
 """
 import pytest
+
+from data_needs import needs_real_paper
 
 from ros.cards.completeness import assess as card_completeness
 from ros.cards.schema import (
@@ -300,6 +303,7 @@ def _shape(path):
     return classify_document(doc, len(parse_text_tables(doc)))
 
 
+@needs_real_paper
 def test_a_real_paper_is_recognised():
     sh = _shape(REAL_PAPER)
     assert sh.verdict == PAPER and sh.looks_like_a_paper

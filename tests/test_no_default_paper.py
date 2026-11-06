@@ -1,3 +1,4 @@
+# Quant AI Researcher
 """Two rules this repo learned the hard way.
 
 1. THERE IS NO DEFAULT PAPER. The repo was built around one worked example and
@@ -18,6 +19,8 @@ import subprocess
 import sys
 
 import pytest
+
+from data_needs import needs_real_paper
 
 from ros.papers import (
     NoPaperGiven,
@@ -74,12 +77,14 @@ def test_a_truncated_upload_is_caught(tmp_path):
         require_paper(str(stub))
 
 
+@needs_real_paper
 def test_a_real_paper_resolves_with_its_identity():
     p = require_paper(EXAMPLE)
     assert p.slug == "devanathan_2026_simple_dynamic_sbg"
     assert len(p.sha256) == 64 and p.size > 100_000
 
 
+@needs_real_paper
 def test_artifacts_are_keyed_per_paper():
     """Two papers must never share an analysis file."""
     a = artifact_paths(require_paper(EXAMPLE))
@@ -209,6 +214,7 @@ def test_claude_md_carries_the_rule():
 # ---------------------------------------------------------------------------
 # Gate A without data
 # ---------------------------------------------------------------------------
+@needs_real_paper
 def test_run_interpret_reaches_gate_a_with_the_workbook_absent(tmp_path):
     """The claim, tested by removing the data rather than by reading the code."""
     xlsx = ROOT / "data/raw/NSE_Broad_Factor_Indices_Historical_Data.xlsx"
@@ -244,6 +250,7 @@ def test_run_interpret_never_imports_a_data_loader():
         f"without touching market data")
 
 
+@needs_real_paper
 def test_it_says_what_to_supply_when_data_is_missing(tmp_path):
     """A shortfall is the deliverable of this script, so it must be printed."""
     r = _run("run_interpret.py", "--pdf", EXAMPLE,
