@@ -60,7 +60,7 @@ from numpy.lib.stride_tricks import sliding_window_view
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from ros.cards.schema import load_card
-from ros.data import ace, nifty500
+from ros.data import ace, corporate_actions, nifty500
 from ros.data.lineage import sha256_file, write_run_manifest
 from ros.data.loaders import synthetic_cash_series
 from ros.data.sources import ACE_PRICES_CSV, NIFTY500_HOLDINGS_XLSX, NSE_INDEX_WORKBOOK
@@ -229,8 +229,12 @@ def load_data() -> dict:
     segments = snaps.assign(segment=seg)[["snapshot_date", "isin", "segment"]]
 
     stale = nifty500.staleness(END)
+    # demergers Ace does not adjust for: the adjusted panels above already carry them (ace.load_long); the ex-dates are
+    # also exempt from the gap rule (operator's ruling 2026-11-11)
+    dem = corporate_actions.load_table()
+    dem = dem[dem["parent_isin"].isin(isins)]
     return dict(cal=cal, isins=isins, names=names, members=members, index=index, sleeves=sleeves, segments=segments,
-                stale=stale, idx_missing_days=idx_missing, prov_index=prov_bm["sha256"], **panels)
+                stale=stale, idx_missing_days=idx_missing, prov_index=prov_bm["sha256"], demergers=dem, **panels)
 
 
 def build_signals(d: dict, regression_days: int, gap_limit: float) -> dict:
@@ -245,6 +249,9 @@ def build_signals(d: dict, regression_days: int, gap_limit: float) -> dict:
     sma = close.rolling(P["stock_trend_days"], min_periods=P["stock_trend_days"]).mean()
     ret = close.pct_change(fill_method=None)
     absret = ret.abs()
+    for e in d.get("demergers", pd.DataFrame(columns=["parent_isin", "ex_date"])).itertuples():
+        if e.parent_isin in absret.columns and e.ex_date in absret.index:
+            absret.at[e.ex_date, e.parent_isin] = 0.0          # a demerger ex-date is not a gap
     biggest = absret.rolling(P["gap_days"], min_periods=1).max()
     gap = biggest > gap_limit
     prev = close.shift(1)
@@ -1126,10 +1133,16 @@ def main() -> int:
     ev = ev[ev]
     unadj_ret_df = d["unadj_close"].pct_change(fill_method=None)
     gap_rows = []
+    known = {(e.parent_isin, e.ex_date) for e in d["demergers"].itertuples()}
+    listings = ace.security_master()[["company_name", "first_date"]].dropna()
     for (dte, isin) in ev.index:
-        gap_rows.append({"date": str(dte.date()), "isin": isin, "symbol": d["names"][isin][0], "adjusted_move": float(sig["ret"].at[dte, isin]),
+        adj_move, fc = float(sig["ret"].at[dte, isin]), bool(fchg.at[dte, isin])
+        gap_rows.append({"date": str(dte.date()), "isin": isin, "symbol": d["names"][isin][0], "adjusted_move": adj_move,
                          "unadjusted_move": float(unadj_ret_df.at[dte, isin]),
-                         "adjustment_factor_changed": bool(fchg.at[dte, isin])})
+                         "adjustment_factor_changed": fc, "known_demerger": (isin, dte) in known,
+                         "probable_unadjusted_corporate_action": corporate_actions.probable_unadjusted_action(
+                             adj_move, fc, corporate_actions.new_listing_near(d["names"][isin][1], dte, listings),
+                             (isin, dte) in known)})
     gap_df = pd.DataFrame(gap_rows)
     gap_df.to_csv(os.path.join(out, "gap_events.csv"), index=False)
     produced.append(os.path.join(out, "gap_events.csv"))
@@ -1232,7 +1245,9 @@ def main() -> int:
 
     mp = write_run_manifest(run_dir, __file__, {"ace_prices": ACE_PRICES_CSV, "nifty500_holdings": NIFTY500_HOLDINGS_XLSX,
                                                "nse_index_workbook": NSE_INDEX_WORKBOOK, "card": CARD,
-                                               **nifty500.membership_inputs(MEMBERSHIP_SOURCE, FIRST_SIGNAL_UNIVERSE)},
+                                               **nifty500.membership_inputs(MEMBERSHIP_SOURCE, FIRST_SIGNAL_UNIVERSE),
+                                               "demergers_sourced": corporate_actions.SOURCED,
+                                               "demergers_table": corporate_actions.table_path()},
                             params={**CARD_PARAMS, **P, "n_trials": N_TRIALS, "cost_sweep_bp": COST_SWEEP_BP, "cash_sweep": CASH_SWEEP,
                                     "start": str(START.date()), "end": str(END.date()), "start_capital": START_CAPITAL,
                                     "mandate_allow_cash": MANDATE_ALLOWS_CASH, "sensitivities": list(SENSITIVITIES),

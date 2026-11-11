@@ -1,3 +1,4 @@
+# Quant AI Researcher
 """Ace Equity daily prices: the one stock-level price source in this repository.
 
 THE FILE (ros/data/sources.py: ACE_PRICES_CSV)
@@ -285,8 +286,12 @@ def security_master(holdings_path: str | None = None, prices_path: str | None = 
 
 # ------------------------------------------------------------------------------------------------ loading
 def load_long(fields: Iterable[str] = ("close",), path: str | None = None, out_dir: str | None = None,
-              start=None, end=None, codes: Iterable[int] | None = None, with_isin: bool = True) -> pd.DataFrame:
-    """Long frame: date, accord_code[, isin], *fields. Reads only those columns from the Parquet cache."""
+              start=None, end=None, codes: Iterable[int] | None = None, with_isin: bool = True,
+              demergers: bool = True) -> pd.DataFrame:
+    """Long frame: date, accord_code[, isin], *fields. Reads only those columns from the Parquet cache.
+
+    Adjusted open/high/low/close are also adjusted for demergers, which Ace leaves out (ros/data/corporate_actions.py),
+    unless demergers=False. Raw unadj_* fields are never changed."""
     fields = [fields] if isinstance(fields, str) else list(fields)
     unknown = [f for f in fields if f not in NUMERIC_FIELDS]
     if unknown:
@@ -306,6 +311,9 @@ def load_long(fields: Iterable[str] = ("close",), path: str | None = None, out_d
         sm["accord_code"] = sm["accord_code"].astype("int32")
         df = df.merge(sm, on="accord_code", how="left")
         df = df[["date", "accord_code", "isin"] + fields]
+        if demergers and any(f in ("open", "high", "low", "close") for f in fields):
+            from ros.data import corporate_actions
+            df = corporate_actions.apply(df, corporate_actions.load_table(path, out_dir))
     return df.sort_values(["date", "accord_code"]).reset_index(drop=True)
 
 

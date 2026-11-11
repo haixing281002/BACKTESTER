@@ -83,7 +83,7 @@ def test_cache_is_built_once_and_cleaning_is_counted(small_world):
     assert prov["rows"] == 30 * 4 and prov["securities"] == 4
     assert prov["dropped_rows"]["missing_or_nonpositive_close"] == 2
     assert prov["first_date"] == "2024-01-01" and prov["trading_days"] == 30
-    assert prov["built_at"].endswith("+05:30"), "provenance timestamps are tz-aware Asia/Kolkata"
+    assert prov["built_at"].endswith("+00:00"), "provenance timestamps are stored in UTC with their offset"
     before = os.path.getmtime(prov["cache"])
     again = ace.build_cache(w["csv"], w["out"])
     assert again["built_at"] == prov["built_at"] and os.path.getmtime(prov["cache"]) == before
