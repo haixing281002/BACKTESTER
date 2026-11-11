@@ -123,9 +123,9 @@ def test_gate_rows_advisory_with_a_value_is_a_fail_not_not_computed():
     rows = gates.rows([
         {"name": "turnover", "passed": False, "blocking": False, "value": "627%", "threshold": "<=400%"},
         {"name": "differentiated", "passed": False, "blocking": False, "value": "NO COMPARISON", "threshold": "<=0.8"},
-        {"name": "alpha", "passed": False, "blocking": True, "value": "-2.5", "threshold": "|t|>=2.0"},
+        {"name": "alpha", "passed": False, "blocking": True, "value": "-2.5", "threshold": ">=2.0"},
         {"name": "dsr", "passed": True, "blocking": True, "value": 0.97, "threshold": 0.95}])
-    assert [r["result"] for r in rows] == ["FAIL (advisory)", "not computed", "PASS", "PASS"]
+    assert [r["result"] for r in rows] == ["FAIL (advisory)", "not computed", "FAIL", "PASS"]
     assert rows[0]["value"] == pytest.approx(6.27) and rows[0]["threshold"] == pytest.approx(4.0)
     assert rows[3]["op"] == ">="
 

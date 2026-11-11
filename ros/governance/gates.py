@@ -1071,9 +1071,9 @@ def gate_b(card, research: dict[str, Any], portfolio: dict[str, Any],
     if at is not None:
         c.append(Criterion(
             "alpha survives the factor fingerprint",
-            abs(at) >= t["min_alpha_t"],
-            value=f"{at:.2f}", threshold=f"|t|>={t['min_alpha_t']}",
-            evidence="HAC t-stat of alpha vs known factor sleeves"))
+            at >= t["min_alpha_t"],          # one-sided: t >= bar means a POSITIVE alpha; a significant negative one fails
+            value=f"{at:.2f}", threshold=f">={t['min_alpha_t']}",
+            evidence="HAC t-stat of alpha vs known factor sleeves (one-sided: alpha must be positive)"))
     else:
         # A test that could not be run is NOT a test that passed. Dropping the
         # row would shrink the checklist silently and let `passed` go True
@@ -1081,7 +1081,7 @@ def gate_b(card, research: dict[str, Any], portfolio: dict[str, Any],
         # whether the alpha is anything more than sleeves the fund already owns.
         c.append(Criterion(
             "alpha survives the factor fingerprint", False,
-            value="NOT COMPUTED", threshold=f"|t|>={t['min_alpha_t']}",
+            value="NOT COMPUTED", threshold=f">={t['min_alpha_t']}",
             evidence=portfolio.get("alpha_t_hac_error",
                                    "the factor regression did not run")))
 

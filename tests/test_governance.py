@@ -232,3 +232,11 @@ def test_uncomputed_evidence_is_never_reported_as_a_pass():
         if c.value == "NOT COMPUTED":
             assert not c.passed, f"{c.name!r} was scored as passing without evidence"
 
+
+@pytest.mark.parametrize("t_stat, passes", [(-3.0, False), (3.0, True)])
+def test_alpha_must_be_significantly_positive_not_just_significant(t_stat, passes):
+    """A strategy whose alpha is significantly NEGATIVE (t = -3) must fail 'alpha survives', not pass on |t|."""
+    port = dict(_FULL_PORT, alpha_t_hac=t_stat)
+    row = [c for c in gate_b(load_card(CARD), _FULL_RESEARCH, port).criteria
+           if c.name == "alpha survives the factor fingerprint"][0]
+    assert row.passed is passes

@@ -775,8 +775,8 @@ def _build_ladder(card, research, port, tbl, primary, runset, fp) -> dict[str, l
                   value=f"{corr:.2f}" if corr is not None else "n/a", threshold="<= 0.80",
                   evidence="max correlation to any runnable alternative"),
         Criterion("alpha survives the factor fingerprint",
-                  at is not None and abs(at) >= 2.0,
-                  value=f"{at:.2f}" if at is not None else "n/a", threshold="|t| >= 2.0",
+                  at is not None and at >= 2.0,     # one-sided: a significantly negative alpha fails
+                  value=f"{at:.2f}" if at is not None else "n/a", threshold=">= 2.0",
                   evidence=f"R^2 = {fp.get('r_squared', float('nan')):.2f} against known sleeves"),
     ]
 
