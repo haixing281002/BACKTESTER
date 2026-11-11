@@ -539,6 +539,14 @@ now, so **v2 does not test for selection luck**. The decision stays PENDING unti
 
 ## Non-negotiables when working in this repo
 
+- **Excel and Python use the same formulas (hard rule, 2026-11-11).** `ros/metrics/core.py` is the single definition
+  of every metric. Every Excel formula, in `lightyear/workbook.py` and `universal_backtester/excel_tearsheet.py`,
+  reproduces it exactly: daily returns, sample standard deviation, 252, the Sharpe hurdle from `config/fund.yaml`,
+  losses as positive numbers, years = calendar days / 365.25; monthly metrics use `core.monthly_returns()`.
+  **No metric may be defined in Excel only.** To add one: define it in `core.py`, write the Excel formula to match,
+  and add it to `tests/test_excel_equals_python.py`, which recalculates the workbooks and fails the suite on any
+  difference above 1e-6. That test is never skipped: it needs LibreOffice (`SOFFICE`, or `~\LibreOffice`).
+
 - **Never edit a number into a report.** Every figure comes from a run.
 - **Never resolve a Strategy Card ambiguity silently.** Log it with a page
   citation and a resolution, or put it in the human queue.

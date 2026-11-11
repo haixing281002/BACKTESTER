@@ -1,688 +1,199 @@
-# Quant AI Researcher by Harshil Pahuja
-"""Writes a live-formula Excel workbook matching the "SE Return Analytics"
-tab layout (section headers, row labels, glossary column) -- built from
-inspecting the real .xlsb, since pyxlsb only exposes computed VALUES, never
-formula text. Every ratio below is a genuine Excel formula referencing the
-raw monthly-return columns, computed by Excel when the file opens -- not a
-value baked in by Python. That means these formulas are written from this
-repo's own, independently-tested metric definitions (universal_backtester/
-tearsheet.py), not transcribed from the source workbook, because the source
-workbook's actual formulas are not retrievable from the .xlsb format at all
-(pyxlsb's Cell has no .f / formula-text attribute, only .v / value).
-Cross-check a few cells by hand against tearsheet.py's Python output before
-trusting this for anything that matters.
+# Quant AI Researcher
+"""The return-analytics workbook: every tearsheet metric as a live Excel formula over a sheet of DAILY returns.
 
-Calibrated to the source workbook's own parameters, found in its own
-"Parameters" panel: risk-free rate 5%, Omega threshold 1% (monthly),
-drawdown limit 0%.
+Hard rule (2026-11-11): Python's ros/metrics/core.py is the single definition of every metric, and each formula here
+reproduces it exactly. tests/test_excel_equals_python.py recalculates this workbook and fails the suite if any cell differs
+from core by more than 1e-6. No metric may be defined in Excel only.
 
-VERIFIED, 2026-09-24: every formula below (Total Return through Max
-Calendar Year Drawdown -- 30+ distinct ratios) was checked bit-for-bit
-against the real 161-month reference series extracted from the source
-.xlsb (tests/fixtures/se_return_analytics_reference.json), NOT assumed.
-That check caught and fixed several real formula bugs from an earlier
-pass: STDEV should have been STDEVP (population, ddof=0) throughout;
-Positive/Negative Monthly Vol is the one pair NOT annualized; Average
-Annual Max Drawdown is the mean of each CALENDAR YEAR's own peak-reset
-drawdown, not equal to the whole-history Max Drawdown; Gain to Pain
-Ratio's numerator is winning months only, not every month; VaR/CVaR are
-reported UNNEGATED (the raw, negative tail value). See
-tests/test_universal_backtester_tearsheet_reference.py for the full set
-of checks.
+Conventions, the same as core: daily returns; sample standard deviation (STDEV); annualise with 252; the Sharpe hurdle
+from config/fund.yaml; a loss, drawdown, VaR or CVaR is a positive number; years = calendar days / 365.25. Metrics that
+are monthly by definition (month counts, gain to pain, capture ratios) use calendar-month compounding of the daily returns,
+which is core.monthly_returns().
 
-UNVERIFIED_JENSENS_ALPHA: "Jensens Alpha (Adj Beta)" is the one row that
-resisted this exercise -- several plausible CAPM-with-shrunk-beta
-variants were tried against the real number and none reproduced it
-exactly. The formula below (Bloomberg-style (2/3*beta + 1/3) shrinkage)
-is a reasonable, documented convention, consistent with Treynor's own
-raw-beta formula on the same sheet, but is NOT a confirmed match --
-flagged here rather than silently claimed as verified.
+The earlier monthly "SE Return Analytics" layout (population standard deviation, a separate 5% risk-free cell, a 1% Omega
+threshold, 83rd/7th percentile capture) was removed on the operator's instruction: one set of formulas only.
 """
-# Kept by the operator's ruling of 2026-11-05: the Excel calculation is still needed. It is not a report path of Lightyear,
-# and its ratios are not part of ros/metrics/core.py, so Excel and the dashboard can differ here (monthly data, its own rate).
 from __future__ import annotations
 
+from typing import Any
+
 import pandas as pd
+from openpyxl import Workbook
+from openpyxl.worksheet.formula import ArrayFormula
 
-try:
-    from openpyxl import Workbook
-    from openpyxl.styles import Alignment, Font, PatternFill
-    from openpyxl.utils import get_column_letter
-    from openpyxl.workbook.properties import CalcProperties
-    from openpyxl.worksheet.formula import ArrayFormula
-except ImportError as e:
-    raise ImportError("excel_tearsheet.py needs openpyxl: pip install openpyxl") from e
+from ros import config
+from ros.metrics import core
+from universal_backtester.xlsx_style import (DATE, F_BASE, F_BOLD, F_INPUT, F_NOTE, F_TITLE, FILL_KEY, apply_house_style,
+                                             header, name, put, widths)
 
-from universal_backtester.tearsheet import (
-    EXTREME_LOWER_PCT,
-    EXTREME_UPPER_PCT,
-    financial_year_label,
-)
+PCT, NUM, INT = "0.00%", "0.0000", "0"
+SIGNATURE = "Quant AI Researcher"
 
-DEFAULT_OMEGA_THRESHOLD = 0.01
-DEFAULT_DRAWDOWN_LIMIT = 0.0
-
-_GLOSSARY = [
-    ("Annualized Volatility", "Measures how much an investment’s returns fluctuate on an annualized basis calculated using standard deviation."),
-    ("Positive Volatility", "Measures fluctuations in returns when the investment's returns are positive"),
-    ("Negative Volatility", "Measures fluctuations in returns when the investment's returns are negative"),
-    ("Sharpe Ratio", "Shows how much returns an investment delivers per unit of risk - higher is better."),
-    ("Treynor Ratio", "Measures return per unit of market risk."),
-    ("Sortino Ratio", "Evaluates an investment's returns relative to only downside risk - higher means better returns with fewer losses."),
-    ("Calmar Ratio", "Measures the risk-adjusted return of a portfolio by comparing its return to the worst peak-to-trough decline (drawdown)"),
-    ("Sterling Ratio", "Measures return over average drawdown"),
-    ("Omega Ratio", "Measures the likelihood and magnitude of gains vs. losses, based on a chosen threshold."),
-    ("Gain to Pain Ratio", "Evaluates reward per unit of risk, focusing purely on the magnitude of profits vs. losses"),
-    ("Tail Ratio", "Ratio of 95th to 5th percentile returns. Measures skewness and extremes in the return distribution."),
-    ("Alpha (Adj Beta)", "Jensen's Alpha, indicates whether an investment performed better after adjusting for market risk."),
-    ("Tracking Error", "Measures how closely a portfolio follows its benchmark. (Standard deviation of the Alpha)"),
-    ("Ret +Ve Nifty 500 TRI", "Average Monthly Returns when Benchmark (Nifty 500 TRI) Returns is positive"),
-    ("Ret -Ve Nifty 500 TRI", "Average Monthly Returns when Benchmark (Nifty 500 TRI) Returns is negative"),
-    ("Upside Capture", "Measures how much times an investment returns rises during market upswings - higher the better"),
-    ("Downside Capture", "Measures how much times an investment returns declines during market downturns - lower the better"),
-    ("Capture Ratio", "Ratio of upside to downside capture - a ratio above 1 means the investment gains more in up markets than it loses in down markets."),
-    ("Extreme Capture Ratio", "Assesses portfolio performance specifically during periods of extreme market moves — typically the top and bottom percentile of benchmark returns."),
-    ("Skewness", "Indicates asymmetry in returns. Positive skew = rare large gains; negative = rare large losses."),
-    ("Kurtosis", "Measures “tailedness” of returns. High kurtosis = frequent extreme outcomes."),
-    ("95% VaR (Value at Risk)", "Expected loss in the worst 5% of scenarios. Indicates threshold beyond which losses rarely occur."),
-    ("99% VaR", "Stricter version of VaR capturing the worst 1% outcomes. Used in high-risk contexts."),
-    ("95% CVaR (Conditional VaR)", "Average loss in the worst 5% of cases beyond VaR. Captures tail risk magnitude."),
-    ("99%  CVaR", "Average loss in the worst 1% of cases beyond VaR. Reflects extreme downside exposure."),
+# label, formula for column x (S or B; None = strategy-only), number format, the definition in words
+# {x} is S or B; {r} is this sheet's row of another metric, written as {r[Label]}.
+_BOTH = [
+    ("Total Return", "ARRAY:=PRODUCT(1+Ret_{x})-1", PCT, "product of (1 + r) - 1"),
+    ("Years", "=(MAX(Dates)-Start_Date)/365.25", NUM, "calendar days from the base date / 365.25"),
+    ("CAGR", "=(1+{c}{r[Total Return]})^(1/{c}{r[Years]})-1", PCT, "(1 + total return)^(1 / years) - 1"),
+    ("Annualized Volatility", "=STDEV(Ret_{x})*SQRT(252)", PCT, "sample stdev of daily returns x sqrt(252)"),
+    ("Positive Volatility", "ARRAY:=STDEV(IF(Ret_{x}>0,Ret_{x}))*SQRT(252)", PCT, "sample stdev of the days with a gain x sqrt(252)"),
+    ("Negative Volatility", "ARRAY:=STDEV(IF(Ret_{x}<0,Ret_{x}))*SQRT(252)", PCT, "sample stdev of the days with a loss x sqrt(252)"),
+    ("Max Drawdown", "=MAX(DD_{x})", PCT, "worst fall from a previous high on daily values, positive"),
+    ("Average Annual Max Drawdown", "=AVERAGE(YearDD_{x})", PCT, "mean of each calendar year's worst fall; the year's peak starts at the prior year-end value"),
+    ("Sharpe Ratio", "=(AVERAGE(Ret_{x})-Hurdle_Daily)/STDEV(Ret_{x})*SQRT(252)", NUM, "mean(r - h) / stdev(r - h) x sqrt(252), h the daily hurdle"),
+    ("Sortino Ratio", "=(AVERAGE(Ret_{x})-Hurdle_Daily)*252/(SQRT(SUMPRODUCT((Ex_{x}<0)*Ex_{x}^2)/COUNT(Ret_{x}))*SQRT(252))", NUM,
+     "mean(r - h) x 252 / downside deviation; downside deviation = sqrt(mean(min(r - h, 0)^2)) x sqrt(252)"),
+    ("Calmar Ratio", "={c}{r[CAGR]}/{c}{r[Max Drawdown]}", NUM, "CAGR / max drawdown"),
+    ("Sterling Ratio", "={c}{r[CAGR]}/{c}{r[Average Annual Max Drawdown]}", NUM, "CAGR / average annual max drawdown"),
+    ("Omega Ratio", "=SUMPRODUCT((Ex_{x}>0)*Ex_{x})/-SUMPRODUCT((Ex_{x}<0)*Ex_{x})", NUM, "daily gains above the hurdle / daily shortfalls below it"),
+    ("Gain to Pain Ratio", '=SUMIF(Mon_{x},">0")/-SUMIF(Mon_{x},"<0")', NUM, "sum of winning months / |sum of losing months|"),
+    ("Tail Ratio", "=ABS(PERCENTILE(Ret_{x},0.95))/ABS(PERCENTILE(Ret_{x},0.05))", NUM, "|95th percentile| / |5th percentile| of daily returns"),
+    ("Avg Month Ret", "=AVERAGE(Mon_{x})", PCT, "mean calendar-month return"),
+    ("Max Month Ret", "=MAX(Mon_{x})", PCT, "best calendar month"),
+    ("Min Month Ret", "=MIN(Mon_{x})", PCT, "worst calendar month"),
+    ("Positive Months", '=COUNTIF(Mon_{x},">0")', INT, "months with a gain"),
+    ("Negative Months", '=COUNTIF(Mon_{x},"<0")', INT, "months with a loss"),
+    ("Skewness", "=SKEW(Ret_{x})", NUM, "sample skew of daily returns"),
+    ("Excess Kurtosis", "=KURT(Ret_{x})", NUM, "sample excess kurtosis of daily returns; a bell curve is 0"),
+    ("95% VaR", "=-PERCENTILE(Ret_{x},0.05)", PCT, "daily loss exceeded on 5% of days, positive"),
+    ("99% VaR", "=-PERCENTILE(Ret_{x},0.01)", PCT, "daily loss exceeded on 1% of days, positive"),
+    ("95% CVaR", "ARRAY:=-AVERAGE(IF(Ret_{x}<=PERCENTILE(Ret_{x},0.05),Ret_{x}))", PCT, "mean daily loss at or beyond the 95% VaR, positive"),
+    ("99% CVaR", "ARRAY:=-AVERAGE(IF(Ret_{x}<=PERCENTILE(Ret_{x},0.01),Ret_{x}))", PCT, "mean daily loss at or beyond the 99% VaR, positive"),
 ]
-
-_HEADER_FILL = PatternFill(start_color="2F6F62", end_color="2F6F62", fill_type="solid")
-_HEADER_FONT = Font(color="FFFFFF", bold=True)
-_SECTION_FONT = Font(bold=True)
-
-# Helper columns (kept off to the right, past the glossary) for the running
-# NAV / running-peak series that Max Drawdown needs -- Excel has no single
-# built-in function for "max drawdown of a return series."
-_NAV_G_COL, _NAV_H_COL = 18, 19    # R, S
-_PEAK_G_COL, _PEAK_H_COL = 20, 21  # T, U
-
-# Helper columns for the Financial Year / Calendar Year tables: a per-row
-# FY/CY label, plus a running NAV+peak pair that RESETS at the start of
-# each calendar year (needed for Max Calendar Year Drawdown -- a whole-
-# history running peak gives the wrong answer for a year the strategy
-# entered already below its all-time high).
-_FY_LABEL_COL = 22    # V
-_CY_LABEL_COL = 23    # W
-_CYNAV_G_COL, _CYPEAK_G_COL = 24, 25   # X, Y (strategy)
-_CYNAV_H_COL, _CYPEAK_H_COL = 26, 27   # Z, AA (benchmark)
+_RELATIVE = [
+    ("Beta", "=SLOPE(Ret_S,Ret_B)", NUM, "Cov(r, b) / Var(b) on daily returns"),
+    ("Adjusted Beta", "=2/3*B{r[Beta]}+1/3", NUM, "2/3 x beta + 1/3"),
+    ("Treynor Ratio", "=(B{r[CAGR]}-Hurdle)/B{r[Beta]}", NUM, "(CAGR - hurdle) / beta"),
+    ("Alpha", "=B{r[CAGR]}-C{r[CAGR]}", PCT, "CAGR - benchmark CAGR"),
+    ("Jensens Alpha (Adj Beta)", "=(B{r[CAGR]}-Hurdle)-B{r[Adjusted Beta]}*(C{r[CAGR]}-Hurdle)", PCT, "(CAGR - hurdle) - adjusted beta x (benchmark CAGR - hurdle)"),
+    ("Tracking Error", "=STDEV(Diff)*SQRT(252)", PCT, "sample stdev of (r - b) x sqrt(252)"),
+    ("Information Ratio", "=AVERAGE(Diff)*252/B{r[Tracking Error]}", NUM, "mean(r - b) x 252 / tracking error"),
+    ("Upside Capture", '=AVERAGEIF(Mon_B,">0",Mon_S)/AVERAGEIF(Mon_B,">0",Mon_B)', NUM, "mean monthly return / benchmark's, in months the benchmark rose"),
+    ("Downside Capture", '=AVERAGEIF(Mon_B,"<0",Mon_S)/AVERAGEIF(Mon_B,"<0",Mon_B)', NUM, "the same, in months the benchmark fell"),
+    ("Capture Ratio", "=B{r[Upside Capture]}/B{r[Downside Capture]}", NUM, "upside capture / downside capture"),
+]
+METRIC_LABELS = [m[0] for m in _BOTH] + [m[0] for m in _RELATIVE]
 
 
-def write_se_return_analytics_workbook(
-    path: str,
-    monthly_dates: pd.DatetimeIndex,
-    strategy_returns: pd.Series,
-    benchmark_returns: pd.Series,
-    strategy_name: str = "Strategy",
-    benchmark_name: str = "Nifty 500 TRI",
-    *,
-    risk_free_rate: float,
-    omega_threshold: float = DEFAULT_OMEGA_THRESHOLD,
-    drawdown_limit: float = DEFAULT_DRAWDOWN_LIMIT,
-) -> None:
-    """Write a live-formula .xlsx replicating the SE Return Analytics layout.
+def _cell(ws, ref, text, fmt):
+    if text.startswith("ARRAY:"):
+        ws[ref] = ArrayFormula(ref, text[6:])
+        ws[ref].font, ws[ref].number_format = F_BASE, fmt
+    else:
+        put(ws, ref, text, F_BASE, fmt, border=True)
 
-    `strategy_returns` / `benchmark_returns` must be MONTHLY simple returns
-    (not cumulative, not annualized), aligned to `monthly_dates`. Every cell
-    in the Parameters/Analytics panel is a real Excel formula referencing
-    the raw data columns -- open the file and click a cell to see it.
-    """
-    n = len(monthly_dates)
-    if not (len(strategy_returns) == len(benchmark_returns) == n):
-        raise ValueError("monthly_dates, strategy_returns, benchmark_returns must be the same length")
-    if n < 2:
-        raise ValueError(f"need at least 2 months of data, got {n}")
 
+def write_return_analytics_workbook(path: str, strategy_returns: pd.Series, benchmark_returns: pd.Series, start,
+                                    strategy_name: str = "Strategy", benchmark_name: str = "Benchmark",
+                                    hurdle_annual: float | None = None) -> dict[str, Any]:
+    """Write the workbook from two DAILY return series on one date index. `start` is the base date: the session before
+    the first return, where value is 100. Returns where each metric and table sits, for the Excel-equals-Python test."""
+    df = pd.concat([strategy_returns.rename("s"), benchmark_returns.rename("b")], axis=1).dropna()
+    if len(df) < 60:
+        raise ValueError(f"need at least 60 daily returns on common dates, got {len(df)}")
+    if not pd.Timestamp(start) < df.index[0]:
+        raise ValueError("start must be before the first return date: it is the value-100 base date")
+    hurdle_annual = config.hurdle_annual() if hurdle_annual is None else float(hurdle_annual)
+    n, first, last = len(df), 3, len(df) + 2
     wb = Workbook()
     ws = wb.active
-    ws.title = "SE Return Analytics"
+    ws.title = "Analytics"
+    wd, wm, wy = wb.create_sheet("Daily"), wb.create_sheet("Monthly"), wb.create_sheet("Years")
 
-    _STRAT_FILL = PatternFill(start_color="1F4E78", end_color="1F4E78", fill_type="solid")
-    _BENCH_FILL = PatternFill(start_color="7F7F7F", end_color="7F7F7F", fill_type="solid")
-    _WHITE_BOLD = Font(color="FFFFFF", bold=True, size=10)
+    # ---- Daily: the only hardcoded numbers in the workbook are the two return columns and the dates
+    header(wd, 1, ["Date", f"{strategy_name} return", f"{benchmark_name} return", "Value S", "Value B", "Peak S", "Peak B", "Drawdown S",
+                   "Drawdown B", "Year peak S", "Year peak B", "Year drawdown S", "Year drawdown B", "Year", "Year-month", "Financial year",
+                   "Return - hurdle S", "Return - hurdle B", "S - B"])
+    put(wd, "A2", pd.Timestamp(start).to_pydatetime(), F_INPUT, DATE)
+    for col in "DEFG":
+        put(wd, f"{col}2", 100.0 if col in "DE" else f"={'D' if col == 'F' else 'E'}2", F_INPUT if col in "DE" else F_BASE, "0.0000")
+    for k, (d, row) in enumerate(df.iterrows()):
+        i = first + k
+        put(wd, f"A{i}", d.to_pydatetime(), F_INPUT, DATE)
+        put(wd, f"B{i}", float(row["s"]), F_INPUT, "0.000000")
+        put(wd, f"C{i}", float(row["b"]), F_INPUT, "0.000000")
+        for v, r, pk, dd, yp, yd in (("D", "B", "F", "H", "J", "L"), ("E", "C", "G", "I", "K", "M")):
+            wd[f"{v}{i}"] = f"={v}{i - 1}*(1+{r}{i})"
+            wd[f"{pk}{i}"] = f"=MAX({pk}{i - 1},{v}{i})"
+            wd[f"{dd}{i}"] = f"=1-{v}{i}/{pk}{i}"
+            # the year's peak starts at the prior year-end value (the base, in the first year)
+            wd[f"{yp}{i}"] = f"=MAX({v}{i - 1},{v}{i})" if i == first else f"=IF(N{i}<>N{i - 1},MAX({v}{i - 1},{v}{i}),MAX({yp}{i - 1},{v}{i}))"
+            wd[f"{yd}{i}"] = f"=1-{v}{i}/{yp}{i}"
+        wd[f"N{i}"] = f"=YEAR(A{i})"
+        wd[f"O{i}"] = f"=YEAR(A{i})*100+MONTH(A{i})"
+        wd[f"P{i}"] = f"=YEAR(A{i})+IF(MONTH(A{i})>=4,1,0)"
+        wd[f"Q{i}"] = f"=B{i}-Hurdle_Daily"
+        wd[f"R{i}"] = f"=C{i}-Hurdle_Daily"
+        wd[f"S{i}"] = f"=B{i}-C{i}"
+    for nm, col in (("Dates", "A"), ("Ret_S", "B"), ("Ret_B", "C"), ("DD_S", "H"), ("DD_B", "I"), ("YDD_S", "L"), ("YDD_B", "M"),
+                    ("Yr", "N"), ("YM", "O"), ("FY", "P"), ("Ex_S", "Q"), ("Ex_B", "R"), ("Diff", "S")):
+        name(wb, nm, f"Daily!${col}${first}:${col}${last}")
+    widths(wd, [12] + [14] * 18)
 
-    # Row 1: an unmissable "which column is which" banner -- both in the raw
-    # monthly-data table (B:D) and the Parameters/Analytics panel (F:H) use
-    # the SAME column convention (strategy left, benchmark right), stated
-    # here once so neither table needs re-explaining.
-    ws.cell(row=1, column=2, value="READ THIS FIRST:").font = Font(bold=True, size=10)
-    ws.merge_cells(start_row=1, start_column=3, end_row=1, end_column=4)
-    ws.cell(row=1, column=3,
-            value=f"\"{strategy_name}\" = THIS STRATEGY (columns C and G)").font = _WHITE_BOLD
-    ws.cell(row=1, column=3).fill = _STRAT_FILL
-    ws.merge_cells(start_row=1, start_column=7, end_row=1, end_column=8)
-    ws.cell(row=1, column=7,
-            value=f"\"{benchmark_name}\" = BENCHMARK (columns D and H)").font = _WHITE_BOLD
-    ws.cell(row=1, column=7).fill = _BENCH_FILL
-    ws.row_dimensions[1].height = 24
-    for c in (3, 7):
-        ws.cell(row=1, column=c).alignment = Alignment(wrap_text=True, vertical="center")
+    # ---- Monthly and Years: the keys are labels read off the dates; every return is a formula over Daily
+    yms = sorted({d.year * 100 + d.month for d in df.index})
+    header(wm, 1, ["Year-month", f"{strategy_name} month return", f"{benchmark_name} month return"])
+    for k, ym in enumerate(yms, start=2):
+        put(wm, f"A{k}", ym, F_BASE, "0")
+        for col, x in (("B", "S"), ("C", "B")):
+            _cell(wm, f"{col}{k}", f"ARRAY:=PRODUCT(IF(YM=$A{k},1+Ret_{x},1))-1", PCT)
+    name(wb, "Mon_S", f"Monthly!$B$2:$B${len(yms) + 1}")
+    name(wb, "Mon_B", f"Monthly!$C$2:$C${len(yms) + 1}")
+    widths(wm, [14, 24, 24])
+    years = sorted(set(df.index.year))
+    fys = sorted({d.year + (1 if d.month >= 4 else 0) for d in df.index})
+    header(wy, 1, ["Calendar year", "Return S", "Return B", "Max drawdown S", "Max drawdown B", "", "Financial year (ends March)", "Return S", "Return B"])
+    for k, y in enumerate(years, start=2):
+        put(wy, f"A{k}", y, F_BASE, "0")
+        for col, x in (("B", "S"), ("C", "B")):
+            _cell(wy, f"{col}{k}", f"ARRAY:=PRODUCT(IF(Yr=$A{k},1+Ret_{x},1))-1", PCT)
+        for col, x in (("D", "S"), ("E", "B")):
+            _cell(wy, f"{col}{k}", f"ARRAY:=MAX(IF(Yr=$A{k},YDD_{x}))", PCT)
+    for k, y in enumerate(fys, start=2):
+        put(wy, f"G{k}", y, F_BASE, "0")
+        for col, x in (("H", "S"), ("I", "B")):
+            _cell(wy, f"{col}{k}", f"ARRAY:=PRODUCT(IF(FY=$G{k},1+Ret_{x},1))-1", PCT)
+    name(wb, "YearDD_S", f"Years!$D$2:$D${len(years) + 1}")
+    name(wb, "YearDD_B", f"Years!$E$2:$E${len(years) + 1}")
+    widths(wy, [14, 12, 12, 16, 16, 4, 26, 12, 12])
 
-    ws.cell(row=2, column=2,
-            value="Every ratio in the Analytics panel (columns F-H) is a real Excel formula "
-                  "referencing the raw monthly-return columns C/D -- click any G/H cell to see it. "
-                  "Percent-formatted rows (Total Return, CAGR, Volatility, drawdowns, VaR/CVaR, ...) "
-                  "are fractions shown as %; ratio rows (Sharpe, Beta, Capture Ratio, Omega, ...) are "
-                  "plain decimals, not percentages -- a Sharpe of 0.46 is not '0.46%'.").font = Font(italic=True, size=9)
-    ws.cell(row=2, column=2).alignment = Alignment(wrap_text=True)
-    ws.merge_cells(start_row=2, start_column=2, end_row=2, end_column=8)
-    ws.row_dimensions[2].height = 30
-
-    first_row = 4
-    last_row = first_row + n - 1
-    C = f"C{first_row}:C{last_row}"
-    D = f"D{first_row}:D{last_row}"
-
-    # ---- raw monthly data (columns B, C, D) -------------------------------
-    ws["B3"], ws["C3"], ws["D3"] = "Months", strategy_name, benchmark_name
-    for col in ("B3", "C3", "D3"):
-        ws[col].font = _HEADER_FONT
-        ws[col].fill = _HEADER_FILL
-    for i, (dt, sr, br) in enumerate(zip(monthly_dates, strategy_returns, benchmark_returns)):
-        row = first_row + i
-        ws.cell(row=row, column=2, value=pd.Timestamp(dt).to_pydatetime()).number_format = "mmm-yy"
-        ws.cell(row=row, column=3, value=float(sr)).number_format = "0.00%"
-        ws.cell(row=row, column=4, value=float(br)).number_format = "0.00%"
-
-    # ---- running NAV / running peak helper columns (for Max Drawdown) -----
-    ws.cell(row=3, column=_NAV_G_COL, value="NAV helper (strategy)")
-    ws.cell(row=3, column=_NAV_H_COL, value="NAV helper (benchmark)")
-    ws.cell(row=3, column=_PEAK_G_COL, value="Running peak (strategy)")
-    ws.cell(row=3, column=_PEAK_H_COL, value="Running peak (benchmark)")
-    for i in range(n):
-        row = first_row + i
-        nav_g = f"{get_column_letter(_NAV_G_COL)}{row}"
-        nav_h = f"{get_column_letter(_NAV_H_COL)}{row}"
-        prev_g = "1" if i == 0 else f"{get_column_letter(_NAV_G_COL)}{row - 1}"
-        prev_h = "1" if i == 0 else f"{get_column_letter(_NAV_H_COL)}{row - 1}"
-        ws.cell(row=row, column=_NAV_G_COL, value=f"={prev_g}*(1+C{row})")
-        ws.cell(row=row, column=_NAV_H_COL, value=f"={prev_h}*(1+D{row})")
-        prev_peak_g = nav_g if i == 0 else f"{get_column_letter(_PEAK_G_COL)}{row - 1}"
-        prev_peak_h = nav_h if i == 0 else f"{get_column_letter(_PEAK_H_COL)}{row - 1}"
-        ws.cell(row=row, column=_PEAK_G_COL, value=(f"={nav_g}" if i == 0 else f"=MAX({nav_g},{prev_peak_g})"))
-        ws.cell(row=row, column=_PEAK_H_COL, value=(f"={nav_h}" if i == 0 else f"=MAX({nav_h},{prev_peak_h})"))
-    NAV_G = f"{get_column_letter(_NAV_G_COL)}{first_row}:{get_column_letter(_NAV_G_COL)}{last_row}"
-    NAV_H = f"{get_column_letter(_NAV_H_COL)}{first_row}:{get_column_letter(_NAV_H_COL)}{last_row}"
-    PEAK_G = f"{get_column_letter(_PEAK_G_COL)}{first_row}:{get_column_letter(_PEAK_G_COL)}{last_row}"
-    PEAK_H = f"{get_column_letter(_PEAK_H_COL)}{first_row}:{get_column_letter(_PEAK_H_COL)}{last_row}"
-
-    # ---- FY/CY labels + calendar-year-reset NAV/peak (for the FY/CY tables) ----
-    ws.cell(row=3, column=_FY_LABEL_COL, value="FY label")
-    ws.cell(row=3, column=_CY_LABEL_COL, value="CY label")
-    ws.cell(row=3, column=_CYNAV_G_COL, value="CY-reset NAV (strategy)")
-    ws.cell(row=3, column=_CYPEAK_G_COL, value="CY-reset peak (strategy)")
-    ws.cell(row=3, column=_CYNAV_H_COL, value="CY-reset NAV (benchmark)")
-    ws.cell(row=3, column=_CYPEAK_H_COL, value="CY-reset peak (benchmark)")
-    fy_labels, cy_labels = [], []
-    for i, dt in enumerate(monthly_dates):
-        row = first_row + i
-        ts_dt = pd.Timestamp(dt)
-        fy_label = financial_year_label(ts_dt)
-        cy_label = f"CY{ts_dt.year % 100:02d}"
-        fy_labels.append(fy_label)
-        cy_labels.append(cy_label)
-        ws.cell(row=row, column=_FY_LABEL_COL, value=fy_label)
-        ws.cell(row=row, column=_CY_LABEL_COL, value=cy_label)
-
-        w_col = get_column_letter(_CY_LABEL_COL)
-        new_year = i == 0 or cy_labels[i] != cy_labels[i - 1]
-        nav_g = f"{get_column_letter(_CYNAV_G_COL)}{row}"
-        nav_h = f"{get_column_letter(_CYNAV_H_COL)}{row}"
-        if new_year:
-            ws.cell(row=row, column=_CYNAV_G_COL, value=f"=1*(1+C{row})")
-            ws.cell(row=row, column=_CYNAV_H_COL, value=f"=1*(1+D{row})")
-            ws.cell(row=row, column=_CYPEAK_G_COL, value=f"={nav_g}")
-            ws.cell(row=row, column=_CYPEAK_H_COL, value=f"={nav_h}")
-        else:
-            prev_nav_g = f"{get_column_letter(_CYNAV_G_COL)}{row - 1}"
-            prev_nav_h = f"{get_column_letter(_CYNAV_H_COL)}{row - 1}"
-            prev_peak_g = f"{get_column_letter(_CYPEAK_G_COL)}{row - 1}"
-            prev_peak_h = f"{get_column_letter(_CYPEAK_H_COL)}{row - 1}"
-            ws.cell(row=row, column=_CYNAV_G_COL, value=f"={prev_nav_g}*(1+C{row})")
-            ws.cell(row=row, column=_CYNAV_H_COL, value=f"={prev_nav_h}*(1+D{row})")
-            ws.cell(row=row, column=_CYPEAK_G_COL, value=f"=MAX({nav_g},{prev_peak_g})")
-            ws.cell(row=row, column=_CYPEAK_H_COL, value=f"=MAX({nav_h},{prev_peak_h})")
-    FY_RANGE = f"{get_column_letter(_FY_LABEL_COL)}{first_row}:{get_column_letter(_FY_LABEL_COL)}{last_row}"
-    CY_RANGE = f"{get_column_letter(_CY_LABEL_COL)}{first_row}:{get_column_letter(_CY_LABEL_COL)}{last_row}"
-    CYNAV_G = f"{get_column_letter(_CYNAV_G_COL)}{first_row}:{get_column_letter(_CYNAV_G_COL)}{last_row}"
-    CYPEAK_G = f"{get_column_letter(_CYPEAK_G_COL)}{first_row}:{get_column_letter(_CYPEAK_G_COL)}{last_row}"
-    CYNAV_H = f"{get_column_letter(_CYNAV_H_COL)}{first_row}:{get_column_letter(_CYNAV_H_COL)}{last_row}"
-    CYPEAK_H = f"{get_column_letter(_CYPEAK_H_COL)}{first_row}:{get_column_letter(_CYPEAK_H_COL)}{last_row}"
-    # Ordered, de-duplicated FY/CY label lists for the tables below.
-    fy_order = sorted(set(fy_labels), key=lambda s: int(s[2:]))
-    cy_order = list(dict.fromkeys(cy_labels))
-
-    # ---- parameters (named cells every formula below references) ---------
-    ws["N1"], ws["O1"] = "Risk Free Rate", risk_free_rate
-    ws["N2"], ws["O2"] = "Omega Threshold (monthly)", omega_threshold
-    ws["N3"], ws["O3"] = "Drawdown Limit", drawdown_limit
-    RFR, OMEGA_T = "$O$1", "$O$2"
-
-    # ---- Parameters / Analytics panel (columns F, G, H) --------------------
-    ws["F3"], ws["G3"], ws["H3"] = "Parameters", strategy_name, benchmark_name
-    for col in ("F3", "G3", "H3"):
-        ws[col].font = _HEADER_FONT
-        ws[col].fill = _HEADER_FILL
-
-    row_of = {}   # label -> row number, so later formulas can reference earlier ones by name
-
-    def section(r, label):
-        ws.cell(row=r, column=6, value=label).font = _SECTION_FONT
-
-    def metric(r, label, g_formula, h_formula, pct=True):
-        row_of[label] = r
-        ws.cell(row=r, column=6, value=label)
-        gc, hc = ws.cell(row=r, column=7), ws.cell(row=r, column=8)
-        gc.value, hc.value = g_formula, h_formula
-        gc.number_format = hc.number_format = "0.00%" if pct else "0.00"
-
-    def g(label):
-        return f"G{row_of[label]}"
-
-    def h(label):
-        return f"H{row_of[label]}"
-
-    r = 5
-    section(r, "Performance"); r += 1
-    # THE ACTUAL BUG THAT MADE TOTAL RETURN AND CAGR SHOW ~0: "1+{C}" is
-    # elementwise arithmetic across a whole range BEFORE it enters PRODUCT.
-    # Without CSE/array entry, Excel resolves that with "implicit
-    # intersection" -- it silently collapses the range down to the single
-    # cell that shares this formula's OWN row (e.g. row 5 -> C5, one
-    # month's return) instead of the whole column, so Total Return quietly
-    # became "just this one month's return" and CAGR (which is derived
-    # from it) inherited the same wrong, near-zero number. Every other
-    # formula on this sheet that does range arithmetic (NAV/PEAK division,
-    # C-D subtraction, IF(...) inside PRODUCT/STDEVP/AVERAGE) was already
-    # wrapped in ArrayFormula elsewhere in this function -- this one row
-    # was the one place that got missed. Confirmed by a user screenshot:
-    # Total Return/CAGR showed the exact values of the row's own C/D
-    # cells, not the whole-column product.
-    metric(r, "Total Return",
-          ArrayFormula(f"G{r}", f"=PRODUCT(1+{C})-1"),
-          ArrayFormula(f"H{r}", f"=PRODUCT(1+{D})-1")); r += 1
-    metric(r, "CAGR", f"=(1+{g('Total Return')})^(12/COUNT({C}))-1", f"=(1+{h('Total Return')})^(12/COUNT({D}))-1"); r += 1
-    metric(r, "Avg Month Ret", f"=AVERAGE({C})", f"=AVERAGE({D})"); r += 1
-    metric(r, "Positive Months", f"=COUNTIF({C},\">0\")", f"=COUNTIF({D},\">0\")", pct=False); r += 1
-    metric(r, "Negative Months", f"=COUNTIF({C},\"<0\")", f"=COUNTIF({D},\"<0\")", pct=False); r += 1
-    metric(r, "Max Month Ret", f"=MAX({C})", f"=MAX({D})"); r += 1
-    metric(r, "Min Month Ret", f"=MIN({C})", f"=MIN({D})"); r += 1
-    r += 1
-
-    section(r, "Risk Parameters"); r += 1
-    # STDEVP (population, ddof=0), not STDEV (sample, ddof=1) -- verified
-    # against the reference workbook's real numbers; STDEV misses by a
-    # small but real margin on every volatility figure below.
-    metric(r, "Annualized Volatility", f"=STDEVP({C})*SQRT(12)", f"=STDEVP({D})*SQRT(12)"); r += 1
-    # These two are the one pair on the whole sheet that is NOT annualized
-    # (no *SQRT(12)) -- also verified against the real numbers, not assumed.
-    metric(r, "Positive Monthly Vol",
-          ArrayFormula(f"G{r}", f"=STDEVP(IF({C}>0,{C}))"),
-          ArrayFormula(f"H{r}", f"=STDEVP(IF({D}>0,{D}))")); r += 1
-    metric(r, "Negative Monthly Vol",
-          ArrayFormula(f"G{r}", f"=STDEVP(IF({C}<0,{C}))"),
-          ArrayFormula(f"H{r}", f"=STDEVP(IF({D}<0,{D}))")); r += 1
-    metric(r, "Max Drawdown",
-          ArrayFormula(f"G{r}", f"=MIN({NAV_G}/{PEAK_G})-1"),
-          ArrayFormula(f"H{r}", f"=MIN({NAV_H}/{PEAK_H})-1")); r += 1
-    # Genuinely the mean of each CALENDAR YEAR's own (peak-reset-at-Jan-1)
-    # max drawdown -- NOT the same as Max Drawdown above (that one whole-
-    # history figure gave the wrong number here, verified against the
-    # real reference value). The Max Calendar Year Drawdown table below
-    # computes exactly these per-year figures; backfilled once that table
-    # exists, same two-pass idiom as the Treynor row below.
-    metric(r, "Average Annual Max Drawdown", "PENDING_CY_TABLE", "PENDING_CY_TABLE", pct=True); r += 1
-    aamdd_row = r - 1
-    metric(r, "Sharpe Ratio",
-          f"=({g('CAGR')}-{RFR})/{g('Annualized Volatility')}",
-          f"=({h('CAGR')}-{RFR})/{h('Annualized Volatility')}"); r += 1
-    metric(r, "Treynor Ratio", "PENDING_BETA", "PENDING_BETA", pct=False); r += 1
-    treynor_row = r - 1
-    metric(r, "Sortino Ratio",
-          ArrayFormula(f"G{r}", f"=({g('CAGR')}-{RFR})/(STDEVP(IF({C}<0,{C}))*SQRT(12))"),
-          ArrayFormula(f"H{r}", f"=({h('CAGR')}-{RFR})/(STDEVP(IF({D}<0,{D}))*SQRT(12))")); r += 1
-    metric(r, "Calmar Ratio", f"={g('CAGR')}/ABS({g('Max Drawdown')})", f"={h('CAGR')}/ABS({h('Max Drawdown')})"); r += 1
-    metric(r, "Sterling Ratio",
-          f"={g('CAGR')}/ABS({g('Average Annual Max Drawdown')})",
-          f"={h('CAGR')}/ABS({h('Average Annual Max Drawdown')})"); r += 1
-    metric(r, "Omega Ratio",
-          f"=SUMIF({C},\">\"&{OMEGA_T},{C})/-SUMIF({C},\"<\"&{OMEGA_T},{C})",
-          f"=SUMIF({D},\">\"&{OMEGA_T},{D})/-SUMIF({D},\"<\"&{OMEGA_T},{D})", pct=False); r += 1
-    # Numerator is the sum of WINNING months only, not every month --
-    # verified against the real number; summing every month (winners and
-    # losers together) is off by almost exactly 1.0.
-    metric(r, "Gain to Pain ratio",
-          f"=SUMIF({C},\">0\",{C})/-SUMIF({C},\"<0\",{C})",
-          f"=SUMIF({D},\">0\",{D})/-SUMIF({D},\"<0\",{D})", pct=False); r += 1
-    metric(r, "Tail Ratio",
-          f"=ABS(PERCENTILE({C},0.95))/ABS(PERCENTILE({C},0.05))",
-          f"=ABS(PERCENTILE({D},0.95))/ABS(PERCENTILE({D},0.05))", pct=False); r += 1
-    r += 1
-
-    section(r, "Performance Vs Index"); r += 1
-    metric(r, "Beta", ArrayFormula(f"G{r}", f"=SLOPE({C},{D})"), "=1", pct=False); r += 1
-    metric(r, "Alpha", f"={g('CAGR')}-{h('CAGR')}", "=0"); r += 1
-    metric(r, "Jensens Alpha (Adj Beta)",
-          f"=({g('CAGR')}-{RFR})-((2/3*{g('Beta')}+1/3)*({h('CAGR')}-{RFR}))", "=0"); r += 1
-    metric(r, "Tracking Error", ArrayFormula(f"G{r}", f"=STDEV({C}-{D})*SQRT(12)"), "=0"); r += 1
-    # Now that Beta exists, fill in the Treynor row left pending above.
-    ws.cell(row=treynor_row, column=7).value = f"=({g('CAGR')}-{RFR})/{g('Beta')}"
-    ws.cell(row=treynor_row, column=8).value = f"=({h('CAGR')}-{RFR})/1"
-    r += 1
-
-    section(r, "Capture Ratio"); r += 1
-    metric(r, "Ret +Ve Nifty 500 TRI", f"=AVERAGEIF({D},\">0\",{C})", f"=AVERAGEIF({D},\">0\",{D})"); r += 1
-    metric(r, "Ret -Ve Nifty 500 TRI", f"=AVERAGEIF({D},\"<0\",{C})", f"=AVERAGEIF({D},\"<0\",{D})"); r += 1
-    metric(r, "Upside Capture", f"={g('Ret +Ve Nifty 500 TRI')}/{h('Ret +Ve Nifty 500 TRI')}", "=1", pct=False); r += 1
-    metric(r, "Downside Capture", f"={g('Ret -Ve Nifty 500 TRI')}/{h('Ret -Ve Nifty 500 TRI')}", "=1", pct=False); r += 1
-    metric(r, "Capture Ratio", f"={g('Upside Capture')}/{g('Downside Capture')}", "=1", pct=False); r += 1
-    r += 1
-
-    # Extreme Capture Ratio: same shape as Capture Ratio above, but the
-    # +Ve/-Ve split uses PERCENTILE(benchmark, 0.83) / PERCENTILE(benchmark,
-    # 0.07) instead of a plain >0/<0 split. Those two exact constants (not a
-    # symmetric 90/10 or 95/5) are what reproduces the reference workbook's
-    # real numbers -- see EXTREME_UPPER_PCT/EXTREME_LOWER_PCT in tearsheet.py.
-    hi_thr = f"PERCENTILE({D},{EXTREME_UPPER_PCT})"
-    lo_thr = f"PERCENTILE({D},{EXTREME_LOWER_PCT})"
-    section(r, "Extreme Capture Ratio"); r += 1
-    metric(r, "Ex. Ret +Ve Nifty 500 TRI",
-          ArrayFormula(f"G{r}", f"=AVERAGEIF({D},\">=\"&{hi_thr},{C})"),
-          ArrayFormula(f"H{r}", f"=AVERAGEIF({D},\">=\"&{hi_thr},{D})")); r += 1
-    metric(r, "Ex. Ret -Ve Nifty 500 TRI",
-          ArrayFormula(f"G{r}", f"=AVERAGEIF({D},\"<=\"&{lo_thr},{C})"),
-          ArrayFormula(f"H{r}", f"=AVERAGEIF({D},\"<=\"&{lo_thr},{D})")); r += 1
-    metric(r, "Ex. Upside Capture",
-          f"={g('Ex. Ret +Ve Nifty 500 TRI')}/{h('Ex. Ret +Ve Nifty 500 TRI')}", "=1", pct=False); r += 1
-    metric(r, "Ex. Downside Capture",
-          f"={g('Ex. Ret -Ve Nifty 500 TRI')}/{h('Ex. Ret -Ve Nifty 500 TRI')}", "=1", pct=False); r += 1
-    metric(r, "Extreme Capture Ratio",
-          f"={g('Ex. Upside Capture')}/{g('Ex. Downside Capture')}", "=1", pct=False); r += 1
-    r += 1
-
-    section(r, "Tail Risk"); r += 1
-    metric(r, "Skewness", f"=SKEW({C})", f"=SKEW({D})", pct=False); r += 1
-    metric(r, "Kurtosis", f"=KURT({C})", f"=KURT({D})", pct=False); r += 1
-    # UNNEGATED -- verified against the real reference numbers, which report
-    # VaR/CVaR as the raw (negative) tail value, not a positive loss
-    # magnitude, despite the glossary's "expected loss" phrasing.
-    metric(r, "95% VaR", f"=PERCENTILE({C},0.05)", f"=PERCENTILE({D},0.05)"); r += 1
-    metric(r, "99% VaR", f"=PERCENTILE({C},0.01)", f"=PERCENTILE({D},0.01)"); r += 1
-    metric(r, "95% CVaR",
-          ArrayFormula(f"G{r}", f"=AVERAGE(IF({C}<=PERCENTILE({C},0.05),{C}))"),
-          ArrayFormula(f"H{r}", f"=AVERAGE(IF({D}<=PERCENTILE({D},0.05),{D}))")); r += 1
-    metric(r, "99%  CVaR",
-          ArrayFormula(f"G{r}", f"=AVERAGE(IF({C}<=PERCENTILE({C},0.01),{C}))"),
-          ArrayFormula(f"H{r}", f"=AVERAGE(IF({D}<=PERCENTILE({D},0.01),{D}))")); r += 1
-    r += 1
-
-    assert "PENDING_BETA" not in str(ws.cell(row=treynor_row, column=7).value), \
-        "Treynor row was never backfilled -- a real bug, not a placeholder left on purpose"
-    # (Average Annual Max Drawdown's own PENDING_CY_TABLE placeholder is
-    # backfilled further down, after the Max Calendar Year Drawdown table
-    # exists -- checked once, right before the file is saved, below.)
-
-    # ---- Financial Year Performance (Apr-Mar), Calendar Year Performance --
-    # (Jan-Dec), and Max Calendar Year Drawdown -- all compounded from the
-    # raw monthly columns via array PRODUCT/MIN formulas keyed on the FY/CY
-    # label helper columns built above. Layout order matches the reference
-    # workbook: FY table, CY table, footnotes, then Max CY Drawdown table.
-    section(r, "Financial Year Performance"); r += 1
-    for i, label in enumerate(fy_order):
-        disp = label + ("*" if i == 0 else "**" if i == len(fy_order) - 1 else "")
-        metric(r, disp,
-              ArrayFormula(f"G{r}", f"=PRODUCT(IF({FY_RANGE}=\"{label}\",1+{C},1))-1"),
-              ArrayFormula(f"H{r}", f"=PRODUCT(IF({FY_RANGE}=\"{label}\",1+{D},1))-1")); r += 1
-    r += 1
-
-    section(r, "Calendar Year Performance"); r += 1
-    for i, label in enumerate(cy_order):
-        disp = label + ("*" if i == 0 else "**" if i == len(cy_order) - 1 else "")
-        metric(r, "CY:" + disp,
-              ArrayFormula(f"G{r}", f"=PRODUCT(IF({CY_RANGE}=\"{label}\",1+{C},1))-1"),
-              ArrayFormula(f"H{r}", f"=PRODUCT(IF({CY_RANGE}=\"{label}\",1+{D},1))-1")); r += 1
-        ws.cell(row=r - 1, column=6, value=disp)   # display label without the "CY:" dedup prefix
-    r += 1
-
-    first_dt, last_dt = pd.Timestamp(monthly_dates[0]), pd.Timestamp(monthly_dates[-1])
-    ws.cell(row=r, column=6, value=f"*Returns from {first_dt.strftime('%B %Y')}"); r += 1
-    ws.cell(row=r, column=6, value=f"**Returns till {last_dt.strftime('%B %Y')}"); r += 1
-    r += 1
-
-    section(r, "Max Calendar Year Drawdown"); r += 1
-    dd_first_row = r
-    for i, label in enumerate(cy_order):
-        disp = label + ("*" if i == 0 else "**" if i == len(cy_order) - 1 else "")
-        metric(r, "DD:" + disp,
-              ArrayFormula(f"G{r}", f"=MIN(IF({CY_RANGE}=\"{label}\",{CYNAV_G}/{CYPEAK_G}-1))"),
-              ArrayFormula(f"H{r}", f"=MIN(IF({CY_RANGE}=\"{label}\",{CYNAV_H}/{CYPEAK_H}-1))")); r += 1
-        ws.cell(row=r - 1, column=6, value=disp)
-    dd_last_row = r - 1
-    r += 2
-
-    # Now that the Max Calendar Year Drawdown table exists, backfill
-    # Average Annual Max Drawdown (Risk Parameters) as its plain average --
-    # verified against the reference workbook's real number.
-    ws.cell(row=aamdd_row, column=7).value = f"=AVERAGE(G{dd_first_row}:G{dd_last_row})"
-    ws.cell(row=aamdd_row, column=8).value = f"=AVERAGE(H{dd_first_row}:H{dd_last_row})"
-
-    # ---- Parameters (bottom block, matching the reference workbook's own
-    # position and label order) -- these three cells are what the ratios
-    # above actually reference (via the $O$1:$O$3 named-parameter cells),
-    # shown again here so a reader sees the same panel the source has.
-    section(r, "Drawdown limit"); ws.cell(row=r, column=7, value="=$O$3"); r += 1
-    section(r, "Threshold for Omega ratio"); ws.cell(row=r, column=7, value="=$O$2"); r += 1
-    section(r, "Risk Free Rate"); ws.cell(row=r, column=7, value="=$O$1"); r += 1
-
-    # ---- glossary (columns K, L) ------------------------------------------
-    ws["K3"], ws["L3"] = "Analytics", "Glossary"
-    ws["K3"].font = _HEADER_FONT
-    ws["K3"].fill = _HEADER_FILL
-    ws["L3"].font = _HEADER_FONT
-    ws["L3"].fill = _HEADER_FILL
-    for i, (label, text) in enumerate(_GLOSSARY):
-        row = first_row + i
-        ws.cell(row=row, column=11, value=label)
-        ws.cell(row=row, column=12, value=text).alignment = Alignment(wrap_text=True)
-
-    for col, width in (("A", 3), ("B", 10), ("C", 14), ("D", 14), ("F", 26),
-                       ("G", 14), ("H", 14), ("K", 26), ("L", 60)):
-        ws.column_dimensions[col].width = width
-
-    assert "PENDING_CY_TABLE" not in str(ws.cell(row=aamdd_row, column=7).value), \
-        "Average Annual Max Drawdown was never backfilled -- a real bug, not a placeholder left on purpose"
-
-    # Force Excel to recalculate every formula on open, regardless of the
-    # user's Automatic/Manual calculation setting -- openpyxl never writes a
-    # cached formula result, so without this a formula cell can sit at 0
-    # (or blank) until the user manually presses F9.
-    wb.calculation = CalcProperties(fullCalcOnLoad=True)
-
-    from universal_backtester.xlsx_style import apply_house_style
-    apply_house_style(wb)       # Arial, blue inputs, green cross-sheet links (xlsx skill rules)
+    # ---- Analytics
+    put(ws, "A1", "Return analytics", F_TITLE)
+    put(ws, "A2", f"Every metric is a formula over the Daily sheet and reproduces ros/metrics/core.py. {SIGNATURE}", F_NOTE)
+    put(ws, "A3", "Sharpe hurdle, a year (config/fund.yaml)", F_BOLD)
+    put(ws, "B3", hurdle_annual, F_INPUT, PCT, FILL_KEY, border=True, comment="Key assumption: the Sharpe yardstick, from config/fund.yaml (sharpe_hurdle).")
+    put(ws, "C3", "=(1+Hurdle)^(1/252)-1", F_BASE, "0.000000%", border=True)
+    put(ws, "D3", "the hurdle for one day", F_NOTE)
+    put(ws, "A4", "Base date (value 100)", F_BOLD)
+    put(ws, "B4", "=Daily!A2", F_BASE, DATE, border=True)
+    name(wb, "Hurdle", "Analytics!$B$3")
+    name(wb, "Hurdle_Daily", "Analytics!$C$3")
+    name(wb, "Start_Date", "Analytics!$B$4")
+    header(ws, 6, ["Metric", strategy_name, benchmark_name, "Definition (the same as ros/metrics/core.py)"])
+    rows = {lab: 7 + k for k, lab in enumerate(METRIC_LABELS)}
+    for lab, f, fmt, note in _BOTH:
+        for c, x in (("B", "S"), ("C", "B")):
+            _cell(ws, f"{c}{rows[lab]}", f.format(x=x, c=c, r=rows), fmt)
+        put(ws, f"A{rows[lab]}", lab, F_BASE, border=True)
+        put(ws, f"D{rows[lab]}", note, F_NOTE)
+    for lab, f, fmt, note in _RELATIVE:
+        _cell(ws, f"B{rows[lab]}", f.format(r=rows), fmt)
+        put(ws, f"A{rows[lab]}", lab, F_BASE, border=True)
+        put(ws, f"D{rows[lab]}", note, F_NOTE)
+    widths(ws, [38, 16, 16, 96])
+    apply_house_style(wb)
     wb.save(path)
+    return {"sheet": "Analytics", "rows": rows, "strategy_col": "B", "benchmark_col": "C", "n_days": n,
+            "months": {"sheet": "Monthly", "keys": yms, "first_row": 2}, "years": {"sheet": "Years", "calendar": years, "financial": fys, "first_row": 2}}
 
 
-def compute_se_return_analytics_rows(
-    monthly_dates: pd.DatetimeIndex,
-    strategy_returns: pd.Series,
-    benchmark_returns: pd.Series,
-    *,
-    risk_free_rate: float,
-    omega_threshold: float = DEFAULT_OMEGA_THRESHOLD,
-) -> list:
-    """The exact same ratios as write_se_return_analytics_workbook's Excel
-    formulas, computed here directly in numpy on the monthly series --
-    same arithmetic, same section order, same row labels -- so a CSV built
-    from this function's output is guaranteed consistent with the Excel
-    file's numbers by construction (both come from the same formulas,
-    just evaluated by Excel in one case and by numpy in the other).
-
-    Returns a list of (section, label, strategy_value, benchmark_value,
-    is_percent) tuples in the same top-to-bottom order as the workbook.
-    """
-    import numpy as np
-
-    from universal_backtester.tearsheet import (
-        average_annual_max_drawdown,
-        calendar_year_max_drawdown,
-        calendar_year_returns,
-        capture_breakdown,
-        extreme_capture_breakdown,
-        financial_year_returns,
-        historical_cvar,
-        historical_var,
-        negative_volatility,
-        positive_volatility,
-    )
-    from universal_backtester.tearsheet import (
-        gain_to_pain_ratio as _gain_to_pain,
-    )
-    from universal_backtester.tearsheet import (
-        tracking_error as _tracking_error,
-    )
-
-    strat_s = pd.Series(strategy_returns.values, index=monthly_dates)
-    bench_s = pd.Series(benchmark_returns.values, index=monthly_dates)
-
-    c = pd.Series(strategy_returns).to_numpy(dtype=float)
-    d = pd.Series(benchmark_returns).to_numpy(dtype=float)
-    n = len(c)
-    rfr = risk_free_rate
-
-    def total_return(x): return float(np.prod(1 + x) - 1)
-    def cagr(x): return float((1 + total_return(x)) ** (12 / n) - 1)
-    def ann_vol(x): return float(np.std(x, ddof=0) * np.sqrt(12))   # STDEVP, verified vs. reference
-    def mdd(x):
-        nav = np.cumprod(1 + x)
-        peak = np.maximum.accumulate(nav)
-        return float(np.min(nav / peak - 1))
-    def beta_of(x, y):
-        return float(np.cov(x, y, ddof=1)[0, 1] / np.var(y, ddof=1))
-    def omega(x):
-        excess = x - omega_threshold
-        gains, losses = excess[excess > 0].sum(), -excess[excess < 0].sum()
-        return float(gains / losses) if losses > 0 else float("nan")
-    def tail_ratio(x):
-        return float(abs(np.percentile(x, 95)) / abs(np.percentile(x, 5)))
-    def sortino_denom(x):
-        neg = x[x < 0]
-        return float(np.std(neg, ddof=0) * np.sqrt(12)) if len(neg) > 1 else float("nan")
-
-    strat_cagr, bench_cagr = cagr(c), cagr(d)
-    strat_mdd, bench_mdd = mdd(c), mdd(d)
-    # Average Annual Max Drawdown: mean of each calendar year's OWN
-    # (peak-reset-at-Jan-1) drawdown -- NOT the same as Max Drawdown,
-    # verified against the reference workbook's real number.
-    strat_aamdd = average_annual_max_drawdown(strat_s)
-    bench_aamdd = average_annual_max_drawdown(bench_s)
-    strat_vol, bench_vol = ann_vol(c), ann_vol(d)
-    strat_beta = beta_of(c, d)
-    strat_sharpe = (strat_cagr - rfr) / strat_vol
-    bench_sharpe = (bench_cagr - rfr) / bench_vol
-    strat_treynor = (strat_cagr - rfr) / strat_beta
-    bench_treynor = (bench_cagr - rfr) / 1.0
-    strat_sortino = (strat_cagr - rfr) / sortino_denom(c)
-    bench_sortino = (bench_cagr - rfr) / sortino_denom(d)
-    strat_calmar = strat_cagr / abs(strat_mdd)
-    bench_calmar = bench_cagr / abs(bench_mdd)
-    strat_sterling = strat_cagr / abs(strat_aamdd)
-    bench_sterling = bench_cagr / abs(bench_aamdd)
-    strat_alpha = strat_cagr - bench_cagr
-    # Jensen's Alpha (Adj Beta): our own CAPM-with-Bloomberg-shrunk-beta
-    # convention. Flagged rather than silently claimed: every other ratio
-    # in this module was verified bit-for-bit against the reference
-    # workbook's real numbers, but this one specific formula was not --
-    # several plausible variants were tried and none reproduced the
-    # source exactly, so this is a reasonable, documented convention
-    # rather than a confirmed match. See UNVERIFIED_JENSENS_ALPHA below.
-    strat_jensens = (strat_cagr - rfr) - ((2 / 3 * strat_beta + 1 / 3) * (bench_cagr - rfr))
-    strat_te = _tracking_error(strat_s, bench_s, ann=12)
-
-    cap = capture_breakdown(strat_s, bench_s)
-    excap = extreme_capture_breakdown(strat_s, bench_s)
-
-    rows = [
-        ("Performance", "Total Return", total_return(c), total_return(d), True),
-        ("Performance", "CAGR", strat_cagr, bench_cagr, True),
-        ("Performance", "Avg Month Ret", float(c.mean()), float(d.mean()), True),
-        ("Performance", "Positive Months", int((c > 0).sum()), int((d > 0).sum()), False),
-        ("Performance", "Negative Months", int((c < 0).sum()), int((d < 0).sum()), False),
-        ("Performance", "Max Month Ret", float(c.max()), float(d.max()), True),
-        ("Performance", "Min Month Ret", float(c.min()), float(d.min()), True),
-        ("Risk Parameters", "Annualized Volatility", strat_vol, bench_vol, True),
-        ("Risk Parameters", "Positive Monthly Vol",
-         positive_volatility(strat_s), positive_volatility(bench_s), True),
-        ("Risk Parameters", "Negative Monthly Vol",
-         negative_volatility(strat_s), negative_volatility(bench_s), True),
-        ("Risk Parameters", "Max Drawdown", strat_mdd, bench_mdd, True),
-        ("Risk Parameters", "Average Annual Max Drawdown", strat_aamdd, bench_aamdd, True),
-        ("Risk Parameters", "Sharpe Ratio", strat_sharpe, bench_sharpe, False),
-        ("Risk Parameters", "Treynor Ratio", strat_treynor, bench_treynor, False),
-        ("Risk Parameters", "Sortino Ratio", strat_sortino, bench_sortino, False),
-        ("Risk Parameters", "Calmar Ratio", strat_calmar, bench_calmar, False),
-        ("Risk Parameters", "Sterling Ratio", strat_sterling, bench_sterling, False),
-        ("Risk Parameters", "Omega Ratio", omega(c), omega(d), False),
-        ("Risk Parameters", "Gain to Pain ratio",
-         _gain_to_pain(strat_s), _gain_to_pain(bench_s), False),
-        ("Risk Parameters", "Tail Ratio", tail_ratio(c), tail_ratio(d), False),
-        ("Performance Vs Index", "Beta", strat_beta, 1.0, False),
-        ("Performance Vs Index", "Alpha", strat_alpha, 0.0, True),
-        ("Performance Vs Index", "Jensens Alpha (Adj Beta)", strat_jensens, 0.0, True),
-        ("Performance Vs Index", "Tracking Error", strat_te, 0.0, True),
-        ("Capture Ratio", "Ret +Ve Nifty 500 TRI", cap["ret_positive_strategy"], cap["ret_positive_benchmark"], True),
-        ("Capture Ratio", "Ret -Ve Nifty 500 TRI", cap["ret_negative_strategy"], cap["ret_negative_benchmark"], True),
-        ("Capture Ratio", "Upside Capture", cap["upside_capture"], 1.0, False),
-        ("Capture Ratio", "Downside Capture", cap["downside_capture"], 1.0, False),
-        ("Capture Ratio", "Capture Ratio", cap["capture_ratio"], 1.0, False),
-        ("Extreme Capture Ratio", "Ex. Ret +Ve Nifty 500 TRI", excap["ex_ret_positive_strategy"], excap["ex_ret_positive_benchmark"], True),
-        ("Extreme Capture Ratio", "Ex. Ret -Ve Nifty 500 TRI", excap["ex_ret_negative_strategy"], excap["ex_ret_negative_benchmark"], True),
-        ("Extreme Capture Ratio", "Ex. Upside Capture", excap["ex_upside_capture"], 1.0, False),
-        ("Extreme Capture Ratio", "Ex. Downside Capture", excap["ex_downside_capture"], 1.0, False),
-        ("Extreme Capture Ratio", "Extreme Capture Ratio", excap["extreme_capture_ratio"], 1.0, False),
-        ("Tail Risk", "Skewness", float(pd.Series(c).skew()), float(pd.Series(d).skew()), False),
-        ("Tail Risk", "Kurtosis", float(pd.Series(c).kurtosis()), float(pd.Series(d).kurtosis()), False),
-        # Unnegated -- see historical_var/historical_cvar's own docstrings.
-        ("Tail Risk", "95% VaR", historical_var(strat_s, 0.95), historical_var(bench_s, 0.95), True),
-        ("Tail Risk", "99% VaR", historical_var(strat_s, 0.99), historical_var(bench_s, 0.99), True),
-        ("Tail Risk", "95% CVaR", historical_cvar(strat_s, 0.95), historical_cvar(bench_s, 0.95), True),
-        ("Tail Risk", "99% CVaR", historical_cvar(strat_s, 0.99), historical_cvar(bench_s, 0.99), True),
-    ]
-
-    fy_s, fy_b = financial_year_returns(strat_s), financial_year_returns(bench_s)
-    for label in fy_s:
-        rows.append(("Financial Year Performance", label, fy_s[label], fy_b.get(label, float("nan")), True))
-    cy_s, cy_b = calendar_year_returns(strat_s), calendar_year_returns(bench_s)
-    for label in cy_s:
-        rows.append(("Calendar Year Performance", label, cy_s[label], cy_b.get(label, float("nan")), True))
-    dd_s, dd_b = calendar_year_max_drawdown(strat_s), calendar_year_max_drawdown(bench_s)
-    for label in dd_s:
-        rows.append(("Max Calendar Year Drawdown", label, dd_s[label], dd_b.get(label, float("nan")), True))
-
-    rows.append(("Parameters", "Risk Free Rate", risk_free_rate, None, True))
-    rows.append(("Parameters", "Threshold for Omega ratio", omega_threshold, None, True))
-    return rows
-
-
-def write_se_return_analytics_csv(
-    path: str,
-    monthly_dates: pd.DatetimeIndex,
-    strategy_returns: pd.Series,
-    benchmark_returns: pd.Series,
-    strategy_name: str = "Strategy",
-    benchmark_name: str = "Nifty 500 TRI",
-    *,
-    risk_free_rate: float,
-    omega_threshold: float = DEFAULT_OMEGA_THRESHOLD,
-) -> None:
-    """CSV twin of write_se_return_analytics_workbook: same sections, same
-    row labels, same top-to-bottom order, computed from the identical
-    formulas (see compute_se_return_analytics_rows) so the two files never
-    disagree with each other on a number."""
-    rows = compute_se_return_analytics_rows(
-        monthly_dates, strategy_returns, benchmark_returns, risk_free_rate=risk_free_rate, omega_threshold=omega_threshold)
-    out = pd.DataFrame(rows, columns=["section", "metric", strategy_name, benchmark_name, "is_percent"])
-    out.drop(columns=["is_percent"]).to_csv(path, index=False)
+def python_values(strategy_returns: pd.Series, benchmark_returns: pd.Series, start, hurdle_annual: float | None = None) -> dict[str, Any]:
+    """The same numbers from ros/metrics/core.py: what every cell of the workbook must equal."""
+    df = pd.concat([strategy_returns.rename("s"), benchmark_returns.rename("b")], axis=1).dropna()
+    h = config.hurdle_annual() if hurdle_annual is None else float(hurdle_annual)
+    s, b = df["s"], df["b"]
+    return {"strategy": core.tearsheet(s, start, h, b), "benchmark": core.tearsheet(b, start, h),
+            "monthly": {"strategy": core.monthly_returns(s), "benchmark": core.monthly_returns(b)},
+            "calendar_year": {"strategy": core.calendar_year_returns(s), "benchmark": core.calendar_year_returns(b)},
+            "financial_year": {"strategy": core.financial_year_returns(s), "benchmark": core.financial_year_returns(b)},
+            "year_max_drawdown": {"strategy": core.calendar_year_max_drawdown(s), "benchmark": core.calendar_year_max_drawdown(b)}}

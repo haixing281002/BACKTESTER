@@ -89,7 +89,7 @@ from universal_backtester.data import (
     load_field_only,
     load_wide_csv,
 )
-from universal_backtester.excel_tearsheet import write_se_return_analytics_workbook
+from universal_backtester.excel_tearsheet import write_return_analytics_workbook
 from universal_backtester.metrics import metrics_table, render_table
 from universal_backtester.signals import (
     atr,
@@ -174,7 +174,6 @@ def main():
     ap.add_argument("price_file", nargs="?", default=DEFAULT_DATA_FILE)
     ap.add_argument("--sheet", default="Sheet1")
     ap.add_argument("--spread-bps", type=float, required=True, help="round-trip cost in bp; this script has no card, so you state it")
-    ap.add_argument("--risk-free-rate", type=float, required=True, help="annual cash rate for the Excel tearsheet; you state it")
     args = ap.parse_args()
     using_default = os.path.abspath(args.price_file) == DEFAULT_DATA_FILE
 
@@ -296,18 +295,13 @@ def main():
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
     if benchmark_col:
-        monthly_strategy = (1 + result.returns).resample("ME").prod() - 1
-        bench_daily_ret = close_full[benchmark_col].reindex(result.value.index).pct_change()
-        monthly_bench = (1 + bench_daily_ret).resample("ME").prod() - 1
-        common = monthly_strategy.index.intersection(monthly_bench.index)
-        monthly_strategy, monthly_bench = monthly_strategy.loc[common], monthly_bench.loc[common]
-        xlsx_path = os.path.join(OUTPUT_DIR, "se_return_analytics.xlsx")
-        write_se_return_analytics_workbook(
-            xlsx_path, common, monthly_strategy, monthly_bench,
-            strategy_name="Strategy", benchmark_name=benchmark_col, risk_free_rate=args.risk_free_rate)
-        print(f"\nLive-formula tearsheet (SE Return Analytics layout) written to "
-              f"{os.path.relpath(xlsx_path, REPO_ROOT)} -- every ratio is a real Excel "
-              f"formula referencing the monthly-return columns, not a baked-in value.")
+        value = result.value.dropna()
+        bench_daily_ret = close_full[benchmark_col].reindex(value.index).pct_change().iloc[1:]
+        xlsx_path = os.path.join(OUTPUT_DIR, "return_analytics.xlsx")
+        write_return_analytics_workbook(xlsx_path, value.pct_change().iloc[1:], bench_daily_ret, value.index[0],
+                                        strategy_name="Strategy", benchmark_name=benchmark_col)
+        print(f"Live-formula tearsheet written to {os.path.relpath(xlsx_path, REPO_ROOT)}: every ratio is an Excel formula over "
+              f"the daily returns and reproduces ros/metrics/core.py (Sharpe hurdle from config/fund.yaml).")
     trade_log = derive_trade_log(result)
     log_path = os.path.join(OUTPUT_DIR, "universal_backtester_trade_log.csv")
     trade_log.to_csv(log_path, index=False)

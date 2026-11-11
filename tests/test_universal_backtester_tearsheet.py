@@ -1,220 +1,83 @@
-"""Correctness tests for the extended tearsheet -- these numbers get
-reported to a person deciding whether a strategy is real, so each one is
-checked against a case where the right answer is known by construction,
-not just "it runs."
-"""
+# Quant AI Researcher
+"""The tearsheet metrics behave as their definitions say. They live in ros/metrics/core.py; universal_backtester/tearsheet.py
+only arranges them. That Excel reproduces them is tests/test_excel_equals_python.py."""
 import numpy as np
 import pandas as pd
 import pytest
 
+from ros.metrics import core
 from universal_backtester import tearsheet as ts
 
-
-def _series(rng, n=1500, mu=0.0004, sigma=0.01, start="2015-01-01"):
-    idx = pd.bdate_range(start, periods=n)
-    return pd.Series(rng.normal(mu, sigma, size=n), index=idx)
+IDX = pd.bdate_range("2020-01-01", periods=756)
+START = IDX[0] - pd.offsets.BDay(1)
 
 
-def test_positive_and_negative_volatility_are_nonnegative_and_finite():
-    rng = np.random.default_rng(0)
-    r = _series(rng)
-    assert ts.positive_volatility(r) > 0
-    assert ts.negative_volatility(r) > 0
+def _r(mean=5e-4, sd=0.01, seed=0):
+    return pd.Series(np.random.default_rng(seed).normal(mean, sd, len(IDX)), index=IDX)
 
 
-def test_average_annual_max_drawdown_on_a_known_two_year_path():
-    """Year 1: drops 20% and recovers. Year 2: drops 10% and recovers.
-    Average annual max DD should land between 10% and 20%, closer to 15%."""
-    idx = pd.bdate_range("2020-01-01", periods=500)
-    v = pd.Series(1.0, index=idx)
-    y1 = idx.year == 2020
-    y2 = idx.year == 2021
-    n1, n2 = y1.sum(), y2.sum()
-    path1 = np.concatenate([np.linspace(1.0, 0.8, n1 // 2), np.linspace(0.8, 1.0, n1 - n1 // 2)])
-    path2 = np.concatenate([np.linspace(1.0, 0.9, n2 // 2), np.linspace(0.9, 1.05, n2 - n2 // 2)])
-    v.loc[y1] = path1
-    v.loc[y2] = path2 * path1[-1]
-    result = ts.average_annual_max_drawdown(v.pct_change().dropna())
-    assert -0.21 < result < -0.09
+def test_average_annual_max_drawdown_uses_the_prior_year_end_as_the_peak():
+    idx = pd.DatetimeIndex(["2020-12-30", "2020-12-31", "2021-01-01", "2021-01-04"])
+    r = pd.Series([0.10, 0.0, -0.20, 0.05], index=idx)          # 2021 opens with a 20% fall from the 2020 year-end
+    d = core.calendar_year_max_drawdown(r)
+    assert d[2020] == 0.0 and d[2021] == pytest.approx(0.20)
+    assert core.average_annual_max_drawdown(r) == pytest.approx(0.10)
 
 
-def test_beta_of_a_series_against_itself_is_one():
-    rng = np.random.default_rng(1)
-    r = _series(rng)
-    assert ts.beta(r, r) == pytest.approx(1.0, abs=1e-9)
+def test_beta_and_adjusted_beta():
+    b = _r(seed=1)
+    assert core.beta(b, b) == pytest.approx(1.0)
+    assert core.beta(1.5 * b, b) == pytest.approx(1.5)
+    assert core.adjusted_beta(1.5) == pytest.approx(4 / 3) and core.adjusted_beta(1.0) == 1.0
 
 
-def test_beta_of_a_scaled_series_matches_the_scale_factor():
-    rng = np.random.default_rng(1)
-    b = _series(rng)
-    r = b * 1.5
-    assert ts.beta(r, b) == pytest.approx(1.5, abs=1e-6)
+def test_jensen_alpha_is_zero_for_a_strategy_that_only_earns_its_beta():
+    assert core.jensen_alpha(0.05 + 1.0 * 0.07, 0.05 + 0.07, 0.05, 1.0) == pytest.approx(0.0)
+    assert core.treynor(0.15, 0.05, 2.0) == pytest.approx(0.05)
 
 
-def test_adjusted_beta_shrinks_toward_one():
-    rng = np.random.default_rng(1)
-    b = _series(rng)
-    r = b * 2.0  # raw beta = 2.0
-    adj = ts.adjusted_beta(r, b)
-    assert 1.0 < adj < 2.0
-    assert adj == pytest.approx((2 / 3) * 2.0 + (1 / 3) * 1.0, abs=1e-6)
+def test_sortino_counts_only_the_downside():
+    r = _r(seed=2)
+    boosted = r.where(r < 0, r * 2.0)                    # bigger gains, same losses
+    assert core.sortino(boosted, 0.0) > core.sortino(r, 0.0)
+    assert core.downside_deviation(boosted, 0.0) == pytest.approx(core.downside_deviation(r, 0.0))
 
 
-def test_alpha_is_zero_when_portfolio_equals_beta_times_benchmark_plus_rf():
-    """Construct a portfolio with NO skill: r_p = rf + beta*(r_b - rf) exactly.
-    Alpha should be ~0 regardless of the (arbitrary) adjusted-beta shrinkage,
-    because we feed the function the ADJUSTED beta's own implied portfolio."""
-    rng = np.random.default_rng(2)
-    idx = pd.bdate_range("2015-01-01", periods=2000)
-    bench_r = pd.Series(rng.normal(0.0004, 0.01, size=2000), index=idx)
-    rf = pd.Series(0.06 / 252, index=idx)
-    adj_b = 1.3
-    port_r = rf + adj_b * (bench_r - rf)
-    port_v = (1 + port_r).cumprod()
-    bench_v = (1 + bench_r).cumprod()
-    # Force adjusted_beta to read back ~1.3 by using a raw beta of 1.45
-    # (since adjusted = 2/3*raw + 1/3*1 => raw = (adj - 1/3)/(2/3))
-    a = ts.alpha_adj_beta(port_v, port_r, bench_v, bench_r, rf_daily=rf)
-    # Not exactly zero since adjusted_beta != raw beta used to build port_r,
-    # but should be small relative to either CAGR.
-    assert abs(a) < 0.05
+def test_omega_and_gain_to_pain_sit_either_side_of_one():
+    assert core.omega(_r(1.5e-3), 0.0) > 1 > core.omega(_r(-1.5e-3), 0.0)
+    assert core.gain_to_pain(_r(1.5e-3)) > 1 > core.gain_to_pain(_r(-1.5e-3))
 
 
-def test_treynor_ratio_scales_inversely_with_beta():
-    rng = np.random.default_rng(3)
-    idx = pd.bdate_range("2015-01-01", periods=2000)
-    bench_r = pd.Series(rng.normal(0.0004, 0.01, size=2000), index=idx)
-    low_beta_r = 0.5 * bench_r
-    high_beta_r = 2.0 * bench_r
-    low_v = (1 + low_beta_r).cumprod()
-    high_v = (1 + high_beta_r).cumprod()
-    t_low = ts.treynor_ratio(low_v, low_beta_r, bench_r)
-    t_high = ts.treynor_ratio(high_v, high_beta_r, bench_r)
-    # Same underlying driver, scaled -- Treynor should come out ~equal
-    # (return and beta scale together), unlike Sharpe which would differ.
-    assert t_low == pytest.approx(t_high, rel=0.05)
+def test_losses_are_positive_numbers_and_ordered():
+    r = _r(seed=3)
+    assert 0 < core.var(r, 0.95) < core.var(r, 0.99)
+    assert core.cvar(r, 0.95) >= core.var(r, 0.95) and core.cvar(r, 0.99) >= core.var(r, 0.99)
+    assert core.max_drawdown(core.value_from_returns(r, start=START)) > 0
 
 
-def test_sortino_penalizes_downside_only_not_upside_vol():
-    idx = pd.bdate_range("2015-01-01", periods=1000)
-    rng = np.random.default_rng(4)
-    base = rng.normal(0.0005, 0.008, size=1000)
-    upside_heavy = base.copy()
-    upside_heavy[upside_heavy > 0] *= 3  # inflate only the winners
-    r_base = pd.Series(base, index=idx)
-    r_upside = pd.Series(upside_heavy, index=idx)
-    sortino_base = ts.sortino_ratio(r_base)
-    sortino_upside = ts.sortino_ratio(r_upside)
-    assert sortino_upside > sortino_base, \
-        "amplifying only the upside should raise Sortino (downside unchanged, mean return up)"
+def test_a_levered_clone_captures_150_percent_both_ways():
+    b = _r(seed=4)
+    assert core.up_capture(1.5 * b, b) == pytest.approx(1.5, rel=0.05)
+    assert core.down_capture(1.5 * b, b) == pytest.approx(1.5, rel=0.05)
 
 
-def test_calmar_and_sterling_are_positive_for_a_rising_series():
-    idx = pd.bdate_range("2015-01-01", periods=1500)
-    rng = np.random.default_rng(5)
-    r = pd.Series(rng.normal(0.0006, 0.01, size=1500), index=idx)
-    v = (1 + r).cumprod()
-    assert ts.calmar_ratio(v) > 0
-    assert ts.sterling_ratio(v) > 0
+def test_the_hurdle_lowers_sharpe_by_about_hurdle_over_volatility():
+    r = _r(seed=5)
+    t0, t5 = core.tearsheet(r, START, 0.0), core.tearsheet(r, START, 0.05)
+    assert t0["Sharpe Ratio"] - t5["Sharpe Ratio"] == pytest.approx(np.log(1.05) / t0["Annualized Volatility"], rel=0.02)
+    assert t0["CAGR"] == t5["CAGR"]                      # a yardstick: it changes no return
 
 
-def test_omega_ratio_above_one_for_a_positive_mean_series():
-    rng = np.random.default_rng(6)
-    r = _series(rng, mu=0.001, sigma=0.01)
-    assert ts.omega_ratio(r, threshold=0.0) > 1.0
+def test_compute_tearsheet_from_a_result_is_core():
+    r, b = _r(seed=6), _r(seed=7)
 
-
-def test_omega_ratio_below_one_for_a_negative_mean_series():
-    rng = np.random.default_rng(6)
-    r = _series(rng, mu=-0.001, sigma=0.01)
-    assert ts.omega_ratio(r, threshold=0.0) < 1.0
-
-
-def test_gain_to_pain_ratio_positive_for_a_strongly_uptrending_series():
-    """A long enough, strongly-trending series should reliably show a
-    positive Gain-to-Pain regardless of random seed -- a short, noisy
-    sample can realize a net loss by chance even with a positive true
-    drift, which is a property of the data, not a bug in the ratio."""
-    rng = np.random.default_rng(7)
-    r = _series(rng, mu=0.0012, sigma=0.008, n=4000)
-    assert ts.gain_to_pain_ratio(r) > 0
-
-
-def test_tail_ratio_reflects_skew():
-    """A right-skewed series (rare big up moves, frequent small down moves)
-    should have a tail ratio above 1."""
-    rng = np.random.default_rng(8)
-    n = 3000
-    base = rng.normal(-0.0005, 0.006, size=n)
-    jump_days = rng.choice(n, size=n // 50, replace=False)
-    base[jump_days] += rng.uniform(0.03, 0.06, size=len(jump_days))
-    r = pd.Series(base, index=pd.bdate_range("2015-01-01", periods=n))
-    assert ts.tail_ratio(r) > 1.0
-
-
-def _monthly_series(values, start="2010-01-31"):
-    idx = pd.date_range(start, periods=len(values), freq="ME")
-    return pd.Series(values, index=idx)
-
-
-def test_upside_and_downside_capture_of_a_levered_clone_both_equal_150pct():
-    """Capture ratios here are a simple mean-of-monthly-returns ratio (the
-    reference "SE Return Analytics" workbook's own definition, verified
-    against its real numbers -- NOT a compounded-product ratio). A
-    portfolio at exactly 1.5x the benchmark every month is therefore
-    exactly 1.5x on both upside and downside capture, with no convexity
-    distortion (that distortion only shows up under a compounded-product
-    definition, which this repo no longer uses)."""
-    rng = np.random.default_rng(9)
-    mb = _monthly_series(rng.normal(0.01, 0.04, size=60))
-    mr = 1.5 * mb
-    assert ts.upside_capture(mr, mb) == pytest.approx(1.5)
-    assert ts.downside_capture(mr, mb) == pytest.approx(1.5)
-
-
-def test_a_defensive_strategy_has_capture_ratio_above_one():
-    """Full upside, 30% of the downside, built at monthly frequency so the
-    relationship is exact: capture ratio must clearly exceed 1."""
-    rng = np.random.default_rng(10)
-    mb = _monthly_series(rng.normal(0.01, 0.04, size=80))
-    mr = mb.where(mb > 0, mb * 0.3)
-    assert ts.capture_ratio(mr, mb) > 1.5
-
-
-def test_cvar_is_at_least_as_extreme_as_var():
-    """historical_var/historical_cvar are UNNEGATED (a negative number is
-    the raw tail value, matching the reference workbook's real
-    convention) -- so "more extreme" now means more negative, i.e. CVaR
-    <= VaR, not >=."""
-    rng = np.random.default_rng(11)
-    r = _series(rng, n=2000)
-    assert ts.historical_cvar(r, 0.95) <= ts.historical_var(r, 0.95) + 1e-9
-    assert ts.historical_cvar(r, 0.99) <= ts.historical_var(r, 0.99) + 1e-9
-
-
-def test_var_99_is_more_extreme_than_var_95():
-    rng = np.random.default_rng(12)
-    r = _series(rng, n=2000)
-    assert ts.historical_var(r, 0.99) <= ts.historical_var(r, 0.95)
-
-
-def test_compute_tearsheet_runs_end_to_end():
-    class FakeResult:
-        pass
-
-    rng = np.random.default_rng(13)
-    idx = pd.bdate_range("2015-01-01", periods=1500)
-    r = pd.Series(rng.normal(0.0004, 0.01, size=1500), index=idx)
-    v = (1 + r).cumprod()
-    result = FakeResult()
-    result.value = v
-    result.returns = r
-
-    bench = pd.Series(100 * (1 + pd.Series(rng.normal(0.0003, 0.011, size=1500), index=idx)).cumprod(), index=idx)
-    sheet = ts.compute_tearsheet(result, bench)
-    d = sheet.to_dict()
-    assert len(d) == 33
-    assert all(k in ts._LABELS for k in d)
-    rendered = ts.render_tearsheet(sheet)
-    assert "Sharpe Ratio" in rendered
-    assert "TRI" in rendered  # the benchmark caveat must always print
+    class Res:
+        value = core.value_from_returns(r, start=START)
+        returns = r
+    close = core.value_from_returns(b, start=START)
+    got = ts.compute_tearsheet(Res, close, 0.05)
+    want = core.tearsheet(r, START, 0.05, b)
+    assert got.keys() == want.keys()
+    for k in want:
+        assert got[k] == pytest.approx(want[k], rel=1e-9, abs=1e-12), k
+    assert "PRICE index" in ts.render_tearsheet(got)

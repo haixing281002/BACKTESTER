@@ -142,8 +142,7 @@ def drawdown_duration(value: pd.Series) -> int:
 
 def cvar_95(returns: pd.Series) -> float:
     """Mean daily loss on the days at or below the 5th percentile, as a positive number."""
-    r = returns.dropna()
-    return float(-r[r <= np.percentile(r, 5)].mean()) if len(r) else float("nan")
+    return cvar(returns, 0.95)
 
 
 def skew(returns: pd.Series) -> float:
@@ -229,6 +228,141 @@ def rolling_periods_behind(returns: pd.Series, bench: pd.Series, window: int = A
     gap = (1.0 + r).rolling(window).apply(np.prod, raw=True) - (1.0 + b).rolling(window).apply(np.prod, raw=True)
     gap = gap.dropna()
     return float((gap < 0).mean()) if len(gap) else float("nan")
+
+
+# ---------------------------------------------------------------------------------------------- the full tearsheet
+# One definition of every ratio a tearsheet shows. Excel (lightyear/workbook.py, universal_backtester/excel_tearsheet.py)
+# reproduces these formulas cell for cell, and tests/test_excel_equals_python.py fails if any differs by more than 1e-6.
+# Conventions: daily returns; sample standard deviation; 252; `hurdle` is the DAILY Sharpe hurdle (config.hurdle_daily());
+# a loss, drawdown, VaR or CVaR is a positive number; monthly metrics use monthly_returns() (calendar-month compounding).
+def total_return(returns: pd.Series) -> float:
+    return float((1.0 + returns.dropna()).prod() - 1.0)
+
+
+def positive_vol(returns: pd.Series) -> float:
+    """stdev of the days with a gain * sqrt(252)."""
+    r = returns.dropna()
+    return float(r[r > 0].std(ddof=1) * np.sqrt(ANN)) if (r > 0).sum() > 2 else float("nan")
+
+
+def negative_vol(returns: pd.Series) -> float:
+    """stdev of the days with a loss * sqrt(252)."""
+    r = returns.dropna()
+    return float(r[r < 0].std(ddof=1) * np.sqrt(ANN)) if (r < 0).sum() > 2 else float("nan")
+
+
+def downside_deviation(returns: pd.Series, hurdle: float = 0.0) -> float:
+    """sqrt(mean(min(r - h, 0)^2)) * sqrt(252), over every day."""
+    x = excess(returns, hurdle)
+    return float(np.sqrt((np.minimum(x.to_numpy(), 0.0) ** 2).mean()) * np.sqrt(ANN)) if len(x) else float("nan")
+
+
+def calendar_year_max_drawdown(returns: pd.Series, base: float = 100.0) -> pd.Series:
+    """Worst fall within each calendar year on daily values. The year's peak starts at the value at the prior year-end
+    (the base before the first return, in the first year), so a fall in a year's first days counts."""
+    r = returns.dropna()
+    v = (base * (1.0 + r).cumprod()).to_numpy()
+    years = r.index.year.to_numpy()
+    out: dict[int, float] = {}
+    peak = base
+    for i in range(len(v)):
+        if i and years[i] != years[i - 1]:
+            peak = v[i - 1]
+        peak = max(peak, v[i])
+        out[int(years[i])] = max(out.get(int(years[i]), 0.0), 1.0 - v[i] / peak)
+    return pd.Series(out, dtype=float)
+
+
+def average_annual_max_drawdown(returns: pd.Series) -> float:
+    d = calendar_year_max_drawdown(returns)
+    return float(d.mean()) if len(d) else float("nan")
+
+
+def sterling(returns: pd.Series, start) -> float:
+    """CAGR / average annual max drawdown. No 10-point adjustment."""
+    a = average_annual_max_drawdown(returns)
+    return float(cagr_from_returns(returns, start) / a) if a and a > 0 else float("nan")
+
+
+def omega(returns: pd.Series, hurdle: float = 0.0) -> float:
+    """Sum of daily gains above the hurdle / sum of daily shortfalls below it."""
+    x = excess(returns, hurdle)
+    loss = float(-x[x < 0].sum())
+    return float(x[x > 0].sum() / loss) if loss > 0 else float("nan")
+
+
+def gain_to_pain(returns: pd.Series) -> float:
+    """Sum of winning months / |sum of losing months|. Monthly by definition."""
+    m = monthly_returns(returns)
+    loss = float(-m[m < 0].sum())
+    return float(m[m > 0].sum() / loss) if loss > 0 else float("nan")
+
+
+def tail_ratio(returns: pd.Series) -> float:
+    """|95th percentile| / |5th percentile| of daily returns."""
+    r = returns.dropna()
+    lo = float(np.percentile(r, 5))
+    return float(abs(np.percentile(r, 95)) / abs(lo)) if lo != 0 else float("nan")
+
+
+def var(returns: pd.Series, level: float = 0.95) -> float:
+    """The daily loss exceeded on (1 - level) of days, as a positive number."""
+    return float(-np.percentile(returns.dropna(), 100.0 * (1.0 - level)))
+
+
+def cvar(returns: pd.Series, level: float = 0.95) -> float:
+    """Mean daily loss on the days at or beyond the VaR, as a positive number."""
+    r = returns.dropna()
+    return float(-r[r <= np.percentile(r, 100.0 * (1.0 - level))].mean()) if len(r) else float("nan")
+
+
+def excess_kurtosis(returns: pd.Series) -> float:
+    """Sample excess kurtosis (a bell curve is 0): Excel's KURT."""
+    return float(stats.kurtosis(returns.dropna(), fisher=True, bias=False))
+
+
+def adjusted_beta(beta_value: float) -> float:
+    return 2.0 / 3.0 * beta_value + 1.0 / 3.0
+
+
+def treynor(strategy_cagr: float, hurdle_annual: float, beta_value: float) -> float:
+    return float((strategy_cagr - hurdle_annual) / beta_value) if beta_value else float("nan")
+
+
+def jensen_alpha(strategy_cagr: float, benchmark_cagr: float, hurdle_annual: float, beta_value: float) -> float:
+    """(CAGR - H) - adjusted beta * (benchmark CAGR - H)."""
+    return float((strategy_cagr - hurdle_annual) - adjusted_beta(beta_value) * (benchmark_cagr - hurdle_annual))
+
+
+def tearsheet(returns: pd.Series, start, hurdle_annual: float, bench: pd.Series | None = None) -> dict[str, float]:
+    """Every tearsheet metric for one daily return series, keyed by the label the Excel tearsheet prints. `start` is the
+    base date (the session before the first return). With `bench`, the benchmark-relative rows are added."""
+    r = returns.dropna()
+    h = daily_cash(hurdle_annual)
+    v = value_from_returns(r, start=start)
+    m = monthly_returns(r)
+    g = cagr(v)
+    mdd = max_drawdown(v)
+    out = {"Total Return": total_return(r), "Years": years_between(start, r.index[-1]), "CAGR": g,
+           "Annualized Volatility": ann_vol(r), "Positive Volatility": positive_vol(r), "Negative Volatility": negative_vol(r),
+           "Max Drawdown": mdd, "Average Annual Max Drawdown": average_annual_max_drawdown(r),
+           "Sharpe Ratio": sharpe(r, h), "Sortino Ratio": sortino(r, h),
+           "Calmar Ratio": float(g / mdd) if mdd > 0 else float("nan"), "Sterling Ratio": sterling(r, start),
+           "Omega Ratio": omega(r, h), "Gain to Pain Ratio": gain_to_pain(r), "Tail Ratio": tail_ratio(r),
+           "Avg Month Ret": float(m.mean()), "Max Month Ret": float(m.max()), "Min Month Ret": float(m.min()),
+           "Positive Months": float((m > 0).sum()), "Negative Months": float((m < 0).sum()),
+           "Skewness": skew(r), "Excess Kurtosis": excess_kurtosis(r),
+           "95% VaR": var(r, 0.95), "99% VaR": var(r, 0.99), "95% CVaR": cvar(r, 0.95), "99% CVaR": cvar(r, 0.99)}
+    if bench is not None:
+        b = bench.reindex(r.index)
+        gb = cagr_from_returns(b, start)
+        bt = beta(r, b)
+        up, dn = up_capture(r, b), down_capture(r, b)
+        out.update({"Beta": bt, "Adjusted Beta": adjusted_beta(bt), "Treynor Ratio": treynor(g, hurdle_annual, bt),
+                    "Alpha": edge(g, gb), "Jensens Alpha (Adj Beta)": jensen_alpha(g, gb, hurdle_annual, bt),
+                    "Tracking Error": tracking_error(r, b), "Information Ratio": information_ratio(r, b),
+                    "Upside Capture": up, "Downside Capture": dn, "Capture Ratio": float(up / dn) if dn else float("nan")})
+    return out
 
 
 # ---------------------------------------------------------------------------------------------- robustness re-reads

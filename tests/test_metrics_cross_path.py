@@ -97,7 +97,7 @@ def test_with_no_cash_rate_on_the_card_beta_is_blank_not_guessed(data):
 
 
 def test_the_workbook_formulas_agree_with_the_dashboard_after_recalculation(data, tmp_path):
-    """The Excel path, recalculated. Skipped only where LibreOffice is not installed."""
+    """The Excel path, recalculated. Fails, never skips, where LibreOffice is not installed."""
     r, b = data
     df = _frame(r.iloc[:300], b.iloc[:300])
     ch = charts.build(df, {"strategy": "S"}, cash_rate=RATE)
@@ -107,8 +107,8 @@ def test_the_workbook_formulas_agree_with_the_dashboard_after_recalculation(data
     workbook.build(str(tmp_path), res, df, "t", str(out), observations=ch["observations"], core_metrics=ch)
     p = subprocess.run([sys.executable, os.path.join(REPO, "scripts", "xlsx_recalc_libreoffice.py"), str(out)], capture_output=True, text=True, timeout=300, check=False)
     rec = json.loads(p.stdout) if p.stdout.strip().startswith("{") else {}
-    if rec.get("status") != "success":
-        pytest.skip(f"no recalculation here: {(p.stdout or p.stderr)[:120]}")
+    # never skipped (hard rule, 2026-11-11): a machine that cannot recalculate cannot vouch for the workbook
+    assert rec.get("status") == "success", f"LibreOffice is required to check Excel against Python (set SOFFICE): {(p.stdout or p.stderr)[:200]}"
     ws = openpyxl.load_workbook(out, data_only=True)["Summary"]
     m = ch["metrics"]["strategy"]
     assert ws["B12"].value == pytest.approx(m["cagr"], rel=1e-9)

@@ -549,26 +549,31 @@ def build(run_dir, results, df, title, out_path, holdings=None, trades=None, com
         hdr = ["Date"]
         for c in names_c:
             hdr += [f"{c} daily return", f"{c} value", f"{c} drawdown"]
-        header(wc, top, hdr, height=44)
-        wc.cell(row=top + 1, column=1, value=start_date(df["date"]).to_pydatetime()).number_format = DATE
+        # The daily data sits to the RIGHT of the summary table (from column H), never under it: a summary formula in the
+        # same column as the data it depends on makes LibreOffice's column-wise recalculation report #VALUE!.
+        c0 = 8
+        header(wc, top, hdr, col=c0, height=44)
+        wc.cell(row=top + 1, column=c0, value=start_date(df["date"]).to_pydatetime()).number_format = DATE
         for j in range(len(names_c)):
-            cv = wc.cell(row=top + 1, column=3 + 3 * j, value=100)
+            cv = wc.cell(row=top + 1, column=c0 + 2 + 3 * j, value=100)
             cv.font = F_INPUT
-            wc.cell(row=top + 1, column=4 + 3 * j, value=0).number_format = PCT
+            wc.cell(row=top + 1, column=c0 + 3 + 3 * j, value=0).number_format = PCT
         for i, dte in enumerate(df["date"], start=d0):
-            wc.cell(row=i, column=1, value=dte.to_pydatetime()).number_format = DATE
+            wc.cell(row=i, column=c0, value=dte.to_pydatetime()).number_format = DATE
             for j, c in enumerate(names_c):
-                rc, vc, dc = 2 + 3 * j, 3 + 3 * j, 4 + 3 * j
+                rc, vc, dc = c0 + 1 + 3 * j, c0 + 2 + 3 * j, c0 + 3 + 3 * j
                 L = lambda k: wc.cell(row=1, column=k).column_letter
                 v = cmp[c].iloc[i - d0]
                 cell = wc.cell(row=i, column=rc, value=0.0 if pd.isna(v) else float(v))
                 cell.font, cell.number_format = F_INPUT, RET_FMT
                 wc.cell(row=i, column=vc, value=f"={L(vc)}{i-1}*(1+{L(rc)}{i})").number_format = "0.00"
-                wc.cell(row=i, column=dc, value=f"={L(vc)}{i}/MAX({L(vc)}${top+1}:{L(vc)}{i})-1").number_format = PCT
+                # running peak = the larger of today's value and yesterday's peak (yesterday's value / (1 + yesterday's drawdown)):
+                # the same number as value / MAX(all values so far) - 1, without a range that grows on every row
+                wc.cell(row=i, column=dc, value=f"={L(vc)}{i}/MAX({L(vc)}{i},{L(vc)}{i-1}/(1+{L(dc)}{i-1}))-1").number_format = PCT
         for j, c in enumerate(names_c):
             row = 5 + j
             L = lambda k: wc.cell(row=1, column=k).column_letter
-            rc, vc, dc = L(2 + 3 * j), L(3 + 3 * j), L(4 + 3 * j)
+            rc, vc, dc = L(c0 + 1 + 3 * j), L(c0 + 2 + 3 * j), L(c0 + 3 + 3 * j)
             put(wc, f"A{row}", c, F_BASE, border=True)
             put(wc, f"B{row}", f"=({vc}{d1}/100)^(1/Summary!$B$9)-1", F_LINK, PCT, border=True)
             put(wc, f"C{row}", f"=STDEV({rc}{d0}:{rc}{d1})*SQRT(252)", F_BASE, PCT, border=True)
@@ -577,7 +582,7 @@ def build(run_dir, results, df, title, out_path, holdings=None, trades=None, com
             put(wc, f"F{row}", f"=B{row}-Summary!$B$12", F_LINK, PCT, border=True)
         sign_colour(wc, f"F5:F{4 + len(names_c)}")
         wc.freeze_panes = wc.cell(row=top + 1, column=2)
-        widths(wc, [34] + [18] * (3 * len(names_c)))
+        widths(wc, [34] + [18] * 5 + [4, 12] + [18] * (3 * len(names_c)))
 
     # ---------------------------------------------------------------- Holdings, Rebalances, Trades
     if holdings is not None and len(holdings):
