@@ -1,4 +1,4 @@
-# Quant AI Researcher by Harshil Pahuja
+# Quant AI Researcher
 """Gate B v2: hard blocks, an evidence scorecard, and a status of PASS or FAIL.
 
 Code computes and reports. The decision stays PENDING until a named human records one, and nothing here can set it.

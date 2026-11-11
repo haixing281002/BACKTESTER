@@ -1,4 +1,4 @@
-# Quant AI Researcher by Harshil Pahuja
+# Quant AI Researcher
 """Phase 0: record what Gate B v1 said for every past Lightyear run, one row per criterion.
 
 Read-only over the run folders. Nothing is recomputed: each value is what the run's own gate_b() wrote in results.json.
@@ -51,7 +51,7 @@ def main() -> int:
                             "criterion": g["name"], "value": g["value_raw"], "threshold": g["threshold_raw"],
                             "blocking": g["blocking"], "result": g["result"]})
     with open(a.out, "w", newline="", encoding="utf-8") as fh:
-        fh.write("# Quant AI Researcher by Harshil Pahuja\n")
+        fh.write("# Quant AI Researcher\n")
         w = csv.DictWriter(fh, fieldnames=FIELDS)
         w.writeheader()
         w.writerows(out)

@@ -1,4 +1,4 @@
-# Quant AI Researcher by Harshil Pahuja
+# Quant AI Researcher
 """Step 06 -- RESEARCH VALIDATION.
 
 Answers one question: is this result real, or is it a number we manufactured?

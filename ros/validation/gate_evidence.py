@@ -1,4 +1,4 @@
-# Quant AI Researcher by Harshil Pahuja
+# Quant AI Researcher
 """The numbers gate v2 reads. All of it is arithmetic on return series; the calibration runs this same code."""
 from __future__ import annotations
 

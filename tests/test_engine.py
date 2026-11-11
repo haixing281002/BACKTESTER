@@ -1,4 +1,4 @@
-# Quant AI Researcher by Harshil Pahuja
+# Quant AI Researcher
 """Engine correctness tests.
 
 These target the properties that, if broken, make every downstream number wrong

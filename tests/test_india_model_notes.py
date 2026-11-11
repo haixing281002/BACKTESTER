@@ -1,4 +1,4 @@
-# Quant AI Researcher by Harshil Pahuja
+# Quant AI Researcher
 """The India rules are a floor a model may build on, never one it may lower.
 
 The requirements module derives what India demands from PROPERTIES of the

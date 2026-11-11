@@ -1,4 +1,4 @@
-# Quant AI Researcher by Harshil Pahuja
+# Quant AI Researcher
 """Phase 5: re-score every past Lightyear run under Gate v2 and set it beside what v1 said.
 
 v1 comes from each run's own results.json, as recorded; v2 is computed now from the run's own hand-off files. Thresholds are

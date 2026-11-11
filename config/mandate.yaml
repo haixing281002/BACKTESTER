@@ -1,4 +1,4 @@
-# Quant AI Researcher by Harshil Pahuja
+# Quant AI Researcher
 # The fund's limits. A card cannot override these: an override needs a named approval, logged with a timestamp.
 # A blank limit makes the mandate test INCOMPLETE. Nothing is guessed.
 long_only: null          # NOT SET. CLAUDE.md: the fund may short since 2026-09-28; confirm before relying on this

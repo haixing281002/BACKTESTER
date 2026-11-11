@@ -1,4 +1,4 @@
-# Quant AI Researcher by Harshil Pahuja
+# Quant AI Researcher
 """Stage 01 now decides two things that dominate everything downstream: which
 universe a paper is tested on, and what the strategy actually is.
 

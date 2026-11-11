@@ -1,4 +1,4 @@
-# Quant AI Researcher by Harshil Pahuja
+# Quant AI Researcher
 """Comparison words follow the numbers: 'lower volatility (16.8% against 15.9%)' is corrected to 'higher'."""
 import os
 import sys

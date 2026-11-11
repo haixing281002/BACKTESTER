@@ -1,4 +1,4 @@
-# Quant AI Researcher by Harshil Pahuja
+# Quant AI Researcher
 """Each metric against numbers worked out by hand in plain Python (no numpy, no pandas), and the rules the metrics live by."""
 import numpy as np
 import pandas as pd

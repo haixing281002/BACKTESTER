@@ -1,4 +1,4 @@
-# Quant AI Researcher by Harshil Pahuja
+# Quant AI Researcher
 """What it takes to backtest THIS strategy in India, honestly.
 
 Gate A used to say "you are missing nifty500_constituent_prices". True, and

@@ -1,4 +1,4 @@
-# Quant AI Researcher by Harshil Pahuja
+# Quant AI Researcher
 """The 'what changed vs the previous run' block: card field diff classified trade-affecting vs verdict-only, script sha
 diff, and a one-line verdict that says whether the trades should have moved."""
 import json

@@ -1,4 +1,4 @@
-# Quant AI Researcher by Harshil Pahuja
+# Quant AI Researcher
 """The per-result metrics table the pipeline report prints. Every definition is in ros.metrics.core; this adds no formula.
 
 `sharpe_paper_basis` is the one exception to a single Sharpe: a replication target printed in a paper is on the paper's

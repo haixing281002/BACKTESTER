@@ -1,4 +1,4 @@
-# Quant AI Researcher by Harshil Pahuja
+# Quant AI Researcher
 """Build docs/gate_b/gate-b-v2-change-log.pdf. Run figures are read from the run files and the dashboard check, never typed.
 
     python scripts/gate_v2/build_change_log.py <run_id> "<pytest summary>"
@@ -28,7 +28,7 @@ from reportlab.platypus import (
 NEW, TESTS = sys.argv[1], sys.argv[2]
 RN = f"outputs/lightyear/{NEW}"
 OUT = "docs/gate_b/gate-b-v2-change-log.pdf"
-SIGN = "Quant AI Researcher by Harshil Pahuja"
+SIGN = "Quant AI Researcher"
 with open(RN + "/state.json", encoding="utf8") as fh:
     state = json.load(fh)
 with open(RN + "/charts.json", encoding="utf8") as fh:

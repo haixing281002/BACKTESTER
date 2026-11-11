@@ -1,4 +1,4 @@
-# Quant AI Researcher by Harshil Pahuja
+# Quant AI Researcher
 """Step 07 -- PORTFOLIO VALIDATION.
 
 Step 06 asks 'is the result real?'. Step 06 passing is necessary and nowhere near

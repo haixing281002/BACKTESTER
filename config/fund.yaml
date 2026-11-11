@@ -1,4 +1,4 @@
-# Quant AI Researcher by Harshil Pahuja
+# Quant AI Researcher
 # Facts about the fund. A blank value is reported as not computed, and its gate test as INCOMPLETE. Nothing is guessed.
 cash_rate_sweep: [0.0, 0.04, 0.08]   # Rates an appendix sweep tries beside the card's own. Never reaches a headline or a gate.
 aum_inr_cr: null        # NOT SET: the fund's AUM in Rs crore, needed for the capacity metric and test

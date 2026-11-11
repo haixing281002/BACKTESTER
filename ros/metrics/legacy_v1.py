@@ -1,4 +1,4 @@
-# Quant AI Researcher by Harshil Pahuja
+# Quant AI Researcher
 """Metric code as gate v1 used it. Nothing reports from here.
 
 Two reasons this exists. Gate v1 must stay measurable, so the calibration can compare v1 with v2 on the same synthetic

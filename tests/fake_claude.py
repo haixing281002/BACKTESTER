@@ -1,4 +1,4 @@
-# Quant AI Researcher by Harshil Pahuja
+# Quant AI Researcher
 """Stand-in for the Claude Code CLI in Lightyear's tests: reads the prompt on stdin, writes the hand-off
 files the prompt asks for, and emits stream-json events like the real CLI. No model, no network.
 

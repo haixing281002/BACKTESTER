@@ -1,4 +1,4 @@
-# Quant AI Researcher by Harshil Pahuja
+# Quant AI Researcher
 """Gate A is the strategy card, displayed. Nothing else.
 
 The output kept drifting into a tour of the pipeline -- which stage produced

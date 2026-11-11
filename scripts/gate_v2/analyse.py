@@ -1,4 +1,4 @@
-# Quant AI Researcher by Harshil Pahuja
+# Quant AI Researcher
 """Read the simulated statistics and score gate v1 and the approved gate v2. Thresholds come from config, never from here.
 
 Writes docs/gate_b/calibration/{candidate_grid_no_dsr.csv, power_table_approved.csv}. Targets from the brief: false pass at

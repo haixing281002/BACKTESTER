@@ -1,1 +1,1 @@
-# Quant AI Researcher by Harshil Pahuja
+# Quant AI Researcher

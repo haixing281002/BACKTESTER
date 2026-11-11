@@ -1,4 +1,4 @@
-# Quant AI Researcher by Harshil Pahuja
+# Quant AI Researcher
 """Step 05 -- BUILD + EXECUTE. Deterministic daily portfolio accounting.
 
 Implements the paper's appendix A accounting exactly, generalised so any card can

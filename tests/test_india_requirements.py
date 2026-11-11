@@ -1,4 +1,4 @@
-# Quant AI Researcher by Harshil Pahuja
+# Quant AI Researcher
 """Gate A must say what it takes to run THIS strategy in India.
 
 "You are missing nifty500_constituent_prices" names a file, not a specification.

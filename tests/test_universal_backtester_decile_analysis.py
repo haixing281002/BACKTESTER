@@ -1,4 +1,4 @@
-# Quant AI Researcher by Harshil Pahuja
+# Quant AI Researcher
 """compute_decile_membership / run_decile_backtests / summarize_deciles /
 write_decile_membership_log -- the full NIFTY 500 decile deep-dive, not
 just the top/bottom decile pair."""

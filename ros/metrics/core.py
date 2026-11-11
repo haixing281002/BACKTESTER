@@ -1,4 +1,4 @@
-# Quant AI Researcher by Harshil Pahuja
+# Quant AI Researcher
 """The one definition of every performance metric. Dashboards, workbooks, reports and gates import from here.
 
 Daily simple returns as fractions, dates as the index. `cash` is one period's cash return: a number or a Series, and it

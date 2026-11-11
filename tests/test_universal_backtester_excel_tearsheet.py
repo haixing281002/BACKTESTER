@@ -1,4 +1,4 @@
-# Quant AI Researcher by Harshil Pahuja
+# Quant AI Researcher
 """excel_tearsheet.py cannot be checked by actually recalculating in Excel
 (no Excel available; LibreOffice headless conversion fails to even load a
 trivial 3-cell file in this sandbox -- confirmed to be an environment

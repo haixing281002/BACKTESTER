@@ -1,4 +1,4 @@
-# Quant AI Researcher by Harshil Pahuja
+# Quant AI Researcher
 """The Clenow run's Validation rows and table sheet names are a FIXED template: this test fails on any sheet rename or
 any Validation row removal. New diagnostics may only be appended (add them to the frozen lists here on purpose)."""
 import importlib.util

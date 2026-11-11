@@ -1,4 +1,4 @@
-# Quant AI Researcher by Harshil Pahuja
+# Quant AI Researcher
 """Build docs/gate_b/financial-metrics-and-gate-b-v2.pdf: one formula per metric, the gate, its calibration, and what changed.
 
 A reference: no strategy's results. Thresholds come from config/gate_thresholds.yaml and rates from the calibration tables.
@@ -38,7 +38,7 @@ from reportlab.platypus import (
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 CAL = os.path.join(REPO, "docs", "gate_b", "calibration")
 OUT = os.path.join(REPO, "docs", "gate_b", "financial-metrics-and-gate-b-v2.pdf")
-SIGN = "Quant AI Researcher by Harshil Pahuja"
+SIGN = "Quant AI Researcher"
 sys.path.insert(0, REPO)
 from ros.versions import GATE_VERSION, METRICS_VERSION
 

@@ -1,4 +1,4 @@
-# Quant AI Researcher by Harshil Pahuja
+# Quant AI Researcher
 """Gate v2 on fixtures with known answers. Thresholds here are the test's own, so no result depends on what is approved."""
 import ast
 import os

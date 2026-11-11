@@ -1,4 +1,4 @@
-# Quant AI Researcher by Harshil Pahuja
+# Quant AI Researcher
 """lightyear.spec_audit: the run's own files are checked against the card's Gate A rules, and a rule the files break
 is reported as FAIL (never silently dropped)."""
 import json

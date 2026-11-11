@@ -1,4 +1,4 @@
-# Quant AI Researcher by Harshil Pahuja
+# Quant AI Researcher
 """Pipeline driver: card in, governed verdict out.
 
 Runs steps 01-08 for ANY card. Nothing in this module knows about any particular

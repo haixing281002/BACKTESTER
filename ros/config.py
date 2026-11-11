@@ -1,4 +1,4 @@
-# Quant AI Researcher by Harshil Pahuja
+# Quant AI Researcher
 """Fund-level settings the code reads and never types: sweep grids, AUM, the mandate and the gate's thresholds.
 A run's own cost and cash rate are not here: they come only from its card."""
 from __future__ import annotations

@@ -1,4 +1,4 @@
-# Quant AI Researcher by Harshil Pahuja
+# Quant AI Researcher
 """Open a run on a live Lightyear in a real browser and test the metrics and Gate v2 against the page, manifest and workbook.
 
 Nothing is changed unless --rebuild is passed, which rebuilds the run's charts and workbook from its own files first.

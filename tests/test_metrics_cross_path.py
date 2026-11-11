@@ -1,4 +1,4 @@
-# Quant AI Researcher by Harshil Pahuja
+# Quant AI Researcher
 """A metric name means one thing. This fails if any two code paths give different values for the same name."""
 import json
 import os

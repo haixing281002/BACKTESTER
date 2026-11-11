@@ -1,4 +1,4 @@
-# Quant AI Researcher by Harshil Pahuja
+# Quant AI Researcher
 """Phase 4, part 2: reference strategies on real data. None of these should pass the hard blocks and a green scorecard.
 
 The benchmark itself, the equal-weight universe, random 30-stock books rebalanced monthly, and NSE's Momentum 50 index.

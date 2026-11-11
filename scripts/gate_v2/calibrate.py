@@ -1,4 +1,4 @@
-# Quant AI Researcher by Harshil Pahuja
+# Quant AI Researcher
 """Phase 4: calibrate Gate B by simulation. No threshold is written anywhere by this script.
 
 Part 1 simulates strategies with a known truth and records every statistic the gates read, one row per simulated

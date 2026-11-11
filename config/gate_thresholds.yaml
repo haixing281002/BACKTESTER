@@ -1,4 +1,4 @@
-# Quant AI Researcher by Harshil Pahuja
+# Quant AI Researcher
 # Gate B v2 thresholds. APPROVED by the operator on 2026-11-05, who asked for them to be easier than first proposed.
 # Set from 8,000 simulated strategies (docs/gate_b/calibration/), committed before any named strategy was scored on them.
 gate_version: v2
