@@ -177,6 +177,9 @@ def run(run_dir, card_path, results=None):
             add(f"Mandate criterion judged with mandate_allow_cash = {port['mandate_allow_cash']}", bool(m.get("passed")) == exp_pass,
                 f"gate_b criterion passed = {m.get('passed')}; {m.get('evidence', '')[:120]}")
 
+    # the numbers half: NAV, filters and fill prices recomputed from the source data, not from the script's columns
+    from . import numbers_audit
+    out.extend(numbers_audit.run(run_dir, card))
     n_fail = sum(1 for c in out if c["passed"] is False)
     n_na = sum(1 for c in out if c["passed"] is None)
     summary = {"checks": out, "n_pass": sum(1 for c in out if c["passed"] is True), "n_fail": n_fail, "n_not_checkable": n_na,
