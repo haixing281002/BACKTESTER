@@ -34,6 +34,7 @@ OUT = os.path.join(REPO, *config.calibration().get("out_dir", "docs/gate_b/calib
 START, END = "2014-01-01", "2026-09-18"     # 12.7 years to the benchmark's last close
 CASH_ANNUAL = float(config.calibration()["cash_annual"])     # these books have no card, so the calibration file states it
 CASH = core.daily_cash(CASH_ANNUAL)
+HURDLE = config.hurdle_daily()      # Wave 4: Sharpe, bootstrap and sub-period subtract this; factor alpha keeps CASH
 FACTORS = {"market": "NIFTY 500", "midcap150": "NIFTY MIDCAP 150", "smallcap250": "NIFTY SMALLCAP 250", "momentum": "NIFTY500 MOMENTUM 50",
            "value": "NIFTY500 VALUE 50", "quality": "NIFTY500 QUALITY 50", "low_vol": "NIFTY500 LOW VOLATILITY 50"}
 _S: dict = {}
@@ -91,13 +92,13 @@ def stats_row(name: str, r: pd.Series, b: pd.Series, factors: pd.DataFrame, floo
     from lightyear.charts import start_date
     t0 = start_date(pd.Series(r.index))          # the NSE session before the first return: the one CAGR base
     v, vb = core.value_from_returns(r, start=t0), core.value_from_returns(b, start=t0)
-    row = {"name": name, "cagr": core.cagr(v), "bench_cagr": core.cagr(vb), "edge": core.cagr(v) - core.cagr(vb), "sharpe": core.sharpe(r, CASH),
-           "bench_sharpe": core.sharpe(b, CASH), "max_dd": core.max_drawdown(v), "ir": core.information_ratio(r, b) if (r - b).std() > 0 else float("nan"),
+    row = {"name": name, "cagr": core.cagr(v), "bench_cagr": core.cagr(vb), "edge": core.cagr(v) - core.cagr(vb), "sharpe": core.sharpe(r, HURDLE),
+           "bench_sharpe": core.sharpe(b, HURDLE), "max_dd": core.max_drawdown(v), "ir": core.information_ratio(r, b) if (r - b).std() > 0 else float("nan"),
            **_boot(r, b)}
     d = ev.deflated_sharpe(r, b, CASH, 1.0, floors["1overT"], null="benchmark")
     row["dsr_bench_n1"] = d["dsr"]
     row["dsr_zero_n1"] = ev.deflated_sharpe(r, b, CASH, 1.0, floors["1overT"], null="zero")["dsr"]
-    sp = ev.sub_period(r, b, CASH)
+    sp = ev.sub_period(r, b, HURDLE)
     row.update(sp_n=sp["n"], sp_pos=sp["positive"], sp_worst=sp["worst"])
     if (r - b).std() > 0:
         fa = ev.factor_alpha(r, factors, CASH, leave_one_out=False)
@@ -106,7 +107,7 @@ def stats_row(name: str, r: pd.Series, b: pd.Series, factors: pd.DataFrame, floo
 
 
 def _boot(r, b) -> dict:
-    bt = ev.paired_bootstrap(r, b, CASH)          # Politis-White block, with 5/21/63 beside it
+    bt = ev.paired_bootstrap(r, b, HURDLE)          # Politis-White block, with 5/21/63 beside it
     return {"boot_p": bt["p"], "boot_block": bt["mean_block"], **{f"boot_p_{k}": v for k, v in bt["sensitivity"].items()}}
 
 

@@ -35,6 +35,7 @@ FROZEN_VALIDATION = [
     "Paired P(no Sharpe edge) vs NIFTY 500", "Paired P(no Sharpe edge) vs equal-weight members",
     "Paired P(no Sharpe edge) vs Momentum 50", "Paired P(no Sharpe edge) vs no-filter variant",
     "Worst sub-period excess CAGR over NIFTY 500", "Factor alpha a year", "Factor alpha HAC t-stat",
+    "Factor alpha a year, over the Sharpe hurdle", "Factor alpha HAC t-stat, over the Sharpe hurdle",   # inserted 2026-11-11, Wave 4
     "Loading on NIFTY500 Momentum 50", "Loading on NIFTY500 Value 50", "Factor R-squared",
     "Alpha HAC t without the Momentum 50 sleeve", "Alpha HAC t, no-filter variant",
     "CAGR, Thursday signal / Friday fill", "CAGR, 20% gap limit", "CAGR, 120-day regression", "CAGR with cash at 0%",

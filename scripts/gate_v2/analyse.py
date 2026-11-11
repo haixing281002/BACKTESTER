@@ -88,7 +88,7 @@ def curves(t: pd.DataFrame) -> None:
         a.set(title=title, xlabel="True excess Sharpe over the benchmark", ylabel="Pass rate", ylim=(0, 1))
         a.grid(alpha=0.3)
         a.legend(fontsize=7.5, loc="upper left")
-    fig.text(0.01, 0.01, "Cash 0%, cost 0bp, Politis-White block (Wave 3). Dotted lines: 5% false-pass and 70% power targets.", fontsize=7.5, color="#555")
+    fig.text(0.01, 0.01, "Cash 0%, cost 0bp, Sharpe over the 5% hurdle, Politis-White block (Wave 4). Dotted lines: 5% false-pass and 70% power targets.", fontsize=7.5, color="#555")
     fig.text(0.99, 0.01, "Quant AI Researcher", fontsize=7.5, color="#555", ha="right")
     fig.tight_layout(rect=(0, 0.04, 1, 1))
     fig.savefig(os.path.join(OUT, "power_curves.png"), dpi=150)

@@ -816,6 +816,8 @@ FIXED_VALIDATION_SPEC = [
     {"label": "Worst sub-period excess CAGR over NIFTY 500", "group": "robustness", "format": "pct", "fn": lambda r: min(w["excess_cagr"] for w in r["sub_period_stability"]), "source": "out/sub_period_stability.csv"},
     {"label": "Factor alpha a year", "group": "robustness", "format": "pct", "fn": lambda r: r["factor_fingerprint"].get("alpha_ann"), "source": "factor_fingerprint()"},
     {"label": "Factor alpha HAC t-stat", "group": "robustness", "format": "num", "fn": lambda r: r["factor_fingerprint"].get("alpha_t_hac"), "source": "factor_fingerprint()"},
+    {"label": "Factor alpha a year, over the Sharpe hurdle", "group": "robustness", "format": "pct", "fn": lambda r: r["factor_fingerprint_hurdle"].get("alpha_ann"), "source": "factor_fingerprint(), config/fund.yaml sharpe_hurdle"},
+    {"label": "Factor alpha HAC t-stat, over the Sharpe hurdle", "group": "robustness", "format": "num", "fn": lambda r: r["factor_fingerprint_hurdle"].get("alpha_t_hac"), "source": "factor_fingerprint(), config/fund.yaml sharpe_hurdle"},
     {"label": "Loading on NIFTY500 Momentum 50", "group": "robustness", "format": "num", "fn": lambda r: r["factor_fingerprint"].get("loadings", {}).get("NIFTY500 MOMENTUM 50"), "source": "factor_fingerprint()"},
     {"label": "Loading on NIFTY500 Value 50", "group": "robustness", "format": "num", "fn": lambda r: r["factor_fingerprint"].get("loadings", {}).get("NIFTY500 VALUE 50"), "source": "factor_fingerprint()"},
     {"label": "Factor R-squared", "group": "robustness", "format": "num", "fn": lambda r: r["factor_fingerprint"].get("r_squared"), "source": "factor_fingerprint()"},
@@ -1159,6 +1161,8 @@ def main() -> int:
     fac = sleeves[["NIFTY 500", "NIFTY500 MOMENTUM 50", "NIFTY500 VALUE 50", "NIFTY500 QUALITY 50", "NIFTY500 LOW VOLATILITY 50"]]
     fac_ret = fac.pct_change(fill_method=None).dropna()
     ff = factor_fingerprint(ret(nav), fac_ret, rf_daily)
+    # the same regression with returns above the Sharpe hurdle instead of the card's cash rate: reported beside it
+    ff_hurdle = factor_fingerprint(ret(nav), fac_ret, pd.Series(config.hurdle_daily(), index=rf_daily.index))
     ff_nomom = factor_fingerprint(ret(nav), fac_ret.drop(columns=["NIFTY500 MOMENTUM 50"]), rf_daily)
     ff_nf = factor_fingerprint(ret(nofilter["nav"]), fac_ret, rf_daily)
     br = benchmark_relative(ret(nav), ret(bench), rf_daily)
@@ -1316,7 +1320,7 @@ def main() -> int:
         "sensitivities": sens.to_dict("records"), "calendar_years": cal_years.reset_index().to_dict("records"),
         "sub_period_stability": oos.to_dict("records"), "subperiod_cagr": sub.reset_index().to_dict("records"),
         "bootstrap": boot, "deflated_sharpe": dsr, "n_trials": N_TRIALS, "trials": {**TRIALS, "sensitivities": N_SENSITIVITIES},
-        "factor_fingerprint": ff,
+        "factor_fingerprint": ff, "factor_fingerprint_hurdle": ff_hurdle,
         "factor_fingerprint_without_momentum": ff_nomom, "factor_fingerprint_no_filter_variant": ff_nf,
         "benchmark_relative": br, "turnover_two_way_annual": turnover_ann, "mandate": mandate,
         "cash": {"mean_share": cash_mean, "max_share": cash_max, "pct_days_over_half_cash": pct_days_cash_over_half,

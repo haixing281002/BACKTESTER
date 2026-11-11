@@ -35,6 +35,7 @@ OUT = os.path.join(REPO, *config.calibration().get("out_dir", "docs/gate_b/calib
 DAYS = round(12.7 * 252)
 CASH_ANNUAL = float(config.calibration()["cash_annual"])    # the simulation's own cash level; returns are simulated above it
 CASH = core.daily_cash(CASH_ANNUAL)
+HURDLE = config.hurdle_daily()      # Wave 4: gate v2's Sharpes (bootstrap, sub-period) subtract this; factor alpha and v1 keep CASH
 BENCH_VOL, BENCH_EXCESS = 0.16, 0.07    # benchmark: 16% vol, 7% a year above cash
 STRAT_VOL, RHO = 0.17, 0.80             # the brief: about 17% vol, about 0.8 correlation to the benchmark
 T_DF = 5                                # the brief: Student-t, df 4 to 5
@@ -118,12 +119,12 @@ def one_sim(args) -> dict:
 
     t0 = r.index[0] - pd.offsets.BDay(1)        # synthetic business-day calendar: its own day before the first return
     vr, vb = core.value_from_returns(r, start=t0), core.value_from_returns(b, start=t0)
-    row.update(sharpe=core.sharpe(r, CASH), bench_sharpe=core.sharpe(b, CASH), edge=core.cagr(vr) - core.cagr(vb), ir=core.information_ratio(r, b))
+    row.update(sharpe=core.sharpe(r, HURDLE), bench_sharpe=core.sharpe(b, HURDLE), edge=core.cagr(vr) - core.cagr(vb), ir=core.information_ratio(r, b))
 
     # one index matrix for this simulation: both gates read paired draws
     x, y = r.to_numpy(), b.to_numpy()
     idx = core.stationary_bootstrap_indices(DAYS, 2000, 21, rng)     # same stream as the approved run: v1 and the 21-day row
-    d = core.sharpe_draws(x, idx, CASH) - core.sharpe_draws(y, idx, CASH)
+    d = core.sharpe_draws(x, idx, HURDLE) - core.sharpe_draws(y, idx, HURDLE)
     row["boot_p_21"] = float((d <= 0).mean())
     # v2 reads the Politis-White block; 5 and 63 days are reported beside it. Their draws use their own stream, so every
     # other statistic here is drawn exactly as in the approved calibration.
@@ -133,7 +134,7 @@ def one_sim(args) -> dict:
     row["boot_block_sq"] = core.auto_mean_block(x * x, y * y, (x - y) ** 2)
     for key, L in (("boot_p", row["boot_block"]), ("boot_p_5", 5), ("boot_p_63", 63)):
         ix = core.stationary_bootstrap_indices(DAYS, 2000, L, rng_b)
-        dd = core.sharpe_draws(x, ix, CASH) - core.sharpe_draws(y, ix, CASH)
+        dd = core.sharpe_draws(x, ix, HURDLE) - core.sharpe_draws(y, ix, HURDLE)
         row[key] = float((dd <= 0).mean())
     per_year = DAYS / ((r.index[-1] - r.index[0]).days / 365.25)
     row["v1_boot_p"] = legacy_v1.paired_geometric_p(x, y, CASH, idx, per_year)
@@ -144,7 +145,7 @@ def one_sim(args) -> dict:
     row.update(alpha=fit["alpha_ann"], alpha_t=fit["alpha_t_hac"], r2=fit["r_squared"])
 
     # sub-period stability, on the Sharpe gap to the benchmark, plus the same on the information ratio
-    sp = ev.sub_period(r, b, CASH, n_windows=4)
+    sp = ev.sub_period(r, b, HURDLE, n_windows=4)
     row.update(sp_n=sp["n"], sp_pos=sp["positive"], sp_worst=sp["worst"])
     w = ev.windows(r.index, 4)
     irs = [core.information_ratio(r.loc[days], b.loc[days]) for _, _, days, _ in core.split_windows(r.index, [lo for lo, _ in w] + [w[-1][1]])]

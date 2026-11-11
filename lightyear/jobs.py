@@ -779,6 +779,7 @@ def build_outputs(rid, review=True):
     recalc = _workbook(rid, res, df, extra, ch["observations"], _load_review(rd), ch)
     res["gate_rows"] = gates.rows(res["gate_b"].get("criteria", []))
     update(rid, status="gate_b", current_stage="GB", results=res, recalc=recalc, handoff_warnings=warn, error=None,
+           card_unreadable=next((w for w in warn_core if w.startswith("Card not read")), None),
            card_checks=card_checks,
            has_holdings="holdings" in extra, has_trades=("trades" in extra or "holdings" in extra),
            has_comparators="comparators" in extra)

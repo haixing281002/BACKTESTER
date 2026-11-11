@@ -73,24 +73,32 @@ def score(rd, card_path, df, trades=None, holdings=None, spec_failures=None) -> 
     e["capacity"] = capacity(df, trades, card)
 
     series = r
-    basis = f"daily returns at the card's cost, {float(card.costs.spread_bps):g}bp round trip"
-    cash = core.daily_cash(config.cash_rate_for(card)[0])
+    hurdle_annual = config.hurdle_annual()
+    hurdle = config.hurdle_daily()                    # the Sharpe yardstick: every Sharpe the gate reads subtracts it
+    basis = (f"daily returns at the card's cost, {float(card.costs.spread_bps):g}bp round trip; Sharpe over the "
+             f"{hurdle_annual:.0%} hurdle")
+    cash = core.daily_cash(config.cash_rate_for(card)[0])   # what idle cash earns: factor alpha and beta subtract this
+    e["sharpe_hurdle"] = hurdle_annual
     from lightyear.charts import start_date
     t0 = start_date(df["date"])                      # the NSE session before the first return: the one CAGR base
     e["net_edge"] = core.cagr_from_returns(series, t0) - core.cagr_from_returns(b, t0)
     bt = th.get("bootstrap") or {}
-    boot = ev.paired_bootstrap(series, b, cash, mean_block=bt.get("mean_block", "auto"),
+    boot = ev.paired_bootstrap(series, b, hurdle, mean_block=bt.get("mean_block", "auto"),
                                sensitivity=tuple(bt.get("sensitivity_blocks", (5, 21, 63))))
     e.update(bootstrap_p=boot["p"], bootstrap_max_dd_gap=boot["max_dd_gap_mean"], bootstrap_block=boot["mean_block"],
              bootstrap_block_method=boot["block_method"], bootstrap_sensitivity=boot["sensitivity"])
-    sp = ev.sub_period(series, b, cash, fits_parameters=bool(card.fits_parameters))
+    sp = ev.sub_period(series, b, hurdle, fits_parameters=bool(card.fits_parameters))
     e.update(sub_period_name=sp["name"], sub_period_n=sp["n"], sub_period_positive=sp["positive"], sub_period_worst=sp["worst"],
              sub_period_evidence="; ".join(f"{w['window']}: Sharpe {w['sharpe']:.2f}, benchmark {w['benchmark_sharpe']:.2f}" for w in sp["windows"]))
     fa = ev.factor_alpha(series, ev.factor_returns(idx), cash)
     if "error" not in fa:
         loo = ", ".join(f"{k} {v['alpha_t_hac']:.2f}" for k, v in fa.get("leave_one_out", {}).items())
         e.update(alpha=fa["alpha_ann"], alpha_t=fa["alpha_t_hac"], alpha_evidence=f"alpha {fa['alpha_ann']:.2%} a year, R-squared {fa['r_squared']:.2f}. t with each factor left out: {loo}. Factor indices are backfilled before launch and price-only")
-    pp = core.post_publication(series, b, cash, card.paper.date)
+        fh = ev.factor_alpha(series, ev.factor_returns(idx), hurdle, leave_one_out=False)
+        if "error" not in fh:      # reported beside the gate row, which stays on the card's cash rate
+            e.update(alpha_hurdle=fh["alpha_ann"], alpha_t_hurdle=fh["alpha_t_hac"])
+            e["alpha_evidence"] += f". Over the {hurdle_annual:.0%} hurdle instead of the card's cash rate: alpha {fh['alpha_ann']:.2%}, t {fh['alpha_t_hac']:.2f} (reported, not judged)"
+    pp = core.post_publication(series, b, cash, card.paper.date, hurdle=hurdle)
     if pp:
         e["post_publication_edge"] = pp["edge"]
     book_path = config.fund().get("book_returns_csv")
@@ -99,5 +107,5 @@ def score(rd, card_path, df, trades=None, holdings=None, spec_failures=None) -> 
         e.update(ev.book_tests(series, bk, b))
     res = gate_v2.evaluate(e, th, config.mandate()).to_dict()
     res["basis"] = basis
-    res["summary"] = {k: e.get(k) for k in ("net_edge", "bootstrap_p", "bootstrap_max_dd_gap", "bootstrap_block", "bootstrap_sensitivity", "alpha", "alpha_t", "sub_period_positive", "sub_period_n", "sub_period_worst", "post_publication_edge")}
+    res["summary"] = {k: e.get(k) for k in ("net_edge", "bootstrap_p", "bootstrap_max_dd_gap", "bootstrap_block", "bootstrap_sensitivity", "sharpe_hurdle", "alpha_hurdle", "alpha_t_hurdle", "alpha", "alpha_t", "sub_period_positive", "sub_period_n", "sub_period_worst", "post_publication_edge")}
     return res

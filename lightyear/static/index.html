@@ -386,6 +386,7 @@ async function tick(){
   else if(st.status==="gate_a") b = `<div class="banner info"><b>Gate A is ready for you.</b> Read what will be tested, tick each item you agree with, then approve. Or ask for changes.</div>`;
   else if(st.status==="gate_b") b = `<div class="banner info"><b>The backtest is done.</b> Look at the results, then record your decision on the Gate B tab.</div>`;
   else if(st.status==="decided") b = `<div class="banner ok">Decision recorded: <b>${esc(st.decision.decision)}</b> by ${esc(st.decision.decided_by)} at ${esc(ist(st.decision.at))}.</div>`;
+  if(st.card_unreadable) b = `<div class="banner err"><b>This run's card could not be read.</b> ${esc(st.card_unreadable)} Its cost, cash rate and beta are blank or missing, and Gate v2 could not be scored from the card.</div>` + b;
   $("#rbanner").innerHTML = b;
   renderTrack(st);
   if(prev && prev !== st.status){ if(!USER_TAB || ["gate_a","gate_b"].includes(st.status)) TAB = defaultTab(st); USER_TAB = false; refreshRuns(); H = await api("/api/health") }

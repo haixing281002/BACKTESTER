@@ -3,4 +3,4 @@
 # Wave 3 overrides (operator, 2026-11-11): cash 0% and cost 0bp, as on the cards; no constant 6% anywhere. Was 6% and 30bp.
 cash_annual: 0.0           # the simulation's cash level; simulated returns are set relative to it
 reference_cost_bp: 0       # what the equal-weight and random reference books are charged. They have no card.
-out_dir: docs/gate_b/calibration_wave3   # the approved 2026-11-05 run stays in docs/gate_b/calibration/
+out_dir: docs/gate_b/calibration_wave4_hurdle   # Wave 4: Sharpes over the 5% hurdle. Wave 3 (0%) stays in calibration_wave3/. Was: docs/gate_b/calibration_wave3   # the approved 2026-11-05 run stays in docs/gate_b/calibration/
