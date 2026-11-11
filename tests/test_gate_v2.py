@@ -252,6 +252,49 @@ def test_a_run_folder_scores_at_the_cards_cost_and_no_other(tmp_path, monkeypatc
     assert gate_run2.score(str(tmp_path), card2, df2)["status"] == "FAIL"
 
 
+def test_gate_b_sharpes_read_the_hurdle_not_the_cards_cash_rate(tmp_path, monkeypatch):
+    """Wave 4: the bootstrap, sub-period and post-publication Sharpes subtract the 5% hurdle in config/fund.yaml. The card's
+    cash rate (6% here, so the two cannot be confused) reaches only factor alpha."""
+    from types import SimpleNamespace
+
+    from ros import config
+    from ros.metrics import core
+    b = _series(4e-4, 0.01, 1)
+    strong = b + _series(1.2e-3, 0.003, 2)
+    gate_run, card, df = _run_folder(tmp_path, strong, b)
+    fake = SimpleNamespace(universe=SimpleNamespace(cash_asset="CASH_PROXY_CONSTANT_6PCT"), fits_parameters=False, paper=SimpleNamespace(date="2015"), costs=SimpleNamespace(spread_bps=0.0))
+    monkeypatch.setattr(gate_run, "load_card", lambda p: fake)
+    monkeypatch.setattr(gate_run.ev, "factor_returns", lambda idx: pd.DataFrame({"market": b.reindex(idx), "size": _series(5e-4, 0.012, 9).reindex(idx)}))
+    seen = {}
+    real = {k: getattr(gate_run.ev, k) for k in ("paired_bootstrap", "sub_period", "factor_alpha")}
+    real_pp = gate_run.core.post_publication
+
+    def spy(name):
+        def f(r, x, rate, *a, **k):
+            seen.setdefault(name, []).append(rate)
+            return real[name](r, x, rate, *a, **k)
+        return f
+
+    def spy_pp(r, x, cash, date, hurdle=None):
+        seen["post_publication"] = hurdle
+        return real_pp(r, x, cash, date, hurdle=hurdle)
+
+    for k in real:
+        monkeypatch.setattr(gate_run.ev, k, spy(k))
+    monkeypatch.setattr(gate_run.core, "post_publication", spy_pp)
+    res = gate_run.score(str(tmp_path), card, df)
+    hurdle, cash = config.hurdle_daily(), core.daily_cash(0.06)
+    assert config.hurdle_annual() == 0.05 and hurdle != cash
+    assert seen["paired_bootstrap"] == [hurdle] and seen["sub_period"] == [hurdle] and seen["post_publication"] == hurdle
+    assert seen["factor_alpha"] == [cash, hurdle]          # the gate row at the card's rate, then the reported one at the hurdle
+    assert res["summary"]["sharpe_hurdle"] == 0.05 and "5% hurdle" in res["basis"]
+    # and the numbers are the hurdle's: the bootstrap p equals a direct call at the hurdle
+    df_i = pd.DatetimeIndex(df["date"])
+    r = pd.Series(df["strategy"].to_numpy(), index=df_i)
+    bb = pd.Series(df["benchmark"].to_numpy(), index=df_i)
+    assert res["summary"]["bootstrap_p"] == real["paired_bootstrap"](r, bb, hurdle)["p"]
+
+
 def test_rule_specific_rows_are_diagnostics():
     from lightyear.jobs import DIAGNOSTIC_LABEL
     for x in ("Sells forced by a name leaving the NIFTY 500 list", "Share of 15%-gap exits that were in profit", "Buys on days the stock closed up more than 9.5% (band proxy)", "Share of signals with buying shut by the index filter"):

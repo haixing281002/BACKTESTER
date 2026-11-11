@@ -4,7 +4,9 @@
 
     book        the configurations the paper itself reports (the card's n_configs_tried)
     lightyear   distinct versions run through Lightyear on this paper: one per distinct parameter set in a run
-                folder's manifest, and one per earlier run folder that reached results without a manifest
+                folder's manifest, and one per earlier run folder that reached results without a manifest. A run whose
+                state.json says counts_as_version: false (a re-run the operator ruled is not a new version) is listed
+                and not counted
     ledger      versions run outside Lightyear, recorded by hand with their source in data/reference/trial_ledger.csv
 
 versions = book + lightyear + ledger. A run's sensitivities are reported beside it, never folded in.
@@ -30,7 +32,7 @@ def _run_dirs():
 
 
 def lightyear_versions(slug: str, exclude: str | None = None, dirs: list[str] | None = None) -> dict:
-    keys, no_manifest = set(), []
+    keys, no_manifest, reruns = set(), [], []
     for d in dirs if dirs is not None else _run_dirs():
         if exclude and os.path.abspath(d) == os.path.abspath(exclude):
             continue
@@ -40,6 +42,9 @@ def lightyear_versions(slug: str, exclude: str | None = None, dirs: list[str] | 
         with open(sp, encoding="utf-8") as fh:
             st = json.load(fh)
         if st.get("slug") != slug or st.get("status") not in _DONE:
+            continue
+        if st.get("counts_as_version") is False:      # a logged re-run the operator ruled is not a new version (state.json)
+            reruns.append(os.path.basename(d))
             continue
         mp = os.path.join(d, "manifest.json")
         params = {}
@@ -51,7 +56,8 @@ def lightyear_versions(slug: str, exclude: str | None = None, dirs: list[str] | 
             keys.add(hashlib.sha256(key.encode()).hexdigest())
         else:
             no_manifest.append(os.path.basename(d))
-    return {"n": len(keys) + len(no_manifest), "distinct_parameter_sets": len(keys), "runs_without_manifest": no_manifest}
+    return {"n": len(keys) + len(no_manifest), "distinct_parameter_sets": len(keys), "runs_without_manifest": no_manifest,
+            "reruns_not_counted": reruns}
 
 
 def ledger(slug: str, path: str | None = None) -> pd.DataFrame:
