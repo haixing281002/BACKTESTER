@@ -9,6 +9,8 @@ capacity:
 data_integrity:
   min_priced_coverage: 0.90         # Not simulated. Placeholder: a window's priced members over all members. Lowered from 95% with the rest.
 bootstrap:
+  mean_block: auto                  # Wave 3 override: Politis-White automatic length (ros/metrics/core.py), not a fixed 21
+  sensitivity_blocks: [5, 21, 63]   # the same p at these fixed lengths, reported beside it, never judged
   p_max: 0.10                       # Eased from 0.05. Pass at true excess Sharpe 0.5: 57% against 43%. Alone it lets 6.9% of no-skill strategies through.
 deflated_sharpe:
   enabled: false                    # Removed from the gate for now, by the operator. Without it the gate has no defence against selection luck.

@@ -46,8 +46,34 @@ def excess(returns: pd.Series, cash: float | pd.Series | None = None) -> pd.Seri
 
 
 # ---------------------------------------------------------------------------------------------- return
-def value_from_returns(returns: pd.Series, base: float = 100.0) -> pd.Series:
-    return base * (1.0 + returns.fillna(0.0)).cumprod()
+def value_from_returns(returns: pd.Series, base: float = 100.0, start=None) -> pd.Series:
+    """`base` at `start`, the close before the first return, then compounded by every return. Give `start` whenever a CAGR
+    is taken: without it the series begins AFTER the first return, which a CAGR then leaves out."""
+    v = base * (1.0 + returns.fillna(0.0)).cumprod()
+    if start is not None:
+        v = pd.concat([pd.Series([base], index=[pd.Timestamp(start)]), v])
+    return v
+
+
+def cagr_from_returns(returns: pd.Series, start) -> float:
+    """The one CAGR of a return series: base at `start`, the NSE session before the first return, so every return counts
+    and the years run from that base date."""
+    return cagr(value_from_returns(returns.dropna(), start=start))
+
+
+def split_windows(index: pd.DatetimeIndex, edges) -> list[tuple[pd.Timestamp, pd.Timestamp, pd.DatetimeIndex, pd.Timestamp | None]]:
+    """Consecutive windows of `index` at `edges`: the first is [e0, e1], each later one (e_i, e_i+1], so no day falls in
+    two windows. Each comes with its anchor: the last date of `index` before the window's first day (None when the window
+    starts the index), which is the base of that window's value and CAGR."""
+    out = []
+    for i in range(len(edges) - 1):
+        lo, hi = pd.Timestamp(edges[i]), pd.Timestamp(edges[i + 1])
+        days = index[((index >= lo) if i == 0 else (index > lo)) & (index <= hi)]
+        if not len(days):
+            continue
+        pos = index.get_loc(days[0])
+        out.append((lo, hi, days, index[pos - 1] if pos > 0 else None))
+    return out
 
 
 def years_between(start, end) -> float:
@@ -214,7 +240,44 @@ def cagr_without_best_days(returns: pd.Series, n: int = 10) -> float:
     return float((1.0 + kept).prod() ** (1.0 / years) - 1.0) if years > 0 else float("nan")
 
 
-def stationary_bootstrap_indices(n: int, n_boot: int, mean_block: int, rng: np.random.Generator) -> np.ndarray:
+def politis_white_block(x) -> float:
+    """Automatic mean block length for the stationary bootstrap: Politis and White (2004), with the correction of Patton,
+    Politis and White (2009). Flat-top lag window; its bandwidth M = 2 m-hat, where m-hat is the smallest lag after which
+    K_n = max(5, sqrt(log10 n)) autocorrelations in a row are inside 2 sqrt(log10 n / n). Capped at min(3 sqrt(n), n / 3).
+        b = (2 G^2 / D)^(1/3) n^(1/3),  G = sum lambda(k/M) |k| R(k),  D = 2 (sum lambda(k/M) R(k))^2"""
+    x = np.asarray(x, dtype=float)
+    x = x[np.isfinite(x)]
+    n = len(x)
+    if n < 10:
+        return 1.0
+    e = x - x.mean()
+    kn = max(5, int(np.ceil(np.sqrt(np.log10(n)))))
+    m_max = int(np.ceil(np.sqrt(n))) + kn
+    b_max = float(np.ceil(min(3.0 * np.sqrt(n), n / 3.0)))
+    acov = np.array([e[k:] @ e[:n - k] / n for k in range(min(m_max + kn, n - 1) + 1)])
+    if acov[0] <= 0:
+        return 1.0
+    rho = np.abs(acov / acov[0])
+    crit = 2.0 * np.sqrt(np.log10(n) / n)
+    m_hat = next((m for m in range(m_max + 1) if m + kn < len(rho) and np.all(rho[m + 1:m + kn + 1] < crit)), None)
+    big_m = m_max if m_hat is None else min(2 * max(m_hat, 1), m_max)
+    big_m = min(big_m, len(acov) - 1)
+    k = np.arange(1, big_m + 1)
+    lam = np.where(k / big_m <= 0.5, 1.0, 2.0 * (1.0 - k / big_m))
+    g = 2.0 * float(np.sum(lam * k * acov[1:big_m + 1]))
+    d = 2.0 * float(acov[0] + 2.0 * np.sum(lam * acov[1:big_m + 1])) ** 2
+    if d <= 0 or g == 0:
+        return 1.0
+    return float(min(max((2.0 * g * g / d) ** (1.0 / 3.0) * n ** (1.0 / 3.0), 1.0), b_max))
+
+
+def auto_mean_block(*series) -> float:
+    """One block length for paired draws of several series: the largest Politis-White length among them, so no series'
+    dependence is cut shorter than its own estimate asks."""
+    return max(politis_white_block(s) for s in series)
+
+
+def stationary_bootstrap_indices(n: int, n_boot: int, mean_block: float, rng: np.random.Generator) -> np.ndarray:
     """Politis and Romano (1994): each day starts a new block with probability 1 / mean_block, wrapping at the end.
     Returns an n_boot x n matrix of day positions; pass the same matrix to every series to keep them paired."""
     pos = np.arange(n, dtype=np.int32)
@@ -324,10 +387,14 @@ def post_publication(returns: pd.Series, bench: pd.Series, cash: float | pd.Seri
     cut = publication_cutoff(date)
     if cut is None:
         return None
-    r, b = returns.dropna().loc[cut:], bench.dropna().loc[cut:]
+    r_all, b_all = returns.dropna(), bench.dropna()
+    r, b = r_all.loc[cut:], b_all.loc[cut:]
     if len(r) < ANN:
         return None
-    vr, vb = value_from_returns(r), value_from_returns(b)
+    # base: the last date before the first post-publication return, so that return counts
+    before_r, before_b = r_all.index[r_all.index < r.index[0]], b_all.index[b_all.index < b.index[0]]
+    vr = value_from_returns(r, start=before_r[-1] if len(before_r) else None)
+    vb = value_from_returns(b, start=before_b[-1] if len(before_b) else None)
     return {"from": str(cut.date()), "days": len(r), "cagr": cagr(vr), "benchmark_cagr": cagr(vb), "edge": edge(cagr(vr), cagr(vb)),
             "sharpe": sharpe(r, cash), "benchmark_sharpe": sharpe(b, cash), "max_dd": max_drawdown(vr), "information_ratio": information_ratio(r, b)}
 
@@ -336,9 +403,7 @@ def post_publication(returns: pd.Series, bench: pd.Series, cash: float | pd.Seri
 def summary(returns: pd.Series, cash: float | pd.Series | None = None, bench: pd.Series | None = None, start=None) -> dict[str, float]:
     """The core block for one return series. `start` is the value-100 date before the first return, when there is one."""
     r = returns.dropna()
-    v = value_from_returns(r)
-    if start is not None:
-        v = pd.concat([pd.Series([100.0], index=[pd.Timestamp(start)]), v])
+    v = value_from_returns(r, start=start)
     out = {"final": float(v.iloc[-1]), "cagr": cagr(v), "vol": ann_vol(r), "sharpe": sharpe(r, cash), "sortino": sortino(r, cash),
            "calmar": calmar(v), "max_dd": max_drawdown(v), "dd_duration_days": drawdown_duration(v), "cvar_95": cvar_95(r),
            "skew": skew(r), "best_days_removed_cagr": cagr_without_best_days(r), "days": len(r)}

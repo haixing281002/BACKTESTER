@@ -106,6 +106,16 @@ def integrity_row(checks: list[dict[str, Any]] | None, reconciles: bool | None, 
     return Row("data_integrity", "Data integrity", PASS if ok else FAIL, value=coverage, threshold=min_coverage, evidence="; ".join(bits))
 
 
+def _boot_evidence(e: dict) -> str:
+    s = "share of draws where the Sharpe gap to the benchmark is at or below zero"
+    if e.get("bootstrap_block") is not None:
+        s += f"; mean block {e['bootstrap_block']:.1f} days ({e.get('bootstrap_block_method', 'automatic')})"
+    sens = e.get("bootstrap_sensitivity") or {}
+    if sens:
+        s += "; at fixed blocks " + ", ".join(f"{k} days p {v:.3f}" for k, v in sens.items()) + " (reported, not judged)"
+    return s
+
+
 def evaluate(e: dict[str, Any], th: dict[str, Any], mandate_limits: dict[str, Any], overrides: list[dict[str, Any]] | None = None) -> GateV2Result:
     """`e` is the evidence (ros.validation.gate_evidence), `th` the loaded thresholds file. Every number is at the cost on the run's card."""
     h: list[Row] = [
@@ -119,7 +129,7 @@ def evaluate(e: dict[str, Any], th: dict[str, Any], mandate_limits: dict[str, An
     p = e.get("bootstrap_p")
     p_max = th["bootstrap"]["p_max"]
     h.append(Row("bootstrap", "Paired bootstrap, at the card's cost", NOT_RUN if p is None else (PASS if p <= p_max else FAIL), value=p, threshold=f"<= {p_max}",
-                 evidence="share of draws where the Sharpe gap to the benchmark is at or below zero"))
+                 evidence=_boot_evidence(e)))
 
     d = th["deflated_sharpe"]
     sp = th["sub_period"]

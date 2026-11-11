@@ -6,8 +6,9 @@ Answers one question: is this result real, or is it a number we manufactured?
 Contents:
   replication_gap    -- our run vs the numbers printed in the paper
   subperiod_table    -- does it work in every regime, or one lucky decade?
-  walk_forward       -- out-of-sample by construction
-  stationary_bootstrap -- Politis-Romano CIs and PAIRED Sharpe differences
+  walk_forward_split / oos_summary -- per-window metrics and excess over a benchmark: sub-period stability for rules
+                        with no fitted parameters, out of sample only when the rules were fitted
+  stationary_bootstrap -- Politis-Romano CIs and PAIRED Sharpe differences, Politis-White block length
   deflated_sharpe    -- Bailey & Lopez de Prado, penalised by trials tried
   cost_sensitivity   -- at what cost does the edge die?
   lag_sensitivity    -- does the edge survive realistic implementation delay?
@@ -82,11 +83,9 @@ def subperiod_table(results, rf_daily: pd.Series | None = None,
     out: dict[str, dict[str, float]] = {}
     for res in results:
         row: dict[str, float] = {}
-        for i in range(n_periods):
-            lo, hi = edges[i], edges[i + 1]
-            v = res.value.loc[lo:hi]
-            r = res.returns.loc[lo:hi]
-            if len(v) < 60:
+        for lo, hi, days, anchor in core.split_windows(res.value.index, edges):
+            v, r = _anchored(res.value, days, anchor), res.returns.reindex(days)
+            if len(days) < 60:
                 row[f"{lo.year}-{hi.year}"] = float("nan")
                 continue
             rf = rf_daily.loc[lo:hi] if rf_daily is not None else None
@@ -107,6 +106,11 @@ def subperiod_table(results, rf_daily: pd.Series | None = None,
     return pd.DataFrame(out).T
 
 
+def _anchored(value: pd.Series, days: pd.DatetimeIndex, anchor) -> pd.Series:
+    """A window's value series, starting from the last value before the window so its first return counts."""
+    return value.reindex(days) if anchor is None else value.reindex(days.insert(0, anchor))
+
+
 def walk_forward_split(index: pd.DatetimeIndex, n_folds: int = 4,
                        min_train_years: float = 5.0) -> list[tuple[pd.Timestamp, pd.Timestamp]]:
     """Anchored (expanding-window) walk-forward test windows.
@@ -123,16 +127,24 @@ def walk_forward_split(index: pd.DatetimeIndex, n_folds: int = 4,
     return [(edges[i], edges[i + 1]) for i in range(n_folds)]
 
 
-def oos_summary(result, splits, rf_daily=None) -> pd.DataFrame:
+def oos_summary(result, splits, rf_daily=None, bench=None) -> pd.DataFrame:
+    """Metrics per window: half-open windows, each anchored on the last value before it so its first return counts. With
+    `bench` (same shape as `result`), each window is also judged on excess over the benchmark: excess CAGR and Sharpe gap.
+    For rules with no fitted parameters this is sub-period stability, not out-of-sample evidence."""
     rows = []
-    for lo, hi in splits:
-        v, r = result.value.loc[lo:hi], result.returns.loc[lo:hi]
-        if len(v) < 60:
+    edges = [lo for lo, _ in splits] + [splits[-1][1]] if splits else []
+    for lo, hi, days, anchor in core.split_windows(result.value.index, edges):
+        v, r = _anchored(result.value, days, anchor), result.returns.reindex(days)
+        if len(days) < 60:
             continue
-        rf = rf_daily.loc[lo:hi] if rf_daily is not None else None
-        rows.append({"window": f"{lo.date()}..{hi.date()}", "n": len(v),
-                     "cagr": cagr(v), "vol": ann_vol(r),
-                     "sharpe": sharpe(r, rf), "max_dd": max_drawdown(v)})
+        rf = rf_daily.reindex(days) if rf_daily is not None else None
+        row = {"window": f"{days[0].date()}..{days[-1].date()}", "n": len(days),
+               "cagr": cagr(v), "vol": ann_vol(r), "sharpe": sharpe(r, rf), "max_dd": max_drawdown(v)}
+        if bench is not None:
+            bv, br = _anchored(bench.value, days, anchor), bench.returns.reindex(days)
+            row.update(benchmark_cagr=cagr(bv), benchmark_sharpe=sharpe(br, rf))
+            row.update(excess_cagr=row["cagr"] - row["benchmark_cagr"], sharpe_gap=row["sharpe"] - row["benchmark_sharpe"])
+        rows.append(row)
     return pd.DataFrame(rows)
 
 
@@ -143,9 +155,10 @@ def stationary_bootstrap(
     returns_map: dict[str, pd.Series],
     rf_daily: pd.Series | None = None,
     n_boot: int = 2000,
-    mean_block: int = 21,
+    mean_block: float | str = "auto",
     seed: int = 7,
     baseline: str | None = None,
+    sensitivity: tuple[float, ...] = (5, 21, 63),
 ) -> dict[str, Any]:
     """Bootstrap CIs for CAGR / Sharpe / maxDD, plus PAIRED Sharpe differences and, as evidence only, paired
     max-drawdown gaps.
@@ -166,6 +179,13 @@ def stationary_bootstrap(
     arr = aligned.to_numpy(dtype=float)
     per_year = n / ((aligned.index[-1] - aligned.index[0]).days / 365.25)
 
+    method = "Politis-White (2004, 2009 correction), the largest over the series" if mean_block == "auto" else "fixed"
+    if mean_block == "auto":
+        cols = [arr[:, k] for k in range(arr.shape[1])]
+        if baseline in names:
+            b0 = names.index(baseline)
+            cols += [arr[:, b0] - arr[:, k] for k in range(arr.shape[1]) if k != b0]
+        mean_block = core.auto_mean_block(*cols)
     idx = core.stationary_bootstrap_indices(n, n_boot, mean_block, np.random.default_rng(seed))
     sharpes, dds, cagrs = {}, {}, {}
     for k, nm in enumerate(names):
@@ -184,7 +204,7 @@ def stationary_bootstrap(
         return [float(np.percentile(a, 2.5)), float(np.percentile(a, 97.5))]
 
     out: dict[str, Any] = {
-        "n_boot": n_boot, "mean_block": mean_block, "n_obs": n,
+        "n_boot": n_boot, "mean_block": float(mean_block), "block_method": method, "n_obs": n,
         "intervals": {nm: {"cagr": ci(cagrs[nm]), "sharpe": ci(sharpes[nm]), "max_dd": ci(dds[nm])} for nm in names},
     }
 
@@ -205,6 +225,19 @@ def stationary_bootstrap(
             dd_gaps[nm] = {"mean_gap": float(g.mean()), "ci95": ci(g)}
         out["paired_sharpe_diff_vs_" + baseline] = diffs
         out["paired_max_dd_gap_vs_" + baseline] = dd_gaps
+        # the same paired p at fixed block lengths, reported beside the automatic one; it decides nothing
+        sens: dict[str, dict[str, float]] = {}
+        b0 = names.index(baseline)
+        for L in sensitivity:
+            ix = core.stationary_bootstrap_indices(n, n_boot, L, np.random.default_rng(seed))
+            sb = core.sharpe_draws(arr[:, b0], ix, rf)
+            sens[str(int(L))] = {}
+            for k, nm in enumerate(names):
+                if nm != baseline:
+                    d = sb - core.sharpe_draws(arr[:, k], ix, rf)
+                    d = d[np.isfinite(d)]
+                    sens[str(int(L))][nm] = float((d <= 0).mean()) if d.size else float("nan")
+        out["block_sensitivity_p_not_positive"] = sens
     return out
 
 

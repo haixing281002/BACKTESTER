@@ -62,8 +62,10 @@ def sub_period(r: pd.Series, bench: pd.Series, cash: float, fits_parameters: boo
     a window of a fixed rule tests nothing out of sample, so it is not called that. With fitted parameters, the first
     `min_train_years` are skipped and it is a walk-forward."""
     rows = []
-    for lo, hi in windows(r.index, n_windows, min_train_years if fits_parameters else 0.0):
-        x, y = r.loc[lo:hi], bench.loc[lo:hi]
+    w = windows(r.index, n_windows, min_train_years if fits_parameters else 0.0)
+    edges = [lo for lo, _ in w] + [w[-1][1]] if w else []
+    for lo, hi, days, _ in core.split_windows(r.index, edges):       # half-open: no day counted in two windows
+        x, y = r.loc[days], bench.reindex(days)
         if len(x) < 60:
             continue
         sx, sy = core.sharpe(x, cash), core.sharpe(y, cash)
@@ -73,16 +75,25 @@ def sub_period(r: pd.Series, bench: pd.Series, cash: float, fits_parameters: boo
             "positive": int(sum(g > 0 for g in gaps)), "worst": float(min(gaps)) if gaps else float("nan")}
 
 
-def paired_bootstrap(r: pd.Series, bench: pd.Series, cash: float, n_boot: int = 2000, mean_block: int = 21, seed: int = 7) -> dict[str, float]:
+def paired_bootstrap(r: pd.Series, bench: pd.Series, cash: float, n_boot: int = 2000, mean_block: float | str = "auto",
+                     seed: int = 7, sensitivity: tuple[float, ...] = (5, 21, 63)) -> dict[str, Any]:
     """Share of draws where strategy Sharpe minus benchmark Sharpe is at or below zero, plus the paired max-drawdown gap
-    as evidence only."""
+    as evidence only. mean_block "auto" is the Politis-White length (core.auto_mean_block over the strategy, the benchmark
+    and their difference); the same p at each `sensitivity` length is reported beside it and decides nothing."""
     df = pd.concat([r, bench], axis=1).dropna()
     x, y = df.iloc[:, 0].to_numpy(dtype=float), df.iloc[:, 1].to_numpy(dtype=float)
-    idx = core.stationary_bootstrap_indices(len(x), n_boot, mean_block, np.random.default_rng(seed))
-    d = core.sharpe_draws(x, idx, cash) - core.sharpe_draws(y, idx, cash)
-    d = d[np.isfinite(d)]
+    block = core.auto_mean_block(x, y, x - y) if mean_block == "auto" else float(mean_block)
+
+    def draw(length):
+        ix = core.stationary_bootstrap_indices(len(x), n_boot, length, np.random.default_rng(seed))
+        dd = core.sharpe_draws(x, ix, cash) - core.sharpe_draws(y, ix, cash)
+        return ix, dd[np.isfinite(dd)]
+
+    idx, d = draw(block)
     g = core.max_drawdown_draws(y, idx) - core.max_drawdown_draws(x, idx)
-    return {"p": float((d <= 0).mean()), "mean_gap": float(d.mean()), "max_dd_gap_mean": float(g.mean())}
+    return {"p": float((d <= 0).mean()), "mean_gap": float(d.mean()), "max_dd_gap_mean": float(g.mean()),
+            "mean_block": float(block), "block_method": "Politis-White (2004, 2009 correction)" if mean_block == "auto" else "fixed",
+            "sensitivity": {str(int(L)): float((draw(L)[1] <= 0).mean()) for L in sensitivity}}
 
 
 def factor_alpha(r: pd.Series, factors: pd.DataFrame, cash: float, product_cost_bp: dict[str, float] | None = None, leave_one_out: bool = True) -> dict[str, Any]:

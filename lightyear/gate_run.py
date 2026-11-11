@@ -75,9 +75,14 @@ def score(rd, card_path, df, trades=None, holdings=None, spec_failures=None) -> 
     series = r
     basis = f"daily returns at the card's cost, {float(card.costs.spread_bps):g}bp round trip"
     cash = core.daily_cash(config.cash_rate_for(card)[0])
-    e["net_edge"] = core.cagr(core.value_from_returns(series)) - core.cagr(core.value_from_returns(b))
-    boot = ev.paired_bootstrap(series, b, cash)
-    e.update(bootstrap_p=boot["p"], bootstrap_max_dd_gap=boot["max_dd_gap_mean"])
+    from lightyear.charts import start_date
+    t0 = start_date(df["date"])                      # the NSE session before the first return: the one CAGR base
+    e["net_edge"] = core.cagr_from_returns(series, t0) - core.cagr_from_returns(b, t0)
+    bt = th.get("bootstrap") or {}
+    boot = ev.paired_bootstrap(series, b, cash, mean_block=bt.get("mean_block", "auto"),
+                               sensitivity=tuple(bt.get("sensitivity_blocks", (5, 21, 63))))
+    e.update(bootstrap_p=boot["p"], bootstrap_max_dd_gap=boot["max_dd_gap_mean"], bootstrap_block=boot["mean_block"],
+             bootstrap_block_method=boot["block_method"], bootstrap_sensitivity=boot["sensitivity"])
     sp = ev.sub_period(series, b, cash, fits_parameters=bool(card.fits_parameters))
     e.update(sub_period_name=sp["name"], sub_period_n=sp["n"], sub_period_positive=sp["positive"], sub_period_worst=sp["worst"],
              sub_period_evidence="; ".join(f"{w['window']}: Sharpe {w['sharpe']:.2f}, benchmark {w['benchmark_sharpe']:.2f}" for w in sp["windows"]))
@@ -94,5 +99,5 @@ def score(rd, card_path, df, trades=None, holdings=None, spec_failures=None) -> 
         e.update(ev.book_tests(series, bk, b))
     res = gate_v2.evaluate(e, th, config.mandate()).to_dict()
     res["basis"] = basis
-    res["summary"] = {k: e.get(k) for k in ("net_edge", "bootstrap_p", "bootstrap_max_dd_gap", "alpha", "alpha_t", "sub_period_positive", "sub_period_n", "sub_period_worst", "post_publication_edge")}
+    res["summary"] = {k: e.get(k) for k in ("net_edge", "bootstrap_p", "bootstrap_max_dd_gap", "bootstrap_block", "bootstrap_sensitivity", "alpha", "alpha_t", "sub_period_positive", "sub_period_n", "sub_period_worst", "post_publication_edge")}
     return res

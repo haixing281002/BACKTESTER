@@ -387,21 +387,22 @@ def main(argv=None) -> int:
     R.block("    " + sub.round(2).to_string().replace("\n", "\n    "))
 
     splits = rv.walk_forward_split(primary.value.index, n_folds=4, min_train_years=5.0)
-    oos = rv.oos_summary(primary, splits, rf_daily=rf)
+    oos = rv.oos_summary(primary, splits, rf_daily=rf, bench=runset.by_name(card.universe.benchmark))
     if not oos.empty:
         R.p("")
-        R.p("  ANCHORED WALK-FORWARD (out-of-sample windows):")
+        R.p("  SUB-PERIOD STABILITY (windows after a 5-year start, judged on excess over the benchmark;"
+            " out of sample only if the card fits parameters):")
         R.block("    " + oos.round(3).to_string(index=False).replace("\n", "\n    "))
         research["oos_min_sharpe"] = float(oos["sharpe"].min())
 
     ret_map = {r.name: r.returns for r in results}
     boot = rv.stationary_bootstrap(ret_map, rf_daily=rf, n_boot=args.n_boot,
-                                   mean_block=21, baseline=primary.name)
+                                   mean_block="auto", baseline=primary.name)
     research["bootstrap"] = boot
     if "intervals" in boot:
         R.p("")
         R.p(f"  STATIONARY BLOCK BOOTSTRAP  ({boot['n_boot']} reps, mean block "
-            f"{boot['mean_block']}d, paired draws):")
+            f"{boot['mean_block']:.1f}d, Politis-White, paired draws):")
         rows = [{"portfolio": k,
                  "sharpe_ci95": f"[{v['sharpe'][0]:.2f}, {v['sharpe'][1]:.2f}]",
                  "cagr_ci95": f"[{v['cagr'][0]:.1%}, {v['cagr'][1]:.1%}]",
