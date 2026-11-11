@@ -1,4 +1,4 @@
-# Quant AI Researcher by Harshil Pahuja
+# Quant AI Researcher
 """The NIFTY 500 universe v2 (data/processed/universe/) and the card field that selects it.
 
 Every test here reads the committed artifacts; none needs the Ace file. The tests that compare v1 with v2 need the
@@ -24,6 +24,12 @@ pytestmark = pytest.mark.skipif(not HAVE_V2, reason="universe v2 not built on th
 
 def _csv(name, **kw):
     return pd.read_csv(os.path.join(UNI, name), skiprows=1, keep_default_na=False, **kw)
+
+
+@pytest.fixture(autouse=True)
+def _caches_outside_the_repo(live_processed_dir, monkeypatch):
+    """Every test here reads the real files; the loaders' caches go to a folder outside the repository."""
+    monkeypatch.setattr(sources, "PROCESSED_DIR", live_processed_dir)
 
 
 @pytest.fixture(scope="module")

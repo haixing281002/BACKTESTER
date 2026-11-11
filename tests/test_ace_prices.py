@@ -1,3 +1,4 @@
+# Quant AI Researcher
 """ros/data/ace.py: the Ace Equity price loader, on a small synthetic file in the real layout, plus a live
 check against the real files when they are on this machine."""
 import os
@@ -146,7 +147,8 @@ def test_a_missing_file_names_the_path_and_the_override(tmp_path):
 
 @pytest.mark.skipif(not (os.path.isfile(sources.ACE_PRICES_CSV) and os.path.isfile(sources.NIFTY500_HOLDINGS_XLSX)),
                     reason="the real Ace file and holdings workbook are not on this machine")
-def test_live_ace_file_matches_what_the_module_documents():
+def test_live_ace_file_matches_what_the_module_documents(live_processed_dir, monkeypatch):
+    monkeypatch.setattr(sources, "PROCESSED_DIR", live_processed_dir)     # caches built here, never in data/processed/
     prov = ace.provenance()
     assert prov["first_date"] == "2000-01-03" and prov["securities"] >= 4000 and prov["rows"] > 9_000_000
     assert prov["dropped_rows"]["bad_date"] == 0

@@ -131,7 +131,8 @@ def test_a_workbook_without_the_bifurcation_layout_is_refused(tmp_path, monkeypa
 
 
 @pytest.mark.skipif(not os.path.isfile(sources.NIFTY500_HOLDINGS_XLSX), reason="holdings workbook not on this machine")
-def test_live_workbook_matches_what_the_module_documents():
+def test_live_workbook_matches_what_the_module_documents(live_processed_dir, monkeypatch):
+    monkeypatch.setattr(sources, "PROCESSED_DIR", live_processed_dir)     # caches built here, never in data/processed/
     summ = n.snapshot_summary()
     assert summ.index.min() == pd.Timestamp("2012-03-31")
     assert summ.loc[~summ["complete"]].index.strftime("%Y-%m-%d").tolist() == ["2017-09-30", "2018-06-30", "2018-09-30"]

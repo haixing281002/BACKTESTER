@@ -43,3 +43,10 @@ def _no_writes_outside_tmp_path(request):
     if changed:
         pytest.fail(f"test changed {len(changed)} file(s) inside the repository (only tmp_path is allowed): "
                     f"{changed[:15]}", pytrace=False)
+
+
+@pytest.fixture(scope="session")
+def live_processed_dir(tmp_path_factory) -> str:
+    """One cache folder OUTSIDE the repository, shared by every test that reads the real data files, so the Ace
+    file is parsed once per session and nothing is written under data/processed/."""
+    return str(tmp_path_factory.mktemp("processed"))
