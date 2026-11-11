@@ -664,29 +664,51 @@ def basket(d: dict, sig: dict, scheme: str) -> pd.Series:
 # ------------------------------------------------------------------------------------------------- checks
 def lookahead_checks(d: dict, sig: dict, sched, rng) -> list[dict]:
     """(a) recompute the ranking on random signal dates with every later price deleted: must be identical;
-    (b) planted leak: a score that uses the fill-day close must change the ranking; (c) hand-check slope/R2."""
+    (b) planted one-day leak: the same test on a score built from TOMORROW's close must catch it;
+    (c) scramble test (ros/validation/lookahead.py): every price after a mid-sample signal date perturbed, the whole
+    book re-run: weights and NAV up to that date must be bit-identical; (d) hand-check slope/R2."""
     from scipy import stats
+
+    from ros.validation import lookahead as la
     out = []
     picks = rng.choice(len(sched), size=5, replace=False)
-    same, leak_detected = 0, 0
+    panels = ("close", "high", "low", "unadj_close")
+
+    def truncated(dd, s):
+        t = {k: v.loc[:s] for k, v in dd.items() if k in panels}
+        t.update({"isins": dd["isins"], "cal": dd["cal"][dd["cal"] <= s]})
+        return t
+
+    def leaky_score(dd):          # the planted leak lives INSIDE the signal: every price read one day early
+        return build_signals({**dd, **{k: dd[k].shift(-1) for k in panels}}, P["regression_days"], P["gap_limit"])["score"]
+
+    leaky_full = leaky_score(d)
+    same, caught = 0, 0
     for p in picks:
-        s, f = sched[p]
-        full = sig["score"].loc[s]
-        trunc = {k: v.loc[:s] for k, v in d.items() if k in ("close", "high", "low", "unadj_close")}
-        trunc.update({k: d[k] for k in ("cal", "isins")})
-        trunc["cal"] = d["cal"][d["cal"] <= s]
-        sig_t = build_signals(trunc, P["regression_days"], P["gap_limit"])
-        same += int(np.allclose(full.to_numpy(dtype=float), sig_t["score"].loc[s].to_numpy(dtype=float), equal_nan=True))
-        # planted leak: the ranking recomputed with the window ending on the FILL day
-        leaked = sig["score"].loc[f]
-        mem = d["members"].loc[s]
-        a = full[mem].dropna().sort_values(ascending=False).index[:93]
-        b = leaked[mem].dropna().sort_values(ascending=False).index[:93]
-        leak_detected += int(list(a) != list(b))
+        s, _ = sched[p]
+        full = sig["score"].loc[s].to_numpy(dtype=float)
+        part = build_signals(truncated(d, s), P["regression_days"], P["gap_limit"])["score"].loc[s].to_numpy(dtype=float)
+        same += int(np.allclose(full, part, equal_nan=True))
+        lfull = leaky_full.loc[s].to_numpy(dtype=float)
+        lpart = leaky_score(truncated(d, s)).loc[s].to_numpy(dtype=float)
+        caught += int(not np.allclose(lfull, lpart, equal_nan=True))
     out.append({"check": "look-ahead tripwire: ranking recomputed with every later price deleted is identical",
                 "passed": same == 5, "detail": f"{same}/5 random signal dates identical"})
-    out.append({"check": "planted leak control: a score read one day late changes the top-20% list",
-                "passed": leak_detected == 5, "detail": f"{leak_detected}/5 dates changed (a tripwire that cannot see a leak is no tripwire)"})
+    out.append({"check": "planted leak control: the same tripwire catches a score built from tomorrow's close",
+                "passed": caught == 5, "detail": f"caught on {caught}/5 dates (a tripwire that cannot see a leak is no tripwire)"})
+    # (c) scramble: one noise matrix for all four panels, so each day's high/low/close stay consistent
+    cut = sched[len(sched) // 2][0]
+    noise = la.scramble_after(pd.DataFrame(1.0, index=d["cal"], columns=d["isins"]), cut, rng)
+    sd = {**d, **{k: d[k] * noise for k in panels}}
+    base = simulate(d, sig, P)
+    scr = simulate(sd, build_signals(sd, P["regression_days"], P["gap_limit"]), P)
+    w_ok = base["weights"].loc[:cut].equals(scr["weights"].loc[:cut])
+    n_ok = base["nav"].loc[:cut].equals(scr["nav"].loc[:cut])
+    moved = not base["nav"].equals(scr["nav"])
+    out.append({"check": "scramble test: every price after a mid-sample signal date perturbed; weights and NAV up to it unchanged",
+                "passed": bool(w_ok and n_ok and moved),
+                "detail": f"up to {cut.date()}: weights {'identical' if w_ok else 'CHANGED'}, NAV {'identical' if n_ok else 'CHANGED'}; "
+                          f"after it the NAV {'moved' if moved else 'did not move'}"})
     # hand check of slope and R2 against scipy on two names at two dates
     ok = 0
     tested = 0
