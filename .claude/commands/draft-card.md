@@ -2,6 +2,7 @@
 description: "Stage 02 — draft a Strategy Card from an ingested analysis"
 argument-hint: "<analysis.json> [quick|replication|adaptation]"
 ---
+<!-- Quant AI Researcher -->
 
 # Stage 02 — STRATEGY CARD  (LLM owns, code validates)
 

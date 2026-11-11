@@ -2,6 +2,7 @@
 description: "Stage 01 — read a paper, decide the universe, and reconstruct the strategy"
 argument-hint: "<paper.pdf>"
 ---
+<!-- Quant AI Researcher -->
 
 # Stage 01 — INGEST  (LLM owns; the heaviest stage in the pipeline)
 

@@ -1,3 +1,4 @@
+# Quant AI Researcher
 """Gates A and B, and the promotion ladder.
 
 The board replaced 'promising / rejected' with a governed ladder:

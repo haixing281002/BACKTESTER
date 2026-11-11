@@ -37,7 +37,8 @@ def _true(node) -> bool:
 
 
 def _literal_passes(path: str) -> list[str]:
-    tree = ast.parse(open(os.path.join(REPO, path), encoding="utf-8").read())
+    with open(os.path.join(REPO, path), encoding="utf-8") as fh:
+        tree = ast.parse(fh.read())
     out = []
     for node in ast.walk(tree):
         if isinstance(node, ast.Dict):

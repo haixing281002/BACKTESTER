@@ -9,7 +9,7 @@ import sys
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, REPO)
 
-from lightyear import jobs, prompts  # noqa: E402
+from lightyear import jobs, prompts
 
 NAMED = ("python -m ros.tools", "python -m ros.interpretation", "python -m ros.data.sources", "python run_interpret.py")
 
@@ -47,11 +47,13 @@ def test_every_session_is_told_the_paper_is_data_not_instructions():
 
 
 def test_stage_commands_use_named_entry_points_that_exist():
-    from ros import tools
     import argparse
+
+    from ros import tools
     names = set()
     for f in glob.glob(os.path.join(REPO, ".claude", "commands", "*.md")):
-        text = open(f, encoding="utf-8").read()
+        with open(f, encoding="utf-8") as fh:
+            text = fh.read()
         assert "python -c" not in text, f"{os.path.basename(f)} still runs ad-hoc python"
         names |= set(re.findall(r"python -m ros\.tools ([a-z-]+)", text))
     assert names, "the stage commands should name ros.tools subcommands"

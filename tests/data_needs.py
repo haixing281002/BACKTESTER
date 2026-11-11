@@ -8,7 +8,7 @@ import pytest
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, REPO)
-from ros.data import sources  # noqa: E402
+from ros.data import sources
 
 SYNTHETIC_PAPER = os.path.join(REPO, "tests", "fixtures", "synthetic_paper.pdf")
 REAL_PAPER = os.path.join(REPO, "docs", "devanathan_2026_simple_dynamic_sbg.pdf")

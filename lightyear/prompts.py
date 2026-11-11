@@ -1,4 +1,4 @@
-# Quant AI Researcher by Harshil Pahuja
+# Quant AI Researcher
 """Prompts for the two headless Claude Code phases, and the file contract each must satisfy.
 
 Each phase announces stages with `LIGHTYEAR-STAGE: <id>` lines (the server also recognises looser forms) and

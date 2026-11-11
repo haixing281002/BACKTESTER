@@ -1,3 +1,4 @@
+<!-- Quant AI Researcher -->
 # AI Research Operating System
 
 Long-only Indian equity fund, NIFTY500 universe, benchmarked to NIFTY 500.

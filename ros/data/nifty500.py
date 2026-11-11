@@ -1,3 +1,4 @@
+# Quant AI Researcher
 """NIFTY 500 membership, point in time, from the holdings workbook (ros/data/sources.py: NIFTY500_HOLDINGS_XLSX).
 
 THE FILE

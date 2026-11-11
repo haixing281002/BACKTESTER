@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Quant AI Researcher
 """AI Research Operating System -- pipeline driver.
 
     python run_pipeline.py --card cards/<card>.yaml

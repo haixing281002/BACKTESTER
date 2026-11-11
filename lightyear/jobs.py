@@ -1,4 +1,4 @@
-# Quant AI Researcher by Harshil Pahuja
+# Quant AI Researcher
 """Run state machine and the headless Claude Code driver.
 
 States:  phase_a -> gate_a -> phase_b -> building -> gate_b -> decided

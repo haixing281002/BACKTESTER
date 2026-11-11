@@ -2,6 +2,7 @@
 description: "Gate A — assemble the human review queue. You do NOT decide."
 argument-hint: "<card.yaml>"
 ---
+<!-- Quant AI Researcher -->
 
 # GATE A — THE CARD, DISPLAYED (informational, not blocking — changed 2026-10-06)
 

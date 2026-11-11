@@ -31,11 +31,12 @@ def client(tmp_path, monkeypatch):
     monkeypatch.setenv("LIGHTYEAR_PORT", "8100")
     import lightyear.jobs
     import lightyear.paths
-    import lightyear.server
     import lightyear.security
+    import lightyear.server
     for m in (lightyear.paths, lightyear.security, lightyear.jobs, lightyear.server):
         importlib.reload(m)
     from fastapi.testclient import TestClient
+
     from lightyear import security
     with TestClient(lightyear.server.app, base_url="http://127.0.0.1:8100",
                     headers={security.HEADER: security.TOKEN}) as c:

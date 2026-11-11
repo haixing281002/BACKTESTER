@@ -1,4 +1,4 @@
-# Quant AI Researcher by Harshil Pahuja
+# Quant AI Researcher
 """Stocks on the Move (Andreas Clenow, 2015) on NIFTY 500 members: the book's own rules, translated to India.
 
 Executes cards/oceanofpdf_com_stocks_on_the_move_andreas_clenow.yaml (Step 05) and computes the Step 06/07
@@ -1152,7 +1152,7 @@ def main() -> int:
 
     # ---------------------------------------------------------------- charts
     footnote = (f"Price returns (no dividends in the Ace file); {COST_LABEL} (the card's costs.spread_bps); cash at a flat "
-                f"{P['cash_rate']:.0%}. Benchmark: NIFTY 500 price index. Quant AI Researcher by Harshil Pahuja")
+                f"{P['cash_rate']:.0%}. Benchmark: NIFTY 500 price index. Quant AI Researcher")
     charts = save_clean_charts(nav, bench, charts_dir, SLUG, strategy_name="Stocks on the Move book", benchmark_name="NIFTY 500 (price)",
                                weights=w_, sleeve=mom50, sleeve_name="NIFTY500 Momentum 50 (price, backfilled)", footnote=footnote)
     produced += charts

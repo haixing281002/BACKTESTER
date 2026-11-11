@@ -2,6 +2,7 @@
 description: "Stage 08 — has this question already been answered?"
 argument-hint: "<what you propose to test>"
 ---
+<!-- Quant AI Researcher -->
 
 # Stage 08 — LIBRARIAN  (code stores, LLM recalls)
 

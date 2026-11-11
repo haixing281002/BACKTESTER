@@ -116,7 +116,10 @@ def main(argv=None) -> int:
             needs_cross_section=not a.no_cross_section, min_names=a.min_names, cap_segment=a.cap_segment,
             sector=a.sector, min_history_years=a.min_history_years, must_be_in_mandate=a.in_mandate)))
     elif a.cmd == "diversification":
-        from ros.data.diversification import diversification_report, greedy_diverse_subset
+        from ros.data.diversification import (
+            diversification_report,
+            greedy_diverse_subset,
+        )
         from ros.data.loaders import load_nse_workbook_combined
         frame, _ = load_nse_workbook_combined(sources.NSE_INDEX_WORKBOOK)
         exclude = set(a.exclude or ["NIFTY 500"])

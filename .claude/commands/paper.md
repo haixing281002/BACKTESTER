@@ -2,6 +2,7 @@
 description: "Full pipeline on one paper, stages 00 through Gate B"
 argument-hint: "<paper.pdf>"
 ---
+<!-- Quant AI Researcher -->
 
 # Paper to Position — the whole chain on `$1`
 

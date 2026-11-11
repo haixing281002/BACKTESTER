@@ -75,8 +75,8 @@ def _busy_guard():
 
 @app.get("/", response_class=HTMLResponse)
 def index():
-    page = open(os.path.join(STATIC, "index.html"), encoding="utf-8").read()
-    return page.replace("__LIGHTYEAR_TOKEN__", security.TOKEN)
+    with open(os.path.join(STATIC, "index.html"), encoding="utf-8") as fh:
+        return fh.read().replace("__LIGHTYEAR_TOKEN__", security.TOKEN)
 
 
 @app.get("/api/health")

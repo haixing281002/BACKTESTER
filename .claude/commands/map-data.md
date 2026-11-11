@@ -2,6 +2,7 @@
 description: "Stage 03 — map a paper's data requirements onto what the fund holds"
 argument-hint: "<card.yaml>"
 ---
+<!-- Quant AI Researcher -->
 
 # Stage 03 — DATA FEASIBILITY  (code binds, LLM advises)
 

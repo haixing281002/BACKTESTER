@@ -1,3 +1,4 @@
+# Quant AI Researcher
 """ros/data/nifty500.py: point-in-time NIFTY 500 membership from the holdings workbook, on a synthetic workbook in
 the real layout, plus a live check when the real file is present."""
 import os

@@ -1,4 +1,4 @@
-# Quant AI Researcher by Harshil Pahuja
+# Quant AI Researcher
 """Did the backtest do what the approved card says? An independent audit of the run's OWN hand-off files against the
 card, computed by Lightyear after Phase B (added 2026-10-30). It does not trust the script's self-reported checks: it
 re-reads holdings.csv, trades.csv, selection.csv, comparators.csv, daily_returns.csv and out/rebalance_log.csv and tests
@@ -180,7 +180,7 @@ def run(run_dir, card_path, results=None):
     n_fail = sum(1 for c in out if c["passed"] is False)
     n_na = sum(1 for c in out if c["passed"] is None)
     summary = {"checks": out, "n_pass": sum(1 for c in out if c["passed"] is True), "n_fail": n_fail, "n_not_checkable": n_na,
-               "card_path": card_path, "signature": "Quant AI Researcher by Harshil Pahuja"}
+               "card_path": card_path, "signature": "Quant AI Researcher"}
     with open(os.path.join(run_dir, "spec_audit.json"), "w", encoding="utf-8") as fh:
         json.dump(summary, fh, indent=1, default=str)
     return summary

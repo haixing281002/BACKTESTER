@@ -34,6 +34,7 @@ def ly(tmp_path, monkeypatch):
     for m in (lightyear.paths, lightyear.security, lightyear.jobs, lightyear.server):
         importlib.reload(m)
     from fastapi.testclient import TestClient
+
     from lightyear import jobs, security
     with TestClient(lightyear.server.app, base_url="http://127.0.0.1:8100") as c:
         yield c, jobs, security

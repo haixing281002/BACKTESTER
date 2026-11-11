@@ -1,3 +1,4 @@
+# Quant AI Researcher
 """python -m lightyear [--port 8100] [--no-browser]"""
 import argparse
 import os
