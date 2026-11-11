@@ -16,10 +16,10 @@ import subprocess
 import sys
 
 import pytest
+from data_needs import needs_nse_workbook
 
 from ros.cards.schema import load_card
 from ros.governance.gates import Criterion, GateResult, gate_a, gate_b
-from data_needs import needs_nse_workbook
 
 CARD = "examples/cards/devanathan_2026_india_factor_adaptation.yaml"
 
@@ -237,6 +237,6 @@ def test_uncomputed_evidence_is_never_reported_as_a_pass():
 def test_alpha_must_be_significantly_positive_not_just_significant(t_stat, passes):
     """A strategy whose alpha is significantly NEGATIVE (t = -3) must fail 'alpha survives', not pass on |t|."""
     port = dict(_FULL_PORT, alpha_t_hac=t_stat)
-    row = [c for c in gate_b(load_card(CARD), _FULL_RESEARCH, port).criteria
-           if c.name == "alpha survives the factor fingerprint"][0]
+    row = next(c for c in gate_b(load_card(CARD), _FULL_RESEARCH, port).criteria
+               if c.name == "alpha survives the factor fingerprint")
     assert row.passed is passes

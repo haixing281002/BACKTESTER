@@ -12,10 +12,10 @@ stay clearly separate from a real governed Step 08 verdict.
 import json
 from datetime import UTC, datetime
 
+from data_needs import SYNTHETIC_PAPER
+
 from ros.agents.analysts import _precedent_block
 from ros.agents.orchestrator import AgenticPipeline
-
-from data_needs import SYNTHETIC_PAPER
 from ros.governance.library import LibraryEntry, StrategyLibrary, make_entry_id
 
 FIX = "ros/agents/fixtures/devanathan_2026.json"

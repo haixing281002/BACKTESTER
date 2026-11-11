@@ -11,7 +11,6 @@ stocks from memory produces a plausible, unverifiable list -- and that is worse
 than no list, because it looks checked and a reviewer skips it.
 """
 import pytest
-
 from data_needs import needs_real_paper
 
 from ros.cards.completeness import assess as card_completeness

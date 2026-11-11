@@ -19,7 +19,6 @@ import subprocess
 import sys
 
 import pytest
-
 from data_needs import needs_real_paper
 
 from ros.papers import (
@@ -200,7 +199,7 @@ def test_nothing_on_a_live_path_globs_the_users_cards_and_loads_one():
 
 def test_the_paper_command_tells_the_model_to_ask():
     cmd = (ROOT / ".claude/commands/paper.md").read_text(encoding="utf-8")
-    assert "ask_for_a_paper" in cmd
+    assert "python -m ros.tools paper-ask" in cmd          # ros.tools paper-ask prints ros.papers.ask_for_a_paper()
     assert "no default paper" in cmd.lower()
 
 

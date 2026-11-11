@@ -7,6 +7,7 @@ answers is: can a wrong or hostile model output reach something that matters?
 import json
 
 import pytest
+from data_needs import SYNTHETIC_PAPER
 from pydantic import BaseModel
 
 from ros.agents import schemas as S
@@ -21,8 +22,6 @@ from ros.agents.client import (
 )
 from ros.agents.orchestrator import AgenticPipeline, reconcile_feasibility
 from ros.governance.library import StrategyLibrary
-
-from data_needs import SYNTHETIC_PAPER
 
 FIX = "ros/agents/fixtures/devanathan_2026.json"
 
