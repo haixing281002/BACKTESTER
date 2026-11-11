@@ -80,7 +80,12 @@ def capacity_row(cap: dict[str, Any] | None, limit: float | None) -> Row:
     if limit is None:
         return Row("capacity", "Capacity at the fund's AUM", NOT_RUN, evidence="config/gate_thresholds.yaml has no capacity limit")
     if not cap or cap.get("status") != "computed":
-        return Row("capacity", "Capacity at the fund's AUM", NOT_RUN, threshold=limit, evidence=(cap or {}).get("why", "not computed"))
+        unit = (cap or {}).get("unit") or {}
+        at = unit.get("capital_at_limit_cr")
+        more = (f"; per Rs 1 crore the 95th-percentile trade is {unit['per_cr_p95']:.4%} of 20-day traded value, so it reaches "
+                f"the {limit:.0%} limit at about Rs {at:,.0f} crore" if at is not None and at == at else "")
+        return Row("capacity", "Capacity at the fund's AUM", NOT_RUN, threshold=limit,
+                   evidence=f"{(cap or {}).get('why', 'not computed')}{more}")
     names = cap.get("names_above_limit") or []
     return Row("capacity", "Capacity at the fund's AUM", PASS if cap["p95"] <= limit else FAIL, value=cap["p95"], threshold=limit,
                evidence=f"95th percentile of trade size / 20-day traded value; {len(names)} name(s) above the limit, {cap.get('n_no_adv', 0)} with no traded value")

@@ -273,3 +273,26 @@ def test_no_row_can_name_a_house_cost():
     from lightyear.jobs import HOUSE_COST_LABEL
     assert HOUSE_COST_LABEL.search("CAGR at the 30bp house floor (Appendix cost sweep, 30bp round trip)")
     assert not HOUSE_COST_LABEL.search("Breakeven round-trip cost vs NIFTY 500")
+
+
+def test_capacity_needs_no_aum_and_says_aum_not_set():
+    import pandas as pd
+
+    from ros.governance import gate_v2
+    from ros.metrics import core
+    days = pd.bdate_range("2024-01-01", periods=40)
+    adv = core.adv_20(pd.DataFrame({"A": [100.0] * 40, "B": [10.0] * 40}, index=days))   # Rs crore a day
+    trades = pd.DataFrame({"execution_date": [days[30], days[31]], "isin": ["A", "B"],
+                           "weight_before": [0.0, 0.0], "weight_after": [0.05, 0.02]})
+    u = core.capacity_unit(trades, adv, 0.10)
+    assert abs(u["per_cr_median"] - (0.05 / 100 + 0.02 / 10) / 2) < 1e-12
+    assert abs(u["capital_at_limit_cr"] - 0.10 / u["per_cr_p95"]) < 1e-9
+    row = gate_v2.capacity_row({"status": "AUM not set at Gate A", "why": "AUM not set at Gate A", "unit": u}, 0.10)
+    assert row.status == gate_v2.NOT_RUN and "AUM not set at Gate A" in row.evidence and "None" not in row.evidence
+
+
+def test_a_missing_value_or_threshold_is_never_shown_as_none():
+    from lightyear import gates
+    r = gates.rows([{"name": "implementable within mandate", "passed": True, "blocking": True,
+                     "value": None, "threshold": None}])[0]
+    assert r["value_raw"] == "" and r["threshold_raw"] == ""

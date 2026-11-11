@@ -13,17 +13,25 @@ from ros.validation import gate_evidence as ev
 from .paths import REPO
 
 
-def capacity(df, trades) -> dict:
-    """Trade size at the fund's AUM as a share of 20-day ADV. Not computed, and says why, until fund.yaml has an AUM."""
-    aum = config.fund().get("aum_inr_cr")
-    if not aum:
-        return {"status": "not computed", "why": "config/fund.yaml has no aum_inr_cr"}
+def capacity(df, trades, card=None) -> dict:
+    """Trade size against 20-day ADV. Always: per Rs 1 crore of capital and the capital at which the 95th-percentile
+    trade reaches the limit (no AUM assumed). At a capital size only when the card's portfolio.aum_inr_cr was set at
+    Gate A (operator's ruling 2026-11-06: AUM is set only there)."""
     if trades is None or "isin" not in trades.columns:
         return {"status": "not computed", "why": "trades.csv has no isin column"}
     from ros.data import ace
-    value = ace.wide("value_cr").loc[df["date"].min() - pd.Timedelta(days=60):df["date"].max()]
-    limit = (config.gate_thresholds().get("capacity") or {}).get("p95_adv_participation_max")
-    return {"status": "computed", "aum_inr_cr": aum, **core.capacity(trades, core.adv_20(value), float(aum), limit)}
+    try:
+        value = ace.wide("value_cr").loc[df["date"].min() - pd.Timedelta(days=60):df["date"].max()]
+    except FileNotFoundError as e:
+        return {"status": "not computed", "why": f"no traded value: {e}"}
+    adv = core.adv_20(value)
+    cap = config.gate_thresholds().get("capacity") or {}
+    limit = cap.get("p95_adv_participation_max")
+    out = {"unit": core.capacity_unit(trades, adv, limit), "limit_is_placeholder": bool(cap.get("limit_is_placeholder", True))}
+    aum = getattr(getattr(card, "portfolio", None), "aum_inr_cr", None)
+    if not aum:
+        return {"status": "AUM not set at Gate A", "why": "AUM not set at Gate A", **out}
+    return {"status": "computed", "aum_inr_cr": float(aum), **core.capacity(trades, adv, float(aum), limit), **out}
 
 
 def _checks(rd):
@@ -62,7 +70,7 @@ def score(rd, card_path, df, trades=None, holdings=None, spec_failures=None) -> 
     card = load_card(card_path if os.path.isabs(card_path) else os.path.join(REPO, card_path))
     e = {"mandate_observed": _positions(holdings), "checks": _checks(rd), "reconciles": None if spec_failures is None else spec_failures == 0}
     e["priced_coverage"], e["unpriced"] = _coverage(rd)
-    e["capacity"] = capacity(df, trades)
+    e["capacity"] = capacity(df, trades, card)
 
     series = r
     basis = f"daily returns at the card's cost, {float(card.costs.spread_bps):g}bp round trip"

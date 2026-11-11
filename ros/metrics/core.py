@@ -287,6 +287,24 @@ def capacity(trades: pd.DataFrame, adv: pd.DataFrame, aum: float, limit: float) 
             "names_above_limit": sorted(t.loc[t["participation"] > limit, "isin"].unique().tolist())}
 
 
+def capacity_unit(trades: pd.DataFrame, adv: pd.DataFrame, limit: float) -> dict[str, Any]:
+    """Capacity with NO AUM assumed. For every trade: its size for each Rs 1 crore of capital as a share of that name's
+    20-day ADV (adv in Rs crore). Reports the median and 95th percentile per Rs 1 crore, and the capital at which the
+    95th-percentile trade reaches `limit` of ADV20: capital = limit / p95 (Rs crore). A name with no ADV is counted."""
+    date = "execution_date" if "execution_date" in trades.columns else "date"
+    t = pd.DataFrame({"date": pd.to_datetime(trades[date]), "isin": trades["isin"],
+                      "share_of_capital": (trades["weight_after"].astype(float) - trades["weight_before"].astype(float)).abs()})
+    t = t[t["share_of_capital"] > 0]
+    long_adv = adv.stack().rename("adv").rename_axis(["date", "isin"]).reset_index()
+    t = t.merge(long_adv, how="left", on=["date", "isin"])
+    t["per_cr"] = t["share_of_capital"] / t["adv"].where(t["adv"] > 0)          # participation per Rs 1 crore of capital
+    ok = t["per_cr"].dropna()
+    p95 = float(ok.quantile(0.95)) if len(ok) else float("nan")
+    return {"n_trades": len(t), "n_no_adv": int(t["per_cr"].isna().sum()),
+            "per_cr_median": float(ok.median()) if len(ok) else float("nan"), "per_cr_p95": p95, "limit": limit,
+            "capital_at_limit_cr": float(limit / p95) if limit and p95 and p95 > 0 else float("nan")}
+
+
 # ---------------------------------------------------------------------------------------------- post-publication
 def publication_cutoff(date: str | None) -> pd.Timestamp | None:
     """The first day after a paper was public. A bare year means the end of that year, the cautious reading."""

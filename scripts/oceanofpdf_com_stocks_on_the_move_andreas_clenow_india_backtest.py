@@ -48,7 +48,6 @@ import argparse
 import json
 import math
 import os
-import re
 import sys
 import time
 
@@ -86,9 +85,7 @@ def _params_from_card(card) -> tuple[dict, dict]:
     """Signal parameters, cost and cash rate from the approved card. Returns (P as the engine uses it, the card's
     signal.params as written) so manifest.json can carry both and Lightyear can compare them with the card."""
     sp = dict(card.signal.params)
-    with open(CARD, encoding="utf-8") as fh:
-        m = re.search(r"CASH_PROXY_CONSTANT_(\d+)PCT", fh.read())
-    assert m, "the card must name its cash proxy as CASH_PROXY_CONSTANT_<n>PCT"
+    cash_rate, _cash_source = config.cash_rate_for(card)      # the card's universe.cash_asset; 0% when it names none
     wd = sp.get("signal_weekday", "Tuesday")
     p = {"regression_days": int(sp["regression_days"]), "annualise_power": int(sp["annualise_power"]),
          "stock_trend_days": int(sp["stock_trend_days"]), "gap_limit": float(sp["gap_limit"]), "gap_days": int(sp["gap_days"]),
@@ -97,7 +94,7 @@ def _params_from_card(card) -> tuple[dict, dict]:
          "resize_every_n_signals": int(sp["resize_every_n_signals"]), "resize_tolerance": float(sp["resize_tolerance"]),
          "min_history_days": int(sp["min_history_days"]),
          "signal_weekday": _WEEKDAY[str(wd).lower()] if isinstance(wd, str) else int(wd),
-         "cash_rate": int(m.group(1)) / 100.0, "cost_bp": float(card.costs.spread_bps), "use_index_filter": True}
+         "cash_rate": cash_rate, "cost_bp": float(card.costs.spread_bps), "use_index_filter": True}
     return p, sp
 
 
@@ -1072,7 +1069,7 @@ def main() -> int:
     s15, b15 = nav.loc[SENS_FROM_2015:], bench.loc[SENS_FROM_2015:]
     m15 = nav_metrics(s15, rf_daily.loc[SENS_FROM_2015:], "From 2015")
     sens = pd.concat([sens, pd.DataFrame([{"variant": "From 2015 (survivorship: 2013-14 hold the most unpriced members)",
-                                           **{k: m15[k] for k in ("cagr", "vol", "sharpe_card", "max_dd")},
+                                           **{k: m15[k] for k in ("cagr", "vol", "sharpe", "max_dd")},
                                            "minus_nifty500_cagr": cagr(s15) - cagr(b15)}])], ignore_index=True)
     sens.to_csv(os.path.join(out, "sensitivities.csv"), index=False)
     produced.append(os.path.join(out, "sensitivities.csv"))

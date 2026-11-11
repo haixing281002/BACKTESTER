@@ -112,9 +112,10 @@ def main(argv=None) -> int:
     ap.add_argument("--cash-rate", type=float, default=None, help="overrides the card's cash rate; by default the card sets it")
     ap.add_argument("--book", default="Equal-weight sleeves",
                     help="name of the run representing the fund's EXISTING book")
-    ap.add_argument("--aum-cr", type=float, default=1000.0, help="AUM in INR crore")
-    ap.add_argument("--adv-cr", type=float, default=300.0,
-                    help="tradable ADV of the sleeve basket, INR crore")
+    ap.add_argument("--aum-cr", type=float, default=None,
+                    help="AUM in INR crore; by default the card's portfolio.aum_inr_cr, set at Gate A. No AUM, no capital size")
+    ap.add_argument("--adv-cr", type=float, default=None,
+                    help="tradable ADV of the sleeve basket, INR crore; with no value no days-to-execute is computed")
     ap.add_argument("--n-boot", type=int, default=2000)
     ap.add_argument("--no-charts", action="store_true")
     # Changed 2026-10-06: the DEFAULT is now to run straight through, Gate A
@@ -604,14 +605,20 @@ def main(argv=None) -> int:
         R.p(f"    (faithful cash-holding variant would violate: {not m2['passes']} -- "
             f"max cash {m2['max_cash']:.0%})")
 
-    cap = pv.turnover_capacity(primary, aum_inr_cr=args.aum_cr, adv_inr_cr=args.adv_cr)
-    port["annual_turnover"] = cap["annual_turnover"]
+    # No capital size is assumed (operator's ruling 2026-11-06): AUM comes only from the card, set at Gate A.
+    aum = args.aum_cr if args.aum_cr is not None else card.portfolio.aum_inr_cr
+    port["annual_turnover"] = float(primary.turnover.mean() * 252)
     R.p("")
-    R.p(f"  CAPACITY (AUM Rs{args.aum_cr:,.0f}cr, tradable ADV Rs{args.adv_cr:,.0f}cr, "
-        f"10% participation):")
-    R.p(f"    annual turnover              : {cap['annual_turnover']:.0%}")
-    R.p(f"    notional per rebalance       : Rs{cap['notional_per_rebalance_inr_cr']:,.0f} cr")
-    R.p(f"    days to execute a rebalance  : {cap['days_to_execute_rebalance']:.1f}")
+    R.p(f"  annual turnover                : {port['annual_turnover']:.0%}")
+    if aum is None or args.adv_cr is None:
+        R.p("  CAPACITY: not computed at a capital size -- "
+            + ("AUM not set at Gate A" if aum is None else "no tradable ADV given (--adv-cr)"))
+    else:
+        cap = pv.turnover_capacity(primary, aum_inr_cr=aum, adv_inr_cr=args.adv_cr)
+        R.p(f"  CAPACITY (AUM Rs{aum:,.0f}cr from {'--aum-cr' if args.aum_cr is not None else 'the card'}, "
+            f"tradable ADV Rs{args.adv_cr:,.0f}cr, 10% participation):")
+        R.p(f"    notional per rebalance       : Rs{cap['notional_per_rebalance_inr_cr']:,.0f} cr")
+        R.p(f"    days to execute a rebalance  : {cap['days_to_execute_rebalance']:.1f}")
 
     rc = _checkpoint(R, args, card, "STEP 07  |  PORTFOLIO VALIDATION", produced)
     if rc is not None:

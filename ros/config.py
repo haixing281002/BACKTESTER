@@ -21,6 +21,11 @@ def cost_sweep_bp() -> list[float]:
     return [float(x) for x in _load("costs.yaml")["sweep_round_trip_bp"]]
 
 
+def round_trip_bp() -> float:
+    """The round-trip cost a new card is drafted with (config/costs.yaml). A run charges only its card's cost."""
+    return float(_load("costs.yaml")["round_trip_bp"])
+
+
 def cash_rate_sweep() -> list[float]:
     return [float(x) for x in _load("fund.yaml")["cash_rate_sweep"]]
 

@@ -1,4 +1,7 @@
 # Quant AI Researcher
 # A run's cost comes only from its card (costs.spread_bps), as approved at Gate A. No cost is assumed anywhere else.
 # This is only the list of costs an appendix sweep tries, to show what the card's cost is worth. It never reaches a headline or a gate.
+# The round-trip cost a newly drafted card states (operator, 2026-11-06). The card's costs.spread_bps is required and,
+# as approved at Gate A, is the only cost a run charges; this value is where a draft starts, nothing more.
+round_trip_bp: 0
 sweep_round_trip_bp: [0, 10, 20, 30, 50, 75, 100]

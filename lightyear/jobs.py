@@ -767,7 +767,7 @@ def build_outputs(rid, review=True):
     warn = list(warn) + warn_core
     ch = charts.build(df, names, comparators=extra.get("comparators"), **extras)
     try:
-        ch["capacity"] = gate_run.capacity(df, extra.get("trades"))
+        ch["capacity"] = gate_run.capacity(df, extra.get("trades"), _card_or_none(st))
     except Exception as e:  # noqa: BLE001  a report; the failure is shown, and the run is not lost
         log(rid, "error", f"Capacity not computed: {type(e).__name__}: {e}")
         ch["capacity"] = {"status": "not computed", "why": f"{type(e).__name__}: {e}"}
@@ -789,6 +789,14 @@ def build_outputs(rid, review=True):
         except Exception as e:      # the review is extra; Gate B is already on the page
             update(rid, review_status="failed")
             log(rid, "error", f"Analyst review failed: {e}")
+
+
+def _card_or_none(st):
+    path = (st.get("phase_a") or {}).get("card_path") or ""
+    try:
+        return load_card(path if os.path.isabs(path) else os.path.join(REPO, path))
+    except Exception:  # noqa: BLE001 -- capacity is then reported without an AUM; the card problem shows elsewhere
+        return None
 
 
 def _core_inputs(st, res, df, extra):

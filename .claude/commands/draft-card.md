@@ -37,7 +37,8 @@ only:
   instead and keep just the rule.
 - `signal.template` naming a **registered** template
   (`python -m ros.tools templates`).
-- The non-negotiables regardless of mode: a round-trip cost stated for Gate A, `lag_days >= 1`,
+- The non-negotiables regardless of mode: a round-trip cost stated for Gate A (draft it at `config/costs.yaml`
+  `round_trip_bp`, 0bp today; the operator may change it at Gate A), `lag_days >= 1`,
   `mandate_allow_cash: false` unless the mechanism genuinely needs cash.
 
 **Leave `data_plan` and `convertibility` unset** (both are `Optional` on the

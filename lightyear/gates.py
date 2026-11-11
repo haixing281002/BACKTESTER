@@ -45,6 +45,8 @@ def rows(criteria):
         name = c.get("name", "")
         blocking = c.get("blocking", True) is not False
         v_raw, t_raw = c.get("value"), c.get("threshold")
+        v_raw = "" if v_raw is None or str(v_raw) == "None" else v_raw      # a missing value is blank, never "None"
+        t_raw = "" if t_raw is None or str(t_raw) == "None" else t_raw
         v = None if NOT_COMPUTED.search(str(v_raw if v_raw is not None else "")) and to_num(v_raw) is None else to_num(v_raw)
         op, thr, is_abs = parse_threshold(t_raw)
         row = {"name": name, "blocking": blocking, "value_raw": v_raw, "threshold_raw": t_raw, "value": v,

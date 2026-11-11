@@ -779,6 +779,9 @@ class PortfolioSpec:
     # mechanism work?) and the mandate variant (may we actually run it?).
     # Conflating the two is how an un-runnable strategy reaches an IC deck.
     mandate_allow_cash: bool | None = None
+    # The fund's AUM in Rs crore, set by the operator at Gate A and nowhere else. Blank = no capital size is assumed:
+    # capacity is then reported per Rs 1 crore and the Gate B capacity test shows "AUM not set at Gate A".
+    aum_inr_cr: float | None = None
 
 
 @dataclass

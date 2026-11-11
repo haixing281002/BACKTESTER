@@ -4,7 +4,8 @@
 gate_version: v2
 status: "Approved 2026-11-05"
 capacity:
-  p95_adv_participation_max: 0.10   # Not simulated. The 10% participation already in ros/validation/portfolio.py. Waits on AUM.
+  p95_adv_participation_max: 0.10   # PLACEHOLDER for the operator's call (X). Not simulated. Capacity is reported per Rs 1 crore and as the capital where the 95th-percentile trade reaches X.
+  limit_is_placeholder: true
 data_integrity:
   min_priced_coverage: 0.90         # Not simulated. Placeholder: a window's priced members over all members. Lowered from 95% with the rest.
 bootstrap:
