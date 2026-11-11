@@ -73,9 +73,13 @@ MEMBERSHIP_SOURCES = {
     "nifty500_members_v2": ("v2 (built 2026-11-02): the holdings workbook with its own quarterly semantics, every name "
                             "ISIN-mapped, Alpha Lab membership on NSE effective dates for 2017-2018, NSE-confirmed "
                             "Alpha Lab fills elsewhere; data/processed/universe/nifty500_members_v2_spells.csv"),
+    "nifty500_members_v3": ("v3 (built 2026-11-11): NSE's own effective dates for every review and interim change, "
+                            "2013-04-18 onward, from the NSE-rebuilt membership file (checked against 128 NSE snapshots); "
+                            "data/processed/universe/nifty500_members_v3_spells.csv"),
 }
 UNIVERSE_DIR = os.path.join(sources.PROCESSED_DIR, "universe")
 V2_SPELLS = os.path.join(UNIVERSE_DIR, "nifty500_members_v2_spells.csv")
+V3_SPELLS = os.path.join(UNIVERSE_DIR, "nifty500_members_v3_spells.csv")
 _ISIN_RE = re.compile(r"IN[A-Z0-9]{10}")
 _UPDATE_NAME = re.compile(r"(\d{4}-\d{2}-\d{2})\.csv$", re.IGNORECASE)
 SNAPSHOT_COLUMNS = ["snapshot_date", "bbg_id", "isin", "symbol", "company_name", "mapped", *_SLEEVE_HEADERS.values(),
@@ -242,10 +246,11 @@ def _flag(index: str) -> tuple[str, ...] | None:
     return None if f is None else (f,) if isinstance(f, str) else tuple(f)
 
 
-def load_membership_v2(path: str | None = None) -> pd.DataFrame:
+def load_membership_v2(path: str | None = None, what: str = "NIFTY 500 universe v2 spells") -> pd.DataFrame:
     """The v2 universe as spells: isin, symbol, company_name, start_date, end_date (exclusive; NaT = carried forward
-    after the last snapshot), source, flags. Built by scripts/universe_v2/step3b_build_v2.py; never fetched."""
-    p = sources.require(path or V2_SPELLS, "NIFTY 500 universe v2 spells")
+    after the last snapshot), source, flags. Built by scripts/universe_v2/step3b_build_v2.py; never fetched.
+    The v3 spells (scripts/universe_v3/build_v3.py) have the same layout and load through here too."""
+    p = sources.require(path or V2_SPELLS, what)
     df = pd.read_csv(p, skiprows=1, keep_default_na=False, dtype=str)
     df["start_date"] = pd.to_datetime(df["start_date"])
     df["end_date"] = pd.to_datetime(df["end_date"].replace("", None))
@@ -258,6 +263,8 @@ def membership_inputs(source: str = "holdings_workbook", first_signal_universe: 
     out = {}
     if source == "nifty500_members_v2":
         out["universe_v2_spells"] = V2_SPELLS
+    if source == "nifty500_members_v3":
+        out["universe_v3_spells"] = V3_SPELLS
     m = re.fullmatch(r"nse_review_(\d{4}-\d{2}-\d{2})", str(first_signal_universe or ""))
     if m:
         out[first_signal_universe] = os.path.join(UNIVERSE_DIR, f"nse_review_{m.group(1)}_members.csv")
@@ -283,9 +290,11 @@ def load_membership(index: str = "NIFTY 500", path: str | None = None, source: s
     ISIN-mapped names, only complete snapshots."""
     if source not in MEMBERSHIP_SOURCES:
         raise MembershipError(f"unknown membership_source {source!r}; choose from {sorted(MEMBERSHIP_SOURCES)}")
-    if source == "nifty500_members_v2":
+    if source in ("nifty500_members_v2", "nifty500_members_v3"):
         if index.strip().upper() != "NIFTY 500":
-            raise MembershipError("universe v2 carries NIFTY 500 membership only; sub-index flags come from the workbook")
+            raise MembershipError(f"{source} carries NIFTY 500 membership only; sub-index flags come from the workbook")
+        if source == "nifty500_members_v3":
+            return load_membership_v2(path or V3_SPELLS, "NIFTY 500 universe v3 spells")
         return load_membership_v2(path)
     snaps = load_snapshots(path, **kw)
     flag = _flag(index)

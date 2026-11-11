@@ -58,9 +58,13 @@ PROCESSED_DIR = os.path.join(REPO, "data", "processed")
 # scripts/universe_v2/*; a run reads the derived spells CSV and never this file.
 ALPHALAB_NIFTY500_XLSX = _path("LIGHTYEAR_ALPHALAB_XLSX", "alphalab_nifty500_xlsx")
 ALPHALAB_NIFTY500_CSV = _path("LIGHTYEAR_ALPHALAB_CSV", "alphalab_nifty500_csv")
+# BUILD-TIME source for universe v3 (scripts/universe_v3/build_v3.py): NIFTY 500 membership rebuilt from NSE's own
+# documents on NSE effective dates (2013-04-18 to 2026-10-21). A run reads the derived v3 spells, never this file.
+NSE_NIFTY500_MEMBERSHIP = _path("LIGHTYEAR_NSE_MEMBERSHIP", "nse_nifty500_membership")
 BUILD_SOURCES = {
     "alphalab_nifty500_xlsx": ("Alpha Lab NIFTY 500 constituents workbook (universe v2 build only)", ALPHALAB_NIFTY500_XLSX),
     "alphalab_nifty500_csv": ("Alpha Lab NIFTY 500 row-level pull, dated tickers (universe v2 build only)", ALPHALAB_NIFTY500_CSV),
+    "nse_nifty500_membership": ("NSE-rebuilt NIFTY 500 membership on effective dates (universe v3 build only)", NSE_NIFTY500_MEMBERSHIP),
 }
 # Later NIFTY 500 constituent lists (after the workbook's last snapshot) are dropped here, one CSV per
 # snapshot date, named YYYY-MM-DD.csv with an `isin` column. See ros/data/nifty500.py.

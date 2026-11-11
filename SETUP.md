@@ -78,6 +78,7 @@ third-party). Supply them on each machine; nothing is downloaded:
 | NIFTY 500 holdings workbook (.xlsx) | `LIGHTYEAR_NIFTY500_HOLDINGS` | `nifty500_holdings` |
 | NSE index levels workbook | `data/raw/NSE_Broad_Factor_Indices_Historical_Data.xlsx`, or `LIGHTYEAR_INDEX_WORKBOOK` | `nse_index_workbook` |
 | Universe v2 build inputs (only to rebuild the universe) | `LIGHTYEAR_ALPHALAB_XLSX`, `LIGHTYEAR_ALPHALAB_CSV` | `alphalab_nifty500_xlsx`, `alphalab_nifty500_csv` |
+| Universe v3 build input: NSE-rebuilt NIFTY 500 membership (then run `python scripts/universe_v3/build_v3.py`) | `LIGHTYEAR_NSE_MEMBERSHIP` | `nse_nifty500_membership` |
 | Papers | `docs/papers/` | — |
 
 Copy `config/local.example.yaml` to `config/local.yaml` (gitignored) and fill in

@@ -9,9 +9,11 @@
 #   nse_index_workbook      LIGHTYEAR_INDEX_WORKBOOK      NSE index levels workbook (default: data/raw/NSE_Broad_Factor_Indices_Historical_Data.xlsx)
 #   alphalab_nifty500_xlsx  LIGHTYEAR_ALPHALAB_XLSX       universe v2 build only
 #   alphalab_nifty500_csv   LIGHTYEAR_ALPHALAB_CSV        universe v2 build only
+#   nse_nifty500_membership LIGHTYEAR_NSE_MEMBERSHIP      universe v3 build only (NSE-rebuilt membership CSV)
 
 ace_prices: ""
 nifty500_holdings: ""
 # nse_index_workbook: ""
 alphalab_nifty500_xlsx: ""
 alphalab_nifty500_csv: ""
+nse_nifty500_membership: ""
