@@ -292,7 +292,10 @@ def approve(rid: str, a: Approval):
     if not a.by.strip():
         raise HTTPException(400, "A named human approves Gate A.")
     _busy_guard()
-    jobs.approve(rid, a.by.strip(), a.notes)
+    try:
+        jobs.approve(rid, a.by.strip(), a.notes)
+    except jobs.GateConflict as e:
+        raise HTTPException(409, str(e))
     return {"ok": True}
 
 
@@ -348,7 +351,10 @@ def decide(rid: str, d: Decision):
     if live:
         raise HTTPException(409, f"A Claude Code session is still running (run {live}). Gate B is recorded only "
                                  "when no session is live.")
-    return jobs.decide(rid, d.decision, d.by.strip(), d.rationale.strip())
+    try:
+        return jobs.decide(rid, d.decision, d.by.strip(), d.rationale.strip())
+    except jobs.GateConflict as e:
+        raise HTTPException(409, str(e))
 
 
 @app.post("/api/runs/{rid}/cancel")

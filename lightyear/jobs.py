@@ -30,6 +30,9 @@ from .paths import LEDGER, REPO, RUNS, code_hash, find_claude, git_bash, git_com
 
 _log = logging.getLogger("lightyear")
 STALL_MINUTES = float(os.environ.get("LIGHTYEAR_STALL_MINUTES", "60"))   # no output from Claude Code for this long = stuck
+# Turn cap per session. The installed CLI (2.1.322) documents no --max-turns, so the driver counts assistant turns
+# itself and stops the session past the cap. 48 finished sessions to 2026-11-11 used at most 117 (median 25).
+MAX_TURNS = int(os.environ.get("LIGHTYEAR_MAX_TURNS", "250"))
 
 # A session reads an untrusted paper, so it runs NAMED entry points only: no `python -c`, no python on an arbitrary
 # file. The stage commands' snippets are subcommands of ros.tools. Phase B (after a human approved Gate A) may also run
@@ -75,6 +78,11 @@ ORDER = IDS_A + IDS_B
 DEFAULT_MIN = {"00": 3, "01": 3, "02": 5, "03m": 2, "GA": 3, "03": 4, "04": 6, "05": 15, "06": 8, "07": 5, "GB": 4}
 
 _lock = threading.RLock()
+_gate_lock = threading.Lock()   # approve and decide check the status and act under this lock: a double click is refused
+
+
+class GateConflict(Exception):
+    """The run is not at the gate the request assumes (or a session is live); the server answers 409."""
 _procs = {}            # run_id -> Popen
 
 
@@ -173,21 +181,25 @@ def load(rid):
             time.sleep(0.05)
 
 
+def write_json_atomic(path, obj, **kw):
+    """Write JSON to a temp file and swap it in, so a crash never leaves a half-written file."""
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(obj, f, **kw)
+    for attempt in range(20):
+        try:
+            os.replace(tmp, path)
+            return
+        except PermissionError:          # a reader outside this process (antivirus, an editor) has it open
+            if attempt == 19:
+                raise
+            time.sleep(0.05)
+
+
 def save(st):
     with _lock:
         st["updated"] = now()
-        p = state_path(st["id"])
-        tmp = p + ".tmp"
-        with open(tmp, "w", encoding="utf-8") as f:
-            json.dump(st, f, indent=1, default=str)
-        for attempt in range(20):
-            try:
-                os.replace(tmp, p)
-                return
-            except PermissionError:          # a reader outside this process (antivirus, an editor) has it open
-                if attempt == 19:
-                    raise
-                time.sleep(0.05)
+        write_json_atomic(state_path(st["id"]), st, indent=1, default=str)
 
 
 def update(rid, **kw):
@@ -497,6 +509,7 @@ def run_claude(rid, prompt, label, phase_ids, backtest_script=None):
                 return
     threading.Thread(target=_watch, daemon=True, name=f"watch-{rid}").start()
     result_text, ok = "", False
+    turns = 0
     for line in proc.stdout:
         last_line[0] = time.time()
         line = line.strip()
@@ -512,6 +525,11 @@ def run_claude(rid, prompt, label, phase_ids, backtest_script=None):
             update(rid, sessions=load(rid)["sessions"] + [ev.get("session_id")])
             log(rid, "system", f"Session {ev.get('session_id', '')[:8]} on model {ev.get('model', '?')}")
         elif t == "assistant":
+            turns += 1
+            if turns > MAX_TURNS:
+                log(rid, "error", f"Session passed {MAX_TURNS} turns (LIGHTYEAR_MAX_TURNS): stopping it.")
+                _kill(proc.pid)
+                break
             for block in ev.get("message", {}).get("content", []):
                 if block.get("type") == "text" and block.get("text", "").strip():
                     txt = block["text"]
@@ -725,7 +743,7 @@ def build_outputs(rid, review=True):
     names = {"strategy": res.get("strategy_name") or "Strategy", "benchmark": res.get("benchmark_name") or "NIFTY 500",
              "sleeve": res.get("sleeve_name") or "Sleeve"}
     ch = charts.build(df, names, comparators=extra.get("comparators"))
-    json.dump(ch, open(os.path.join(rd, "charts.json"), "w", encoding="utf-8"), default=float)
+    write_json_atomic(os.path.join(rd, "charts.json"), ch, default=float)
     log(rid, "server", "Interactive chart series built from daily_returns.csv"
         + (" and comparators.csv." if "comparators" in extra else "."))
     recalc = _workbook(rid, res, df, extra, ch["observations"], _load_review(rd))
@@ -825,15 +843,18 @@ def analyst_review(rid):
 # ------------------------------------------------------------------ human actions
 def approve(rid, by, notes=""):
     """Record the approval AND pin the card: its sha256 at this moment is what Phase B must run from."""
-    st = load(rid)
-    card_path = (st.get("phase_a") or {}).get("card_path") or ""
-    approval = {"by": by, "at": now(), "notes": notes, "card_path": card_path, "card_sha256": _sha(card_path)}
-    # keep the approved card's CONTENT with the run (not only its sha), so later runs can diff field by field
-    src = card_path if os.path.isabs(card_path) else os.path.join(REPO, card_path)
-    if os.path.isfile(src):
-        with open(src, encoding="utf-8") as fh, open(os.path.join(run_dir(rid), "card_approved.yaml"), "w", encoding="utf-8") as out:
-            out.write(fh.read())
-    st = update(rid, approval=approval, status="phase_b")
+    with _gate_lock:
+        st = load(rid)
+        if st["status"] != "gate_a":
+            raise GateConflict(f"Run is at {st['status']}, not Gate A.")
+        card_path = (st.get("phase_a") or {}).get("card_path") or ""
+        approval = {"by": by, "at": now(), "notes": notes, "card_path": card_path, "card_sha256": _sha(card_path)}
+        # keep the approved card's CONTENT with the run (not only its sha), so later runs can diff field by field
+        src = card_path if os.path.isabs(card_path) else os.path.join(REPO, card_path)
+        if os.path.isfile(src):
+            with open(src, encoding="utf-8") as fh, open(os.path.join(run_dir(rid), "card_approved.yaml"), "w", encoding="utf-8") as out:
+                out.write(fh.read())
+        st = update(rid, approval=approval, status="phase_b")
     log(rid, "gate", f"Gate A approved by {by}. Card {card_path} pinned at sha256 {(approval['card_sha256'] or '?')[:12]}; "
         f"{len(st.get('revisions') or [])} revision(s) on record.")
     start(phase_b, rid)
@@ -875,7 +896,7 @@ def rerun_from(src_rid, by, extra_note="", src_dir=None):
         for s, _ in prompts.STAGES_A:
             st["stages"][s] = "done"
         st.update(phase_a=src["phase_a"], paper_title=src.get("paper_title"), revisions=revisions,
-                  rerun_of=src_rid, current_stage="GA")
+                  rerun_of=src_rid, current_stage="GA", status="gate_a")   # inherited Gate A; approved just below
         save(st)
     log(rid, "server", f"Re-run of {src_rid} from its approved card; {len(revisions)} revision(s) carried over.")
     for r in revisions:
@@ -885,15 +906,22 @@ def rerun_from(src_rid, by, extra_note="", src_dir=None):
 
 
 def decide(rid, decision, by, rationale):
-    rec = {"run": rid, "decision": decision, "decided_by": by, "rationale": rationale, "at": now()}
-    st = load(rid)
-    rec.update(slug=st["slug"], card=(st.get("phase_a") or {}).get("card_path"), paper=st["pdf"],
-               evidence_supports=(st.get("results") or {}).get("evidence_supports"))
-    json.dump(rec, open(os.path.join(run_dir(rid), "decision.json"), "w", encoding="utf-8"), indent=1)
-    os.makedirs(RUNS, exist_ok=True)
-    with open(LEDGER, "a", encoding="utf-8") as f:
-        f.write(json.dumps(rec) + "\n")
-    update(rid, status="decided", decision=rec)
+    with _gate_lock:
+        st = load(rid)
+        if st["status"] != "gate_b":
+            raise GateConflict(f"Run is at {st['status']}, not Gate B.")
+        live = live_session()
+        if live:
+            raise GateConflict(f"A Claude Code session is still running (run {live}). Gate B is recorded only when "
+                               "no session is live.")
+        rec = {"run": rid, "decision": decision, "decided_by": by, "rationale": rationale, "at": now()}
+        rec.update(slug=st["slug"], card=(st.get("phase_a") or {}).get("card_path"), paper=st["pdf"],
+                   evidence_supports=(st.get("results") or {}).get("evidence_supports"))
+        write_json_atomic(os.path.join(run_dir(rid), "decision.json"), rec, indent=1)
+        os.makedirs(RUNS, exist_ok=True)
+        with open(LEDGER, "a", encoding="utf-8") as f:
+            f.write(json.dumps(rec) + "\n")
+        update(rid, status="decided", decision=rec)
     log(rid, "gate", f"Gate B decision recorded: {decision} by {by}.")
     return rec
 
