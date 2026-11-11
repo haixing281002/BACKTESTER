@@ -124,11 +124,10 @@ def _india_for(card):
     but a gate reaching into a derivation module is the kind of edge that turns
     into a cycle later, and the cost of being careful here is one line.
     """
-    try:
-        from ros.india_requirements import derive
-        return derive(card)
-    except Exception:
-        return None
+    # No try/except: a card whose India requirements cannot be derived must fail loudly at Gate A, never show a
+    # Gate A without them (that is how the requirements used to drop out silently).
+    from ros.india_requirements import derive
+    return derive(card)
 
 
 def _call(tag, headline, detail, who=""):

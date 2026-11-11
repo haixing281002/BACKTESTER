@@ -1,3 +1,4 @@
+# Quant AI Researcher
 """Step 01 -- INGEST. Deterministic evidence extraction from a paper PDF.
 
 This module does NOT decide what the strategy is. It produces page-anchored
@@ -13,6 +14,7 @@ damage and refuse to let equations become card fields without human sign-off.
 from __future__ import annotations
 
 import hashlib
+import logging
 import re
 from dataclasses import asdict, dataclass, field
 from typing import Any
@@ -42,6 +44,7 @@ class PageEvidence:
     tables: list[list[list[str | None]]] = field(default_factory=list)
     math_density: float = 0.0    # fraction of lines that look like broken math
     reversed_text: bool = False  # rotated axis labels detected -> figure page
+    table_error: str = ""        # set when the page's tables could not be read (logged, never silent)
 
 
 @dataclass
@@ -200,13 +203,15 @@ def extract_document(path: str, max_pages: int | None = None) -> Document:
         page_iter = pdf.pages[:max_pages] if max_pages else pdf.pages
         for i, pg in enumerate(page_iter, start=1):
             text = pg.extract_text() or ""
+            table_error = ""
             try:
                 tables = pg.extract_tables() or []
-            except Exception:
-                tables = []
+            except Exception as e:  # noqa: BLE001 -- one unreadable page must not block the paper; it is recorded
+                tables, table_error = [], f"{type(e).__name__}: {e}"
+                logging.getLogger(__name__).warning("page %d: tables could not be read (%s)", i, table_error)
             pages.append(PageEvidence(
                 page=i, text=text, n_chars=len(text), n_tables=len(tables),
-                tables=tables,
+                tables=tables, table_error=table_error,
                 math_density=_math_density(text),
                 reversed_text=_looks_reversed(text),
             ))
@@ -225,6 +230,9 @@ def extract_document(path: str, max_pages: int | None = None) -> Document:
         reversed_pages=[p.page for p in pages if p.reversed_text],
         is_scanned=bool(pages) and total_chars / max(len(pages), 1) < 200,
     )
+    bad = [p.page for p in pages if p.table_error]
+    if bad:
+        quality.warnings.append(f"Tables could not be read on page(s) {bad}; numbers from those pages are text only.")
     if quality.is_scanned:
         quality.warnings.append(
             "Near-zero text per page: PDF is likely scanned. OCR required; do NOT card it from this text.")

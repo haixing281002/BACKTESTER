@@ -1,3 +1,4 @@
+# Quant AI Researcher
 """How complete is this card, measured against the standard a good one sets.
 
 WHY SCORE A CARD AT ALL
@@ -397,11 +398,8 @@ def assess(card) -> Completeness:
 
     # ---- what the rules could not see ------------------------------------
     notes = getattr(card, "india_notes", []) or []
-    try:
-        from ros.india_requirements import derive as _derive_india
-        ind = _derive_india(card)
-    except Exception:
-        ind = None
+    from ros.india_requirements import derive as _derive_india
+    ind = _derive_india(card)            # a failure raises: completeness must not quietly skip the India checks
     if ind is not None and ind.unmatched_inputs:
         check("india", "inputs the rules could not read are addressed",
               not ind.unaddressed_inputs, 3,

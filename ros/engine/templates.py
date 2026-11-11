@@ -1,3 +1,4 @@
+# Quant AI Researcher
 """Allocator templates -- Step 05, the 'template-constrained generation' the board
 approved. A Strategy Card names a template and supplies params; it never supplies code.
 
@@ -10,12 +11,15 @@ only the pre-computed causal inputs the backtester hands them.
 """
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
 import pandas as pd
+
+_log = logging.getLogger(__name__)
 
 _TEMPLATES: dict[str, Callable[..., Allocator]] = {}
 
@@ -280,6 +284,9 @@ class MinVariance(Allocator):
     """Long-only global minimum-variance portfolio, scaled to the vol target."""
     requires = ("cov",)
 
+    def diagnostics(self) -> dict[str, Any]:
+        return {"solver_failures": getattr(self, "_failures", 0)}
+
     def __init__(self, assets, target_vol=None, **kw):
         super().__init__(assets, target_vol=target_vol, **kw)
         self.target_vol = target_vol
@@ -296,7 +303,9 @@ class MinVariance(Allocator):
                        [w >= 0, cp.sum(w) == 1]).solve(solver=cp.CLARABEL)
             if w.value is None:
                 raise RuntimeError("no solution")
-        except Exception:
+        except Exception as e:  # noqa: BLE001 -- documented fallback: hold, counted and logged, never silent
+            self._failures = getattr(self, "_failures", 0) + 1
+            _log.warning("min_variance: solver failed (%s); holding current weights", e)
             return ctx.current_weights.copy()
         ww = np.clip(np.asarray(w.value, dtype=float), 0, None)
         ww = ww / ww.sum()
