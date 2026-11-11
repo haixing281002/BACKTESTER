@@ -25,10 +25,7 @@ actually is**.
 **Ask the library what this desk already knows.**
 
 ```bash
-python -c "
-from ros.governance.library import StrategyLibrary
-lib = StrategyLibrary('outputs/library')
-for e in lib.summary(): print(e)"
+python -m ros.tools library-summary
 ```
 
 If a similar mechanism has been tested here before, you are not reading this
@@ -124,11 +121,8 @@ claim about the paper:
 ### 3. Let the code rank the candidates
 
 ```bash
-python -c "
-from ros.data.universes import MechanismRequirements, render_proposal
-print(render_proposal(MechanismRequirements(
-    min_names=100, cap_segment='large', sector=None,
-    needs_cross_section=True, must_be_in_mandate=False)))"
+python -m ros.tools universe-proposal --min-names 100 --cap-segment large
+#   other flags: --sector <name>  --min-history-years <years>  --no-cross-section  --in-mandate
 ```
 
 You get every Indian universe scored against those needs, with reasons for and
@@ -149,17 +143,8 @@ mean "pick one bet, restated N times." Never assume the sleeves you already
 know about are independent enough — measure it:
 
 ```bash
-python -c "
-from ros.data.loaders import load_nse_workbook_combined
-from ros.data.diversification import diversification_report, greedy_diverse_subset
-
-frame, _ = load_nse_workbook_combined(
-    'data/raw/NSE_Broad_Factor_Indices_Historical_Data.xlsx')
-
-# every candidate the mechanism could plausibly use, not just the obvious 5-8
-candidates = [c for c in frame.columns if c != 'NIFTY 500']   # keep the benchmark out
-best = greedy_diverse_subset(frame, candidates, k=8)          # k = how many streams the paper needs
-print(diversification_report(frame, best).render())"
+python -m ros.tools diversification --k 8          # k = how many streams the paper needs; NIFTY 500 is left out
+#   leave out other columns with --exclude "<name>" (repeatable)
 ```
 
 `greedy_diverse_subset` is a selection AID (minimax: each addition minimises
@@ -287,8 +272,8 @@ break out the legs, that is an extraction concern worth stating.
 ### Mapping to the engine
 
 ```bash
-python -c "from ros.engine.templates import list_templates; print(list_templates())"
-python -c "from ros.engine.primitives import list_primitives; print(list_primitives())"
+python -m ros.tools templates
+python -m ros.tools primitives
 ```
 
 Set `engine_template` to whichever registered template expresses this strategy.
@@ -351,10 +336,7 @@ read a fundamental, how fast does it trade, which cap segment. **Do not restate
 those.** Check what it produces first:
 
 ```bash
-python -c "
-from ros.cards.schema import load_card
-from ros.india_requirements import derive
-print(derive(load_card('cards/<slug>.yaml')).render())"
+python -m ros.tools india-requirements cards/<slug>.yaml
 ```
 
 Those rules are a floor. They fire whatever anyone thinks, and you cannot lower

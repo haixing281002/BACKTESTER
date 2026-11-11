@@ -69,7 +69,7 @@ validated against the **same schemas** in `ros/agents/schemas.py`.
 
 **There is no default paper.** Every run analyses one paper, named explicitly. If
 someone asks you to run the pipeline without naming a PDF, show them
-`python -c "from ros.papers import ask_for_a_paper; print(ask_for_a_paper())"`
+`python -m ros.tools paper-ask`
 and wait. Never fall back to a paper already in `docs/` — a run that quietly
 analysed the wrong PDF looks exactly like one that analysed theirs, and that only
 surfaces after a Gate A queue has been signed against the wrong work.

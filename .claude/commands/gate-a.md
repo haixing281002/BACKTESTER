@@ -80,13 +80,7 @@ decision.
 is optional, and both come before anything else this gate prints:
 
 ```bash
-python -c "
-import os
-from ros.cards.schema import load_card
-c = load_card('$1')
-print(c.plain_summary())
-print()
-print('CARD FILE:', os.path.abspath('$1'))"
+python -m ros.tools card-summary $1
 ```
 
 `plain_summary()` is what makes this gate intuitive — a reviewer who never
@@ -99,15 +93,7 @@ does look.
 Then three more blocks, in this order, before any prose:
 
 ```bash
-python -c "
-from ros.cards.schema import load_card
-from ros.cards.completeness import assess
-c = load_card('$1')
-print(c.at_a_glance())
-print(c.plan())
-print(assess(c).render(only_missing=True))
-print(c.convertibility_block())
-print(c.asks())"
+python -m ros.tools gate-a-view $1
 ```
 
 Or, for the whole thing assembled the way the reviewer will read it — the
@@ -174,13 +160,7 @@ mistakes. Put these at the top of the queue, in this order:
 Then show what the code found, not what you believe:
 
 ```bash
-python -c "
-from ros.cards.schema import load_card
-from ros.data.firm_registry import build_firm_registry
-from ros.data.intake import extend_registry
-from ros.data.universes import check_translation
-c = load_card('$1'); r, _ = extend_registry(build_firm_registry())
-print(check_translation(c.universe_translation, r, long_only=c.portfolio.long_only).render())"
+python -m ros.tools translation-check $1
 ```
 
 Any **DIVERGENCE** line is a top-of-queue item: the card claims something the
@@ -213,12 +193,7 @@ return indices and a declared 6% constant standing in — and still pass
 shortfall 1 on every line.
 
 ```bash
-python -c "
-from ros.cards.schema import load_card, reconcile_data_plan
-from ros.data.firm_registry import build_firm_registry
-from ros.feasibility import assess
-c = load_card('$1')
-print(reconcile_data_plan(c, assess(c, build_firm_registry())))"
+python -m ros.tools data-plan $1
 ```
 
 `not_in_hand` is the answer to shortfall 2. If it is non-empty, **say so in the

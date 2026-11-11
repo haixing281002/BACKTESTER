@@ -10,7 +10,7 @@ argument-hint: "<paper.pdf>"
 **If `$1` is empty, do not proceed and do not pick one.** Run:
 
 ```bash
-python -c "from ros.papers import ask_for_a_paper; print(ask_for_a_paper())"
+python -m ros.tools paper-ask
 ```
 
 and show the result. It lists the PDFs already in the repo and says how to add a
@@ -23,10 +23,7 @@ surfaces, a result has been built on the wrong work.
 **If `$1` is given, confirm what you are about to read before reading it:**
 
 ```bash
-python -c "
-from ros.papers import require_paper
-p = require_paper('$1')
-print(f'{p.path}\n  {p.size:,} bytes   sha256 {p.short_sha}   slug: {p.slug}')"
+python -m ros.tools paper-identity $1
 ```
 
 Say the title back to them once you have opened page 1. If it is not the paper

@@ -6,12 +6,7 @@ argument-hint: "<what you propose to test>"
 # Stage 08 — LIBRARIAN  (code stores, LLM recalls)
 
 ```bash
-python -c "
-from ros.governance.library import StrategyLibrary
-import json
-for e in StrategyLibrary('outputs/library').all():
-    print(json.dumps({k: e.get(k) for k in
-        ('entry_id','card_id','mode','outcome','attained_rung','stopped_at','lessons')}, indent=1))"
+python -m ros.tools library-all
 ```
 
 Proposed research: **$ARGUMENTS**

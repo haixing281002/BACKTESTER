@@ -8,11 +8,7 @@ argument-hint: "<card.yaml>"
 **The deterministic gate owns the verdict.** Run it first and read it:
 
 ```bash
-python -c "
-from ros.cards.schema import load_card
-from ros.data.firm_registry import build_firm_registry
-from ros.feasibility import assess
-print(assess(load_card('$1'), build_firm_registry()).render())"
+python -m ros.tools feasibility $1
 ```
 
 Your job is the judgement the gate cannot make: whether anything we hold could

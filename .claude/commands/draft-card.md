@@ -35,7 +35,7 @@ only:
   confirmed it) — do not skip the honesty field to save time, skip the LIST
   instead and keep just the rule.
 - `signal.template` naming a **registered** template
-  (`python -c "from ros.engine.templates import list_templates; print(list_templates())"`).
+  (`python -m ros.tools templates`).
 - The non-negotiables regardless of mode: costs 30bp round trip, `lag_days >= 1`,
   `mandate_allow_cash: false` unless the mechanism genuinely needs cash.
 
@@ -70,7 +70,7 @@ never a second file for a long-short paper, never a second file because the
 paper is long-only. Hard rules:
 
 - `signal.template` must name one of the **registered** templates
-  (`python -c "from ros.engine.templates import list_templates; print(list_templates())"`).
+  (`python -m ros.tools templates`).
   If none fits, say so in the human queue rather than inventing a name.
 - A **replication** card runs the paper's own data and must carry
   `replication_targets` pinned to **one** accounting basis — the headline one.
@@ -108,7 +108,7 @@ paper is long-only. Hard rules:
 Validate before you claim anything:
 
 ```bash
-python -c "from ros.cards.schema import load_card; c=load_card('cards/<slug>.yaml'); print('valid', c.fingerprint()); print(c.plain_summary())"
+python -m ros.tools card-validate cards/<slug>.yaml
 python -m ros.interpretation record --stage 02_card --output cards/<slug>.yaml \
     --operator "<name>" --input "$1"
 ```
@@ -127,10 +127,7 @@ card being coherent.
 ## Score the card before you hand it over
 
 ```bash
-python -c "
-from ros.cards.schema import load_card
-from ros.cards.completeness import assess
-print(assess(load_card('cards/<slug>.yaml')).render())"
+python -m ros.tools card-completeness cards/<slug>.yaml
 ```
 
 Around 70 checks on a full adaptation card — the exact number depends on which
@@ -352,13 +349,7 @@ productive answer — the code cross-checks the verdict against your own asks, a
 ## Then score it
 
 ```bash
-python -c "
-from ros.cards.schema import load_card
-from ros.cards.completeness import assess
-c = load_card('cards/<slug>.yaml')
-print(c.at_a_glance()); print(c.plan()); print(c.asks())
-print(c.convertibility_block())
-print(assess(c).render())"
+python -m ros.tools card-review cards/<slug>.yaml
 ```
 
 The repo's worked example scores 99% and has no `serious` gaps. Anything marked

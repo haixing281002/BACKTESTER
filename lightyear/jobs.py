@@ -31,11 +31,35 @@ from .paths import LEDGER, REPO, RUNS, code_hash, find_claude, git_bash, git_com
 _log = logging.getLogger("lightyear")
 STALL_MINUTES = float(os.environ.get("LIGHTYEAR_STALL_MINUTES", "60"))   # no output from Claude Code for this long = stuck
 
+# A session reads an untrusted paper, so it runs NAMED entry points only: no `python -c`, no python on an arbitrary
+# file. The stage commands' snippets are subcommands of ros.tools. Phase B (after a human approved Gate A) may also run
+# its own backtest script, named per run (session_tools). Shell tools that could run or write anything else (find
+# -exec, tee, cat > file) are not allowed; Read/Grep/Glob read files instead.
 ALLOWED_TOOLS = ["Read", "Write", "Edit", "Glob", "Grep", "TodoWrite", "Skill",
-                 "Bash(python:*)", "Bash(python3:*)", "Bash(py:*)", "Bash(ls:*)", "Bash(mkdir:*)",
-                 "Bash(cat:*)", "Bash(head:*)", "Bash(tail:*)", "Bash(wc:*)", "Bash(echo:*)", "Bash(tee:*)",
-                 "Bash(grep:*)", "Bash(sort:*)", "Bash(find:*)", "Bash(cd:*)"]
-DISALLOWED_TOOLS = ["Bash(git:*)", "Bash(rm:*)", "Bash(curl:*)", "Bash(pip:*)", "WebFetch", "WebSearch"]
+                 "Bash(python -m ros.tools:*)", "Bash(python -m ros.interpretation:*)",
+                 "Bash(python -m ros.data.sources:*)", "Bash(python run_interpret.py:*)",
+                 "Bash(ls:*)", "Bash(mkdir:*)"]
+# Writes to code are refused, so a session cannot plant code that an allowed entry point would then import.
+_CODE = ("ros/**", "lightyear/**", "universal_backtester/**", "validate/**", "tests/**", "webapp/**", ".claude/**",
+         "scripts/universe_v2/**", "run_*.py", "check_setup.py", "*.pth", "sitecustomize.py", "usercustomize.py")
+DISALLOWED_TOOLS = (["Bash(git:*)", "Bash(rm:*)", "Bash(curl:*)", "Bash(pip:*)", "Bash(python -c:*)",
+                     "Bash(python3:*)", "Bash(py:*)", "Bash(find:*)", "Bash(tee:*)", "WebFetch", "WebSearch",
+                     # allowed in .claude/settings.json for interactive use; pytest would run any test file a session
+                     # wrote, and run_agentic.py calls the API
+                     "Bash(python -m pytest:*)", "Bash(python run_agentic.py:*)",
+                     "Read(~/.lightyear/**)"]
+                    + [f"{tool}({p})" for p in _CODE for tool in ("Write", "Edit")])
+
+
+def session_tools(backtest_script=None):
+    """The allow list for one session: the named entry points, plus Phase B's own backtest script when given."""
+    return ALLOWED_TOOLS + ([f"Bash(python {backtest_script}:*)"] if backtest_script else [])
+
+
+def session_denied(backtest_script=None):
+    """Phase B may run run_pipeline.py --card for an index-sleeve card (a --decision fails without the token);
+    Phase A, revisions and the review may not run it at all."""
+    return DISALLOWED_TOOLS + ([] if backtest_script else ["Bash(python run_pipeline.py:*)"])
 STAGE_RE = re.compile(r"LIGHTYEAR-STAGE:\s*([0-9A-Za-z]+)")
 # looser signals, used only to move the tracker forward by at most two stages:
 BANNER_RE = re.compile(r"\bSTAGE\s+0?([0-7])\b")                        # script banners: "STAGE 05 -- BUILD"
@@ -415,14 +439,14 @@ def _set_activity(rid, txt):
     update(rid, activity=(msg[:277] + "...") if len(msg) > 280 else msg, activity_at=now())
 
 
-def run_claude(rid, prompt, label, phase_ids):
+def run_claude(rid, prompt, label, phase_ids, backtest_script=None):
     """Run one headless Claude Code session to completion, streaming its events into the run log.
     Returns (ok, result_text)."""
     claude = find_claude()
     st = load(rid)
     exe = [sys.executable, claude] if claude.endswith(".py") else [claude]   # .py = test stand-in
     cmd = [*exe, "-p", "--output-format", "stream-json", "--verbose", "--permission-mode", "acceptEdits",
-           "--allowedTools", *ALLOWED_TOOLS, "--disallowedTools", *DISALLOWED_TOOLS]
+           "--allowedTools", *session_tools(backtest_script), "--disallowedTools", *session_denied(backtest_script)]
     if st.get("model"):
         cmd += ["--model", st["model"]]
     env = dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONUTF8="1", LIGHTYEAR_RUN=rid)
@@ -436,7 +460,7 @@ def run_claude(rid, prompt, label, phase_ids):
             log(rid, "server", "Git Bash not found. If Claude Code fails to start, set CLAUDE_CODE_GIT_BASH_PATH.")
         env["CLAUDE_CODE_USE_POWERSHELL_TOOL"] = "0"
     # Put this interpreter first on PATH: Git Bash does not see the Windows Python install, and calling python.exe by
-    # its full path does not match the "Bash(python:*)" allow rule, so every Python call would need an approval.
+    # its full path does not match the "Bash(python -m ...)" allow rules, so every Python call would need an approval.
     pydir = os.path.dirname(sys.executable)
     env["PATH"] = os.pathsep.join([pydir, os.path.join(pydir, "Scripts"), env.get("PATH", "")])
     log(rid, "server", f"{label}: starting Claude Code headless ({os.path.basename(claude)}).")
@@ -592,7 +616,7 @@ def phase_b(rid):
         update(rid, current_stage=None, activity="Starting the backtest stages.")
     ok, _ = run_claude(rid, _fmt(prompts.PHASE_B, rid, card=st["phase_a"]["card_path"],
                                  approver=st["approval"]["by"], notes=operator_notes(st)),
-                       "Stages 03-07 + Gate B", IDS_B)
+                       "Stages 03-07 + Gate B", IDS_B, backtest_script=f"scripts/{st['slug']}_india_backtest.py")
     if load(rid)["status"] == "cancelled":
         return
     if not ok:
