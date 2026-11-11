@@ -30,6 +30,16 @@ def cash_rate_sweep() -> list[float]:
     return [float(x) for x in _load("fund.yaml")["cash_rate_sweep"]]
 
 
+def sharpe_hurdle_annual() -> float:
+    """The yearly Sharpe yardstick (config/fund.yaml). Not a cash rate: idle cash earns the card's rate."""
+    return float(_load("fund.yaml")["sharpe_hurdle"])
+
+
+def sharpe_hurdle() -> float:
+    """One trading day of the Sharpe yardstick: (1 + annual)^(1/252) - 1. Every Sharpe subtracts this."""
+    return (1.0 + sharpe_hurdle_annual()) ** (1.0 / 252) - 1.0
+
+
 def calibration() -> dict[str, Any]:
     return _load("calibration.yaml")
 

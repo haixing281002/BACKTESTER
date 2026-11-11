@@ -87,3 +87,9 @@ def test_sub_period_cagr_keeps_each_window_s_first_return():
     assert out.loc[1, "cagr"] > 0.02 and out.loc[1, "excess_cagr"] == out.loc[1, "cagr"]   # before the fix: exactly 0
     tbl = research.subperiod_table([type("R", (), {"value": v, "returns": r, "name": "s"})()], n_periods=3, metric="cagr")
     assert tbl.iloc[0, 1] > 0.02                                    # dropped first return: exactly 0
+
+
+def test_sharpe_hurdle_is_five_percent_a_year_as_a_daily_rate():
+    from ros import config
+    assert config.sharpe_hurdle_annual() == 0.05
+    assert abs((1 + config.sharpe_hurdle()) ** 252 - 1.05) < 1e-12
