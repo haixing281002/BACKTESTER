@@ -80,7 +80,7 @@ def curves(t: pd.DataFrame) -> None:
                             (ax[1], [("bootstrap", "#2166ac", "-"), ("bootstrap at a fixed 5-day block", "#7a7a7a", ":"),
                                      ("bootstrap at a fixed 21-day block", "#7a7a7a", "--"), ("bootstrap at a fixed 63-day block", "#7a7a7a", "-.")], "Bootstrap test alone, by block length")):
         for test, col, ls in tests:
-            s = t[t["test"] == test].set_index("case")["pass_rate"]
+            s = t[(t["test"] == test) & (t["gate"] == ("v1" if test.startswith("OVERALL") else "v2"))].set_index("case")["pass_rate"]
             if len(s):
                 a.plot(x, [s.get(n) for n in lv], color=col, ls=ls, marker="o", label=test.replace("bootstrap", "Politis-White block", 1) if test == "bootstrap" else test)
         a.axhline(0.05, color="#b2182b", lw=0.8, ls=":")
