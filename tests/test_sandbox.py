@@ -36,7 +36,7 @@ def test_the_deny_list_closes_the_known_ways_round():
     denied = set(jobs.session_denied())
     for rule in ("Bash(python -c:*)", "Bash(python -m pytest:*)", "Bash(find:*)", "Bash(tee:*)", "Bash(git:*)",
                  "Bash(curl:*)", "Bash(pip:*)", "WebFetch", "Read(~/.lightyear/**)",
-                 "Write(ros/**)", "Edit(lightyear/**)", "Write(tests/**)", "Write(.claude/**)", "Write(*.pth)"):
+                 "Write(/ros/**)", "Edit(/lightyear/**)", "Write(/tests/**)", "Write(/.claude/**)", "Write(*.pth)"):
         assert rule in denied, rule
 
 
@@ -74,3 +74,13 @@ def test_stage_commands_use_named_entry_points_that_exist():
     finally:
         argparse.ArgumentParser.parse_args = orig
     assert names <= parser_choices, f"stage commands name unknown ros.tools subcommands: {names - parser_choices}"
+
+
+def test_code_folder_rules_are_anchored_so_the_run_folder_stays_writable():
+    """An unanchored "lightyear/**" also matches outputs/lightyear/<run>/, where a session must write results.json."""
+    from lightyear import jobs
+    folders = [p for p in jobs._CODE if p.endswith("/**")]
+    assert folders and all(p.startswith("/") for p in folders), folders
+    denied = jobs.session_denied("scripts/x.py")
+    assert "Write(/lightyear/**)" in denied and "Write(lightyear/**)" not in denied
+    assert not any("outputs" in d for d in denied)

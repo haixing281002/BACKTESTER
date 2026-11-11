@@ -50,8 +50,11 @@ ALLOWED_TOOLS = ["Read", "Write", "Edit", "Glob", "Grep", "TodoWrite", "Skill",
                  "Bash(python -m ros.data.sources:*)", "Bash(python run_interpret.py:*)",
                  "Bash(ls:*)", "Bash(mkdir:*)"]
 # Writes to code are refused, so a session cannot plant code that an allowed entry point would then import.
-_CODE = ("ros/**", "lightyear/**", "universal_backtester/**", "validate/**", "tests/**", "webapp/**", ".claude/**",
-         "scripts/universe_v2/**", "run_*.py", "check_setup.py", "*.pth", "sitecustomize.py", "usercustomize.py")
+# Each folder rule starts with "/", which anchors it at the repository root. Unanchored, "lightyear/**" also matched the
+# run folder outputs/lightyear/<run>/, so a real session could not write its own results.json (found 2026-11-11: the first
+# real session after the sandbox went in; the tests used a stand-in session and did not see it).
+_CODE = ("/ros/**", "/lightyear/**", "/universal_backtester/**", "/validate/**", "/tests/**", "/webapp/**", "/.claude/**",
+         "/scripts/universe_v2/**", "/run_*.py", "/check_setup.py", "*.pth", "sitecustomize.py", "usercustomize.py")
 DISALLOWED_TOOLS = (["Bash(git:*)", "Bash(rm:*)", "Bash(curl:*)", "Bash(pip:*)", "Bash(python -c:*)",
                      "Bash(python3:*)", "Bash(py:*)", "Bash(find:*)", "Bash(tee:*)", "WebFetch", "WebSearch",
                      # allowed in .claude/settings.json for interactive use; pytest would run any test file a session
