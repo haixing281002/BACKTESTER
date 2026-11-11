@@ -1,5 +1,6 @@
 # Quant AI Researcher
-# Binary files are stored and checked out byte for byte, never line-ending converted.
+# Text is stored and checked out with LF line endings on every machine; binary files byte for byte.
+* text=auto eol=lf
 *.pdf binary
 *.xlsx binary
 *.parquet binary
