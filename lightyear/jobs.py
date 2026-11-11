@@ -201,6 +201,19 @@ def active_run():
     return None
 
 
+def live_session():
+    """The run id of any Claude Code session still running (a phase, a revision or the analyst review), else None.
+    Gate B is refused while one is live, so no session can record a decision through the page."""
+    with _lock:
+        for rid, proc in list(_procs.items()):
+            if proc.poll() is None:
+                return rid
+    for r in list_runs():
+        if r["status"] in RUNNING or load(r["id"]).get("review_status") == "running":
+            return r["id"]
+    return None
+
+
 def _pid_alive(pid, names=None):
     """Is this pid running and, when names is given, is its image one of them (claude, node, python)?
     The name check guards against a recycled pid belonging to something else."""
@@ -246,6 +259,9 @@ def recover_interrupted():
     """On server start: a run left 'running' has no live driver any more. If the Claude Code child it last
     started (pid in state.json) outlived the old server, kill it, so two sessions never write into one run."""
     for r in list_runs():
+        if load(r["id"]).get("review_status") == "running":     # the review died with the old server
+            update(r["id"], review_status="failed")
+            log(r["id"], "server", "Analyst review marked failed: the server restarted while it ran. Re-run it from the page.")
         if r["status"] in RUNNING:
             pid = load(r["id"]).get("pid")
             if pid and _pid_alive(pid, names=("claude", "node", "python")):

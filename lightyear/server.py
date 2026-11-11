@@ -5,12 +5,12 @@ import os
 import shutil
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, File, Form, HTTPException, Response, UploadFile
-from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse
+from fastapi import FastAPI, File, Form, HTTPException, Request, Response, UploadFile
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from . import __version__, gates, jobs, prompts, workbook
+from . import __version__, gates, jobs, prompts, security, workbook
 from .paths import PAPERS, REPO, STATIC, code_hash, find_claude, git_commit, run_dir, slugify
 
 
@@ -29,11 +29,27 @@ _BOOT_HASH = code_hash()           # the code version this server process actual
 async def _lifespan(_app):
     os.makedirs(jobs.RUNS, exist_ok=True)
     jobs.recover_interrupted()
+    security.write_token_file()
     yield
+    security.remove_token_file()
 
 
 app = FastAPI(title="Lightyear", version=__version__, lifespan=_lifespan)
 app.mount("/static", StaticFiles(directory=STATIC), name="static")
+
+
+@app.middleware("http")
+async def _guard(request: Request, call_next):
+    """Host check on every request; Origin and the per-launch token on every state-changing one (lightyear/security.py)."""
+    if request.headers.get("host", "") not in security.allowed_hosts():
+        return JSONResponse({"detail": "Lightyear answers only on 127.0.0.1 or localhost."}, status_code=403)
+    if request.method not in security.SAFE_METHODS:
+        origin = request.headers.get("origin")
+        if origin is not None and origin not in security.allowed_origins():
+            return JSONResponse({"detail": f"Request from another site ({origin}) refused."}, status_code=403)
+        if not security.token_ok(request.headers.get(security.HEADER)):
+            return JSONResponse({"detail": "Missing or wrong Lightyear token: reload the page."}, status_code=403)
+    return await call_next(request)
 DECISIONS = ("APPROVE", "OBSERVE", "FIX", "REJECT")
 
 
@@ -59,7 +75,8 @@ def _busy_guard():
 
 @app.get("/", response_class=HTMLResponse)
 def index():
-    return open(os.path.join(STATIC, "index.html"), encoding="utf-8").read()
+    page = open(os.path.join(STATIC, "index.html"), encoding="utf-8").read()
+    return page.replace("__LIGHTYEAR_TOKEN__", security.TOKEN)
 
 
 @app.get("/api/health")
@@ -327,6 +344,10 @@ def decide(rid: str, d: Decision):
         raise HTTPException(400, f"decision must be one of {DECISIONS}")
     if not d.by.strip() or not d.rationale.strip():
         raise HTTPException(400, "A named human and a rationale are required.")
+    live = jobs.live_session()
+    if live:
+        raise HTTPException(409, f"A Claude Code session is still running (run {live}). Gate B is recorded only "
+                                 "when no session is live.")
     return jobs.decide(rid, d.decision, d.by.strip(), d.rationale.strip())
 
 

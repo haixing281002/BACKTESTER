@@ -11,6 +11,7 @@ derived gb.decision from the promotion ladder and wrote it to the library as
 though a human had ruled.
 """
 import json
+import os
 import subprocess
 import sys
 
@@ -23,14 +24,21 @@ from data_needs import needs_nse_workbook
 CARD = "examples/cards/devanathan_2026_india_factor_adaptation.yaml"
 
 
-def _run(*extra):
+def _run(*extra, env=None):
     # These tests exercise Gate B decision-recording, not the interactive pauses
     # in run_pipeline.py -- --auto-approve skips them deterministically
     # regardless of whether the test runner's stdin happens to be a tty.
     return subprocess.run(
         [sys.executable, "run_pipeline.py", "--card", CARD,
          "--n-boot", "120", "--no-charts", "--auto-approve", *extra],
-        capture_output=True, text=True)
+        capture_output=True, text=True, env=env)
+
+
+def _token_env(tmp, token="t0ken-for-tests"):
+    """A stand-in for a running Lightyear server: its token file, as lightyear/security.py writes it."""
+    f = tmp / "session_token"
+    f.write_text(token, encoding="utf-8")
+    return dict(os.environ, LIGHTYEAR_TOKEN_FILE=str(f)), token
 
 
 def _latest(outdir):
@@ -50,8 +58,9 @@ def undecided(tmp_path_factory):
 @pytest.fixture(scope="module")
 def decided(tmp_path_factory):
     d = tmp_path_factory.mktemp("decided")
+    env, token = _token_env(tmp_path_factory.mktemp("token"))
     out = _run("--outdir", str(d), "--decision", "REJECT",
-               "--decided-by", "Test PM", "--rationale", "because").stdout
+               "--decided-by", "Test PM", "--rationale", "because", "--token", token, env=env).stdout
     return out, d
 
 
@@ -105,11 +114,30 @@ def test_pipeline_leaves_the_decision_pending_by_default(undecided):
     assert "evidence supports" in out
 
 
-@needs_nse_workbook
-def test_a_decision_requires_a_named_human():
-    r = _run("--decision", "APPROVE")
+def test_a_decision_requires_a_named_human(tmp_path):
+    env, token = _token_env(tmp_path)
+    r = _run("--outdir", str(tmp_path / "out"), "--decision", "APPROVE", "--token", token, env=env)
     assert r.returncode != 0
     assert "requires --decided-by" in (r.stdout + r.stderr)
+    assert "AI RESEARCH OPERATING SYSTEM" not in r.stdout, "refused only after the pipeline had already run"
+    assert not (tmp_path / "out").exists()
+
+
+def test_a_decision_without_lightyear_running_is_refused_before_any_work(tmp_path):
+    env = dict(os.environ, LIGHTYEAR_TOKEN_FILE=str(tmp_path / "no_server_running"))
+    r = _run("--outdir", str(tmp_path / "out"), "--decision", "APPROVE", "--decided-by", "Test PM",
+             "--token", "anything", env=env)
+    assert r.returncode != 0 and "needs Lightyear running" in (r.stdout + r.stderr)
+    assert not (tmp_path / "out").exists()
+
+
+def test_a_decision_with_a_wrong_or_missing_token_is_refused_before_any_work(tmp_path):
+    env, _ = _token_env(tmp_path)
+    for extra in ([], ["--token", "not-the-token"]):
+        r = _run("--outdir", str(tmp_path / "out"), "--decision", "APPROVE", "--decided-by", "Test PM",
+                 *extra, env=env)
+        assert r.returncode != 0 and "requires --token" in (r.stdout + r.stderr)
+    assert not (tmp_path / "out").exists()
 
 
 @needs_nse_workbook
@@ -134,19 +162,10 @@ def test_undecided_runs_are_identifiable_in_the_library(undecided):
     assert e["reviewer"] == ""
 
 
-def test_no_module_derives_a_decision_from_evidence():
-    """Structural guard: only the CLI flag may assign a gate decision."""
-    import pathlib
-    import re
-    offenders = []
-    for p in pathlib.Path(".").rglob("*.py"):
-        if "test" in p.parts or ".git" in p.parts:
-            continue
-        for i, line in enumerate(p.read_text(encoding="utf-8").splitlines(), 1):
-            if re.search(r"\b(ga|gb|gate\w*)\.decision\s*=", line):
-                if "args.decision" not in line and '"PENDING"' not in line:
-                    offenders.append(f"{p}:{i}: {line.strip()}")
-    assert not offenders, "a decision is being assigned from evidence:\n" + "\n".join(offenders)
+# The old structural guard here was a regex over source lines for `gate.decision =`; it could not see a session
+# POSTing to /decide or running run_pipeline.py --decision. The behavioural tests that replace it are in
+# tests/test_security.py (a live session cannot record a decision; no token, no decision) and above (the CLI
+# refuses a decision without a named human and the Lightyear token, before doing any work).
 
 
 # ---------------------------------------------------------------------------
@@ -212,3 +231,4 @@ def test_uncomputed_evidence_is_never_reported_as_a_pass():
     for c in gr.criteria:
         if c.value == "NOT COMPUTED":
             assert not c.passed, f"{c.name!r} was scored as passing without evidence"
+

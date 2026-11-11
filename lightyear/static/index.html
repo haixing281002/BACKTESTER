@@ -2,8 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<!-- Quant AI Researcher by Harshil Pahuja -->
+<!-- Quant AI Researcher -->
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="lightyear-token" content="__LIGHTYEAR_TOKEN__">
 <title>Lightyear</title>
 <!-- served from lightyear/static/vendor so the page works offline and behind a corporate proxy -->
 <script src="/static/vendor/plotly.min.js"></script>
@@ -239,7 +240,10 @@ const TRIVIA = [
  ["trivia","Lightyear has two checkpoints. At Gate A you approve what will be tested. At Gate B you decide what to do with the result: no model ever makes that call."],
 ];
 
-async function api(path, opts){ const r = await fetch(path, opts); if(!r.ok){ let m; try{m=(await r.json()).detail}catch(e){m=r.statusText} throw new Error(m) } return r.json() }
+const LY_TOKEN = document.querySelector('meta[name="lightyear-token"]').content;
+async function api(path, opts){ opts = opts || {};
+  if((opts.method || "GET").toUpperCase() !== "GET") opts.headers = Object.assign({}, opts.headers, {"X-Lightyear-Token": LY_TOKEN});
+  const r = await fetch(path, opts); if(!r.ok){ let m; try{m=(await r.json()).detail}catch(e){m=r.statusText} throw new Error(m) } return r.json() }
 function md(s){ if(window.marked && window.DOMPurify) return DOMPurify.sanitize(marked.parse(s||"")); return "<pre class='code'>"+esc(s)+"</pre>" }
 function pct(x,d=1){ return (x==null||isNaN(x)) ? "–" : (x*100).toFixed(d)+"%" }
 function num(x,d=2){ return (x==null||isNaN(x)) ? "–" : Number(x).toFixed(d) }
@@ -761,7 +765,8 @@ function renderGateB(st){
       <div class="decide">${["APPROVE","OBSERVE","FIX","REJECT"].map(d=>`<button class="d-${d} ${DEC===d?'on':''}" onclick="pickDec('${d}')">${d}</button>`).join("")}</div>
       <div class="grid2"><div><label>Decided by (named human)</label><input id="gb_by" value="${esc(LS.get('ly_operator',''))}"></div><div></div></div>
       <label>Rationale</label><textarea id="gb_why"></textarea>
-      <div class="row" style="margin-top:12px"><button class="primary" onclick="decideB()">Record decision</button><span class="small muted" id="gb_msg"></span></div></div>`
+      <div class="row" style="margin-top:12px"><button class="primary" onclick="decideB()">Record decision</button><span class="small muted" id="gb_msg"></span></div>
+      <p class="small muted">Recording it from a terminal instead (run_pipeline.py --decision)? It needs this server's token, valid while Lightyear runs: <code>${esc(LY_TOKEN)}</code></p></div>`
     : st.decision?`<div class="card"><h2>Decision on record</h2><div class="facts"><div>Decision</div><div class="d-${esc(st.decision.decision)}"><b>${esc(st.decision.decision)}</b></div><div>By</div><div>${esc(st.decision.decided_by)}</div><div>When</div><div>${esc(st.decision.at.replace("T"," "))}</div><div>Rationale</div><div>${esc(st.decision.rationale)}</div></div></div>`:""}
     <div class="card"><h2>Gate B brief</h2><div class="md">${st.gate_b_md?md(st.gate_b_md):"(no brief file)"}</div></div>`;
 }

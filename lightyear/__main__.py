@@ -13,6 +13,7 @@ def main():
     ap.add_argument("--port", type=int, default=8100)
     ap.add_argument("--no-browser", action="store_true")
     a = ap.parse_args()
+    os.environ["LIGHTYEAR_PORT"] = str(a.port)     # lightyear/security.py accepts only this host:port
     import uvicorn
     url = f"http://127.0.0.1:{a.port}"
     print(f"Lightyear on {url}  (local only; Ctrl+C to stop)")

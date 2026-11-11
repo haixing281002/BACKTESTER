@@ -140,7 +140,20 @@ def main(argv=None) -> int:
                     help="Gate B ruling. Requires --decided-by.")
     ap.add_argument("--decided-by", help="Name of the human who owns this decision.")
     ap.add_argument("--rationale", help="Why. Stored with the decision.")
+    ap.add_argument("--token", help="With --decision: the token shown on the Lightyear page's Gate B panel. "
+                    "Lightyear must be running; no model session is ever given it.")
     args = ap.parse_args(argv)
+    # A decision is checked BEFORE any work, so a refused one never runs the pipeline or writes anything.
+    if args.decision:
+        if not args.decided_by:
+            raise SystemExit("--decision requires --decided-by (a named human owns every decision)")
+        from lightyear import security
+        expected = security.read_token_file()
+        if expected is None:
+            raise SystemExit("--decision needs Lightyear running: start it, open the run's Gate B panel and pass "
+                             "the token shown there with --token.")
+        if not security.token_ok(args.token, expected):
+            raise SystemExit("--decision requires --token: the token shown on the Lightyear page's Gate B panel.")
 
     R = Report()
     card = load_card(args.card)
@@ -626,9 +639,7 @@ def main(argv=None) -> int:
     recommendation = ("PROMOTE" if lad["attained_rung"] in ("PORTFOLIO_USEFUL",
                                                             "PAPER_TRADED", "LIVE_CANDIDATE")
                       else "REJECT" if lad["attained_rung"] is None else "OBSERVE")
-    if args.decision:
-        if not args.decided_by:
-            raise SystemExit("--decision requires --decided-by (a named human owns every decision)")
+    if args.decision:                    # --decided-by and --token were checked before any work, above
         gb.decision = args.decision
         gb.rationale = args.rationale or f"recorded by {args.decided_by}"
         outcome = {"APPROVE": "PROMOTED", "OBSERVE": "HELD",
@@ -648,7 +659,7 @@ def main(argv=None) -> int:
         R.p("  NO DECISION HAS BEEN MADE. The pipeline scored the evidence and stopped.")
         R.p("  A named human records the call by re-running with, for example:")
         R.p(f"    python run_pipeline.py --card {args.card} \\")
-        R.p("        --decision REJECT --decided-by \"N. Ganesh\" --rationale \"...\"")
+        R.p("        --decision REJECT --decided-by \"Your Name\" --rationale \"...\" --token <from the Gate B panel>")
 
     eid = make_entry_id(card.paper.id, card.fingerprint())
     entry = LibraryEntry(

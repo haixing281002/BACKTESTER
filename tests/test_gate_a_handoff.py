@@ -33,13 +33,18 @@ def client(tmp_path, monkeypatch):
     papers.mkdir()
     shutil.copy(os.path.join(REPO, "tests", "fixtures", "synthetic_paper.pdf"), papers / "synthetic_paper.pdf")
     monkeypatch.setenv("LIGHTYEAR_PAPERS", str(papers))
+    monkeypatch.setenv("LIGHTYEAR_TOKEN_FILE", str(tmp_path / "session_token"))
+    monkeypatch.setenv("LIGHTYEAR_PORT", "8100")
     import lightyear.jobs
     import lightyear.paths
     import lightyear.server
-    for m in (lightyear.paths, lightyear.jobs, lightyear.server):
+    import lightyear.security
+    for m in (lightyear.paths, lightyear.security, lightyear.jobs, lightyear.server):
         importlib.reload(m)
     from fastapi.testclient import TestClient
-    with TestClient(lightyear.server.app) as c:
+    from lightyear import security
+    with TestClient(lightyear.server.app, base_url="http://127.0.0.1:8100",
+                    headers={security.HEADER: security.TOKEN}) as c:
         yield c
 
 
