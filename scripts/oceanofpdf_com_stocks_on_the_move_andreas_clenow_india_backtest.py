@@ -1027,7 +1027,10 @@ def main() -> int:
                    "detail": f"min weight {w_.min().min():.4f}, max gross {gross.max():.4f}"})
     checks.append({"check": "cash share plus stock weights equal 1 every day", "passed": bool(np.allclose(gross + base["cash_weight"], 1.0, atol=1e-6)),
                    "detail": f"max |gross + cash - 1| = {float((gross + base['cash_weight'] - 1).abs().max()):.2e}"})
-    checks.append({"check": "every holding was a NIFTY 500 member at its signal date", "passed": True, "detail": "enforced in simulate(): a non-member is never bought and is sold at the first snapshot that omits it"})
+    h_chk = base["holdings"]
+    mem_ok = [bool(d["members"].at[pd.Timestamp(r.date), r.isin]) for r in h_chk.itertuples()] if len(h_chk) else []
+    checks.append({"check": "every holding was a NIFTY 500 member at its signal date", "passed": bool(mem_ok) and all(mem_ok),
+                   "detail": f"{len(mem_ok) - sum(mem_ok)} of {len(mem_ok)} holding rows were not members on their signal date"})
     checks.append({"check": "panel ends at the benchmark's last date; nothing after 2026-09-18 is read", "passed": bool(cal[-1] == END), "detail": str(cal[-1].date())})
     pd.DataFrame(checks).to_csv(os.path.join(out, "checks.csv"), index=False)
     produced.append(os.path.join(out, "checks.csv"))
