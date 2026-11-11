@@ -91,5 +91,5 @@ def test_sub_period_cagr_keeps_each_window_s_first_return():
 
 def test_sharpe_hurdle_is_five_percent_a_year_as_a_daily_rate():
     from ros import config
-    assert config.sharpe_hurdle_annual() == 0.05
-    assert abs((1 + config.sharpe_hurdle()) ** 252 - 1.05) < 1e-12
+    assert config.hurdle_annual() == 0.05
+    assert abs((1 + config.hurdle_daily()) ** 252 - 1.05) < 1e-12

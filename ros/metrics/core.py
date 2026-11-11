@@ -382,7 +382,8 @@ def publication_cutoff(date: str | None) -> pd.Timestamp | None:
         return None
 
 
-def post_publication(returns: pd.Series, bench: pd.Series, cash: float | pd.Series | None, date: str | None) -> dict[str, Any] | None:
+def post_publication(returns: pd.Series, bench: pd.Series, cash: float | pd.Series | None, date: str | None,
+                     hurdle: float | None = None) -> dict[str, Any] | None:
     """Metrics from the publication date onward, shown apart from the full window. None if under a year is left."""
     cut = publication_cutoff(date)
     if cut is None:
@@ -396,15 +397,18 @@ def post_publication(returns: pd.Series, bench: pd.Series, cash: float | pd.Seri
     vr = value_from_returns(r, start=before_r[-1] if len(before_r) else None)
     vb = value_from_returns(b, start=before_b[-1] if len(before_b) else None)
     return {"from": str(cut.date()), "days": len(r), "cagr": cagr(vr), "benchmark_cagr": cagr(vb), "edge": edge(cagr(vr), cagr(vb)),
-            "sharpe": sharpe(r, cash), "benchmark_sharpe": sharpe(b, cash), "max_dd": max_drawdown(vr), "information_ratio": information_ratio(r, b)}
+            "sharpe": sharpe(r, cash if hurdle is None else hurdle), "benchmark_sharpe": sharpe(b, cash if hurdle is None else hurdle), "max_dd": max_drawdown(vr), "information_ratio": information_ratio(r, b)}
 
 
 # ---------------------------------------------------------------------------------------------- one block of metrics
-def summary(returns: pd.Series, cash: float | pd.Series | None = None, bench: pd.Series | None = None, start=None) -> dict[str, float]:
-    """The core block for one return series. `start` is the value-100 date before the first return, when there is one."""
+def summary(returns: pd.Series, cash: float | pd.Series | None = None, bench: pd.Series | None = None, start=None,
+            hurdle: float | None = None) -> dict[str, float]:
+    """The core block for one return series. `start` is the value-100 date before the first return, when there is one.
+    `hurdle` is the daily Sharpe yardstick (config.hurdle_daily()): Sharpe and Sortino subtract it. Beta subtracts `cash`."""
     r = returns.dropna()
     v = value_from_returns(r, start=start)
-    out = {"final": float(v.iloc[-1]), "cagr": cagr(v), "vol": ann_vol(r), "sharpe": sharpe(r, cash), "sortino": sortino(r, cash),
+    h = cash if hurdle is None else hurdle
+    out = {"final": float(v.iloc[-1]), "cagr": cagr(v), "vol": ann_vol(r), "sharpe": sharpe(r, h), "sortino": sortino(r, h),
            "calmar": calmar(v), "max_dd": max_drawdown(v), "dd_duration_days": drawdown_duration(v), "cvar_95": cvar_95(r),
            "skew": skew(r), "best_days_removed_cagr": cagr_without_best_days(r), "days": len(r)}
     if bench is not None:

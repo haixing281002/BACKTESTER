@@ -809,7 +809,7 @@ def _core_inputs(st, res, df, extra):
         out["card_bp"] = float(card.costs.spread_bps)
         out["cash_rate"], out["cash_source"] = config.cash_rate_for(card)
     except Exception as e:  # noqa: BLE001  an unreadable card must not lose the run; the warning is on the page
-        warn.append(f"Card not read for the core metrics ({type(e).__name__}: {e}); Sharpe and Sortino left blank.")
+        warn.append(f"Card not read for the core metrics ({type(e).__name__}: {e}); beta left blank.")
     tr = extra.get("trades")
     if tr is None and "holdings" in extra:
         tr = workbook.derive_trades(extra["holdings"])

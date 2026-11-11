@@ -27,11 +27,12 @@ def test_workbook_sharpe_is_the_one_formula_everywhere(tmp_path):
     out = tmp_path / "w.xlsx"
     workbook.build(str(tmp_path), res, df, "t", str(out), comparators=cmp, observations=ch["observations"], core_metrics=ch)
     wb = openpyxl.load_workbook(out)
-    assert wb["Summary"]["A14"].value == "Sharpe"
-    assert wb["Summary"]["B14"].value == "=(AVERAGE(Ret_Strat)-Cash_Daily)*252/B13"
-    assert wb["Summary"]["C14"].value == "=(AVERAGE(Ret_Bench)-Cash_Daily)*252/C13"
-    assert wb["Summary"]["B4"].value == 0.06
-    assert "Cash_Daily" in wb["Comparators"]["D5"].value
+    # Wave 4: Sharpe is over the 5% hurdle in config/fund.yaml; the card's cash rate stays on the sheet as what cash earns
+    assert wb["Summary"]["A14"].value == "Sharpe (5% hurdle)"
+    assert wb["Summary"]["B14"].value == "=(AVERAGE(Ret_Strat)-Hurdle_Daily)*252/B13"
+    assert wb["Summary"]["C14"].value == "=(AVERAGE(Ret_Bench)-Hurdle_Daily)*252/C13"
+    assert wb["Summary"]["B4"].value == 0.06 and wb["Summary"]["B5"].value == 0.05
+    assert "Hurdle_Daily" in wb["Comparators"]["D5"].value
     assert "Core metrics" in wb.sheetnames
 
 

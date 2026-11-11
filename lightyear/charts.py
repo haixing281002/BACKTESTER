@@ -4,7 +4,8 @@
 The page only draws; every number comes from here. Definitions match the workbook's formulas:
   - value starts at 100 at the close BEFORE the first return (start = the NSE session before the first date, from the
     NSE index workbook's own dates; never weekday logic), so every daily return counts, including the first;
-  - every metric comes from ros.metrics.core, and Sharpe is over the cash rate on the run's card.
+  - every metric comes from ros.metrics.core. Sharpe and Sortino are over the Sharpe hurdle in config/fund.yaml (a
+    yardstick); beta is over the cash rate on the run's card, which is also what idle cash earns.
 """
 import functools
 import math
@@ -13,6 +14,7 @@ import os
 import numpy as np
 import pandas as pd
 
+from ros import config
 from ros.metrics import core
 
 ROLL = 63   # three months of trading days for rolling volatility
@@ -51,26 +53,29 @@ def value_path(r: pd.Series) -> np.ndarray:
     return 100 * np.r_[1.0, np.cumprod(1 + r.fillna(0.0).to_numpy())]
 
 
-def metrics(r: pd.Series, dates: pd.Series, cash_rate=None, bench: pd.Series = None):
-    """The core block for one series. With no cash rate on the card, the two ratios that need one stay blank."""
+def metrics(r: pd.Series, dates: pd.Series, cash_rate=None, bench: pd.Series = None, sharpe_hurdle=None):
+    """The core block for one series. Sharpe and Sortino are over `sharpe_hurdle` (a yearly rate; config's when None).
+    With no cash rate from the card, beta stays blank."""
     t0 = start_date(dates)
     x = pd.Series(r.to_numpy(dtype=float), index=pd.DatetimeIndex(dates)).fillna(0.0)
     b = None if bench is None else pd.Series(bench.to_numpy(dtype=float), index=pd.DatetimeIndex(dates)).fillna(0.0)
     cash = core.daily_cash(cash_rate) if cash_rate is not None else None
-    out = core.summary(x, cash, b, start=t0)
+    out = core.summary(x, cash, b, start=t0, hurdle=core.daily_cash(_hurdle(sharpe_hurdle)))
     out["years"] = core.years_between(t0, x.index[-1])
-    if cash_rate is None:
-        out["sharpe"] = out["sortino"] = float("nan")
-        if b is not None:
-            out["beta"] = float("nan")
+    if cash_rate is None and b is not None:
+        out["beta"] = float("nan")
     return out
+
+
+def _hurdle(sharpe_hurdle) -> float:
+    return config.hurdle_annual() if sharpe_hurdle is None else float(sharpe_hurdle)
 
 
 def _p(x):
     return f"{x * 100:.1f}%"
 
 
-def observations(df, met, names):
+def observations(df, met, names, sharpe_hurdle=None):
     """Positives and negatives measured straight from the daily returns. Each is a plain sentence with its number."""
     s, b = met["strategy"], met["benchmark"]
     bn = names.get("benchmark", "the benchmark")
@@ -80,7 +85,7 @@ def observations(df, met, names):
         f"Grew {_p(s['cagr'])} a year against {_p(b['cagr'])} for {bn}, {'ahead' if gap > 0 else 'behind'} by {_p(abs(gap))} a year.")
     if not (math.isnan(s["sharpe"]) or math.isnan(b["sharpe"])):
         (pos if s["sharpe"] > b["sharpe"] else neg).append(
-            f"Return per unit of risk (Sharpe) of {s['sharpe']:.2f} against {b['sharpe']:.2f} for {bn}"
+            f"Return per unit of risk (Sharpe, over the {_hurdle(sharpe_hurdle):.0%} hurdle) of {s['sharpe']:.2f} against {b['sharpe']:.2f} for {bn}"
             + (": better risk-adjusted." if s["sharpe"] > b["sharpe"] else ": the extra return came with even more extra risk."))
     if s["vol"] < b["vol"]:
         pos.append(f"Smoother ride: yearly volatility {_p(s['vol'])} against {_p(b['vol'])} for {bn}.")
@@ -138,7 +143,7 @@ def _blank_nans(x):
 
 
 def build(df: pd.DataFrame, names: dict, cash_rate=None, comparators: pd.DataFrame = None, turnover: pd.Series = None,
-          card_bp=None, publication_date=None, cash_source=None):
+          card_bp=None, publication_date=None, cash_source=None, sharpe_hurdle=None):
     df = df.sort_values("date").reset_index(drop=True)
     cols = [c for c in ("strategy", "benchmark", "sleeve") if c in df.columns]
     d = df["date"]
@@ -146,7 +151,8 @@ def build(df: pd.DataFrame, names: dict, cash_rate=None, comparators: pd.DataFra
     dates = [t0.strftime("%Y-%m-%d")] + d.dt.strftime("%Y-%m-%d").tolist()
     out = {"dates": dates, "start": dates[0], "calendar_source": nse_sessions()[1],
            "names": {c: names.get(c, c) for c in cols},
-           "growth": {}, "drawdown": {}, "rolling_vol": {}, "metrics": {}, "cash_rate": cash_rate, "cash_source": cash_source}
+           "growth": {}, "drawdown": {}, "rolling_vol": {}, "metrics": {}, "cash_rate": cash_rate, "cash_source": cash_source,
+           "sharpe_hurdle": (sharpe_hurdle := _hurdle(sharpe_hurdle))}
     for c in cols:
         r = df[c].fillna(0.0)
         v = value_path(r)
@@ -154,12 +160,12 @@ def build(df: pd.DataFrame, names: dict, cash_rate=None, comparators: pd.DataFra
         out["drawdown"][c] = [round(float(x), 6) for x in (v / np.maximum.accumulate(v) - 1)]
         rv = core.rolling_vol(r, ROLL)
         out["rolling_vol"][c] = [None] + [None if np.isnan(x) else round(float(x), 6) for x in rv]
-        out["metrics"][c] = metrics(r, d, cash_rate, df["benchmark"] if c == "strategy" else None)
+        out["metrics"][c] = metrics(r, d, cash_rate, df["benchmark"] if c == "strategy" else None, sharpe_hurdle)
 
     yr = df.assign(year=d.dt.year).groupby("year")
     out["calendar"] = {"years": [str(y) for y in yr.groups.keys()],
                        **{c: [float((1 + g[c].fillna(0)).prod() - 1) for _, g in yr] for c in cols}}
-    out["observations"] = observations(df, out["metrics"], out["names"])
+    out["observations"] = observations(df, out["metrics"], out["names"], sharpe_hurdle)
 
     m = df.assign(ym=d.dt.to_period("M")).groupby("ym")["strategy"].apply(lambda x: (1 + x.fillna(0)).prod() - 1)
     years = sorted({p.year for p in m.index})
@@ -175,7 +181,7 @@ def build(df: pd.DataFrame, names: dict, cash_rate=None, comparators: pd.DataFra
             r = cmp[c].astype(float)
             out["comparators"]["names"].append(c)
             out["comparators"]["growth"][c] = [round(float(x), 4) for x in value_path(r)]
-            out["comparators"]["metrics"][c] = metrics(r.fillna(0.0), d, cash_rate)
+            out["comparators"]["metrics"][c] = metrics(r.fillna(0.0), d, cash_rate, sharpe_hurdle=sharpe_hurdle)
 
     idx = pd.DatetimeIndex(d)
     strat = pd.Series(df["strategy"].fillna(0.0).to_numpy(dtype=float), index=idx)
@@ -187,8 +193,8 @@ def build(df: pd.DataFrame, names: dict, cash_rate=None, comparators: pd.DataFra
     out["gross"] = None
     if turnover is not None and card_bp:
         gross = core.returns_at_cost(strat, turnover, 0.0, card_bp)
-        out["gross"] = metrics(pd.Series(gross.to_numpy()), d, cash_rate, df["benchmark"])
-    out["post_publication"] = core.post_publication(strat, bench, cash, publication_date) if cash is not None else None
+        out["gross"] = metrics(pd.Series(gross.to_numpy()), d, cash_rate, df["benchmark"], sharpe_hurdle)
+    out["post_publication"] = core.post_publication(strat, bench, cash, publication_date, hurdle=core.daily_cash(sharpe_hurdle))
     wd = core.worst_days(strat)
     out["worst_days"] = [{"date": str(k.date()), "return": float(v)} for k, v in wd.items()]
     return _blank_nans(out)
