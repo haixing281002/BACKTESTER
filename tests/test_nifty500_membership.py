@@ -140,3 +140,12 @@ def test_live_workbook_matches_what_the_module_documents():
     assert 395 <= len(n.members_on("2024-03-28", index="NIFTY MIDSMALLCAP 400")) <= 405
     assert n.staleness("2026-10-24")["next_review"] == "2026-09-30"
     assert n.backtest_end_limit() == pd.Timestamp("2026-09-29")
+
+
+def test_provenance_works_on_a_cold_cache(world):
+    """First-ever call, nothing cached yet: the freshly built summary has object columns and .item() used to crash."""
+    assert not os.path.exists(world["out"]) or not os.listdir(world["out"])
+    p = n.provenance()
+    assert p["unmapped_names_first"] == 0 and p["unmapped_names_last"] == 0
+    assert isinstance(p["unmapped_names_first"], int)
+    assert n.provenance()["unmapped_names_last"] == 0          # and again, now read back from the cache

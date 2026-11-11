@@ -415,8 +415,8 @@ def provenance(path: str | None = None, source: str = "holdings_workbook", **kw)
         "snapshots": len(summ), "complete_snapshots": len(complete),
         "skipped_incomplete": [str(d.date()) for d in summ.index[~summ["complete"]]],
         "first_snapshot": str(complete.index.min().date()), "last_snapshot": str(complete.index.max().date()),
-        "unmapped_names_first": complete["unmapped"].iloc[0].item(),
-        "unmapped_names_last": complete["unmapped"].iloc[-1].item(),
+        "unmapped_names_first": int(complete["unmapped"].iloc[0]),
+        "unmapped_names_last": int(complete["unmapped"].iloc[-1]),
         "pit_status": "point_in_time",
         "read_at": sources.stamp(),
         "caveats": [
