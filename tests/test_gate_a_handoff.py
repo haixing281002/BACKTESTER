@@ -201,7 +201,10 @@ def test_clenow_script_reads_its_parameters_from_the_card():
     assert mod.P["gap_limit"] == float(card.signal.params["gap_limit"])
     assert mod.P["signal_weekday"] == wd[card.signal.params["signal_weekday"].lower()]
     assert mod.P["cost_bp"] == float(card.costs.spread_bps)
-    assert mod.N_TRIALS == card.n_configs_tried + len(mod.SENSITIVITIES)
+    # Wave 3: trials = every version tried (book + Lightyear runs + ledger, ros/validation/trials.py) plus this run's
+    # sensitivities, counted in main() once the run folder is known; the book's count is still where it starts.
+    assert mod.N_SENSITIVITIES == len(mod.SENSITIVITIES)
+    assert "trials.count(SLUG, int(CARD_OBJ.n_configs_tried), exclude_run=run_dir)" in src
     assert mod.MANDATE_ALLOWS_CASH == (card.portfolio.mandate_allow_cash is True)
     blob = yaml.safe_load(_read(card_path))
     assert blob["portfolio"]["mandate_allow_cash"] is True       # the operator's ruling of 2026-10-30
