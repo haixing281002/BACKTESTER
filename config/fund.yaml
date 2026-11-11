@@ -1,7 +1,8 @@
 # Quant AI Researcher
 # Facts about the fund. A blank value is reported as not computed, and its gate test as INCOMPLETE. Nothing is guessed.
-# The Sharpe yardstick (operator, Wave 4, 2026-11-11): 5% a year, subtracted in every Sharpe as (1.05)^(1/252) - 1 a day.
-# A yardstick only: idle cash still earns the card's cash rate, and no return is changed by it.
+# The RISK-FREE RATE used in every Sharpe and Sortino (operator, Wave 4, 2026-11-11): 5% a year, (1.05)^(1/252) - 1 a day.
+# Shown on every label as "risk-free rate 5%". It is a yardstick only: idle cash still earns the card's cash rate, and no
+# return is changed by it. This one setting is the only place the number lives (the key keeps its first name).
 sharpe_hurdle: 0.05
 cash_rate_sweep: [0.0, 0.04, 0.08]   # Rates an appendix sweep tries beside the card's own. Never reaches a headline or a gate.
 # AUM is set only on a card, at Gate A (portfolio.aum_inr_cr; operator's ruling 2026-11-06). No capital size here.

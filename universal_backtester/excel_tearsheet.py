@@ -5,8 +5,8 @@ Hard rule (2026-11-11): Python's ros/metrics/core.py is the single definition of
 reproduces it exactly. tests/test_excel_equals_python.py recalculates this workbook and fails the suite if any cell differs
 from core by more than 1e-6. No metric may be defined in Excel only.
 
-Conventions, the same as core: daily returns; sample standard deviation (STDEV); annualise with 252; the Sharpe hurdle
-from config/fund.yaml; a loss, drawdown, VaR or CVaR is a positive number; years = calendar days / 365.25. Metrics that
+Conventions, the same as core: daily returns; sample standard deviation (STDEV); annualise with 252; the risk-free rate
+from config/fund.yaml (shown as the risk-free rate); a loss, drawdown, VaR or CVaR is a positive number; years = calendar days / 365.25. Metrics that
 are monthly by definition (month counts, gain to pain, capture ratios) use calendar-month compounding of the daily returns,
 which is core.monthly_returns().
 
@@ -40,15 +40,12 @@ _BOTH = [
     ("Negative Volatility", "ARRAY:=STDEV(IF(Ret_{x}<0,Ret_{x}))*SQRT(252)", PCT, "sample stdev of the days with a loss x sqrt(252)"),
     ("Max Drawdown", "=MAX(DD_{x})", PCT, "worst fall from a previous high on daily values, positive"),
     ("Average Annual Max Drawdown", "=AVERAGE(YearDD_{x})", PCT, "mean of each calendar year's worst fall; the year's peak starts at the prior year-end value"),
-    ("Sharpe (geometric)", "=({c}{r[CAGR]}-Hurdle)/{c}{r[Annualized Volatility]}", NUM, "the headline: (CAGR - hurdle) / annualised volatility"),
-    ("Sharpe (arithmetic)", "=(AVERAGE(Ret_{x})-Hurdle_Daily)/STDEV(Ret_{x})*SQRT(252)", NUM, "mean(r - h) / stdev(r - h) x sqrt(252), h the daily hurdle"),
-    ("Sortino (geometric)", "=({c}{r[CAGR]}-Hurdle)/(SQRT(SUMPRODUCT((Ex_{x}<0)*Ex_{x}^2)/COUNT(Ret_{x}))*SQRT(252))", NUM,
-     "(CAGR - hurdle) / downside deviation; downside deviation = sqrt(mean(min(r - h, 0)^2)) x sqrt(252)"),
-    ("Sortino (arithmetic)", "=(AVERAGE(Ret_{x})-Hurdle_Daily)*252/(SQRT(SUMPRODUCT((Ex_{x}<0)*Ex_{x}^2)/COUNT(Ret_{x}))*SQRT(252))", NUM,
-     "mean(r - h) x 252 / downside deviation"),
+    ("Sharpe Ratio", "=({c}{r[CAGR]}-Risk_Free_Rate)/{c}{r[Annualized Volatility]}", NUM, "(CAGR - risk-free rate) / annualised volatility"),
+    ("Sortino Ratio", "=({c}{r[CAGR]}-Risk_Free_Rate)/(SQRT(SUMPRODUCT((Ex_{x}<0)*Ex_{x}^2)/COUNT(Ret_{x}))*SQRT(252))", NUM,
+     "(CAGR - risk-free rate) / downside deviation; downside deviation = sqrt(mean(min(r - rf, 0)^2)) x sqrt(252), rf the daily risk-free rate"),
     ("Calmar Ratio", "={c}{r[CAGR]}/{c}{r[Max Drawdown]}", NUM, "CAGR / max drawdown"),
     ("Sterling Ratio", "={c}{r[CAGR]}/{c}{r[Average Annual Max Drawdown]}", NUM, "CAGR / average annual max drawdown"),
-    ("Omega Ratio", "=SUMPRODUCT((Ex_{x}>0)*Ex_{x})/-SUMPRODUCT((Ex_{x}<0)*Ex_{x})", NUM, "daily gains above the hurdle / daily shortfalls below it"),
+    ("Omega Ratio", "=SUMPRODUCT((Ex_{x}>0)*Ex_{x})/-SUMPRODUCT((Ex_{x}<0)*Ex_{x})", NUM, "daily gains above the daily risk-free rate / daily shortfalls below it"),
     ("Gain to Pain Ratio", '=SUMIF(Mon_{x},">0")/-SUMIF(Mon_{x},"<0")', NUM, "sum of winning months / |sum of losing months|"),
     ("Tail Ratio", "=ABS(PERCENTILE(Ret_{x},0.95))/ABS(PERCENTILE(Ret_{x},0.05))", NUM, "|95th percentile| / |5th percentile| of daily returns"),
     ("Avg Month Ret", "=AVERAGE(Mon_{x})", PCT, "mean calendar-month return"),
@@ -66,9 +63,9 @@ _BOTH = [
 _RELATIVE = [
     ("Beta", "=SLOPE(Ret_S,Ret_B)", NUM, "Cov(r, b) / Var(b) on daily returns"),
     ("Adjusted Beta", "=2/3*B{r[Beta]}+1/3", NUM, "2/3 x beta + 1/3"),
-    ("Treynor Ratio", "=(B{r[CAGR]}-Hurdle)/B{r[Beta]}", NUM, "(CAGR - hurdle) / beta"),
+    ("Treynor Ratio", "=(B{r[CAGR]}-Risk_Free_Rate)/B{r[Beta]}", NUM, "(CAGR - risk-free rate) / beta"),
     ("Alpha", "=B{r[CAGR]}-C{r[CAGR]}", PCT, "CAGR - benchmark CAGR"),
-    ("Jensens Alpha (Adj Beta)", "=(B{r[CAGR]}-Hurdle)-B{r[Adjusted Beta]}*(C{r[CAGR]}-Hurdle)", PCT, "(CAGR - hurdle) - adjusted beta x (benchmark CAGR - hurdle)"),
+    ("Jensens Alpha (Adj Beta)", "=(B{r[CAGR]}-Risk_Free_Rate)-B{r[Adjusted Beta]}*(C{r[CAGR]}-Risk_Free_Rate)", PCT, "(CAGR - risk-free rate) - adjusted beta x (benchmark CAGR - risk-free rate)"),
     ("Tracking Error", "=STDEV(Diff)*SQRT(252)", PCT, "sample stdev of (r - b) x sqrt(252)"),
     ("Information Ratio", "=AVERAGE(Diff)*252/B{r[Tracking Error]}", NUM, "mean(r - b) x 252 / tracking error"),
     ("Upside Capture", '=AVERAGEIF(Mon_B,">0",Mon_S)/AVERAGEIF(Mon_B,">0",Mon_B)', NUM, "mean monthly return / benchmark's, in months the benchmark rose"),
@@ -106,7 +103,7 @@ def write_return_analytics_workbook(path: str, strategy_returns: pd.Series, benc
     # ---- Daily: the only hardcoded numbers in the workbook are the two return columns and the dates
     header(wd, 1, ["Date", f"{strategy_name} return", f"{benchmark_name} return", "Value S", "Value B", "Peak S", "Peak B", "Drawdown S",
                    "Drawdown B", "Year peak S", "Year peak B", "Year drawdown S", "Year drawdown B", "Year", "Year-month", "Financial year",
-                   "Return - hurdle S", "Return - hurdle B", "S - B"])
+                   "Return - risk-free S", "Return - risk-free B", "S - B"])
     put(wd, "A2", pd.Timestamp(start).to_pydatetime(), F_INPUT, DATE)
     for col in "DEFG":
         put(wd, f"{col}2", 100.0 if col in "DE" else f"={'D' if col == 'F' else 'E'}2", F_INPUT if col in "DE" else F_BASE, "0.0000")
@@ -125,8 +122,8 @@ def write_return_analytics_workbook(path: str, strategy_returns: pd.Series, benc
         wd[f"N{i}"] = f"=YEAR(A{i})"
         wd[f"O{i}"] = f"=YEAR(A{i})*100+MONTH(A{i})"
         wd[f"P{i}"] = f"=YEAR(A{i})+IF(MONTH(A{i})>=4,1,0)"
-        wd[f"Q{i}"] = f"=B{i}-Hurdle_Daily"
-        wd[f"R{i}"] = f"=C{i}-Hurdle_Daily"
+        wd[f"Q{i}"] = f"=B{i}-Risk_Free_Daily"
+        wd[f"R{i}"] = f"=C{i}-Risk_Free_Daily"
         wd[f"S{i}"] = f"=B{i}-C{i}"
     for nm, col in (("Dates", "A"), ("Ret_S", "B"), ("Ret_B", "C"), ("DD_S", "H"), ("DD_B", "I"), ("YDD_S", "L"), ("YDD_B", "M"),
                     ("Yr", "N"), ("YM", "O"), ("FY", "P"), ("Ex_S", "Q"), ("Ex_B", "R"), ("Diff", "S")):
@@ -153,11 +150,11 @@ def write_return_analytics_workbook(path: str, strategy_returns: pd.Series, benc
             _cell(wy, f"{col}{k}", f"ARRAY:=PRODUCT(IF(Yr=$A{k},1+Ret_{x},1))-1", PCT)
         for col, x in (("D", "S"), ("E", "B")):
             _cell(wy, f"{col}{k}", f"ARRAY:=MAX(IF(Yr=$A{k},YDD_{x}))", PCT)
-        # per-calendar-year ratios are the ARITHMETIC form, over the daily hurdle
+        # per-calendar-year ratios are the ARITHMETIC form, over the daily risk-free rate
         for col, x in (("K", "S"), ("L", "B")):
-            _cell(wy, f"{col}{k}", f"ARRAY:=(AVERAGE(IF(Yr=$A{k},Ret_{x}))-Hurdle_Daily)/STDEV(IF(Yr=$A{k},Ret_{x}))*SQRT(252)", NUM)
+            _cell(wy, f"{col}{k}", f"ARRAY:=(AVERAGE(IF(Yr=$A{k},Ret_{x}))-Risk_Free_Daily)/STDEV(IF(Yr=$A{k},Ret_{x}))*SQRT(252)", NUM)
         for col, x in (("M", "S"), ("N", "B")):
-            _cell(wy, f"{col}{k}", f"ARRAY:=(AVERAGE(IF(Yr=$A{k},Ret_{x}))-Hurdle_Daily)*252/"
+            _cell(wy, f"{col}{k}", f"ARRAY:=(AVERAGE(IF(Yr=$A{k},Ret_{x}))-Risk_Free_Daily)*252/"
                                    f"(SQRT(SUMPRODUCT((Yr=$A{k})*(Ex_{x}<0)*Ex_{x}^2)/COUNTIF(Yr,$A{k}))*SQRT(252))", NUM)
     for k, y in enumerate(fys, start=2):
         put(wy, f"G{k}", y, F_BASE, "0")
@@ -170,14 +167,14 @@ def write_return_analytics_workbook(path: str, strategy_returns: pd.Series, benc
     # ---- Analytics
     put(ws, "A1", "Return analytics", F_TITLE)
     put(ws, "A2", f"Every metric is a formula over the Daily sheet and reproduces ros/metrics/core.py. {SIGNATURE}", F_NOTE)
-    put(ws, "A3", "Sharpe hurdle, a year (config/fund.yaml)", F_BOLD)
-    put(ws, "B3", hurdle_annual, F_INPUT, PCT, FILL_KEY, border=True, comment="Key assumption: the Sharpe yardstick, from config/fund.yaml (sharpe_hurdle).")
-    put(ws, "C3", "=(1+Hurdle)^(1/252)-1", F_BASE, "0.000000%", border=True)
-    put(ws, "D3", "the hurdle for one day", F_NOTE)
+    put(ws, "A3", "Risk-free rate for Sharpe and Sortino, a year (config/fund.yaml)", F_BOLD)
+    put(ws, "B3", hurdle_annual, F_INPUT, PCT, FILL_KEY, border=True, comment="Key assumption: the risk-free rate in Sharpe and Sortino, one setting in config/fund.yaml.")
+    put(ws, "C3", "=(1+Risk_Free_Rate)^(1/252)-1", F_BASE, "0.000000%", border=True)
+    put(ws, "D3", "the risk-free rate for one day", F_NOTE)
     put(ws, "A4", "Base date (value 100)", F_BOLD)
     put(ws, "B4", "=Daily!A2", F_BASE, DATE, border=True)
-    name(wb, "Hurdle", "Analytics!$B$3")
-    name(wb, "Hurdle_Daily", "Analytics!$C$3")
+    name(wb, "Risk_Free_Rate", "Analytics!$B$3")
+    name(wb, "Risk_Free_Daily", "Analytics!$C$3")
     name(wb, "Start_Date", "Analytics!$B$4")
     header(ws, 6, ["Metric", strategy_name, benchmark_name, "Definition (the same as ros/metrics/core.py)"])
     rows = {lab: 7 + k for k, lab in enumerate(METRIC_LABELS)}

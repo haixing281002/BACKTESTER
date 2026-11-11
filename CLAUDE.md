@@ -530,7 +530,7 @@ session Lightyear launched, the prompt states the hand-off contract: write exact
 
 Every metric has one definition, in `ros/metrics/core.py`; a test fails if two code paths disagree. There are two Sharpes, both
 over the hurdle in `config/fund.yaml` (5% a year) and **never over the card's cash rate** (changed 2026-11-11). The headline
-(tiles, comparators, workbook Summary) is geometric, `(CAGR - hurdle) / volatility`, labelled "Sharpe (geometric, 5% hurdle)".
+(tiles, comparators, workbook Summary) is geometric, `(CAGR - hurdle) / volatility`, labelled "Sharpe (risk-free rate 5%)" (the config setting is shown everywhere as the risk-free rate).
 Per-calendar-year figures and every Gate B Sharpe (bootstrap, sub-period, post-publication, deflated) are arithmetic,
 `mean(r - h) / stdev(r - h) x sqrt(252)`, labelled "arithmetic", because the pass marks were calibrated on that form.
 Sortino follows the same split. The card's cash rate is what idle cash earns, and what beta and factor alpha subtract. Never write a third. `ros/metrics/legacy_v1.py`

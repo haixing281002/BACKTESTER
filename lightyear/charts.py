@@ -85,7 +85,7 @@ def observations(df, met, names, sharpe_hurdle=None):
         f"Grew {_p(s['cagr'])} a year against {_p(b['cagr'])} for {bn}, {'ahead' if gap > 0 else 'behind'} by {_p(abs(gap))} a year.")
     if not (math.isnan(s["sharpe"]) or math.isnan(b["sharpe"])):
         (pos if s["sharpe"] > b["sharpe"] else neg).append(
-            f"Return per unit of risk (geometric Sharpe, over the {_hurdle(sharpe_hurdle):.0%} hurdle) of {s['sharpe']:.2f} against {b['sharpe']:.2f} for {bn}"
+            f"Return per unit of risk (Sharpe, risk-free rate {_hurdle(sharpe_hurdle):.0%}) of {s['sharpe']:.2f} against {b['sharpe']:.2f} for {bn}"
             + (": better risk-adjusted." if s["sharpe"] > b["sharpe"] else ": the extra return came with even more extra risk."))
     if s["vol"] < b["vol"]:
         pos.append(f"Smoother ride: yearly volatility {_p(s['vol'])} against {_p(b['vol'])} for {bn}.")

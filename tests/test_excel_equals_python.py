@@ -74,7 +74,7 @@ def test_every_return_analytics_metric_equals_python(analytics):
         if lab in py["benchmark"]:
             pairs.append((f"{lab} (benchmark)", ws[f"C{row}"].value, py["benchmark"][lab]))
     assert len(pairs) == len(xt.METRIC_LABELS) + len(xt._BOTH), "every metric row must be compared"
-    assert {"Sharpe (geometric)", "Sharpe (arithmetic)", "Sortino (geometric)", "Sortino (arithmetic)"} <= set(where["rows"])
+    assert {"Sharpe Ratio", "Sortino Ratio"} <= set(where["rows"]) and not any("arithmetic" in k for k in where["rows"])   # arithmetic: Years sheet only
     assert not _diffs(pairs), _diffs(pairs)
 
 
@@ -127,7 +127,7 @@ def test_the_lightyear_workbook_summary_and_comparators_equal_the_dashboard(tmp_
     wb = openpyxl.load_workbook(out, data_only=True)
     ws = wb["Summary"]
     labels = {str(ws[f"A{r}"].value): r for r in range(7, 30) if ws[f"A{r}"].value}
-    hl = f"(geometric, {config.hurdle_annual():.0%} hurdle)"
+    hl = f"(risk-free rate {config.hurdle_annual():.0%})"
     want = {"CAGR": "cagr", "Annualised volatility": "vol", f"Sharpe {hl}": "sharpe", "Maximum drawdown": "max_dd",
             f"Sortino {hl}": "sortino", "Calmar": "calmar", "Final value (100 = start)": "final"}
     pairs = []

@@ -255,3 +255,22 @@ def load_optional(run_dir, dates):
         else:
             out["comparators"] = c[c["date"].isin(set(dates))].reset_index(drop=True)
     return out, warn
+
+
+_RELABEL = ((re.compile(r"\(geometric, (\d+(?:\.\d+)?%) hurdle\)"), r"(risk-free rate \1)"),
+            (re.compile(r"(\d+(?:\.\d+)?%) hurdle"), r"risk-free rate \1"),
+            (re.compile(r"over the Sharpe hurdle"), "over the risk-free rate"))
+
+
+def relabel(rows):
+    """Labels only: rows a run wrote before 2026-11-11 said "5% hurdle"; the page and workbook say "risk-free rate 5%", and
+    the geometric headline carries no qualifier. Values, sources and order are untouched."""
+    out = []
+    for r in rows or []:
+        if isinstance(r, dict) and isinstance(r.get("label"), str):
+            lab = r["label"]
+            for pat, new in _RELABEL:
+                lab = pat.sub(new, lab)
+            r = {**r, "label": lab}
+        out.append(r)
+    return out

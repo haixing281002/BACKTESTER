@@ -195,3 +195,15 @@ def test_no_cost_or_cash_number_is_written_into_live_code():
                     with open(os.path.join(dp, f), encoding="utf-8", errors="replace") as fh:
                         hits += [f"{f}: {m.group(0)}" for m in bad.finditer(fh.read())]
     assert not hits, hits
+
+
+def test_old_hurdle_labels_read_risk_free_rate_and_values_are_untouched():
+    from lightyear import contract
+    rows = [{"label": "Sharpe (geometric, 5% hurdle), strategy", "value": 0.83}, {"label": "Bootstrap Sharpe (arithmetic, 5% hurdle) 95% low", "value": 0.2},
+            {"label": "Paired P(no arithmetic Sharpe edge, 5% hurdle) vs NIFTY 500", "value": 0.097},
+            {"label": "Factor alpha a year, over the Sharpe hurdle", "value": 0.04}, {"label": "CAGR, strategy", "value": 0.19}]
+    out = contract.relabel(rows)
+    assert [r["label"] for r in out] == ["Sharpe (risk-free rate 5%), strategy", "Bootstrap Sharpe (arithmetic, risk-free rate 5%) 95% low",
+                                         "Paired P(no arithmetic Sharpe edge, risk-free rate 5%) vs NIFTY 500",
+                                         "Factor alpha a year, over the risk-free rate", "CAGR, strategy"]
+    assert [r["value"] for r in out] == [r["value"] for r in rows] and rows[0]["label"].endswith("hurdle), strategy")   # input not mutated

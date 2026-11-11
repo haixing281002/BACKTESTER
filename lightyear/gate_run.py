@@ -75,8 +75,8 @@ def score(rd, card_path, df, trades=None, holdings=None, spec_failures=None) -> 
     series = r
     hurdle_annual = config.hurdle_annual()
     hurdle = config.hurdle_daily()                    # the Sharpe yardstick: every Sharpe the gate reads subtracts it
-    basis = (f"daily returns at the card's cost, {float(card.costs.spread_bps):g}bp round trip; arithmetic Sharpe over the "
-             f"{hurdle_annual:.0%} hurdle")
+    basis = (f"daily returns at the card's cost, {float(card.costs.spread_bps):g}bp round trip; arithmetic Sharpe, risk-free rate "
+             f"{hurdle_annual:.0%}")
     cash = core.daily_cash(config.cash_rate_for(card)[0])   # what idle cash earns: factor alpha and beta subtract this
     e["sharpe_hurdle"] = hurdle_annual
     from lightyear.charts import start_date
@@ -89,7 +89,7 @@ def score(rd, card_path, df, trades=None, holdings=None, spec_failures=None) -> 
              bootstrap_block_method=boot["block_method"], bootstrap_sensitivity=boot["sensitivity"])
     sp = ev.sub_period(series, b, hurdle, fits_parameters=bool(card.fits_parameters))
     e.update(sub_period_name=sp["name"], sub_period_n=sp["n"], sub_period_positive=sp["positive"], sub_period_worst=sp["worst"],
-             sub_period_evidence=f"arithmetic Sharpe over the {hurdle_annual:.0%} hurdle. " + "; ".join(f"{w['window']}: Sharpe {w['sharpe']:.2f}, benchmark {w['benchmark_sharpe']:.2f}" for w in sp["windows"]))
+             sub_period_evidence=f"arithmetic Sharpe, risk-free rate {hurdle_annual:.0%}. " + "; ".join(f"{w['window']}: Sharpe {w['sharpe']:.2f}, benchmark {w['benchmark_sharpe']:.2f}" for w in sp["windows"]))
     fa = ev.factor_alpha(series, ev.factor_returns(idx), cash)
     if "error" not in fa:
         loo = ", ".join(f"{k} {v['alpha_t_hac']:.2f}" for k, v in fa.get("leave_one_out", {}).items())
@@ -97,7 +97,7 @@ def score(rd, card_path, df, trades=None, holdings=None, spec_failures=None) -> 
         fh = ev.factor_alpha(series, ev.factor_returns(idx), hurdle, leave_one_out=False)
         if "error" not in fh:      # reported beside the gate row, which stays on the card's cash rate
             e.update(alpha_hurdle=fh["alpha_ann"], alpha_t_hurdle=fh["alpha_t_hac"])
-            e["alpha_evidence"] += f". Over the {hurdle_annual:.0%} hurdle instead of the card's cash rate: alpha {fh['alpha_ann']:.2%}, t {fh['alpha_t_hac']:.2f} (reported, not judged)"
+            e["alpha_evidence"] += f". Over the risk-free rate of {hurdle_annual:.0%} instead of the card's cash rate: alpha {fh['alpha_ann']:.2%}, t {fh['alpha_t_hac']:.2f} (reported, not judged)"
     pp = core.post_publication(series, b, cash, card.paper.date, hurdle=hurdle)
     if pp:
         e["post_publication_edge"] = pp["edge"]

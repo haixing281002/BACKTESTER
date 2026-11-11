@@ -713,6 +713,7 @@ def build_outputs(rid, review=True):
         model_rows = [r for r in (res.get("validation") or []) if r.get("label") not in labels]
         res["validation"] = fixed_v + model_rows
     res["validation"] = [v for v in finite_rows(res.get("validation")) if not HOUSE_COST_LABEL.search(str(v.get("label", "")))]
+    res["validation"] = contract.relabel(res["validation"])      # labels only: "5% hurdle" reads "risk-free rate 5%"
     # Rows tied to this strategy's rules belong in Diagnostics, whichever step wrote them.
     for v in res.get("validation") or []:
         if DIAGNOSTIC_LABEL.search(str(v.get("label", ""))):
@@ -909,6 +910,7 @@ def analyst_review(rid):
         return
     try:
         res, df = contract.check_results(rd)
+        res["validation"] = contract.relabel(res.get("validation"))
         extra, _ = contract.load_optional(rd, df["date"])
         ch = json.load(open(os.path.join(rd, "charts.json"), encoding="utf-8"))
         recalc = _workbook(rid, res, df, extra, ch.get("observations"), rev, ch)

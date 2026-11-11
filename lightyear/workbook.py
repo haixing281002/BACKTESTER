@@ -354,8 +354,8 @@ def _core_sheet(wb, ch, s_name, b_name):
     put(wk, "A2", f"Values from ros/metrics/core.py, the same code as the Lightyear page. The cost is the card's: {bp if bp is not None else 'not read'}bp round trip. "
         "Quant AI Researcher", F_NOTE)
     header(wk, 4, ["Metric", f"{s_name}, at the card's cost" + (" (net)" if gross else " (gross = net)"), f"{s_name}, gross" if gross else "", b_name])
-    rows = [("CAGR", "cagr", PCT), ("Volatility", "vol", PCT), ("Sharpe (geometric, hurdle)", "sharpe", NUM2), ("Sortino (geometric, hurdle)", "sortino", NUM2),
-            ("Sharpe (arithmetic, hurdle)", "sharpe_arithmetic", NUM2), ("Sortino (arithmetic, hurdle)", "sortino_arithmetic", NUM2), ("Calmar", "calmar", NUM2),
+    rf_label = f"{ch['sharpe_hurdle']:.0%}" if ch.get("sharpe_hurdle") is not None else "n/a"
+    rows = [("CAGR", "cagr", PCT), ("Volatility", "vol", PCT), (f"Sharpe (risk-free rate {rf_label})", "sharpe", NUM2), (f"Sortino (risk-free rate {rf_label})", "sortino", NUM2), ("Calmar", "calmar", NUM2),
             ("Maximum drawdown", "max_dd", PCT), ("Drawdown duration (trading days)", "dd_duration_days", INT), ("95% CVaR (daily loss)", "cvar_95", PCT),
             ("Skew", "skew", NUM2), ("CAGR without the 10 best days", "best_days_removed_cagr", PCT), ("Beta", "beta", NUM2),
             ("Tracking error", "tracking_error", PCT), ("Information ratio", "information_ratio", NUM2), ("Up capture (monthly)", "up_capture", NUM2),
@@ -446,18 +446,18 @@ def build(run_dir, results, df, title, out_path, holdings=None, trades=None, com
     put(ws, "A4", f"Cash rate (from {(core_metrics or {}).get('cash_source') or 'the card'})", F_BOLD)
     put(ws, "B4", cash_rate if cash_rate is not None else "not on the card", F_INPUT, PCT, FILL_KEY, border=True,
         comment="Key assumption: a declared constant proxy, from the card's universe.cash_asset or config/fund.yaml. There is no Indian risk-free series.")
-    put(ws, "C4", "What idle cash earns in the run. It is not the Sharpe yardstick: that is the hurdle below.", F_NOTE)
+    put(ws, "C4", "What idle cash earns in the run. It is not the risk-free rate Sharpe uses: that is the row below.", F_NOTE)
     name(wb, "Cash_Rate", "Summary!$B$4")
     hurdle = (core_metrics or {}).get("sharpe_hurdle")
     hurdle = config.hurdle_annual() if hurdle is None else hurdle
-    put(ws, "A5", "Sharpe hurdle (config/fund.yaml)", F_BOLD)
+    put(ws, "A5", "Risk-free rate for Sharpe and Sortino (config/fund.yaml)", F_BOLD)
     put(ws, "B5", hurdle, F_INPUT, PCT, FILL_KEY, border=True,
-        comment="Key assumption: a yardstick, set in config/fund.yaml (sharpe_hurdle). Not income: idle cash earns the cash rate above.")
-    put(ws, "C5", "=(1+Sharpe_Hurdle)^(1/252)-1", F_BASE, "0.000000%", border=True)
-    put(ws, "D5", "the hurdle for one day (h). Headline Sharpe is geometric: (CAGR - hurdle) / volatility; Sortino the same over "
-                  "downside deviation. Both as defined in ros/metrics/core.py. Change the hurdle and both rows update.", F_NOTE)
-    name(wb, "Sharpe_Hurdle", "Summary!$B$5")
-    name(wb, "Hurdle_Daily", "Summary!$C$5")
+        comment="Key assumption: the risk-free rate in Sharpe and Sortino, one setting in config/fund.yaml. A yardstick, not income: idle cash earns the cash rate above.")
+    put(ws, "C5", "=(1+Risk_Free_Rate)^(1/252)-1", F_BASE, "0.000000%", border=True)
+    put(ws, "D5", "the risk-free rate for one day. Sharpe = (CAGR - risk-free rate) / volatility; Sortino the same over downside "
+                  "deviation. Both as defined in ros/metrics/core.py. Change the rate and both rows update.", F_NOTE)
+    name(wb, "Risk_Free_Rate", "Summary!$B$5")
+    name(wb, "Risk_Free_Daily", "Summary!$C$5")
     header(ws, 6, ["Metric", f"Strategy: {s_name}", f"Benchmark: {b_name}", f"Strategy minus {b_name}"])
     mrows = [
         ("Start (value = 100)", "=Start_Date", "=Start_Date", DATE, False, True),
@@ -467,9 +467,9 @@ def build(run_dir, results, df, title, out_path, holdings=None, trades=None, com
         ("Final value (100 = start)", "=INDEX(Val_Strat,ROWS(Val_Strat))", "=INDEX(Val_Bench,ROWS(Val_Bench))", NUM1, True, True),
         ("CAGR", "=(B11/100)^(1/B9)-1", "=(C11/100)^(1/C9)-1", PCT, True, False),
         ("Annualised volatility", "=STDEV(Ret_Strat)*SQRT(252)", "=STDEV(Ret_Bench)*SQRT(252)", PCT, True, True),
-        (f"Sharpe (geometric, {hurdle:.0%} hurdle)", '=(B12-Sharpe_Hurdle)/B13', '=(C12-Sharpe_Hurdle)/C13', NUM2, True, False),
+        (f"Sharpe (risk-free rate {hurdle:.0%})", '=(B12-Risk_Free_Rate)/B13', '=(C12-Risk_Free_Rate)/C13', NUM2, True, False),
         ("Maximum drawdown", "=-MIN(DD_Strat)", "=-MIN(DD_Bench)", PCT, True, True),
-        (f"Sortino (geometric, {hurdle:.0%} hurdle)", '=(B12-Sharpe_Hurdle)/(SQRT(SUMPRODUCT((Ret_Strat-Hurdle_Daily<0)*(Ret_Strat-Hurdle_Daily)^2)/COUNT(Ret_Strat))*SQRT(252))', '=(C12-Sharpe_Hurdle)/(SQRT(SUMPRODUCT((Ret_Bench-Hurdle_Daily<0)*(Ret_Bench-Hurdle_Daily)^2)/COUNT(Ret_Bench))*SQRT(252))', NUM2, True, False),
+        (f"Sortino (risk-free rate {hurdle:.0%})", '=(B12-Risk_Free_Rate)/(SQRT(SUMPRODUCT((Ret_Strat-Risk_Free_Daily<0)*(Ret_Strat-Risk_Free_Daily)^2)/COUNT(Ret_Strat))*SQRT(252))', '=(C12-Risk_Free_Rate)/(SQRT(SUMPRODUCT((Ret_Bench-Risk_Free_Daily<0)*(Ret_Bench-Risk_Free_Daily)^2)/COUNT(Ret_Bench))*SQRT(252))', NUM2, True, False),
         ("Calmar", "=B12/B15", "=C12/C15", NUM2, True, False),
     ]
     for i, (label, fs, fb, fmt, ex, link) in enumerate(mrows, start=7):
@@ -543,7 +543,7 @@ def build(run_dir, results, df, title, out_path, holdings=None, trades=None, com
         put(wc, "A1", "Simpler alternatives, run over the same days", F_TITLE)
         put(wc, "A2", "What the strategy has to beat to be worth its complexity. Daily returns (blue) from comparators.csv; "
             "values, drawdowns and the metrics table are formulas. Appendix only: the headline stays strategy vs NIFTY 500.", F_NOTE)
-        header(wc, 4, ["Comparator", "CAGR", "Annualised volatility", f"Sharpe (geometric, {hurdle:.0%} hurdle)", "Maximum drawdown",
+        header(wc, 4, ["Comparator", "CAGR", "Annualised volatility", f"Sharpe (risk-free rate {hurdle:.0%})", "Maximum drawdown",
                        "CAGR minus strategy"])
         top = 5 + len(names_c) + 2           # data header row
         d0, d1 = top + 2, top + 1 + n        # start row top+1, data rows top+2 .. top+1+n
@@ -578,7 +578,7 @@ def build(run_dir, results, df, title, out_path, holdings=None, trades=None, com
             put(wc, f"A{row}", c, F_BASE, border=True)
             put(wc, f"B{row}", f"=({vc}{d1}/100)^(1/Summary!$B$9)-1", F_LINK, PCT, border=True)
             put(wc, f"C{row}", f"=STDEV({rc}{d0}:{rc}{d1})*SQRT(252)", F_BASE, PCT, border=True)
-            put(wc, f"D{row}", f"=(B{row}-Sharpe_Hurdle)/C{row}", F_LINK, NUM2, border=True)
+            put(wc, f"D{row}", f"=(B{row}-Risk_Free_Rate)/C{row}", F_LINK, NUM2, border=True)
             put(wc, f"E{row}", f"=-MIN({dc}{d0-1}:{dc}{d1})", F_BASE, PCT, border=True)
             put(wc, f"F{row}", f"=B{row}-Summary!$B$12", F_LINK, PCT, border=True)
         sign_colour(wc, f"F5:F{4 + len(names_c)}")

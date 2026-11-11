@@ -287,7 +287,7 @@ def test_gate_b_sharpes_read_the_hurdle_not_the_cards_cash_rate(tmp_path, monkey
     assert config.hurdle_annual() == 0.05 and hurdle != cash
     assert seen["paired_bootstrap"] == [hurdle] and seen["sub_period"] == [hurdle] and seen["post_publication"] == hurdle
     assert seen["factor_alpha"] == [cash, hurdle]          # the gate row at the card's rate, then the reported one at the hurdle
-    assert res["summary"]["sharpe_hurdle"] == 0.05 and "5% hurdle" in res["basis"]
+    assert res["summary"]["sharpe_hurdle"] == 0.05 and "risk-free rate 5%" in res["basis"] and "arithmetic" in res["basis"]
     # and the numbers are the hurdle's: the bootstrap p equals a direct call at the hurdle
     df_i = pd.DatetimeIndex(df["date"])
     r = pd.Series(df["strategy"].to_numpy(), index=df_i)

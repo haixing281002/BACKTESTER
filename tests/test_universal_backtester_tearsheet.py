@@ -64,9 +64,8 @@ def test_a_levered_clone_captures_150_percent_both_ways():
 def test_the_hurdle_lowers_sharpe_by_about_hurdle_over_volatility():
     r = _r(seed=5)
     t0, t5 = core.tearsheet(r, START, 0.0), core.tearsheet(r, START, 0.05)
-    assert t0["Sharpe (arithmetic)"] - t5["Sharpe (arithmetic)"] == pytest.approx(np.log(1.05) / t0["Annualized Volatility"], rel=0.02)
-    assert t0["Sharpe (geometric)"] - t5["Sharpe (geometric)"] == pytest.approx(0.05 / t0["Annualized Volatility"], rel=1e-9)
-    assert t5["Sharpe (geometric)"] == pytest.approx((t5["CAGR"] - 0.05) / t5["Annualized Volatility"], rel=1e-12)
+    assert t0["Sharpe Ratio"] - t5["Sharpe Ratio"] == pytest.approx(0.05 / t0["Annualized Volatility"], rel=1e-9)
+    assert t5["Sharpe Ratio"] == pytest.approx((t5["CAGR"] - 0.05) / t5["Annualized Volatility"], rel=1e-12)
     assert t0["CAGR"] == t5["CAGR"]                      # a yardstick: it changes no return
 
 

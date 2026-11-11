@@ -687,10 +687,9 @@ function fillCore(c){
   }
   const m = c.metrics, s = m.strategy, b = m.benchmark, bp = c.card_bp, g = c.gross;
   const f = (v,fmt) => (v==null||Number.isNaN(v)) ? "–" : fmt==="pct" ? pct(v,2) : fmt==="int" ? Math.round(v) : num(v);
-  const geo = c.sharpe_basis==="geometric";
-  const hl = c.sharpe_hurdle==null ? " (pre-Wave 4: over the card's cash rate)" : geo ? ` (geometric, ${pct(c.sharpe_hurdle,0)} hurdle)` : ` (arithmetic, ${pct(c.sharpe_hurdle,0)} hurdle; built before the geometric headline, press Rebuild)`;
-  const ar = geo ? [[`Sharpe (arithmetic, ${pct(c.sharpe_hurdle,0)} hurdle)`,"sharpe_arithmetic","num"],[`Sortino (arithmetic, ${pct(c.sharpe_hurdle,0)} hurdle)`,"sortino_arithmetic","num"]] : [];
-  const R = [["CAGR","cagr","pct"],["Volatility","vol","pct"],["Sharpe"+hl,"sharpe","num"],["Sortino"+hl,"sortino","num"],...ar,["Calmar","calmar","num"],["Maximum drawdown","max_dd","pct"],
+  const geo = c.sharpe_basis==="geometric", rf = c.sharpe_hurdle==null ? "" : pct(c.sharpe_hurdle,0);
+  const hl = c.sharpe_hurdle==null ? " (pre-Wave 4: over the card's cash rate)" : geo ? ` (risk-free rate ${rf})` : ` (arithmetic, risk-free rate ${rf}; built before the geometric headline, press Rebuild)`;
+  const R = [["CAGR","cagr","pct"],["Volatility","vol","pct"],["Sharpe"+hl,"sharpe","num"],["Sortino"+hl,"sortino","num"],["Calmar","calmar","num"],["Maximum drawdown","max_dd","pct"],
     ["Drawdown duration (trading days)","dd_duration_days","int"],["95% CVaR (daily loss)","cvar_95","pct"],["Skew","skew","num"],["CAGR without the 10 best days","best_days_removed_cagr","pct"],
     ["Beta","beta","num"],["Tracking error","tracking_error","pct"],["Information ratio","information_ratio","num"],["Up capture (monthly)","up_capture","num"],["Down capture (monthly)","down_capture","num"],["Rolling one-year periods behind","rolling_behind","pct"]];
   $("#coretab").innerHTML = `<tr><th>Metric</th>${g?`<th>Strategy, gross</th>`:""}<th>Strategy, at the card's ${num(bp,0)}bp${g?" (net)":" (gross = net)"}</th><th>${esc(c.names.benchmark)}</th></tr>` +
@@ -702,8 +701,8 @@ function fillCore(c){
     cp.status==="computed" ? `Capacity at Rs ${num(cp.aum_inr_cr,0)} crore: trade size against 20-day traded value, median ${pct(cp.median,2)}, 95th percentile ${pct(cp.p95,2)}, largest ${pct(cp.max,2)}; ${cp.names_above_limit.length} name(s) above the limit.`
       : cp.unit ? `Capacity: AUM not set at Gate A, so no capital size is assumed. For each Rs 1 crore of capital the 95th-percentile trade is ${pct(cp.unit.per_cr_p95,4)} of the name's 20-day traded value, so it reaches the ${pct(cp.unit.limit,0)} limit${cp.limit_is_placeholder?" (a placeholder for your call)":""} at about Rs ${num(cp.unit.capital_at_limit_cr,0)} crore.`
       : `Capacity not computed: ${esc(cp.why||"this run predates it")}.`,
-    (geo && c.calendar && c.calendar.sharpe_arithmetic) ? `Sharpe by calendar year (arithmetic, ${pct(c.sharpe_hurdle,0)} hurdle), strategy against ${esc(c.names.benchmark)}: ` + c.calendar.years.map((y,i)=>`${y}: ${num(c.calendar.sharpe_arithmetic.strategy[i])} / ${num(c.calendar.sharpe_arithmetic.benchmark[i])}`).join("; ") + "." : "",
-    c.sharpe_hurdle!=null ? `The headline Sharpe is geometric: (CAGR - ${pct(c.sharpe_hurdle,0)}) / volatility. Yearly and Gate B Sharpes are arithmetic: mean daily return above the hurdle / its standard deviation x sqrt(252). The ${pct(c.sharpe_hurdle,0)} is a yardstick, not income.` : `Pre-Wave 4 run: its Sharpe and Sortino are over the card's cash rate, not the hurdle. Press Rebuild to redo them from its own files.`,
+    (geo && c.calendar && c.calendar.sharpe_arithmetic) ? `Sharpe by calendar year (arithmetic, risk-free rate ${rf}), strategy against ${esc(c.names.benchmark)}: ` + c.calendar.years.map((y,i)=>`${y}: ${num(c.calendar.sharpe_arithmetic.strategy[i])} / ${num(c.calendar.sharpe_arithmetic.benchmark[i])}`).join("; ") + "." : "",
+    c.sharpe_hurdle!=null ? `Sharpe is (CAGR - ${rf}) / volatility, and Sortino the same over downside deviation. Yearly figures and Gate B use the arithmetic form: mean daily return above the risk-free rate / its standard deviation x sqrt(252). The ${rf} risk-free rate is one config setting and a yardstick, not income.` : `Pre-Wave 4 run: its Sharpe and Sortino are over the card's cash rate, not the risk-free rate. Press Rebuild to redo them from its own files.`,
     c.cash_rate==null ? `Beta is blank: this run's card could not be read.` : `Idle cash earns ${pct(c.cash_rate,2)} a year, from ${esc(c.cash_source||"the card")}.`
   ].filter(Boolean).map(x=>`<div>${x}</div>`).join("");
 }
@@ -714,7 +713,7 @@ async function drawCharts(force){
   CHARTED = CUR; CH = c;
   fillPN();
   fillPVB();
-  const legacy = !("card_bp" in c), shLabel = legacy ? `Sharpe (old ${c.hurdle!=null?pct(c.hurdle,0)+" hurdle":"formula"})` : c.sharpe_hurdle==null ? "Sharpe (pre-Wave 4)" : c.sharpe_basis==="geometric" ? `Sharpe (geometric, ${pct(c.sharpe_hurdle,0)} hurdle)` : `Sharpe (arithmetic, ${pct(c.sharpe_hurdle,0)} hurdle)`;
+  const legacy = !("card_bp" in c), shLabel = legacy ? `Sharpe (old ${c.hurdle!=null?pct(c.hurdle,0)+" hurdle":"formula"})` : c.sharpe_hurdle==null ? "Sharpe (pre-Wave 4)" : c.sharpe_basis==="geometric" ? `Sharpe (risk-free rate ${pct(c.sharpe_hurdle,0)})` : `Sharpe (arithmetic, risk-free rate ${pct(c.sharpe_hurdle,0)})`;
   const m = c.metrics, K = [["CAGR (a year)","cagr",pct],["Volatility (a year)","vol",pct],[shLabel,"sharpe",num],["Worst fall from peak","max_dd",pct],["100 became","final",v=>num(v,1)]];
   $("#kpis").innerHTML = K.map(([l,k,f]) => `<div class="kpi"><div class="l">${l}</div><div class="v">${f(m.strategy[k])}</div><div class="b">${esc(c.names.benchmark)}: ${f(m.benchmark[k])}</div></div>`).join("");
   fillCore(c);
