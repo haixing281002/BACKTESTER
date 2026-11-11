@@ -12,12 +12,16 @@ from __future__ import annotations
 
 import itertools
 import os
+import sys
 
 import pandas as pd
 import yaml
 
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+from ros import config  # noqa: E402
+
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-OUT = os.path.join(REPO, "docs", "gate_b", "calibration")
+OUT = os.path.join(REPO, *config.calibration().get("out_dir", "docs/gate_b/calibration").split("/"))
 CASES = {"level 0": ("level", 0.0, 1), "level 0.25": ("level", 0.25, 1), "level 0.5": ("level", 0.5, 1), "level 0.75": ("level", 0.75, 1), "level 1": ("level", 1.0, 1),
          "pure factor": ("pure_factor", 0.0, 1), "best of 20": ("selection", 0.0, 20), "best of 100": ("selection", 0.0, 100)}
 NULLS = ["level 0", "pure factor", "best of 20", "best of 100"]
@@ -64,6 +68,33 @@ def approved() -> dict:
             "t_min": th["factor_alpha"]["t_green_min"], "corr_max": th["book"]["corr_green_max"], "ir_gain_min": th["book"]["ir_gain_green_min"]}
 
 
+def curves(t: pd.DataFrame) -> None:
+    """Power curves: pass rate against the true excess Sharpe, for the gate and the bootstrap at each block length."""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    lv = [n for n in CASES if n.startswith("level")]
+    x = [CASES[n][1] for n in lv]
+    fig, ax = plt.subplots(1, 2, figsize=(11, 4.4))
+    for a, tests, title in ((ax[0], [("STATUS PASS, hard blocks", "#2166ac", "-"), ("PASS and green, no book", "#1b8a6b", "-"), ("OVERALL, N = 1", "#c8660c", "--")], "Gate pass rate"),
+                            (ax[1], [("bootstrap", "#2166ac", "-"), ("bootstrap at a fixed 5-day block", "#7a7a7a", ":"),
+                                     ("bootstrap at a fixed 21-day block", "#7a7a7a", "--"), ("bootstrap at a fixed 63-day block", "#7a7a7a", "-.")], "Bootstrap test alone, by block length")):
+        for test, col, ls in tests:
+            s = t[t["test"] == test].set_index("case")["pass_rate"]
+            if len(s):
+                a.plot(x, [s.get(n) for n in lv], color=col, ls=ls, marker="o", label=test.replace("bootstrap", "Politis-White block", 1) if test == "bootstrap" else test)
+        a.axhline(0.05, color="#b2182b", lw=0.8, ls=":")
+        a.axhline(0.70, color="#1b8a6b", lw=0.8, ls=":")
+        a.set(title=title, xlabel="True excess Sharpe over the benchmark", ylabel="Pass rate", ylim=(0, 1))
+        a.grid(alpha=0.3)
+        a.legend(fontsize=7.5, loc="upper left")
+    fig.text(0.01, 0.01, "Cash 0%, cost 0bp, Politis-White block (Wave 3). Dotted lines: 5% false-pass and 70% power targets.", fontsize=7.5, color="#555")
+    fig.text(0.99, 0.01, "Quant AI Researcher", fontsize=7.5, color="#555", ha="right")
+    fig.tight_layout(rect=(0, 0.04, 1, 1))
+    fig.savefig(os.path.join(OUT, "power_curves.png"), dpi=150)
+    plt.close(fig)
+
+
 def main() -> int:
     df = pd.read_csv(os.path.join(OUT, "sim_stats.csv.gz"))
     c = approved()
@@ -90,8 +121,15 @@ def main() -> int:
         table.append({"gate": "v2", "test": "STATUS PASS, hard blocks", "case": nm, "pass_rate": float(hard_pass(d, c).mean())})
         table.append({"gate": "v2", "test": "PASS and green, no book", "case": nm, "pass_rate": float(v2_pass(d, c, False).mean())})
         table.append({"gate": "v2", "test": "PASS and green, with book", "case": nm, "pass_rate": float(v2_pass(d, c, True).mean())})
+        for k in ("5", "21", "63"):         # block-length sensitivity: reported, not the gate
+            if f"boot_p_{k}" in d:
+                table.append({"gate": "v2", "test": f"bootstrap at a fixed {k}-day block", "case": nm,
+                              "pass_rate": float((d[f"boot_p_{k}"] <= c["boot_p"]).mean())})
     t = pd.DataFrame(table)
     t.to_csv(os.path.join(OUT, "power_table_approved.csv"), index=False, float_format="%.4f")
+    if "boot_block" in df:
+        df.groupby(["scenario", "level", "n"])[[c for c in ("boot_block", "boot_block_sq") if c in df]].describe().to_csv(os.path.join(OUT, "block_length_by_case.csv"), float_format="%.3f")
+    curves(t)
     print(t.pivot_table(index=["gate", "test"], columns="case", values="pass_rate", sort=False)[list(CASES)].round(3).to_string())
     return 0
 

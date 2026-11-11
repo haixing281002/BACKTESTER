@@ -30,7 +30,7 @@ from ros.data.sources import NSE_INDEX_WORKBOOK
 from ros.metrics import core
 from ros.validation import gate_evidence as ev
 
-OUT = os.path.join(REPO, "docs", "gate_b", "calibration", "reference.csv")
+OUT = os.path.join(REPO, *config.calibration().get("out_dir", "docs/gate_b/calibration").split("/"), "reference.csv")
 START, END = "2014-01-01", "2026-09-18"     # 12.7 years to the benchmark's last close
 CASH_ANNUAL = float(config.calibration()["cash_annual"])     # these books have no card, so the calibration file states it
 CASH = core.daily_cash(CASH_ANNUAL)
@@ -88,10 +88,12 @@ def book_returns(rets: pd.DataFrame, eligible: pd.DataFrame, cost_bp: float, pic
 
 
 def stats_row(name: str, r: pd.Series, b: pd.Series, factors: pd.DataFrame, floors: dict[str, float]) -> dict:
-    v, vb = core.value_from_returns(r), core.value_from_returns(b)
+    from lightyear.charts import start_date
+    t0 = start_date(pd.Series(r.index))          # the NSE session before the first return: the one CAGR base
+    v, vb = core.value_from_returns(r, start=t0), core.value_from_returns(b, start=t0)
     row = {"name": name, "cagr": core.cagr(v), "bench_cagr": core.cagr(vb), "edge": core.cagr(v) - core.cagr(vb), "sharpe": core.sharpe(r, CASH),
            "bench_sharpe": core.sharpe(b, CASH), "max_dd": core.max_drawdown(v), "ir": core.information_ratio(r, b) if (r - b).std() > 0 else float("nan"),
-           "boot_p": ev.paired_bootstrap(r, b, CASH)["p"]}
+           **_boot(r, b)}
     d = ev.deflated_sharpe(r, b, CASH, 1.0, floors["1overT"], null="benchmark")
     row["dsr_bench_n1"] = d["dsr"]
     row["dsr_zero_n1"] = ev.deflated_sharpe(r, b, CASH, 1.0, floors["1overT"], null="zero")["dsr"]
@@ -101,6 +103,11 @@ def stats_row(name: str, r: pd.Series, b: pd.Series, factors: pd.DataFrame, floo
         fa = ev.factor_alpha(r, factors, CASH, leave_one_out=False)
         row.update(alpha=fa.get("alpha_ann"), alpha_t=fa.get("alpha_t_hac"), r2=fa.get("r_squared"))
     return row
+
+
+def _boot(r, b) -> dict:
+    bt = ev.paired_bootstrap(r, b, CASH)          # Politis-White block, with 5/21/63 beside it
+    return {"boot_p": bt["p"], "boot_block": bt["mean_block"], **{f"boot_p_{k}": v for k, v in bt["sensitivity"].items()}}
 
 
 def _init(cost_bp):
