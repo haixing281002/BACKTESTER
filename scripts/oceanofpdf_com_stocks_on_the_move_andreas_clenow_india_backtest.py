@@ -729,7 +729,7 @@ FIXED_TABLES = [
     {"title": "Cash-rate sweep", "csv": "cash_rate_sweep.csv", "note": "APPENDIX: idle cash at each rate in config/fund.yaml and at the card's own."},
     {"title": "Sensitivities", "csv": "sensitivities.csv", "note": "Thursday signal, 20% gap limit, 120-day regression, no index filter."},
     {"title": "Calendar-year returns", "csv": "calendar_year_returns.csv", "note": "First and last years are part years."},
-    {"title": "Walk-forward", "csv": "walk_forward.csv", "note": "Consecutive out-of-sample windows after a 3-year start; the rules have no fitted parameters."},
+    {"title": "Sub-period stability", "csv": "sub_period_stability.csv", "note": "Four consecutive windows after a 3-year start, judged on excess over NIFTY 500. The rules fit no parameters, so this is not out-of-sample evidence."},
     {"title": "Sub-period CAGR", "csv": "subperiod_cagr.csv", "note": "Four equal blocks of the sample."},
     {"title": "Rebalance log", "csv": "rebalance_log.csv", "note": "Per signal: names ranked, top band, filter removals, gate state, buys, sells, cash share, largest weight."},
     {"title": "Exits by reason", "csv": "exits_by_reason.csv", "note": "Why positions were sold and what they returned while held."},
@@ -813,7 +813,7 @@ FIXED_VALIDATION_SPEC = [
     {"label": "Paired P(no Sharpe edge) vs equal-weight members", "group": "robustness", "format": "num", "fn": lambda r: r["bootstrap"]["paired_sharpe_diff_vs_strategy"]["Equal weight"]["p_not_positive"], "source": "stationary_bootstrap()"},
     {"label": "Paired P(no Sharpe edge) vs Momentum 50", "group": "robustness", "format": "num", "fn": lambda r: r["bootstrap"]["paired_sharpe_diff_vs_strategy"]["Momentum 50"]["p_not_positive"], "source": "stationary_bootstrap()"},
     {"label": "Paired P(no Sharpe edge) vs no-filter variant", "group": "robustness", "format": "num", "fn": lambda r: r["bootstrap"]["paired_sharpe_diff_vs_strategy"]["No filter"]["p_not_positive"], "source": "stationary_bootstrap()"},
-    {"label": "Worst walk-forward window Sharpe", "group": "robustness", "format": "num", "fn": lambda r: min(w["sharpe"] for w in r["walk_forward"]), "source": "out/walk_forward.csv"},
+    {"label": "Worst sub-period excess CAGR over NIFTY 500", "group": "robustness", "format": "pct", "fn": lambda r: min(w["excess_cagr"] for w in r["sub_period_stability"]), "source": "out/sub_period_stability.csv"},
     {"label": "Factor alpha a year", "group": "robustness", "format": "pct", "fn": lambda r: r["factor_fingerprint"].get("alpha_ann"), "source": "factor_fingerprint()"},
     {"label": "Factor alpha HAC t-stat", "group": "robustness", "format": "num", "fn": lambda r: r["factor_fingerprint"].get("alpha_t_hac"), "source": "factor_fingerprint()"},
     {"label": "Loading on NIFTY500 Momentum 50", "group": "robustness", "format": "num", "fn": lambda r: r["factor_fingerprint"].get("loadings", {}).get("NIFTY500 MOMENTUM 50"), "source": "factor_fingerprint()"},
@@ -1124,12 +1124,9 @@ def main() -> int:
     else:
         latest_corr = {"peak": None, "trough": None, "strategy_dd": None, "nifty500_dd": None}
     splits = research.walk_forward_split(nav.index, n_folds=4, min_train_years=3)
-    oos = research.oos_summary(_Res(nav, base["turnover"], "strategy"), splits, rf_daily)
-    oos_b = research.oos_summary(_Res(bench, None, "NIFTY 500"), splits, rf_daily)
-    oos["nifty500_cagr"] = oos_b["cagr"].to_numpy()
-    oos["nifty500_sharpe"] = oos_b["sharpe"].to_numpy()
-    oos.to_csv(os.path.join(out, "walk_forward.csv"), index=False)
-    produced.append(os.path.join(out, "walk_forward.csv"))
+    oos = research.oos_summary(_Res(nav, base["turnover"], "strategy"), splits, rf_daily, bench=_Res(bench, None, "NIFTY 500"))
+    oos.to_csv(os.path.join(out, "sub_period_stability.csv"), index=False)
+    produced.append(os.path.join(out, "sub_period_stability.csv"))
     print(oos.to_string())
     sub = research.subperiod_table([_Res(nav, None, "strategy"), _Res(bench, None, "NIFTY 500"), _Res(ew, None, "Equal weight"),
                                     _Res(nofilter["nav"], None, "No filter")], rf_daily, n_periods=4, metric="cagr")
@@ -1317,7 +1314,7 @@ def main() -> int:
                            "delistings": mpe[mpe["kind"] == "delisted"][["symbol", "first"]].astype(str).to_dict("records")},
         "performance": perf_rows, "cost_sweep": sweep_rows, "breakeven_bp": breakeven, "cash_rate_sweep": cash_df.to_dict("records"),
         "sensitivities": sens.to_dict("records"), "calendar_years": cal_years.reset_index().to_dict("records"),
-        "walk_forward": oos.to_dict("records"), "subperiod_cagr": sub.reset_index().to_dict("records"),
+        "sub_period_stability": oos.to_dict("records"), "subperiod_cagr": sub.reset_index().to_dict("records"),
         "bootstrap": boot, "deflated_sharpe": dsr, "n_trials": N_TRIALS, "trials": {**TRIALS, "sensitivities": N_SENSITIVITIES},
         "factor_fingerprint": ff,
         "factor_fingerprint_without_momentum": ff_nomom, "factor_fingerprint_no_filter_variant": ff_nf,

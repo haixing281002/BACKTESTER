@@ -11,7 +11,9 @@ REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, REPO)
 SCRIPT = os.path.join(REPO, "scripts", "oceanofpdf_com_stocks_on_the_move_andreas_clenow_india_backtest.py")
 
-FROZEN_SHEETS = ["Performance", "Appendix cost sweep", "Cash-rate sweep", "Sensitivities", "Calendar-year returns", "Walk-forward",
+# 2026-11-11, operator's Wave 3 ruling: "Walk-forward" renamed "Sub-period stability" (fixed rules: nothing is out of sample)
+# and its row judged on excess over NIFTY 500. Renamed in place, on purpose.
+FROZEN_SHEETS = ["Performance", "Appendix cost sweep", "Cash-rate sweep", "Sensitivities", "Calendar-year returns", "Sub-period stability",
                  "Sub-period CAGR", "Rebalance log", "Exits by reason", "Worst days", "Contributors", "Cap mix by year", "Gap events", "Checks",
                  "Universe coverage"]      # appended 2026-11-02
 
@@ -32,7 +34,7 @@ FROZEN_VALIDATION = [
     "Bootstrap Sharpe 95% low", "Bootstrap Sharpe 95% high",
     "Paired P(no Sharpe edge) vs NIFTY 500", "Paired P(no Sharpe edge) vs equal-weight members",
     "Paired P(no Sharpe edge) vs Momentum 50", "Paired P(no Sharpe edge) vs no-filter variant",
-    "Worst walk-forward window Sharpe", "Factor alpha a year", "Factor alpha HAC t-stat",
+    "Worst sub-period excess CAGR over NIFTY 500", "Factor alpha a year", "Factor alpha HAC t-stat",
     "Loading on NIFTY500 Momentum 50", "Loading on NIFTY500 Value 50", "Factor R-squared",
     "Alpha HAC t without the Momentum 50 sleeve", "Alpha HAC t, no-filter variant",
     "CAGR, Thursday signal / Friday fill", "CAGR, 20% gap limit", "CAGR, 120-day regression", "CAGR with cash at 0%",
