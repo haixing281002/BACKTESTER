@@ -1,0 +1,45 @@
+# Quant AI Researcher
+run,rule,old,new,changed
+20261030-191604-3399,'Appendix: same rules at 30bp round trip' is a separate costed simulation and ends below the 0bp headline,True,True,False
+20261030-191604-3399,Cash share reported at every rebalance,True,True,False
+20261030-191604-3399,Cost sweep's 0bp row is the headline itself,True,True,False
+20261030-191604-3399,Every bought or kept name was an index member at its signal date,True,True,False
+20261030-191604-3399,Every buy ranked inside the top 20% band,True,True,False
+20261030-191604-3399,Every fill is exactly 1 session after its signal,True,True,False
+20261030-191604-3399,Every holding was an index member at its signal date (from the membership source),absent,True,True
+20261030-191604-3399,Headline charged at the card's 0bp,False,False,False
+20261030-191604-3399,NAV rebuilt from trades x Ace prices matches every daily return (within 0.5bp),absent,True,True
+20261030-191604-3399,New positions sized at NAV x 0.001 / ATR share of price (whole shares),True,True,False
+20261030-191604-3399,No buy after a one-day move over 15% in 90 days (from Ace prices),absent,True,True
+20261030-191604-3399,No buy below its 100-day average (from Ace prices),absent,True,True
+20261030-191604-3399,No buy below its trend average,True,True,False
+20261030-191604-3399,No buy while the index was below its 200-day average,True,True,False
+20261030-191604-3399,No buy with a one-day move above 15% in the look-back,True,True,False
+20261030-191604-3399,No trade outside the window,True,True,False
+20261030-191604-3399,Signals on the Tuesday close (previous session if a holiday),True,True,False
+20261030-191604-3399,Traded value = shares x price (no cost inside the fills),True,True,False
+20261030-191604-3399,Trades fill at the price the card names (signal.params.fill_price),absent,False,True
+20261030-191604-3399,Weights never renormalised to 100% (cash is a drift),True,True,False
+20261030-191604-3399,Window 2014-01-01 to 2026-09-18,True,True,False
+20261102-105054-0427,'Appendix: same rules at 30bp round trip' is a separate costed simulation and ends below the 0bp headline,True,True,False
+20261102-105054-0427,Cash share reported at every rebalance,True,True,False
+20261102-105054-0427,Cost sweep's 0bp row is the headline itself,True,True,False
+20261102-105054-0427,Every bought or kept name was an index member at its signal date,True,True,False
+20261102-105054-0427,Every buy ranked inside the top 20% band,True,True,False
+20261102-105054-0427,Every fill is exactly 1 session after its signal,True,True,False
+20261102-105054-0427,Every holding was an index member at its signal date (from the membership source),absent,True,True
+20261102-105054-0427,Headline charged at the card's 0bp,False,False,False
+20261102-105054-0427,NAV rebuilt from trades x Ace prices matches every daily return (within 0.5bp),absent,True,True
+20261102-105054-0427,New positions sized at NAV x 0.001 / ATR share of price (whole shares),True,True,False
+20261102-105054-0427,No buy after a one-day move over 15% in 90 days (from Ace prices),absent,True,True
+20261102-105054-0427,No buy below its 100-day average (from Ace prices),absent,True,True
+20261102-105054-0427,No buy below its trend average,True,True,False
+20261102-105054-0427,No buy while the index was below its 200-day average,True,True,False
+20261102-105054-0427,No buy with a one-day move above 15% in the look-back,True,True,False
+20261102-105054-0427,No trade outside the window,True,True,False
+20261102-105054-0427,Signals on the Tuesday close (previous session if a holiday),True,True,False
+20261102-105054-0427,"Start rule: first signal 2013-12-31, first fill on the sample start",True,True,False
+20261102-105054-0427,Traded value = shares x price (no cost inside the fills),True,True,False
+20261102-105054-0427,Trades fill at the price the card names (signal.params.fill_price),absent,False,True
+20261102-105054-0427,Weights never renormalised to 100% (cash is a drift),True,True,False
+20261102-105054-0427,Window 2014-01-01 to 2026-09-18,True,True,False

@@ -34,9 +34,9 @@ def _read(run_dir, name, **kw):
     return pd.read_csv(p, **kw) if os.path.isfile(p) else None
 
 
-def _prices(isins, start, end):
+def _prices(isins, start, end, demergers=True):
     from ros.data import ace
-    long = ace.load_long(["close", "unadj_open", "unadj_close"], start=start, end=end)
+    long = ace.load_long(["close", "unadj_open", "unadj_close"], start=start, end=end, demergers=demergers)
     long = long[long["isin"].isin(set(isins))]
     return {f: long.pivot(index="date", columns="isin", values=f).sort_index() for f in ("close", "unadj_open", "unadj_close")}
 
@@ -138,8 +138,10 @@ def run(run_dir, card) -> list[dict]:
         return [_row("Numbers audit (NAV rebuild, filters from source, fill price)", None,
                      "not run: the run has no trades.csv with ISINs and adjusted closes, or no daily returns")]
     try:
+        # the price basis the run used: demerger-adjusted only if its manifest hashed the demerger table
+        basis = "demergers_table" in (man.get("inputs") or {})
         px = _prices(set(tr["isin"]) | set(hold["isin"] if hold is not None and "isin" in hold.columns else []),
-                     tr["execution_date"].min() - pd.Timedelta(days=400), dr["date"].max())
+                     tr["execution_date"].min() - pd.Timedelta(days=400), dr["date"].max(), demergers=basis)
     except (FileNotFoundError, OSError) as e:
         return [_row("Numbers audit (NAV rebuild, filters from source, fill price)", None, f"not run: {e}")]
     unpriced = sorted(set(tr["isin"]) - set(px["close"].columns))

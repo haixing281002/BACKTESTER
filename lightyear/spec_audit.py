@@ -140,8 +140,8 @@ def run(run_dir, card_path, results=None):
         if len(all_cash) and dr is not None and "cash_rate" in (results or {}).get("_params", {}):
             pass
         cs = pd.to_numeric(rb["cash_share"], errors="coerce")
-        add("Cash share reported at every rebalance", bool(len(cs)) and bool(cs.between(-1e-9, 1 + 1e-9).all()),
-            f"{int(cs.isna().sum())} of {len(cs)} rebalances without a cash share; mean cash {rb['cash_share'].mean():.1%}, max {rb['cash_share'].max():.1%}, {len(all_cash)} all-cash rebalances")
+        add("Cash share reported at every rebalance", bool(len(cs)) and bool(cs.between(-1e-5, 1 + 1e-5).all()),
+            f"{int(cs.isna().sum())} of {len(cs)} rebalances without a cash share; min {cs.min():.2e} (whole-share rounding); mean cash {rb['cash_share'].mean():.1%}, max {rb['cash_share'].max():.1%}, {len(all_cash)} all-cash rebalances")
         if port.get("allow_cash") is False and rb["cash_share"].max() > 0.01:
             add("Card forbids cash but the book held some", False, f"max cash share {rb['cash_share'].max():.1%}")
 

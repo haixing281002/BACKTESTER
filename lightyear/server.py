@@ -232,6 +232,7 @@ def rebuild(rid: str):
     if st["status"] not in ("gate_b", "decided", "failed"):
         raise HTTPException(409, "Nothing to rebuild yet.")
     _busy_guard()
+    jobs.log(rid, "server", f"Rebuild requested: Lightyear code {code_hash()} on git {git_commit()} at {jobs.now()}.")
     keep = st["status"] if st["status"] == "decided" else None
     def go(_rid=None):            # jobs.start passes the run id through
         jobs.build_outputs(rid, review=False)

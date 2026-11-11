@@ -114,3 +114,11 @@ def test_a_review_left_running_by_a_dead_server_does_not_block_gate_b_for_ever(l
     jobs.recover_interrupted()
     assert jobs.load(rid)["review_status"] == "failed"
     assert _decide(c, security, rid).status_code == 200
+
+
+def test_a_rebuild_request_is_logged_with_the_code_version(ly):
+    c, jobs, security = ly
+    rid = _at_gate_b(jobs)
+    assert c.post(f"/api/runs/{rid}/rebuild", headers={security.HEADER: security.TOKEN}).status_code == 200
+    with open(os.path.join(jobs.run_dir(rid), "log.jsonl"), encoding="utf-8") as fh:
+        assert any("Rebuild requested: Lightyear code" in json.loads(line)["msg"] for line in fh)
