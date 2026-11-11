@@ -1,3 +1,4 @@
+# Quant AI Researcher by Harshil Pahuja
 """excel_tearsheet.py cannot be checked by actually recalculating in Excel
 (no Excel available; LibreOffice headless conversion fails to even load a
 trivial 3-cell file in this sandbox -- confirmed to be an environment
@@ -28,7 +29,7 @@ def sample_workbook(tmp_path_factory):
     strat = pd.Series(rng.normal(0.01, 0.04, n))
     bench = pd.Series(rng.normal(0.008, 0.045, n))
     path = tmp_path_factory.mktemp("xl") / "tearsheet.xlsx"
-    write_se_return_analytics_workbook(str(path), dates, strat, bench,
+    write_se_return_analytics_workbook(str(path), dates, strat, bench, risk_free_rate=0.05,
                                        strategy_name="Test Strategy",
                                        benchmark_name="Test Benchmark")
     return str(path), strat, bench, n
@@ -125,7 +126,7 @@ def test_rejects_mismatched_lengths():
     strat = pd.Series(np.zeros(10))
     bench = pd.Series(np.zeros(9))
     with pytest.raises(ValueError, match="same length"):
-        write_se_return_analytics_workbook("/tmp/should_not_be_written.xlsx", dates, strat, bench)
+        write_se_return_analytics_workbook("/tmp/should_not_be_written.xlsx", dates, strat, bench, risk_free_rate=0.05)
 
 
 def test_all_reference_sections_are_present(sample_workbook):
@@ -168,7 +169,7 @@ def test_compute_se_return_analytics_rows_matches_reference_workbook_comprehensi
     strat = pd.Series(d["strat"])
     bench = pd.Series(d["bench"])
 
-    rows = compute_se_return_analytics_rows(dates, strat, bench)
+    rows = compute_se_return_analytics_rows(dates, strat, bench, risk_free_rate=0.05)
     lookup = {(s, l): (sv, bv) for s, l, sv, bv, pct in rows}
 
     checks = {
@@ -246,4 +247,4 @@ def test_rejects_too_few_months():
     strat = pd.Series([0.01])
     bench = pd.Series([0.01])
     with pytest.raises(ValueError, match="at least 2 months"):
-        write_se_return_analytics_workbook("/tmp/should_not_be_written2.xlsx", dates, strat, bench)
+        write_se_return_analytics_workbook("/tmp/should_not_be_written2.xlsx", dates, strat, bench, risk_free_rate=0.05)

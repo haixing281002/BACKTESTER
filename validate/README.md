@@ -1,3 +1,4 @@
+<!-- Quant AI Researcher by Harshil Pahuja -->
 # Independent validation
 
 > Does the engine compute what it claims to compute?
@@ -71,8 +72,8 @@ formula could not show that. Evaluating it could.
 definition, the causal lag, month-end rebalance selection, and every headline
 metric.
 
-**Does not prove:** the assumptions. All three charge 30bp because the Strategy
-Card says 30bp. All three use a flat 6% cash proxy because no Indian risk-free
+**Does not prove:** the assumptions. All three charge the cost the Strategy
+Card states. All three use the card's flat cash rate because no Indian risk-free
 series exists in the snapshot. All three inherit the backfill bias in the NSE
 factor indices -- every series starts at exactly 1000.00, which means the
 history was reconstructed after the rules were written.

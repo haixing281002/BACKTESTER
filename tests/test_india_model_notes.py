@@ -1,3 +1,4 @@
+# Quant AI Researcher by Harshil Pahuja
 """The India rules are a floor a model may build on, never one it may lower.
 
 The requirements module derives what India demands from PROPERTIES of the
@@ -61,7 +62,7 @@ def test_the_non_negotiables_fire_whatever_the_model_says(card):
     card.india_notes = []
     items = [r.item for r in derive(card).blocking]
     assert any("lag_days >= 1" in i for i in items)
-    assert any("30bp" in i for i in items)
+    assert any("stated on the card" in i for i in items)
 
 
 def test_provenance_is_never_lost(card):

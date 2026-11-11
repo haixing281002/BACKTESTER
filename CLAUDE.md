@@ -120,8 +120,8 @@ Gate A legible:
 - `selection.rule`, stated plainly. An explicit, verified list is still subject
   to the same `verified_against`/`as_of` discipline if named; skip the list
   entirely rather than invent verification you have not done.
-- The India non-negotiables regardless: `lag_days >= 1`, 30bp round-trip costs,
-  no cash unless the mandate needs it.
+- The India non-negotiables regardless: `lag_days >= 1`, a round-trip cost stated on the
+  card for a human to confirm at Gate A, no cash unless the mandate needs it.
 
 **`data_plan` and `convertibility` are omitted from a quick-test card**, not
 filled thinly — both are `Optional` on the schema precisely so a card can skip
@@ -209,8 +209,8 @@ Every surface is now a projection over that list and knows **no field names**:
   accounting bases). The reader's self-description — page counts, math density,
   every candidate field it matched — is plumbing and is no longer printed.
 
-India's non-negotiables are deliberately **unflagged**: `lag >= 1` and the 30bp
-floor are enforced whatever anyone thinks, so putting them on a decision sheet
+India's non-negotiables are deliberately **unflagged**: `lag >= 1`
+is enforced whatever anyone thinks, so putting it on a decision sheet
 pads it with things nobody rules on.
 
 `decision: PENDING` is printed verbatim. It is the repo's central invariant made
@@ -526,14 +526,27 @@ the interactive charts and the colour-coded workbook from the run's hand-off fil
 session Lightyear launched, the prompt states the hand-off contract: write exactly those files, print
 `LIGHTYEAR-STAGE: <id>` as each stage starts, never record a Gate B decision, never touch git.
 
+## One metrics module, and Gate B v2 (2026-11-05)
+
+Every metric has one definition, in `ros/metrics/core.py`; a test fails if two code paths disagree. Sharpe is
+mean(r - c) / stdev(r - c) x sqrt(252), with the cash rate read from the card, and over zero if the card names none. Never write another. `ros/metrics/legacy_v1.py`
+exists only so a paper's printed Sharpe compares on its own basis and v1 stays measurable.
+
+Lightyear scores **Gate v2** (`ros/governance/gate_v2.py`, thresholds in `config/gate_thresholds.yaml`) from each run's files,
+at the cost on the run's own card. Hard blocks must pass; the scorecard informs and does not block. A test with
+nothing to run on shows as not run: it is not a pass and does not hold the gate up. The deflated Sharpe is out of the gate for
+now, so **v2 does not test for selection luck**. The decision stays PENDING until a named human records one.
+
 ## Non-negotiables when working in this repo
 
 - **Never edit a number into a report.** Every figure comes from a run.
 - **Never resolve a Strategy Card ambiguity silently.** Log it with a page
   citation and a resolution, or put it in the human queue.
 - **Never claim a replication for an adaptation card.** Different question.
-- **Costs are 30bp round trip for Indian factor sleeves**, not the 5bp a US paper
-  assumes. Do not copy a paper's cost assumption.
+- **A run's cost and cash rate come only from its card**, confirmed by a human at Gate A
+  (changed 2026-11-05). Never write a cost or cash number into code, and never charge a
+  headline, a metric or a gate anything else. Do not copy a paper's cost assumption.
+  Sweep grids live in `config/` and only ever reach an appendix.
 - **`lag_days` is at least 1.** NSE index closes publish after the close.
 - **Every factor index here is backfilled and price-return.** No live claim may
   rest on pre-launch history; say so whenever it matters.
@@ -565,7 +578,7 @@ number and assumption documented next to it with its source; percentages stored 
 `recalc.py` (it needs LibreOffice; on a Windows machine with desktop Excel, `python scripts/xlsx_recalc_libreoffice.py <file>` runs
 headless LibreOffice (set `SOFFICE` or unpack it to `~\LibreOffice`), and `scripts/xlsx_recalc_excel.py <file>` uses Excel COM, needs `pip install pywin32`). Colour code and styles live in `universal_backtester/xlsx_style.py`:
 blue = hardcoded, black = formula, green = cross-sheet formula, yellow = key assumption, green/red fills for pass/fail and sign.
-Use defined names so formulas read `=(CAGR-Hurdle)/Vol`. Put a colour key on the Summary sheet.
+Use defined names so formulas read `=(CAGR-Cash_Rate)/Vol`. Put a colour key on the Summary sheet.
 `lightyear/workbook.py` is the worked example; `excel_tearsheet.py` applies `apply_house_style()` on save.
 
 ## Data
@@ -574,8 +587,8 @@ Three files, listed in `ros/data/sources.py` and described in
 `docs/DATA_SOURCES.md`: the Ace Equity price file, the NIFTY 500 holdings
 workbook, and `data/raw/NSE_Broad_Factor_Indices_Historical_Data.xlsx` (NSE
 daily index levels, 1996-2026). Registry and caveats: `ros/data/firm_registry.py`.
-There is no Indian risk-free series; the cash rate is a declared constant proxy
-and every cash-holding result is swept 4–8%.
+There is no Indian risk-free series; the cash rate is a declared constant on the card,
+and every cash-holding result is swept over the rates in `config/fund.yaml`.
 
 ## Further reading
 

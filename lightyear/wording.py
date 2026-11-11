@@ -1,4 +1,4 @@
-# Quant AI Researcher by Harshil Pahuja
+# Quant AI Researcher
 """Comparison words must follow the numbers (added 2026-10-30).
 
 A model-written sentence such as "lower volatility (16.8% against 15.9%)" is wrong: 16.8 is the larger number. Every

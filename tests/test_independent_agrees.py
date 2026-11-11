@@ -17,6 +17,7 @@ from data_needs import needs_nse_workbook
 from ros.data.loaders import load_nse_factor_workbook, synthetic_cash_series
 from ros.engine.backtest import Backtester, rebalance_dates
 from ros.engine.templates import build_allocator
+from ros.metrics import legacy_v1
 from ros.validation import metrics as M
 from validate import independent as ind
 
@@ -101,10 +102,10 @@ def test_headline_metrics_agree(setup, metric):
         "cagr": (M.cagr(e.value), ind.cagr(i["value"])),
         "vol": (M.ann_vol(e.returns), ind.ann_vol(i["returns"].to_numpy())),
         "maxdd": (M.max_drawdown(e.value), ind.max_drawdown(i["value"])),
-        "sharpe_geo": (M.sharpe_geometric(e.value, e.returns, rf),
+        "sharpe_geo": (legacy_v1.sharpe_geometric(e.value, e.returns, rf),
                        ind.sharpe_geometric(i["value"], i["returns"].to_numpy(),
                                             rf.to_numpy())),
-        "sharpe_conv": (M.sharpe_conventional(e.returns, rf),
+        "sharpe_conv": (M.sharpe(e.returns, rf),
                         ind.sharpe_conventional(i["returns"].to_numpy(),
                                                 rf.to_numpy())),
         "cost": (float(e.costs.sum()), float(i["costs"].sum())),

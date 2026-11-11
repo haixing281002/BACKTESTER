@@ -1,3 +1,4 @@
+# Quant AI Researcher
 """Strategy Card schema -- Step 02 of the pipeline.
 
 The Strategy Card is the ONLY interface between paper interpretation (AI, fallible)
@@ -397,7 +398,7 @@ class IndiaNote:
     ros/india_requirements.py derives requirements mechanically from properties
     of the reconstructed strategy -- does it rank securities, does it read a
     fundamental, how fast does it trade. That is the floor, and it is a floor
-    precisely because no model can argue it away: `lag_days >= 1` and the 30bp
+    precisely because no model can argue it away: `lag_days >= 1` and the stated cost
     cost fire whatever anyone thinks.
 
     But the matching is keyword-based, so it is deaf to anything a paper does
@@ -782,7 +783,7 @@ class PortfolioSpec:
 
 @dataclass
 class CostSpec:
-    spread_bps: float = 5.0        # full bid-ask spread in bps; charged at half
+    spread_bps: float | None = None   # full round-trip cost in bps; charged at half. Only the card sets it: no default
     cost_model: str = "half_spread"
     impact_bps_per_pct_adv: float | None = None
     borrow_bps: float | None = None
@@ -892,6 +893,11 @@ class StrategyCard:
     # Decides nothing; a `not_convertible` verdict is a finding, not a block.
     convertibility: Convertibility | None = None
     n_configs_tried: int = 1     # feeds the deflated Sharpe ratio; understating it is a lie
+    # Gate v2 separates these. Versions actually chosen between feed the deflated Sharpe; robustness checks never do.
+    n_configs_selected_from: int | None = None
+    n_sensitivities: int = 0
+    rules_fixed_in_print: bool = False    # the paper states the rules: own selection is N = 1, plus a post-publication test
+    fits_parameters: bool = False         # the rules fit parameters to data: then, and only then, a true walk-forward
     notes: str = ""
     card_version: str = "1.0"
 
@@ -918,8 +924,14 @@ class StrategyCard:
             errs.append("universe.assets is empty")
         if self.signal.lag_days < 0:
             errs.append("signal.lag_days must be >= 0")
+        if self.costs.spread_bps is None:
+            errs.append("costs.spread_bps must be stated on the card")
         if self.n_configs_tried < 1:
             errs.append("n_configs_tried must be >= 1")
+        if self.n_configs_selected_from is not None and self.n_configs_selected_from < 1:
+            errs.append("n_configs_selected_from must be >= 1")
+        if self.n_sensitivities < 0:
+            errs.append("n_sensitivities must be >= 0")
         for i, d in enumerate(self.data_requirements):
             errs += d.validate(f"data_requirements[{i}]")
         for i, a in enumerate(self.ambiguities):
@@ -1092,9 +1104,9 @@ class StrategyCard:
                 "two different strategies, not two views of one",
                 owner="pm", flag=DECIDE, ref="portfolio.mandate_allow_cash")
         add("COSTS", "charged",
-            f"{self.costs.spread_bps:.0f}bp round trip ({self.costs.cost_model})",
+            f"{self.costs.spread_bps}bp round trip ({self.costs.cost_model})",
             "a US paper's 5bp is the commonest way an Indian backtest lies",
-            owner="researcher", flag=DECIDE if self.costs.spread_bps < 20 else "",
+            owner="researcher", flag=DECIDE,
             ref="costs.spread_bps")
 
         dp = self.data_plan
@@ -1231,7 +1243,7 @@ class StrategyCard:
                      else self.portfolio.rebalance)
         benchmark = self.universe.benchmark or unset
         costs = (f"{self.costs.spread_bps:.0f}bp round trip ({self.costs.cost_model})"
-                 if self.costs.spread_bps else unset)
+                 if self.costs.spread_bps is not None else unset)
 
         n_amb = len(self.ambiguities)
         unresolved = len(self.unresolved_ambiguities)
@@ -1623,7 +1635,8 @@ def load_card(path: str) -> StrategyCard:
 
     known = {"paper", "intent", "universe", "signal", "portfolio", "costs",
              "data_requirements", "ambiguities", "replication_targets",
-             "benchmark_templates", "n_configs_tried", "notes", "card_version",
+             "benchmark_templates", "n_configs_tried", "n_configs_selected_from", "n_sensitivities",
+             "rules_fixed_in_print", "fits_parameters", "notes", "card_version",
              "universe_translation", "strategy", "data_requests",
              "open_questions", "data_plan", "selection", "backtest_plan",
              "no_further_data_needed", "convertibility", "india_notes"}
@@ -1648,6 +1661,10 @@ def load_card(path: str) -> StrategyCard:
                              for i, r in enumerate(blob.get("replication_targets") or [])],
         benchmark_templates=blob.get("benchmark_templates") or [],
         n_configs_tried=blob.get("n_configs_tried", 1),
+        n_configs_selected_from=blob.get("n_configs_selected_from"),
+        n_sensitivities=blob.get("n_sensitivities", 0),
+        rules_fixed_in_print=bool(blob.get("rules_fixed_in_print", False)),
+        fits_parameters=bool(blob.get("fits_parameters", False)),
         notes=blob.get("notes", ""),
         card_version=blob.get("card_version", "1.0"),
         universe_translation=(

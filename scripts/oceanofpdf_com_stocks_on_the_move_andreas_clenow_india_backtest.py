@@ -24,10 +24,9 @@ WHAT THE MECHANISM IS (card: strategy.formation_rule, signal.params)
     second signal date positions are reset to target when the difference exceeds 5%. Then, only if the NIFTY 500
     price index close is above its 200-day simple moving average, buy down the ranking (skipping held and
     disqualified names) at target value = NAV x 0.001 / (ATR20 / price) until the next buy would cost more
-    than the cash available. Cash is a drift only and earns the card's flat rate (6%; swept 0, 4, 8%).
-  * Costs: the card's costs.spread_bps (0 at the operator's instruction, so gross equals net in the headline).
-    The APPENDIX sweeps 0 to 100bp a round trip (house floor 30bp) and reports the breakeven; every comparator or
-    table priced differently from the headline is labelled "Appendix".
+    than the cash available. Cash is a drift only and earns the card's flat rate, with an appendix sweep from config/fund.yaml.
+  * Costs: the card's costs.spread_bps, and nothing else. The APPENDIX sweeps the costs in config/costs.yaml and reports
+    the breakeven; every table priced differently from the headline is labelled "Appendix".
   * Whole shares are honoured on the UNADJUSTED close of the fill day; the position is then carried in adjusted
     units (value / adjusted close), so a split never reads as a trade. Share counts quoted to a human are
     unadjusted.
@@ -59,6 +58,7 @@ from numpy.lib.stride_tricks import sliding_window_view
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from ros import config
 from ros.cards.schema import load_card
 from ros.data import ace, corporate_actions, nifty500
 from ros.data.lineage import sha256_file, write_run_manifest
@@ -66,14 +66,8 @@ from ros.data.loaders import synthetic_cash_series
 from ros.data.sources import ACE_PRICES_CSV, NIFTY500_HOLDINGS_XLSX, NSE_INDEX_WORKBOOK
 from ros.engine import missing_prices as mp
 from ros.governance.gates import gate_b
+from ros.metrics.core import ann_vol, cagr, max_drawdown, sharpe
 from ros.validation import research
-from ros.validation.metrics import (
-    ann_vol,
-    cagr,
-    max_drawdown,
-    sharpe_conventional,
-    sharpe_geometric,
-)
 from ros.validation.portfolio import benchmark_relative, factor_fingerprint
 from universal_backtester.checkpoint import checkpoint
 from universal_backtester.clean_charts import save_clean_charts
@@ -120,8 +114,8 @@ START_CAPITAL = float(CARD_PARAMS.get("start_capital_inr", 100_000_000))   # Rs 
 N_TRIALS = int(CARD_OBJ.n_configs_tried) + len(SENSITIVITIES)   # the book's configurations + this run's sensitivities
 MANDATE_ALLOWS_CASH = CARD_OBJ.portfolio.mandate_allow_cash is True
 COST_LABEL = "zero cost" if P["cost_bp"] == 0 else f"{P['cost_bp']:g}bp round trip"
-COST_SWEEP_BP = [0, 10, 20, 30, 50, 75, 100]      # appendix: the 30bp house floor sits inside it
-CASH_SWEEP = sorted({0.0, 0.04, 0.06, 0.08, P["cash_rate"]})
+COST_SWEEP_BP = sorted({*config.cost_sweep_bp(), P["cost_bp"]})       # appendix only: the headline is at the card's cost
+CASH_SWEEP = sorted({*config.cash_rate_sweep(), P["cash_rate"]})      # appendix only: the headline is at the card's rate
 SENS_FROM_2015 = "2015-01-01"   # survivorship sensitivity window (Wave 2, item 4)
 FFILL_LIMIT = 5    # signals carry a stale close at most 5 sessions; holdings follow ros/engine/missing_prices.py
 BAND_PROXY = 0.095  # a close-to-close move above this on the fill day stands in for a price-band hit
@@ -161,8 +155,7 @@ def rolling_ols(y: np.ndarray, n: int, block: int = 32) -> tuple[np.ndarray, np.
 
 def nav_metrics(nav: pd.Series, rf_daily: pd.Series, name: str) -> dict:
     r = nav.pct_change().dropna()
-    return {"name": name, "cagr": cagr(nav), "vol": ann_vol(r), "sharpe_card": sharpe_geometric(nav, r, rf_daily),
-            "sharpe_conventional": sharpe_conventional(r, rf_daily), "max_dd": max_drawdown(nav),
+    return {"name": name, "cagr": cagr(nav), "vol": ann_vol(r), "sharpe": sharpe(r, rf_daily), "max_dd": max_drawdown(nav),
             "total_return": float(nav.iloc[-1] / nav.iloc[0] - 1), "start": str(nav.index[0].date()),
             "end": str(nav.index[-1].date()), "n_days": len(nav)}
 
@@ -731,9 +724,9 @@ def lookahead_checks(d: dict, sig: dict, sched, rng) -> list[dict]:
 # The Validation rows and the table sheets are the SAME in every run of this card (added 2026-10-30): the model may append
 # rows and tables in results.json, never rename or drop these. tests/test_frozen_outputs.py fails on any change here.
 FIXED_TABLES = [
-    {"title": "Performance", "csv": "performance.csv", "note": "Headline statistics over the card's window, price returns, Sharpe over the flat hurdle."},
-    {"title": "Appendix cost sweep", "csv": "cost_sweep.csv", "note": "APPENDIX: the same run at 0 to 100bp a round trip; the headline is at the card's cost."},
-    {"title": "Cash-rate sweep", "csv": "cash_rate_sweep.csv", "note": "Idle cash at 0, 4, 6 and 8% a year."},
+    {"title": "Performance", "csv": "performance.csv", "note": "Headline statistics over the card's window, price returns, Sharpe over the card's cash rate."},
+    {"title": "Appendix cost sweep", "csv": "cost_sweep.csv", "note": "APPENDIX: the same run at each cost in config/costs.yaml; the headline is at the card's cost."},
+    {"title": "Cash-rate sweep", "csv": "cash_rate_sweep.csv", "note": "APPENDIX: idle cash at each rate in config/fund.yaml and at the card's own."},
     {"title": "Sensitivities", "csv": "sensitivities.csv", "note": "Thursday signal, 20% gap limit, 120-day regression, no index filter."},
     {"title": "Calendar-year returns", "csv": "calendar_year_returns.csv", "note": "First and last years are part years."},
     {"title": "Walk-forward", "csv": "walk_forward.csv", "note": "Consecutive out-of-sample windows after a 3-year start; the rules have no fitted parameters."},
@@ -786,8 +779,8 @@ FIXED_VALIDATION_SPEC = [
     {"label": "CAGR, same rules without the index filter", "group": "returns_risk", "format": "pct", "fn": lambda r: _perf(r, "Same rules, no 200-day")["cagr"], "source": "out/performance.csv"},
     {"label": "Volatility, strategy", "group": "returns_risk", "format": "pct", "fn": lambda r: _perf(r, "Stocks on the Move")["vol"], "source": "out/performance.csv"},
     {"label": "Volatility, NIFTY 500", "group": "returns_risk", "format": "pct", "fn": lambda r: _perf(r, "NIFTY 500 (price")["vol"], "source": "out/performance.csv"},
-    {"label": "Sharpe over 6% hurdle (card formula), strategy", "group": "returns_risk", "format": "num", "fn": lambda r: _perf(r, "Stocks on the Move")["sharpe_card"], "source": "sharpe_geometric()"},
-    {"label": "Sharpe over 6% hurdle (card formula), NIFTY 500", "group": "returns_risk", "format": "num", "fn": lambda r: _perf(r, "NIFTY 500 (price")["sharpe_card"], "source": "sharpe_geometric()"},
+    {"label": "Sharpe, strategy", "group": "returns_risk", "format": "num", "fn": lambda r: _perf(r, "Stocks on the Move")["sharpe"], "source": "ros.metrics.core.sharpe()"},
+    {"label": "Sharpe, NIFTY 500", "group": "returns_risk", "format": "num", "fn": lambda r: _perf(r, "NIFTY 500 (price")["sharpe"], "source": "ros.metrics.core.sharpe()"},
     {"label": "Max drawdown, strategy", "group": "returns_risk", "format": "pct", "fn": lambda r: _perf(r, "Stocks on the Move")["max_dd"], "source": "out/performance.csv"},
     {"label": "Max drawdown, NIFTY 500", "group": "returns_risk", "format": "pct", "fn": lambda r: _perf(r, "NIFTY 500 (price")["max_dd"], "source": "out/performance.csv"},
     {"label": "Drawdown in the latest index correction, strategy", "group": "returns_risk", "format": "pct", "fn": lambda r: r["latest_index_correction"]["strategy_dd"],
@@ -801,18 +794,17 @@ FIXED_VALIDATION_SPEC = [
     {"label": "Deflated Sharpe, variance of the variants' Sharpes", "group": "returns_risk", "format": "num", "fn": lambda r: r["deflated_sharpe_variants_variance"]["deflated_sharpe_prob"],
      "source": "research.deflated_sharpe(benchmark_sharpe=expected_max_sharpe(n, var))"},
     {"label": "Two-way turnover a year (x capital)", "group": "costs_execution", "format": "num", "fn": lambda r: r["turnover_two_way_annual"], "source": "simulate()"},
-    {"label": "CAGR at 30bp round trip (house floor, appendix)", "group": "costs_execution", "format": "pct", "fn": lambda r: _sweep(r, 30)["cagr"], "source": "out/cost_sweep.csv"},
-    {"label": "Edge over NIFTY 500 at 100bp round trip (appendix)", "group": "costs_execution", "format": "pct", "fn": lambda r: _sweep(r, 100)["minus_nifty500_cagr"], "source": "out/cost_sweep.csv"},
+    {"label": "Breakeven round-trip cost vs NIFTY 500 (bp; beyond the sweep if blank)", "group": "costs_execution", "format": "num", "fn": lambda r: r["breakeven_bp"] if np.isfinite(r["breakeven_bp"]) else None, "source": "out/cost_sweep.csv"},
     {"label": "Names held per rebalance, mean", "group": "costs_execution", "format": "num", "fn": lambda r: r["holdings_check"]["mean_names"], "source": "out/rebalance_log.csv"},
-    {"label": "Rebalances with fewer than 5 names", "group": "costs_execution", "format": "int", "fn": lambda r: r["holdings_check"]["rebalances_under_5_names"], "source": "out/rebalance_log.csv"},
+    {"label": "Rebalances with fewer than 5 names", "group": "diagnostics", "format": "int", "fn": lambda r: r["holdings_check"]["rebalances_under_5_names"], "source": "out/rebalance_log.csv"},
     {"label": "Largest single weight at any rebalance", "group": "costs_execution", "format": "pct", "fn": lambda r: r["holdings_check"]["max_weight"], "source": "out/rebalance_log.csv"},
     {"label": "Different stocks held over the run", "group": "costs_execution", "format": "int", "fn": lambda r: r["holdings_check"]["names_ever_held"], "source": "simulate()"},
     {"label": "Top-2 stocks' share of gross gains", "group": "costs_execution", "format": "pct", "fn": lambda r: r["holdings_check"]["top2_share_of_gross_gains"], "source": "out/contributors.csv"},
     {"label": "Mean cash share of NAV", "group": "costs_execution", "format": "pct", "fn": lambda r: r["cash"]["mean_share"], "source": "simulate()"},
-    {"label": "Share of signals with buying shut by the index filter", "group": "costs_execution", "format": "pct", "fn": lambda r: r["cash"]["gate_closed_share_of_signals"], "source": "out/rebalance_log.csv"},
+    {"label": "Share of signals with buying shut by the index filter", "group": "diagnostics", "format": "pct", "fn": lambda r: r["cash"]["gate_closed_share_of_signals"], "source": "out/rebalance_log.csv"},
     {"label": "Median holding period (days)", "group": "costs_execution", "format": "num", "fn": lambda r: r["exits"]["median_holding_days"], "source": "out/exits.csv"},
-    {"label": "Top-band names removed by the gap rule, mean per signal", "group": "costs_execution", "format": "num", "fn": lambda r: r["filters"]["mean_top_disq_gap"], "source": "out/rebalance_log.csv"},
-    {"label": "Buys on days the stock closed up more than 9.5% (band proxy)", "group": "costs_execution", "format": "int", "fn": lambda r: r["band_days"]["buys_on_up_9_5pct_days"], "source": "simulate()"},
+    {"label": "Top-band names removed by the gap rule, mean per signal", "group": "diagnostics", "format": "num", "fn": lambda r: r["filters"]["mean_top_disq_gap"], "source": "out/rebalance_log.csv"},
+    {"label": "Buys on days the stock closed up more than 9.5% (band proxy)", "group": "diagnostics", "format": "int", "fn": lambda r: r["band_days"]["buys_on_up_9_5pct_days"], "source": "simulate()"},
     {"label": "Average NAV share in Smallcap 250 names", "group": "costs_execution", "format": "pct",
      "fn": lambda r: float(np.mean([row.get("small", 0.0) for row in r["cap_mix_by_year"]])) if r["cap_mix_by_year"] else None, "source": "out/cap_mix_by_year.csv"},
     {"label": "Bootstrap Sharpe 95% low", "group": "robustness", "format": "num", "fn": lambda r: r["bootstrap"]["intervals"]["strategy"]["sharpe"][0], "source": "stationary_bootstrap()"},
@@ -1013,11 +1005,10 @@ def main() -> int:
     bench = bench / bench.iloc[0] * START_CAPITAL
     mom50 = d["sleeves"]["NIFTY500 MOMENTUM 50"].reindex(window)
     mom50 = mom50 / mom50.iloc[0] * START_CAPITAL
-    log("comparators: equal weight and inverse volatility baskets of all members, no-filter variant, 30bp variant")
+    log("comparators: equal weight and inverse volatility baskets of all members, no-filter variant")
     ew = basket(d, sig, "equal") * START_CAPITAL
     iv = basket(d, sig, "inverse_vol") * START_CAPITAL
     nofilter = simulate(d, sig, {**P, "use_index_filter": False})
-    cost30 = simulate(d, sig, {**P, "cost_bp": 30.0})
 
     log("sensitivities: Thursday signal, 20% gap, 120-day regression")
     thu = simulate(d, sig, {**P, "signal_weekday": 3})
@@ -1026,7 +1017,7 @@ def main() -> int:
     sig120 = build_signals(d, 120, P["gap_limit"])
     reg120 = simulate(d, sig120, P)
     log("cost sweep and cash-rate sweep")
-    sweep = {bp: (base if bp == 0 else cost30 if bp == 30 else simulate(d, sig, {**P, "cost_bp": float(bp)})) for bp in COST_SWEEP_BP}
+    sweep = {bp: (base if bp == P["cost_bp"] else simulate(d, sig, {**P, "cost_bp": float(bp)})) for bp in COST_SWEEP_BP}
     cash_runs = {r: (base if r == P["cash_rate"] else simulate(d, sig, {**P, "cash_rate": r})) for r in CASH_SWEEP}
 
     # ---------------------------------------------------------------- performance tables
@@ -1039,7 +1030,6 @@ def main() -> int:
                  nav_metrics(iv, rf_daily, "Inverse-volatility NIFTY 500 members (monthly)"),
                  nav_metrics(mom50, rf_daily, "NIFTY500 Momentum 50 (price, backfilled)"),
                  nav_metrics(nofilter["nav"], rf_daily, "Same rules, no 200-day index filter"),
-                 nav_metrics(cost30["nav"], rf_daily, "Appendix: same rules at 30bp round trip"),
                  nav_metrics(thu["nav"], rf_daily, "Thursday signal, Friday fill"),
                  nav_metrics(gap20["nav"], rf_daily, "20% gap limit instead of 15%"),
                  nav_metrics(reg120["nav"], rf_daily, "120-day regression instead of 90")]
@@ -1052,7 +1042,7 @@ def main() -> int:
     sweep_rows = []
     for bp, r in sweep.items():
         m = nav_metrics(r["nav"], rf_daily, f"{bp}bp")
-        sweep_rows.append({"round_trip_cost_bp": bp, "cagr": m["cagr"], "sharpe_card": m["sharpe_card"], "max_dd": m["max_dd"],
+        sweep_rows.append({"round_trip_cost_bp": bp, "cagr": m["cagr"], "sharpe": m["sharpe"], "max_dd": m["max_dd"],
                            "minus_nifty500_cagr": m["cagr"] - bench_cagr})
     sweep_df = pd.DataFrame(sweep_rows)
     edge = sweep_df["minus_nifty500_cagr"].to_numpy()
@@ -1067,12 +1057,12 @@ def main() -> int:
     sweep_df.to_csv(os.path.join(out, "cost_sweep.csv"), index=False)
     produced.append(os.path.join(out, "cost_sweep.csv"))
 
-    cash_df = pd.DataFrame([{"cash_rate": r, **{k: v for k, v in nav_metrics(x["nav"], rf_daily, "").items() if k in ("cagr", "vol", "sharpe_card", "max_dd")}}
+    cash_df = pd.DataFrame([{"cash_rate": r, **{k: v for k, v in nav_metrics(x["nav"], rf_daily, "").items() if k in ("cagr", "vol", "sharpe", "max_dd")}}
                             for r, x in cash_runs.items()])
     cash_df.to_csv(os.path.join(out, "cash_rate_sweep.csv"), index=False)
     produced.append(os.path.join(out, "cash_rate_sweep.csv"))
 
-    sens = pd.DataFrame([{"variant": nm, **{k: v for k, v in nav_metrics(x, rf_daily, nm).items() if k in ("cagr", "vol", "sharpe_card", "max_dd")},
+    sens = pd.DataFrame([{"variant": nm, **{k: v for k, v in nav_metrics(x, rf_daily, nm).items() if k in ("cagr", "vol", "sharpe", "max_dd")},
                           "minus_nifty500_cagr": cagr(x) - bench_cagr}
                          for nm, x in [("Base: Tuesday signal, 15% gap, 90-day regression, index filter", nav),
                                        ("Thursday signal, Friday fill", thu["nav"]), ("20% gap limit", gap20["nav"]),
@@ -1111,7 +1101,7 @@ def main() -> int:
     boot = research.stationary_bootstrap(rets, rf_daily, n_boot=args.n_boot, baseline="strategy")
     dsr = research.deflated_sharpe(ret(nav), N_TRIALS, rf_daily)
     # the same test with the trials' OWN Sharpe dispersion instead of unit variance (both are reported, fixed rows)
-    var_sharpe = float(sens["sharpe_card"].var(ddof=1)) if len(sens) > 1 else 1.0
+    var_sharpe = float(sens["sharpe"].var(ddof=1)) if len(sens) > 1 else 1.0
     dsr_var = research.deflated_sharpe(ret(nav), N_TRIALS, rf_daily, benchmark_sharpe=research.expected_max_sharpe(N_TRIALS, var_sharpe))
     # the latest index correction deeper than 10%: peak to trough of the NIFTY 500, and both series' falls over it
     bench_dd = bench / bench.cummax() - 1
@@ -1313,8 +1303,7 @@ def main() -> int:
                          "Equal-weight NIFTY 500 members (monthly)": ret(ew).reindex(r_s.index).values,
                          "Inverse-volatility NIFTY 500 members (monthly)": ret(iv).reindex(r_s.index).values,
                          "NIFTY500 Momentum 50 index (price, backfilled)": ret(mom50).reindex(r_s.index).values,
-                         "Same rules, no 200-day index filter": ret(nofilter["nav"]).reindex(r_s.index).values,
-                         "Appendix: same rules at 30bp round trip": ret(cost30["nav"]).reindex(r_s.index).values})
+                         "Same rules, no 200-day index filter": ret(nofilter["nav"]).reindex(r_s.index).values})
     comp.to_csv(os.path.join(run_dir, "comparators.csv"), index=False)
     for f in ("daily_returns.csv", "holdings.csv", "trades.csv", "selection.csv", "comparators.csv"):
         produced.append(os.path.join(run_dir, f))

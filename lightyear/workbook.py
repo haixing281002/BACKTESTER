@@ -25,6 +25,7 @@ from openpyxl.chart import LineChart, Reference
 from openpyxl.formatting.rule import CellIsRule
 from openpyxl.styles import Alignment, PatternFill
 
+from ros.versions import GATE_VERSION, METRICS_VERSION
 from universal_backtester.xlsx_style import (
     DATE,
     F_BASE,
@@ -317,9 +318,71 @@ def derive_trades(h):
     return pd.DataFrame(rows, columns=["date", "symbol", "action", "weight_before", "weight_after"])
 
 
-def build(run_dir, results, df, title, out_path, hurdle=0.06, holdings=None, trades=None, comparators=None,
+def _gate_v2_sheet(wb, g):
+    """Gate v2 as Lightyear scored it: hard blocks, then the scorecard. The decision stays PENDING until a named human records one."""
+    w = wb.create_sheet("Gate v2")
+    put(w, "A1", f"Gate B {g['gate_version']}: {g['status']}", F_TITLE)
+    put(w, "A2", f"Computed on {g['basis']}. Thresholds: config/gate_thresholds.yaml ({g['thresholds_status']}). Decision: PENDING until a named human records one. "
+        "Quant AI Researcher", F_NOTE)
+    row = 4
+    for title, rows in (("Hard blocks", g["hard_blocks"]), ("Evidence scorecard (feeds the decision, does not block)", g["scorecard"])):
+        put(w, f"A{row}", title, F_SUB)
+        row += 1
+        header(w, row, ["Test", "Result", "Value", "Needs", "Evidence"])
+        row += 1
+        for r in rows:
+            v = r.get("value")
+            put(w, f"A{row}", r["name"], F_BASE, border=True)
+            put(w, f"B{row}", r["status"], F_BOLD, border=True)
+            put(w, f"C{row}", v, F_INPUT, NUM2, border=True)
+            put(w, f"D{row}", str(r.get("threshold") if r.get("threshold") is not None else ""), F_BASE, border=True)
+            put(w, f"E{row}", r.get("evidence", ""), F_NOTE, border=True)
+            row += 1
+        row += 1
+    if g.get("tests_not_run"):
+        put(w, f"A{row}", "Not run, so not passed: " + ", ".join(g["tests_not_run"]), F_NOTE)
+    widths(w, [42, 12, 12, 44, 110])
+
+
+def _core_sheet(wb, ch, s_name, b_name):
+    """Core performance at the card's cost, with gross beside it when that cost is not zero. The page's table, from ros.metrics.core."""
+    wk = wb.create_sheet("Core metrics")
+    gross, bp = ch.get("gross"), ch.get("card_bp")
+    m, b = ch["metrics"]["strategy"], ch["metrics"]["benchmark"]
+    put(wk, "A1", "Core performance", F_TITLE)
+    put(wk, "A2", f"Values from ros/metrics/core.py, the same code as the Lightyear page. The cost is the card's: {bp if bp is not None else 'not read'}bp round trip. "
+        "Quant AI Researcher", F_NOTE)
+    header(wk, 4, ["Metric", f"{s_name}, at the card's cost" + (" (net)" if gross else " (gross = net)"), f"{s_name}, gross" if gross else "", b_name])
+    rows = [("CAGR", "cagr", PCT), ("Volatility", "vol", PCT), ("Sharpe", "sharpe", NUM2), ("Sortino", "sortino", NUM2), ("Calmar", "calmar", NUM2),
+            ("Maximum drawdown", "max_dd", PCT), ("Drawdown duration (trading days)", "dd_duration_days", INT), ("95% CVaR (daily loss)", "cvar_95", PCT),
+            ("Skew", "skew", NUM2), ("CAGR without the 10 best days", "best_days_removed_cagr", PCT), ("Beta", "beta", NUM2),
+            ("Tracking error", "tracking_error", PCT), ("Information ratio", "information_ratio", NUM2), ("Up capture (monthly)", "up_capture", NUM2),
+            ("Down capture (monthly)", "down_capture", NUM2), ("Rolling one-year periods behind", "rolling_behind", PCT)]
+
+    def cell(x):
+        return None if x is None or pd.isna(x) else x
+
+    for i, (label, key, fmt) in enumerate(rows, start=5):
+        put(wk, f"A{i}", label, F_BASE, border=True)
+        for col, src in (("B", m), ("C", gross or {}), ("D", b)):
+            put(wk, f"{col}{i}", cell(src.get(key)), F_INPUT, fmt, border=True)
+    r = 6 + len(rows)
+    put(wk, f"A{r}", "Two-way turnover a year (x capital)", F_BASE, border=True)
+    put(wk, f"B{r}", cell(ch.get("annual_turnover")), F_INPUT, NUM2, border=True)
+    pp = ch.get("post_publication")
+    if pp:
+        r += 2
+        put(wk, f"A{r}", f"After publication, from {pp['from']}", F_BOLD)
+        for j, (label, key, fmt) in enumerate((("CAGR", "cagr", PCT), ("Benchmark CAGR", "benchmark_cagr", PCT), ("Edge", "edge", PCT), ("Sharpe", "sharpe", NUM2),
+                                               ("Benchmark Sharpe", "benchmark_sharpe", NUM2), ("Maximum drawdown", "max_dd", PCT)), start=r + 1):
+            put(wk, f"A{j}", label, F_BASE, border=True)
+            put(wk, f"B{j}", cell(pp[key]), F_INPUT, fmt, border=True)
+    widths(wk, [38, 24, 26, 24])
+
+
+def build(run_dir, results, df, title, out_path, holdings=None, trades=None, comparators=None,
           observations=None, review=None, selection=None, selection_rule=None, revisions=None, approval=None,
-          provenance=None, change_log=None):
+          provenance=None, change_log=None, core_metrics=None):
     s_name = results.get("strategy_name") or "Strategy"
     b_name = results.get("benchmark_name") or "NIFTY 500"
     df = df.sort_values("date").reset_index(drop=True)
@@ -376,13 +439,17 @@ def build(run_dir, results, df, title, out_path, hurdle=0.06, holdings=None, tra
                    f"{pv.get('card_path', '?')} sha256 {(pv.get('card_sha256_approved') or pv.get('card_sha256_run') or '?')[:12]} · "
                    f"script sha256 {(pv.get('script_sha256') or '?')[:12]} · Lightyear code {pv.get('code_hash_disk', '?')} · "
                    f"backtest ran on git {pv.get('git_commit', '?')}{' (uncommitted changes)' if pv.get('git_dirty') else ''}"
-                   " · Quant AI Researcher"), F_NOTE)
-    put(ws, "A4", "Hurdle rate for Sharpe", F_BOLD)
-    put(ws, "B4", hurdle, F_INPUT, PCT, FILL_KEY, border=True,
-        comment="Key assumption: flat 6% proxy for the Indian short rate (the repo's convention).")
-    put(ws, "C4", "Flat 6% proxy, the repo's convention. Sharpe = (mean daily return x 252 - hurdle) / annualised "
-                  "volatility, the same formula as results.json. Change the hurdle and the Sharpe row updates.", F_NOTE)
-    name(wb, "Hurdle", "Summary!$B$4")
+                   f" · gate_version {GATE_VERSION} · metrics_version {METRICS_VERSION} · Quant AI Researcher"), F_NOTE)
+    cash_rate = (core_metrics or {}).get("cash_rate")
+    put(ws, "A4", f"Cash rate (from {(core_metrics or {}).get('cash_source') or 'the card'})", F_BOLD)
+    put(ws, "B4", cash_rate if cash_rate is not None else "not on the card", F_INPUT, PCT, FILL_KEY, border=True,
+        comment="Key assumption: a declared constant proxy, from the card's universe.cash_asset or config/fund.yaml. There is no Indian risk-free series.")
+    put(ws, "C4", "Sharpe = mean(r - c) / stdev(r - c) x sqrt(252), the one definition in ros/metrics/core.py. Change the "
+                  "rate and the Sharpe and Sortino rows update.", F_NOTE)
+    name(wb, "Cash_Rate", "Summary!$B$4")
+    put(ws, "A5", "Daily cash accrual", F_BASE)
+    put(ws, "B5", "=(1+Cash_Rate)^(1/252)-1" if cash_rate is not None else "n/a", F_BASE, "0.000000%", border=True)
+    name(wb, "Cash_Daily", "Summary!$B$5")
     header(ws, 6, ["Metric", f"Strategy: {s_name}", f"Benchmark: {b_name}", f"Strategy minus {b_name}"])
     mrows = [
         ("Start (value = 100)", "=Start_Date", "=Start_Date", DATE, False, True),
@@ -392,26 +459,29 @@ def build(run_dir, results, df, title, out_path, hurdle=0.06, holdings=None, tra
         ("Final value (100 = start)", "=INDEX(Val_Strat,ROWS(Val_Strat))", "=INDEX(Val_Bench,ROWS(Val_Bench))", NUM1, True, True),
         ("CAGR", "=(B11/100)^(1/B9)-1", "=(C11/100)^(1/C9)-1", PCT, True, False),
         ("Annualised volatility", "=STDEV(Ret_Strat)*SQRT(252)", "=STDEV(Ret_Bench)*SQRT(252)", PCT, True, True),
-        ("Sharpe vs hurdle", "=(AVERAGE(Ret_Strat)*252-Hurdle)/B13", "=(AVERAGE(Ret_Bench)*252-Hurdle)/C13", NUM2, True, False),
+        ("Sharpe", '=(AVERAGE(Ret_Strat)-Cash_Daily)*252/B13' if cash_rate is not None else "n/a", '=(AVERAGE(Ret_Bench)-Cash_Daily)*252/C13' if cash_rate is not None else "n/a", NUM2, cash_rate is not None, False),
         ("Maximum drawdown", "=-MIN(DD_Strat)", "=-MIN(DD_Bench)", PCT, True, True),
+        ("Sortino", '=(AVERAGE(Ret_Strat)-Cash_Daily)*252/(SQRT(SUMPRODUCT((Ret_Strat-Cash_Daily<0)*(Ret_Strat-Cash_Daily)^2)/COUNT(Ret_Strat))*SQRT(252))' if cash_rate is not None else "n/a", '=(AVERAGE(Ret_Bench)-Cash_Daily)*252/(SQRT(SUMPRODUCT((Ret_Bench-Cash_Daily<0)*(Ret_Bench-Cash_Daily)^2)/COUNT(Ret_Bench))*SQRT(252))' if cash_rate is not None else "n/a", NUM2, cash_rate is not None, False),
+        ("Calmar", "=B12/B15", "=C12/C15", NUM2, True, False),
     ]
     for i, (label, fs, fb, fmt, ex, link) in enumerate(mrows, start=7):
         put(ws, f"A{i}", label, F_BASE, border=True)
         put(ws, f"B{i}", fs, F_LINK if link else F_BASE, fmt, border=True)
         put(ws, f"C{i}", fb, F_LINK if link else F_BASE, fmt, border=True)
         put(ws, f"D{i}", f"=B{i}-C{i}" if ex else None, F_BASE, fmt, border=True)
-    for r in (11, 12, 14):
+    for r in (11, 12, 14, 16, 17):
         sign_colour(ws, f"D{r}")
     for r in (13, 15):   # more volatility / deeper drawdown than the benchmark is bad
         ws.conditional_formatting.add(f"D{r}", CellIsRule(operator="greaterThan", formula=["0"], fill=FILL_FAIL))
         ws.conditional_formatting.add(f"D{r}", CellIsRule(operator="lessThan", formula=["0"], fill=FILL_PASS))
-    put(ws, "A16", "CAGR on calendar years from the start row (days / 365.25); volatility = stdev of daily returns x "
-        "sqrt(252). Rows 7 to 15 are formulas over the Returns sheet (green = pulls from another sheet).", F_NOTE)
+    put(ws, "A18", "CAGR on calendar years from the start row (days / 365.25); volatility = stdev of daily returns x "
+        "sqrt(252). Rows 7 to 17 are formulas over the Returns sheet (green = pulls from another sheet). The benchmark is "
+        "the NIFTY 500 PRICE index unless this run supplied a total-return one: relative figures flatter the strategy.", F_NOTE)
 
-    header(ws, 18, ["Gate B criterion (ros/governance/gates.py)", "Result", "Value", "Rule", "Threshold (editable)",
+    header(ws, 20, ["Gate v1 checklist, for comparison (ros/governance/gates.py). Gate v2 is on its own sheet", "Result", "Value", "Rule", "Threshold (editable)",
                     "Counts toward decision"])
     grows = gates.rows(results["gate_b"].get("criteria", []))
-    for i, g in enumerate(grows, start=19):
+    for i, g in enumerate(grows, start=21):
         put(ws, f"A{i}", g["name"], F_BASE, border=True)
         if g["value"] is not None and g["threshold"] is not None and g["op"]:
             fmt = PCT if "%" in str(g["threshold_raw"]) or "%" in str(g["value_raw"]) else NUM2
@@ -428,13 +498,13 @@ def build(run_dir, results, df, title, out_path, hurdle=0.06, holdings=None, tra
             put(ws, f"B{i}", g["result"], F_BOLD, border=True, align=Alignment(horizontal="center"),
                 comment="Not computed: there was nothing to compare against in this run.")
         put(ws, f"F{i}", "blocking" if g["blocking"] else "advisory", F_INPUT, border=True)
-    g_last = 18 + len(grows)
+    g_last = 20 + len(grows)
     if grows:
-        pass_fail(ws, f"B19:B{g_last}")
-        ws.conditional_formatting.add(f"B19:B{g_last}", CellIsRule(operator="equal", formula=['"FAIL (advisory)"'], fill=FILL_ADV))
+        pass_fail(ws, f"B21:B{g_last}")
+        ws.conditional_formatting.add(f"B21:B{g_last}", CellIsRule(operator="equal", formula=['"FAIL (advisory)"'], fill=FILL_ADV))
     r = g_last + 1
     put(ws, f"A{r}", "Blocking criteria passed", F_BOLD, border=True)
-    put(ws, f"B{r}", f'=COUNTIFS(B19:B{g_last},"PASS",F19:F{g_last},"blocking")&" of "&COUNTIF(F19:F{g_last},"blocking")',
+    put(ws, f"B{r}", f'=COUNTIFS(B21:B{g_last},"PASS",F21:F{g_last},"blocking")&" of "&COUNTIF(F21:F{g_last},"blocking")',
         F_BOLD, border=True, align=Alignment(horizontal="center"))
     put(ws, f"A{r+1}", "Evidence supports", F_BOLD, border=True)
     put(ws, f"B{r+1}", results.get("evidence_supports", ""), F_BOLD, border=True, align=Alignment(horizontal="center"))
@@ -449,6 +519,12 @@ def build(run_dir, results, df, title, out_path, hurdle=0.06, holdings=None, tra
     _line_chart("Drawdown from peak", wr, 6, 7, last, "H24", ws, "0%", "Drawdown")
 
     used = {"summary", "returns", "validation", "notes"}
+    if core_metrics:
+        _core_sheet(wb, core_metrics, s_name, b_name)
+        used.add("core metrics")
+    if (results.get("gate_v2") or {}).get("status"):
+        _gate_v2_sheet(wb, results["gate_v2"])
+        used.add("gate v2")
 
     # ---------------------------------------------------------------- Comparators (daily)
     if comparators is not None and len(comparators.columns) > 1:
@@ -459,7 +535,7 @@ def build(run_dir, results, df, title, out_path, hurdle=0.06, holdings=None, tra
         put(wc, "A1", "Simpler alternatives, run over the same days", F_TITLE)
         put(wc, "A2", "What the strategy has to beat to be worth its complexity. Daily returns (blue) from comparators.csv; "
             "values, drawdowns and the metrics table are formulas. Appendix only: the headline stays strategy vs NIFTY 500.", F_NOTE)
-        header(wc, 4, ["Comparator", "CAGR", "Annualised volatility", "Sharpe vs hurdle", "Maximum drawdown",
+        header(wc, 4, ["Comparator", "CAGR", "Annualised volatility", "Sharpe", "Maximum drawdown",
                        "CAGR minus strategy"])
         top = 5 + len(names_c) + 2           # data header row
         d0, d1 = top + 2, top + 1 + n        # start row top+1, data rows top+2 .. top+1+n
@@ -489,7 +565,7 @@ def build(run_dir, results, df, title, out_path, hurdle=0.06, holdings=None, tra
             put(wc, f"A{row}", c, F_BASE, border=True)
             put(wc, f"B{row}", f"=({vc}{d1}/100)^(1/Summary!$B$9)-1", F_LINK, PCT, border=True)
             put(wc, f"C{row}", f"=STDEV({rc}{d0}:{rc}{d1})*SQRT(252)", F_BASE, PCT, border=True)
-            put(wc, f"D{row}", f"=(AVERAGE({rc}{d0}:{rc}{d1})*252-Hurdle)/C{row}", F_LINK, NUM2, border=True)
+            put(wc, f"D{row}", f"=(AVERAGE({rc}{d0}:{rc}{d1})-Cash_Daily)*252/C{row}" if cash_rate is not None else "n/a", F_LINK, NUM2, border=True)
             put(wc, f"E{row}", f"=-MIN({dc}{d0-1}:{dc}{d1})", F_BASE, PCT, border=True)
             put(wc, f"F{row}", f"=B{row}-Summary!$B$12", F_LINK, PCT, border=True)
         sign_colour(wc, f"F5:F{4 + len(names_c)}")
@@ -673,13 +749,19 @@ def build(run_dir, results, df, title, out_path, hurdle=0.06, holdings=None, tra
     put(wv, "A2", "Blue = hardcoded from results.json; the source column names the file or function.", F_NOTE)
     header(wv, 4, ["Measure", "Value", "Source"])
     row = 5
-    for v in results.get("validation", []) or []:
-        val = _num_or_text(v.get("value"))
-        fmt = FMT.get(v.get("format", "num"), NUM2) if isinstance(val, float) else None
-        put(wv, f"A{row}", v.get("label", ""), border=True)
-        put(wv, f"B{row}", val, F_INPUT, fmt, border=True)
-        put(wv, f"C{row}", v.get("source", ""), F_NOTE, border=True)
-        row += 1
+    all_rows = results.get("validation", []) or []
+    for section, rows in (("", [v for v in all_rows if v.get("group") != "diagnostics"]), ("Diagnostics (specific to this strategy's rules)", [v for v in all_rows if v.get("group") == "diagnostics"])):
+        if section and rows:
+            row += 1
+            put(wv, f"A{row}", section, F_SUB)
+            row += 1
+        for v in rows:
+            val = _num_or_text(v.get("value"))
+            fmt = FMT.get(v.get("format", "num"), NUM2) if isinstance(val, float) else None
+            put(wv, f"A{row}", v.get("label", ""), border=True)
+            put(wv, f"B{row}", val, F_INPUT, fmt, border=True)
+            put(wv, f"C{row}", v.get("source", ""), F_NOTE, border=True)
+            row += 1
     if results.get("assumptions"):
         row += 1
         put(wv, f"A{row}", "Assumptions used by the run", F_SUB)

@@ -17,6 +17,7 @@ import csv
 import datetime as dt
 import json
 import logging
+import math
 import os
 import re
 import subprocess
@@ -25,7 +26,13 @@ import threading
 import time
 import uuid
 
-from . import changelog, charts, contract, gates, prompts, spec_audit, wording, workbook
+import pandas as pd
+
+from ros import config
+from ros.cards.schema import load_card
+from ros.metrics import core
+
+from . import changelog, charts, contract, gate_run, gates, prompts, spec_audit, wording, workbook
 from .paths import LEDGER, REPO, RUNS, code_hash, find_claude, git_bash, git_commit, rel, run_dir
 
 _log = logging.getLogger("lightyear")
@@ -641,6 +648,15 @@ def revise_a(rid, notes):
     _after_phase_a(rid, ok, "Revision", since=t0, must_change=before)
 
 
+def finite_rows(rows):
+    """A value with no finite answer (a breakeven beyond the sweep) shows blank. The page's JSON cannot carry infinity."""
+    return [{**v, "value": None} if isinstance(v.get("value"), float) and not math.isfinite(v["value"]) else v for v in rows or []]
+
+
+HOUSE_COST_LABEL = re.compile(r"house (floor|cost)", re.IGNORECASE)   # there is none: a run's cost is its card's
+DIAGNOSTIC_LABEL = re.compile(r"leaving the|membership-forced|gap exits|gap rule|eligible names|first fill|index gate|buying shut|band proxy|resize fills|fewer than 5 names", re.IGNORECASE)
+
+
 def phase_b(rid):
     st = load(rid)
     if st.get("current_stage") not in IDS_B:
@@ -693,6 +709,11 @@ def build_outputs(rid, review=True):
         labels = {r.get("label") for r in fixed_v}
         model_rows = [r for r in (res.get("validation") or []) if r.get("label") not in labels]
         res["validation"] = fixed_v + model_rows
+    res["validation"] = [v for v in finite_rows(res.get("validation")) if not HOUSE_COST_LABEL.search(str(v.get("label", "")))]
+    # Rows tied to this strategy's rules belong in Diagnostics, whichever step wrote them.
+    for v in res.get("validation") or []:
+        if DIAGNOSTIC_LABEL.search(str(v.get("label", ""))):
+            v["group"] = "diagnostics"
         log(rid, "server", f"Validation sheet: {len(fixed_v)} fixed rows from the run, {len(model_rows)} model rows appended.")
     fixed_t = _load_json_list(os.path.join(rd, "out", "tables.json"))
     if fixed_t:
@@ -742,11 +763,20 @@ def build_outputs(rid, review=True):
     _finish_stages(rid, [s for s, _ in prompts.STAGES_B])
     names = {"strategy": res.get("strategy_name") or "Strategy", "benchmark": res.get("benchmark_name") or "NIFTY 500",
              "sleeve": res.get("sleeve_name") or "Sleeve"}
-    ch = charts.build(df, names, comparators=extra.get("comparators"))
+    extras, warn_core = _core_inputs(st, res, df, extra)
+    warn = list(warn) + warn_core
+    ch = charts.build(df, names, comparators=extra.get("comparators"), **extras)
+    try:
+        ch["capacity"] = gate_run.capacity(df, extra.get("trades"))
+    except Exception as e:  # noqa: BLE001  a report; the failure is shown, and the run is not lost
+        log(rid, "error", f"Capacity not computed: {type(e).__name__}: {e}")
+        ch["capacity"] = {"status": "not computed", "why": f"{type(e).__name__}: {e}"}
+    ch["benchmark_basis"] = "price" if not res.get("benchmark_is_total_return") else "total_return"
     write_json_atomic(os.path.join(rd, "charts.json"), ch, default=float)
     log(rid, "server", "Interactive chart series built from daily_returns.csv"
         + (" and comparators.csv." if "comparators" in extra else "."))
-    recalc = _workbook(rid, res, df, extra, ch["observations"], _load_review(rd))
+    res["gate_v2"] = _gate_v2(rid, st, res, df, extra)
+    recalc = _workbook(rid, res, df, extra, ch["observations"], _load_review(rd), ch)
     res["gate_rows"] = gates.rows(res["gate_b"].get("criteria", []))
     update(rid, status="gate_b", current_stage="GB", results=res, recalc=recalc, handoff_warnings=warn, error=None,
            card_checks=card_checks,
@@ -761,6 +791,42 @@ def build_outputs(rid, review=True):
             log(rid, "error", f"Analyst review failed: {e}")
 
 
+def _core_inputs(st, res, df, extra):
+    """What ros.metrics.core needs from the card and the hand-off files, and a plain warning for whatever is missing."""
+    warn, out = [], {}
+    path = (st.get("phase_a") or {}).get("card_path") or ""
+    try:
+        card = load_card(path if os.path.isabs(path) else os.path.join(REPO, path))
+        out["publication_date"] = card.paper.date
+        out["card_bp"] = float(card.costs.spread_bps)
+        out["cash_rate"], out["cash_source"] = config.cash_rate_for(card)
+    except Exception as e:  # noqa: BLE001  an unreadable card must not lose the run; the warning is on the page
+        warn.append(f"Card not read for the core metrics ({type(e).__name__}: {e}); Sharpe and Sortino left blank.")
+    tr = extra.get("trades")
+    if tr is None and "holdings" in extra:
+        tr = workbook.derive_trades(extra["holdings"])
+    if tr is not None and len(tr):
+        out["turnover"] = core.two_way_turnover_from_trades(tr, pd.DatetimeIndex(df["date"]))
+    else:
+        warn.append("Turnover not computed: the run wrote no trades.csv or holdings.csv.")
+    return out, warn
+
+
+def _gate_v2(rid, st, res, df, extra):
+    """Score Gate v2 from this run's files. A failure is logged and shown; v1 and the run's results are not lost."""
+    tr = extra.get("trades")
+    if tr is None and "holdings" in extra:
+        tr = workbook.derive_trades(extra["holdings"])
+    audit = load(rid).get("spec_audit") or {}
+    try:
+        g = gate_run.score(run_dir(rid), (st.get("phase_a") or {}).get("card_path") or "", df, tr, extra.get("holdings"), audit.get("n_fail"))
+        log(rid, "server", f"Gate v2: {g['status']} on {g['basis']}; {len(g['tests_not_run'])} test(s) not run. decision: PENDING.")
+        return g
+    except Exception as e:  # noqa: BLE001
+        log(rid, "error", f"Gate v2 not scored: {type(e).__name__}: {e}")
+        return {"error": f"{type(e).__name__}: {e}"}
+
+
 def _load_review(rd):
     p = os.path.join(rd, "review.json")
     try:
@@ -769,7 +835,7 @@ def _load_review(rd):
         return None
 
 
-def _workbook(rid, res, df, extra, observations, review):
+def _workbook(rid, res, df, extra, observations, review, ch=None):
     """Build the workbook and recalculate it. Never loses the run over a workbook problem."""
     st = load(rid)
     rd = run_dir(rid)
@@ -784,6 +850,7 @@ def _workbook(rid, res, df, extra, observations, review):
               observations=observations, review=review, selection=extra.get("selection"),
               selection_rule=(st.get("phase_a") or {}).get("one_line") or None,
               revisions=st.get("revisions"), approval=st.get("approval"), provenance=provenance(st),
+              core_metrics=ch,
               change_log=(st.get("change_log") or {}).get("lines"))
     try:
         try:
@@ -832,7 +899,7 @@ def analyst_review(rid):
         res, df = contract.check_results(rd)
         extra, _ = contract.load_optional(rd, df["date"])
         ch = json.load(open(os.path.join(rd, "charts.json"), encoding="utf-8"))
-        recalc = _workbook(rid, res, df, extra, ch.get("observations"), rev)
+        recalc = _workbook(rid, res, df, extra, ch.get("observations"), rev, ch)
         update(rid, review_status="done", recalc=recalc)
     except Exception as e:
         update(rid, review_status="done")

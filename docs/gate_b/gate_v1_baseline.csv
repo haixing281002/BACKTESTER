@@ -1,0 +1,93 @@
+# Quant AI Researcher by Harshil Pahuja
+run_id,folder,strategy,gate_version,gate_passed,decision,criterion,value,threshold,blocking,result
+20261030-124039-5511,lightyear,oceanofpdf_com_stocks_on_the_move_andreas_clenow,v1,False,PENDING,deflated Sharpe clears selection bias,0.00,0.95,True,FAIL
+20261030-124039-5511,lightyear,oceanofpdf_com_stocks_on_the_move_andreas_clenow,v1,False,PENDING,positive Sharpe in every out-of-sample window,-0.26,0.3,True,FAIL
+20261030-124039-5511,lightyear,oceanofpdf_com_stocks_on_the_move_andreas_clenow,v1,False,PENDING,advantage over benchmark is significant,0.029,<=0.05,True,PASS
+20261030-124039-5511,lightyear,oceanofpdf_com_stocks_on_the_move_andreas_clenow,v1,False,PENDING,differentiated from existing book,NO COMPARISON,<=0.8,False,not computed
+20261030-124039-5511,lightyear,oceanofpdf_com_stocks_on_the_move_andreas_clenow,v1,False,PENDING,improves the book's information ratio,NO COMPARISON,>=0.05,False,not computed
+20261030-124039-5511,lightyear,oceanofpdf_com_stocks_on_the_move_andreas_clenow,v1,False,PENDING,alpha survives the factor fingerprint,1.88,|t|>=2.0,True,FAIL
+20261030-124039-5511,lightyear,oceanofpdf_com_stocks_on_the_move_andreas_clenow,v1,False,PENDING,implementable within mandate,,,True,not computed
+20261030-124039-5511,lightyear,oceanofpdf_com_stocks_on_the_move_andreas_clenow,v1,False,PENDING,turnover within operational tolerance,1030%,<=400%,False,FAIL (advisory)
+20261030-173539-8fd8,lightyear,oceanofpdf_com_stocks_on_the_move_andreas_clenow,v1,False,PENDING,deflated Sharpe clears selection bias,0.00,0.95,True,FAIL
+20261030-173539-8fd8,lightyear,oceanofpdf_com_stocks_on_the_move_andreas_clenow,v1,False,PENDING,positive Sharpe in every out-of-sample window,-0.26,0.3,True,FAIL
+20261030-173539-8fd8,lightyear,oceanofpdf_com_stocks_on_the_move_andreas_clenow,v1,False,PENDING,advantage over benchmark is significant,0.029,<=0.05,True,PASS
+20261030-173539-8fd8,lightyear,oceanofpdf_com_stocks_on_the_move_andreas_clenow,v1,False,PENDING,differentiated from existing book,NO COMPARISON,<=0.8,False,not computed
+20261030-173539-8fd8,lightyear,oceanofpdf_com_stocks_on_the_move_andreas_clenow,v1,False,PENDING,improves the book's information ratio,NO COMPARISON,>=0.05,False,not computed
+20261030-173539-8fd8,lightyear,oceanofpdf_com_stocks_on_the_move_andreas_clenow,v1,False,PENDING,alpha survives the factor fingerprint,1.88,|t|>=2.0,True,FAIL
+20261030-173539-8fd8,lightyear,oceanofpdf_com_stocks_on_the_move_andreas_clenow,v1,False,PENDING,implementable within mandate,,,True,PASS
+20261030-173539-8fd8,lightyear,oceanofpdf_com_stocks_on_the_move_andreas_clenow,v1,False,PENDING,turnover within operational tolerance,1030%,<=400%,False,FAIL (advisory)
+20261030-183103-3639,lightyear,oceanofpdf_com_stocks_on_the_move_andreas_clenow,v1,False,PENDING,deflated Sharpe clears selection bias,0.00,0.95,True,FAIL
+20261030-183103-3639,lightyear,oceanofpdf_com_stocks_on_the_move_andreas_clenow,v1,False,PENDING,positive Sharpe in every out-of-sample window,-0.26,0.3,True,FAIL
+20261030-183103-3639,lightyear,oceanofpdf_com_stocks_on_the_move_andreas_clenow,v1,False,PENDING,advantage over benchmark is significant,0.029,<=0.05,True,PASS
+20261030-183103-3639,lightyear,oceanofpdf_com_stocks_on_the_move_andreas_clenow,v1,False,PENDING,differentiated from existing book,NO COMPARISON,<=0.8,False,not computed
+20261030-183103-3639,lightyear,oceanofpdf_com_stocks_on_the_move_andreas_clenow,v1,False,PENDING,improves the book's information ratio,NO COMPARISON,>=0.05,False,not computed
+20261030-183103-3639,lightyear,oceanofpdf_com_stocks_on_the_move_andreas_clenow,v1,False,PENDING,alpha survives the factor fingerprint,1.88,|t|>=2.0,True,FAIL
+20261030-183103-3639,lightyear,oceanofpdf_com_stocks_on_the_move_andreas_clenow,v1,False,PENDING,implementable within mandate,,,True,PASS
+20261030-183103-3639,lightyear,oceanofpdf_com_stocks_on_the_move_andreas_clenow,v1,False,PENDING,turnover within operational tolerance,1030%,<=400%,False,FAIL (advisory)
+20261030-191604-3399,lightyear,oceanofpdf_com_stocks_on_the_move_andreas_clenow,v1,False,PENDING,deflated Sharpe clears selection bias,0.00,0.95,True,FAIL
+20261030-191604-3399,lightyear,oceanofpdf_com_stocks_on_the_move_andreas_clenow,v1,False,PENDING,positive Sharpe in every out-of-sample window,-0.26,0.3,True,FAIL
+20261030-191604-3399,lightyear,oceanofpdf_com_stocks_on_the_move_andreas_clenow,v1,False,PENDING,advantage over benchmark is significant,0.029,<=0.05,True,PASS
+20261030-191604-3399,lightyear,oceanofpdf_com_stocks_on_the_move_andreas_clenow,v1,False,PENDING,differentiated from existing book,NO COMPARISON,<=0.8,False,not computed
+20261030-191604-3399,lightyear,oceanofpdf_com_stocks_on_the_move_andreas_clenow,v1,False,PENDING,improves the book's information ratio,NO COMPARISON,>=0.05,False,not computed
+20261030-191604-3399,lightyear,oceanofpdf_com_stocks_on_the_move_andreas_clenow,v1,False,PENDING,alpha survives the factor fingerprint,1.88,|t|>=2.0,True,FAIL
+20261030-191604-3399,lightyear,oceanofpdf_com_stocks_on_the_move_andreas_clenow,v1,False,PENDING,implementable within mandate,,,True,PASS
+20261030-191604-3399,lightyear,oceanofpdf_com_stocks_on_the_move_andreas_clenow,v1,False,PENDING,turnover within operational tolerance,1030%,<=400%,False,FAIL (advisory)
+20261102-105054-0427,lightyear,oceanofpdf_com_stocks_on_the_move_andreas_clenow,v1,False,PENDING,deflated Sharpe clears selection bias,0.00,0.95,True,FAIL
+20261102-105054-0427,lightyear,oceanofpdf_com_stocks_on_the_move_andreas_clenow,v1,False,PENDING,positive Sharpe in every out-of-sample window,-0.29,0.3,True,FAIL
+20261102-105054-0427,lightyear,oceanofpdf_com_stocks_on_the_move_andreas_clenow,v1,False,PENDING,advantage over benchmark is significant,0.058,<=0.05,True,FAIL
+20261102-105054-0427,lightyear,oceanofpdf_com_stocks_on_the_move_andreas_clenow,v1,False,PENDING,differentiated from existing book,NO COMPARISON,<=0.8,False,not computed
+20261102-105054-0427,lightyear,oceanofpdf_com_stocks_on_the_move_andreas_clenow,v1,False,PENDING,improves the book's information ratio,NO COMPARISON,>=0.05,False,not computed
+20261102-105054-0427,lightyear,oceanofpdf_com_stocks_on_the_move_andreas_clenow,v1,False,PENDING,alpha survives the factor fingerprint,1.52,|t|>=2.0,True,FAIL
+20261102-105054-0427,lightyear,oceanofpdf_com_stocks_on_the_move_andreas_clenow,v1,False,PENDING,implementable within mandate,,,True,PASS
+20261102-105054-0427,lightyear,oceanofpdf_com_stocks_on_the_move_andreas_clenow,v1,False,PENDING,turnover within operational tolerance,1033%,<=400%,False,FAIL (advisory)
+20261006-181257-0394,lightyear_archive_2026-10-30,padhy_2024_130_30_long_short,v1,False,PENDING,deflated Sharpe clears selection bias,0.75,0.95,True,FAIL
+20261006-181257-0394,lightyear_archive_2026-10-30,padhy_2024_130_30_long_short,v1,False,PENDING,positive Sharpe in every out-of-sample window,-0.78,0.3,True,FAIL
+20261006-181257-0394,lightyear_archive_2026-10-30,padhy_2024_130_30_long_short,v1,False,PENDING,advantage over benchmark is significant,0.083,<=0.05,True,FAIL
+20261006-181257-0394,lightyear_archive_2026-10-30,padhy_2024_130_30_long_short,v1,False,PENDING,differentiated from existing book,NO COMPARISON,<=0.8,False,not computed
+20261006-181257-0394,lightyear_archive_2026-10-30,padhy_2024_130_30_long_short,v1,False,PENDING,improves the book's information ratio,NO COMPARISON,>=0.05,False,not computed
+20261006-181257-0394,lightyear_archive_2026-10-30,padhy_2024_130_30_long_short,v1,False,PENDING,alpha survives the factor fingerprint,0.85,|t|>=2.0,True,FAIL
+20261006-181257-0394,lightyear_archive_2026-10-30,padhy_2024_130_30_long_short,v1,False,PENDING,turnover within operational tolerance,627%,<=400%,False,FAIL (advisory)
+20261006-lee-swaminathan-1998,lightyear_archive_2026-10-30,lee_swaminathan_1998_price_momentum_trading_volume,v1,False,PENDING,deflated Sharpe clears selection bias,0.21,0.95,True,FAIL
+20261006-lee-swaminathan-1998,lightyear_archive_2026-10-30,lee_swaminathan_1998_price_momentum_trading_volume,v1,False,PENDING,positive Sharpe in every out-of-sample window,-1.31,0.3,True,FAIL
+20261006-lee-swaminathan-1998,lightyear_archive_2026-10-30,lee_swaminathan_1998_price_momentum_trading_volume,v1,False,PENDING,advantage over benchmark is significant,0.900,<=0.05,True,FAIL
+20261006-lee-swaminathan-1998,lightyear_archive_2026-10-30,lee_swaminathan_1998_price_momentum_trading_volume,v1,False,PENDING,differentiated from existing book,NO COMPARISON,<=0.8,False,not computed
+20261006-lee-swaminathan-1998,lightyear_archive_2026-10-30,lee_swaminathan_1998_price_momentum_trading_volume,v1,False,PENDING,improves the book's information ratio,NO COMPARISON,>=0.05,False,not computed
+20261006-lee-swaminathan-1998,lightyear_archive_2026-10-30,lee_swaminathan_1998_price_momentum_trading_volume,v1,False,PENDING,alpha survives the factor fingerprint,1.37,|t|>=2.0,True,FAIL
+20261006-lee-swaminathan-1998,lightyear_archive_2026-10-30,lee_swaminathan_1998_price_momentum_trading_volume,v1,False,PENDING,turnover within operational tolerance,215%,<=400%,False,PASS
+20261013-161034-6649,lightyear_archive_2026-10-30,1_s2_0_s0970389623000538_main,v1,False,PENDING,deflated Sharpe clears selection bias,0.70,0.95,True,FAIL
+20261013-161034-6649,lightyear_archive_2026-10-30,1_s2_0_s0970389623000538_main,v1,False,PENDING,positive Sharpe in every out-of-sample window,-1.37,0.3,True,FAIL
+20261013-161034-6649,lightyear_archive_2026-10-30,1_s2_0_s0970389623000538_main,v1,False,PENDING,advantage over benchmark is significant,0.020,<=0.05,True,PASS
+20261013-161034-6649,lightyear_archive_2026-10-30,1_s2_0_s0970389623000538_main,v1,False,PENDING,differentiated from existing book,NO COMPARISON,<=0.8,False,not computed
+20261013-161034-6649,lightyear_archive_2026-10-30,1_s2_0_s0970389623000538_main,v1,False,PENDING,improves the book's information ratio,NO COMPARISON,>=0.05,False,not computed
+20261013-161034-6649,lightyear_archive_2026-10-30,1_s2_0_s0970389623000538_main,v1,False,PENDING,alpha survives the factor fingerprint,2.12,|t|>=2.0,True,PASS
+20261013-161034-6649,lightyear_archive_2026-10-30,1_s2_0_s0970389623000538_main,v1,False,PENDING,implementable within mandate,,,True,PASS
+20261013-161034-6649,lightyear_archive_2026-10-30,1_s2_0_s0970389623000538_main,v1,False,PENDING,turnover within operational tolerance,226%,<=400%,False,PASS
+20261016-102923-bdc1,lightyear_archive_2026-10-30,oceanofpdf_com_stocks_on_the_move_andreas_clenow,v1,False,PENDING,deflated Sharpe clears selection bias,0.62,0.95,True,FAIL
+20261016-102923-bdc1,lightyear_archive_2026-10-30,oceanofpdf_com_stocks_on_the_move_andreas_clenow,v1,False,PENDING,positive Sharpe in every out-of-sample window,-0.92,0.3,True,FAIL
+20261016-102923-bdc1,lightyear_archive_2026-10-30,oceanofpdf_com_stocks_on_the_move_andreas_clenow,v1,False,PENDING,advantage over benchmark is significant,0.081,<=0.05,True,FAIL
+20261016-102923-bdc1,lightyear_archive_2026-10-30,oceanofpdf_com_stocks_on_the_move_andreas_clenow,v1,False,PENDING,differentiated from existing book,NO COMPARISON,<=0.8,False,not computed
+20261016-102923-bdc1,lightyear_archive_2026-10-30,oceanofpdf_com_stocks_on_the_move_andreas_clenow,v1,False,PENDING,improves the book's information ratio,NO COMPARISON,>=0.05,False,not computed
+20261016-102923-bdc1,lightyear_archive_2026-10-30,oceanofpdf_com_stocks_on_the_move_andreas_clenow,v1,False,PENDING,alpha survives the factor fingerprint,0.60,|t|>=2.0,True,FAIL
+20261016-102923-bdc1,lightyear_archive_2026-10-30,oceanofpdf_com_stocks_on_the_move_andreas_clenow,v1,False,PENDING,turnover within operational tolerance,1085%,<=400%,False,FAIL (advisory)
+20261021-104144-801e,lightyear_archive_2026-10-30,oceanofpdf_com_stocks_on_the_move_andreas_clenow,v1,False,PENDING,deflated Sharpe clears selection bias,0.62,0.95,True,FAIL
+20261021-104144-801e,lightyear_archive_2026-10-30,oceanofpdf_com_stocks_on_the_move_andreas_clenow,v1,False,PENDING,positive Sharpe in every out-of-sample window,-0.92,0.3,True,FAIL
+20261021-104144-801e,lightyear_archive_2026-10-30,oceanofpdf_com_stocks_on_the_move_andreas_clenow,v1,False,PENDING,advantage over benchmark is significant,0.081,<=0.05,True,FAIL
+20261021-104144-801e,lightyear_archive_2026-10-30,oceanofpdf_com_stocks_on_the_move_andreas_clenow,v1,False,PENDING,differentiated from existing book,NO COMPARISON,<=0.8,False,not computed
+20261021-104144-801e,lightyear_archive_2026-10-30,oceanofpdf_com_stocks_on_the_move_andreas_clenow,v1,False,PENDING,improves the book's information ratio,NO COMPARISON,>=0.05,False,not computed
+20261021-104144-801e,lightyear_archive_2026-10-30,oceanofpdf_com_stocks_on_the_move_andreas_clenow,v1,False,PENDING,alpha survives the factor fingerprint,0.60,|t|>=2.0,True,FAIL
+20261021-104144-801e,lightyear_archive_2026-10-30,oceanofpdf_com_stocks_on_the_move_andreas_clenow,v1,False,PENDING,turnover within operational tolerance,1085%,<=400%,False,FAIL (advisory)
+20261022-153434-39aa,lightyear_archive_2026-10-30,method_nifty_equity_indices,v1,False,PENDING,deflated Sharpe clears selection bias,0.58,0.95,True,FAIL
+20261022-153434-39aa,lightyear_archive_2026-10-30,method_nifty_equity_indices,v1,False,PENDING,positive Sharpe in every out-of-sample window,-1.68,0.3,True,FAIL
+20261022-153434-39aa,lightyear_archive_2026-10-30,method_nifty_equity_indices,v1,False,PENDING,advantage over benchmark is significant,0.177,<=0.05,True,FAIL
+20261022-153434-39aa,lightyear_archive_2026-10-30,method_nifty_equity_indices,v1,False,PENDING,differentiated from existing book,NO COMPARISON,<=0.8,False,not computed
+20261022-153434-39aa,lightyear_archive_2026-10-30,method_nifty_equity_indices,v1,False,PENDING,improves the book's information ratio,NO COMPARISON,>=0.05,False,not computed
+20261022-153434-39aa,lightyear_archive_2026-10-30,method_nifty_equity_indices,v1,False,PENDING,alpha survives the factor fingerprint,-0.52,|t|>=2.0,True,FAIL
+20261022-153434-39aa,lightyear_archive_2026-10-30,method_nifty_equity_indices,v1,False,PENDING,turnover within operational tolerance,283%,<=400%,False,PASS
+20261030-171327-0aa8,lightyear_archive_2026-10-30,oceanofpdf_com_stocks_on_the_move_andreas_clenow,v1,False,PENDING,deflated Sharpe clears selection bias,0.00,0.95,True,FAIL
+20261030-171327-0aa8,lightyear_archive_2026-10-30,oceanofpdf_com_stocks_on_the_move_andreas_clenow,v1,False,PENDING,positive Sharpe in every out-of-sample window,-0.26,0.3,True,FAIL
+20261030-171327-0aa8,lightyear_archive_2026-10-30,oceanofpdf_com_stocks_on_the_move_andreas_clenow,v1,False,PENDING,advantage over benchmark is significant,0.029,<=0.05,True,PASS
+20261030-171327-0aa8,lightyear_archive_2026-10-30,oceanofpdf_com_stocks_on_the_move_andreas_clenow,v1,False,PENDING,differentiated from existing book,NO COMPARISON,<=0.8,False,not computed
+20261030-171327-0aa8,lightyear_archive_2026-10-30,oceanofpdf_com_stocks_on_the_move_andreas_clenow,v1,False,PENDING,improves the book's information ratio,NO COMPARISON,>=0.05,False,not computed
+20261030-171327-0aa8,lightyear_archive_2026-10-30,oceanofpdf_com_stocks_on_the_move_andreas_clenow,v1,False,PENDING,alpha survives the factor fingerprint,1.88,|t|>=2.0,True,FAIL
+20261030-171327-0aa8,lightyear_archive_2026-10-30,oceanofpdf_com_stocks_on_the_move_andreas_clenow,v1,False,PENDING,implementable within mandate,,,True,PASS
+20261030-171327-0aa8,lightyear_archive_2026-10-30,oceanofpdf_com_stocks_on_the_move_andreas_clenow,v1,False,PENDING,turnover within operational tolerance,1030%,<=400%,False,FAIL (advisory)

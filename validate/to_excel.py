@@ -1,3 +1,4 @@
+# Quant AI Researcher by Harshil Pahuja
 """Export the backtest as a LIVE Excel workbook.
 
 Not a dump of results -- a working model. Every NAV cell is a formula that
@@ -97,8 +98,8 @@ def write_workbook(prices: pd.DataFrame, assets: list[str], rf: pd.Series,
         ("", False),
         ("What it does NOT prove", True),
         ("", False),
-        ("That the ASSUMPTIONS are right. This workbook charges 30bp because the", False),
-        ("Strategy Card says 30bp. It uses a flat 6% cash proxy because no Indian", False),
+        ("That the ASSUMPTIONS are right. This workbook charges the cost because the", False),
+        ("Strategy Card says so. It uses the card's flat cash rate because no Indian", False),
         ("risk-free series exists in the snapshot. It inherits the backfill bias in", False),
         ("the NSE factor indices -- every series starts at exactly 1000.00, which", False),
         ("means the history was reconstructed after the rules were written.", False),

@@ -1,3 +1,4 @@
+# Quant AI Researcher by Harshil Pahuja
 """The full NIFTY 500 decile deep-dive: partition the point-in-time top-500
 universe into 10 equal-COUNT buckets by market cap (~50 names each) at every
 rebalance, and backtest each bucket separately -- not just the top and
@@ -21,6 +22,7 @@ import os
 import numpy as np
 import pandas as pd
 
+from ros.metrics import core
 from universal_backtester.allocators import build_allocator
 from universal_backtester.engine import Backtester, BacktestResult
 from universal_backtester.metrics import ann_vol, cagr, max_drawdown
@@ -77,7 +79,8 @@ def summarize_deciles(
     decile_results: dict[int, BacktestResult],
     start: pd.Timestamp | None = None,
     end: pd.Timestamp | None = None,
-    cash_rate: float = 0.06,
+    *,
+    cash_rate: float,
 ) -> pd.DataFrame:
     """One row per decile: cagr, vol, sharpe, max_dd -- the table a fund
     reads to check whether the size effect is monotonic across all ten
@@ -98,7 +101,7 @@ def summarize_deciles(
             "start": str(v.index.min().date()) if len(v) else "",
             "end": str(v.index.max().date()) if len(v) else "",
             "cagr": c, "vol": vol,
-            "sharpe": (c - cash_rate) / vol if vol and vol > 0 else float("nan"),
+            "sharpe": core.sharpe(ret, core.daily_cash(cash_rate)),
             "max_dd": max_drawdown(v),
         })
     return pd.DataFrame(rows)

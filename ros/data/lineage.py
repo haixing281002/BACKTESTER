@@ -21,7 +21,8 @@ from datetime import UTC, datetime
 from importlib import metadata
 from typing import Any
 
-from ros.data.snapshot import _ENGINE_FILES, code_hash, git_commit, git_dirty, is_text_path, lf_chunks
+from ros.data.snapshot import _ENGINE_FILES, code_hash, git_commit, git_dirty, is_text_path
+from ros.versions import GATE_VERSION, METRICS_VERSION
 
 SCHEMA = "lightyear-run-manifest/1"
 _PACKAGES = ("pandas", "numpy", "scipy", "statsmodels", "openpyxl", "pyyaml", "pydantic")
@@ -115,6 +116,8 @@ def write_run_manifest(run_dir: str, script: str, inputs: dict[str, str], params
         "git_commit": git_commit(repo),
         "git_dirty": bool(dirty := (git_dirty(repo) or [])),
         "dirty_files": dirty[:200],
+        "gate_version": GATE_VERSION,
+        "metrics_version": METRICS_VERSION,
         "code_hash": code_hash(list(_ENGINE_FILES) + [_rel(script_abs, repo)], root=repo),
         "python": sys.version.split()[0],
         "platform": platform.platform(),

@@ -38,7 +38,7 @@ Hard rules (from CLAUDE.md, restated):
        nifty500.backtest_end_limit() (the day before the first NSE review the file has not seen; 2026-09-29 with
        the current file). State the end date you used. Never rebuild an index list from market cap or anything else.
     3. Index levels: data/raw/NSE_Broad_Factor_Indices_Historical_Data.xlsx (ros.data.loaders) for the NIFTY 500
-       benchmark and the factor sleeves; plus a flat 6% hurdle.
+       benchmark and the factor sleeves; plus the cash rate the card declares.
   Key every security by ISIN. Join prices to membership on ISIN. Returns are price returns (no dividends): say so.
   If the card needs data that is not in these three files, do not substitute: mark it 'missing' in the data map
   and the Gate A gaps, and stop with status 'stopped' and the reason if the test cannot be run honestly.
@@ -161,9 +161,10 @@ ros.data.lineage.write_run_manifest(run_dir, __file__, inputs={{..., "card": <ca
 card's own key names plus "start", "end", "cost_bp" and "n_trials". Lightyear FAILS the run if manifest.json's card
 sha or any parameter disagrees with the approved card. The run folder is {run_dir} (also in $LIGHTYEAR_RUN).
 COSTS FOLLOW THE CARD: the headline (daily_returns.csv strategy column, results.headline_cost_bp, the charts) is at
-exactly the card's costs.spread_bps; when it is zero the headline is GROSS and gross equals net. Other costings (a
-0-100bp sweep, a 30bp house-floor variant) are allowed ONLY as a clearly labelled appendix: every such comparator
-column, table title and chart must contain the word "Appendix" and its cost, e.g. "Appendix: same rules at 30bp".
+exactly the card's costs.spread_bps; when it is zero the headline is GROSS and gross equals net. Other costings (the sweep
+in config/costs.yaml) are allowed ONLY as a clearly labelled appendix: every such comparator column, table title and
+chart must contain the word "Appendix" and its cost. Never write a cost or cash number into code: read them from the card.
+There is no house cost or cost floor. Do not add a row, a note or a sentence that charges or names one, even if an earlier run did.
 Never put a cost the card did not set into the headline. Use universal_backtester/clean_charts.py for charts.
 Keep every number in code; never estimate a statistic in prose. If a script runs for more than a couple of
 minutes, run it in the background and keep announcing progress.
@@ -219,12 +220,19 @@ Then write these hand-off files into {run_dir}/ (the server builds the workbook 
              // one per metric that both sides report (return, Sharpe, drawdown -- whichever the paper gives).
              // Never leave this empty if phase_a.json had any paper_reported entries.
   "gate_b": <gate_b(...).to_dict(), unchanged; its decision must be PENDING>,
+             // That is the v1 checklist, and the Gate B brief is written from it. Lightyear scores Gate v2 itself after your
+             // hand-off (ros/governance/gate_v2.py). Call the checklist v1 in the brief, and do not predict the v2 status.
   "validation": [{{"label": "...", "value": <number or string>, "format": "pct|num|int|text", "source": "<file or function>",
-                    "group": "returns_risk" | "costs_execution" | "robustness" | "other"}}],
+                    "group": "returns_risk" | "costs_execution" | "robustness" | "diagnostics" | "other"}}],
              // "group" sorts this into one of four blocks on the page instead of one long table -- pick the
              // closest fit. returns_risk = CAGR/vol/Sharpe/drawdown/deflated Sharpe; costs_execution = turnover,
              // concentration, slippage, position counts; robustness = walk-forward, bootstrap CI, p-values,
-             // factor fingerprint; other = anything that does not fit the first three.
+             // factor fingerprint; diagnostics = rows specific to this strategy's rules (buys on big up days, names
+             // removed by a rule, signals with buying shut, sells on leaving the index); other = anything else.
+             // Sharpe is always ros.metrics.core.sharpe over the card's cash rate. Do not report another Sharpe.
+             // Lightyear's Core performance table already shows CAGR, volatility, Sharpe, Sortino, Calmar, drawdown and its
+             // duration, CVaR, skew, CAGR without the 10 best days, beta, tracking error, information ratio, capture and
+             // rolling one-year periods behind. Do not add your own version of these under a similar name: one metric, one value.
   "comparator_notes": [ {{"name": "<must match a column header in comparators.csv exactly>",
                           "what_it_is": "<one plain sentence: what this comparator actually is and why it's here>"}} ],
              // one entry per column of comparators.csv, if you wrote one. Never leave a comparator's name

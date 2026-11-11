@@ -1,4 +1,4 @@
-# Quant AI Researcher by Harshil Pahuja
+# Quant AI Researcher
 """Checks on the hand-off files each headless phase must write. A failed check stops the run with a clear
 message instead of letting the page show half a result.
 

@@ -152,7 +152,7 @@ class MarkowitzL1(Allocator):
     """
     requires = ("cov", "alpha")
 
-    def __init__(self, assets, strategic_weights, target_vol, spread_bps=5.0,
+    def __init__(self, assets, strategic_weights, target_vol, spread_bps,
                  l1_budget=1.0, solver="CLARABEL", **kw):
         super().__init__(assets, strategic_weights=strategic_weights,
                          target_vol=target_vol, spread_bps=spread_bps,

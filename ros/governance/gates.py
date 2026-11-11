@@ -539,7 +539,7 @@ def code_facts(card, translation_check=None, feasibility=None,
 
     if india is not None:
         # NOT flagged. These are enforced whatever anyone thinks -- lag >= 1 and
-        # the 30bp floor are non-negotiables, not calls a human makes. Putting
+        # the stated cost are enforced from the card, not calls made here. Putting
         # them on the decision sheet would pad it with things nobody decides.
         for r in india.blocking:
             add("RISKS", f"india/{r.category}", r.item, r.why)

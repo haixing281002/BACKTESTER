@@ -1,0 +1,51 @@
+# Quant AI Researcher by Harshil Pahuja
+"""Fund-level settings the code reads and never types: sweep grids, AUM, the mandate and the gate's thresholds.
+A run's own cost and cash rate are not here: they come only from its card."""
+from __future__ import annotations
+
+import os
+from typing import Any
+
+import yaml
+
+REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+CONFIG_DIR = os.environ.get("LIGHTYEAR_CONFIG_DIR") or os.path.join(REPO, "config")
+
+
+def _load(name: str) -> dict[str, Any]:
+    with open(os.path.join(CONFIG_DIR, name), encoding="utf-8") as fh:
+        return yaml.safe_load(fh) or {}
+
+
+def cost_sweep_bp() -> list[float]:
+    return [float(x) for x in _load("costs.yaml")["sweep_round_trip_bp"]]
+
+
+def cash_rate_sweep() -> list[float]:
+    return [float(x) for x in _load("fund.yaml")["cash_rate_sweep"]]
+
+
+def calibration() -> dict[str, Any]:
+    return _load("calibration.yaml")
+
+
+def fund() -> dict[str, Any]:
+    return _load("fund.yaml")
+
+
+def cash_rate_for(card) -> tuple[float, str]:
+    """The annual cash rate and where it came from. Only the card sets it. A card naming none gets no invented rate: Sharpe
+    is then simply over zero, and the page says so."""
+    from ros.metrics import core
+    try:
+        return core.cash_rate_from_card(card), "the card"
+    except core.MissingCashRate:
+        return 0.0, "nowhere: the card names no rate, so Sharpe here is over zero"
+
+
+def mandate() -> dict[str, Any]:
+    return _load("mandate.yaml")
+
+
+def gate_thresholds() -> dict[str, Any]:
+    return _load("gate_thresholds.yaml")

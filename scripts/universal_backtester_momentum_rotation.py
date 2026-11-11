@@ -1,3 +1,4 @@
+# Quant AI Researcher by Harshil Pahuja
 """Worked example: a Clenow "Stocks on the Move"-style cross-sectional
 momentum rotation, built on the generic `universal_backtester` engine that
 lives at the repo root here.
@@ -110,7 +111,6 @@ GAP_WINDOW = 90
 GAP_THRESHOLD = 0.15
 ATR_WINDOW = 20
 RISK_FACTOR = 0.001       # Clenow's target daily $ impact per position = 0.1% of NAV
-SPREAD_BPS = 30.0         # this fund's own 30bp round-trip floor for Indian factor sleeves (CLAUDE.md)
 LAG_DAYS = 100
 TOP_QUANTILE = 0.20       # "top 20% of the ranking"
 MIN_NAMES = 3
@@ -173,6 +173,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("price_file", nargs="?", default=DEFAULT_DATA_FILE)
     ap.add_argument("--sheet", default="Sheet1")
+    ap.add_argument("--spread-bps", type=float, required=True, help="round-trip cost in bp; this script has no card, so you state it")
+    ap.add_argument("--risk-free-rate", type=float, required=True, help="annual cash rate for the Excel tearsheet; you state it")
     args = ap.parse_args()
     using_default = os.path.abspath(args.price_file) == DEFAULT_DATA_FILE
 
@@ -232,7 +234,7 @@ def main():
     except LookaheadError as e:
         print(f"\n[causality] RAW SIGNAL TRIPPED THE TRIPWIRE:\n  {e}")
 
-    bt = Backtester(prices=close, assets=assets, spread_bps=SPREAD_BPS,
+    bt = Backtester(prices=close, assets=assets, spread_bps=args.spread_bps,
                     lag_days=LAG_DAYS, allow_cash=True, membership=eligible)
     if have_atr:
         alloc = build_allocator("atr_risk_parity", assets, quantile=TOP_QUANTILE,
@@ -248,7 +250,7 @@ def main():
     tbl = metrics_table([result])
     print("\n" + "=" * 70)
     print(f"CORRECT ({'ATR risk-parity sizing, ' if have_atr else ''}"
-          f"{'regime-gated, ' if benchmark_col else ''}causally-shifted, {SPREAD_BPS:.0f}bp cost,")
+          f"{'regime-gated, ' if benchmark_col else ''}causally-shifted, {args.spread_bps:.0f}bp cost,")
     print("LONG-ONLY -- no shorting, no leverage: the engine clips every target weight")
     print("at >= 0 and caps total exposure at 100%; unallocated NAV sits in cash)")
     print("=" * 70)
@@ -302,7 +304,7 @@ def main():
         xlsx_path = os.path.join(OUTPUT_DIR, "se_return_analytics.xlsx")
         write_se_return_analytics_workbook(
             xlsx_path, common, monthly_strategy, monthly_bench,
-            strategy_name="Strategy", benchmark_name=benchmark_col)
+            strategy_name="Strategy", benchmark_name=benchmark_col, risk_free_rate=args.risk_free_rate)
         print(f"\nLive-formula tearsheet (SE Return Analytics layout) written to "
               f"{os.path.relpath(xlsx_path, REPO_ROOT)} -- every ratio is a real Excel "
               f"formula referencing the monthly-return columns, not a baked-in value.")
@@ -320,7 +322,7 @@ def main():
 
     # -- deliberately-broken same-bar replay, for comparison only ----------
     wednesdays = close.index[close.index.weekday == 2]
-    half_spread = SPREAD_BPS / 1e4 / 2
+    half_spread = args.spread_bps / 1e4 / 2
     w = np.zeros(len(assets))
     V = 1.0
     vals = []
