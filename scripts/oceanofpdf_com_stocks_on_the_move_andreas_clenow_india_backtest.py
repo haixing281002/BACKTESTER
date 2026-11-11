@@ -66,7 +66,7 @@ from ros.data.sources import ACE_PRICES_CSV, NIFTY500_HOLDINGS_XLSX, NSE_INDEX_W
 from ros.engine import missing_prices as mp
 from ros.governance.gates import gate_b
 from ros.metrics.core import ann_vol, cagr, max_drawdown, sharpe
-from ros.validation import research
+from ros.validation import research, trials
 from ros.validation.portfolio import benchmark_relative, factor_fingerprint
 from universal_backtester.checkpoint import checkpoint
 from universal_backtester.clean_charts import save_clean_charts
@@ -108,7 +108,10 @@ FIRST_SIGNAL_UNIVERSE = CARD_PARAMS.get("first_signal_universe") or None
 LOAD_START = START - pd.DateOffset(years=1)       # 200 index closes and 100 stock closes of warm-up sit before START
 MEMBERSHIP_FROM = START - pd.offsets.QuarterEnd(1)  # the last quarter-end snapshot before START is the first one used
 START_CAPITAL = float(CARD_PARAMS.get("start_capital_inr", 100_000_000))   # Rs 10 crore on the card
-N_TRIALS = int(CARD_OBJ.n_configs_tried) + len(SENSITIVITIES)   # the book's configurations + this run's sensitivities
+# Every version actually tried on this paper (ros/validation/trials.py: the book's, Lightyear's, and studies outside
+# Lightyear in data/reference/trial_ledger.csv), reported separately from this run's sensitivities.
+N_SENSITIVITIES = len(SENSITIVITIES)
+# TRIALS, N_VERSIONS and N_TRIALS are set in main(), once the run folder is known: the run being written is not counted.
 MANDATE_ALLOWS_CASH = CARD_OBJ.portfolio.mandate_allow_cash is True
 COST_LABEL = "zero cost" if P["cost_bp"] == 0 else f"{P['cost_bp']:g}bp round trip"
 COST_SWEEP_BP = sorted({*config.cost_sweep_bp(), P["cost_bp"]})       # appendix only: the headline is at the card's cost
@@ -947,6 +950,10 @@ def main() -> int:
     if not args.run_dir:
         raise SystemExit("--run-dir is required (or set LIGHTYEAR_RUN): this script never writes into another run's folder")
     run_dir = args.run_dir
+    global TRIALS, N_VERSIONS, N_TRIALS
+    TRIALS = trials.count(SLUG, int(CARD_OBJ.n_configs_tried), exclude_run=run_dir)
+    N_VERSIONS = TRIALS["versions"]
+    N_TRIALS = N_VERSIONS + N_SENSITIVITIES      # every version tried, plus this run's sensitivities
     out = os.path.join(run_dir, "out")
     charts_dir = os.path.join(out, "charts")
     os.makedirs(charts_dir, exist_ok=True)
@@ -1311,7 +1318,8 @@ def main() -> int:
         "performance": perf_rows, "cost_sweep": sweep_rows, "breakeven_bp": breakeven, "cash_rate_sweep": cash_df.to_dict("records"),
         "sensitivities": sens.to_dict("records"), "calendar_years": cal_years.reset_index().to_dict("records"),
         "walk_forward": oos.to_dict("records"), "subperiod_cagr": sub.reset_index().to_dict("records"),
-        "bootstrap": boot, "deflated_sharpe": dsr, "n_trials": N_TRIALS, "factor_fingerprint": ff,
+        "bootstrap": boot, "deflated_sharpe": dsr, "n_trials": N_TRIALS, "trials": {**TRIALS, "sensitivities": N_SENSITIVITIES},
+        "factor_fingerprint": ff,
         "factor_fingerprint_without_momentum": ff_nomom, "factor_fingerprint_no_filter_variant": ff_nf,
         "benchmark_relative": br, "turnover_two_way_annual": turnover_ann, "mandate": mandate,
         "cash": {"mean_share": cash_mean, "max_share": cash_max, "pct_days_over_half_cash": pct_days_cash_over_half,
@@ -1356,7 +1364,8 @@ def main() -> int:
                                                **nifty500.membership_inputs(MEMBERSHIP_SOURCE, FIRST_SIGNAL_UNIVERSE),
                                                "demergers_sourced": corporate_actions.SOURCED,
                                                "demergers_table": corporate_actions.table_path()},
-                            params={**CARD_PARAMS, **P, "n_trials": N_TRIALS, "cost_sweep_bp": COST_SWEEP_BP, "cash_sweep": CASH_SWEEP,
+                            params={**CARD_PARAMS, **P, "n_trials": N_TRIALS, "n_versions": N_VERSIONS,
+                                    "n_sensitivities": N_SENSITIVITIES, "cost_sweep_bp": COST_SWEEP_BP, "cash_sweep": CASH_SWEEP,
                                     "start": str(START.date()), "end": str(END.date()), "start_capital": START_CAPITAL,
                                     "mandate_allow_cash": MANDATE_ALLOWS_CASH, "sensitivities": list(SENSITIVITIES),
                                     "card_sha256_at_import": sha256_file(CARD), "membership_source": MEMBERSHIP_SOURCE,

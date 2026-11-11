@@ -1,0 +1,4 @@
+# Quant AI Researcher -- versions of a strategy tried OUTSIDE Lightyear run folders (ros/validation/trials.py). Add a row for every such study.
+slug,study,versions,source,note
+oceanofpdf_com_stocks_on_the_move_andreas_clenow,month-end 120-day study (before Lightyear),7,outputs/oceanofpdf_com_stocks_on_the_move_andreas_clenow_results.json,7 variants per the 2026-11-06 checkup; that study's own n_trials_used was 14 including the book's 9
+oceanofpdf_com_stocks_on_the_move_andreas_clenow,universe x start-rule comparison 2026-11-02,2,data/processed/universe/reports/comparison_summary.csv,(a) v2 old start and (b) v1 new start; the other two cells are Lightyear runs already counted
