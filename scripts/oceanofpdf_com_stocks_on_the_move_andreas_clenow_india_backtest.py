@@ -20,7 +20,7 @@ WHAT THE MECHANISM IS (card: strategy.formation_rule, signal.params)
     the same fit. Rank every scored member BEFORE any filter; the hold band is the top 20% (rounded down).
   * Disqualified (for holding and for buying): adjusted close below its 100-day simple moving average, or any
     one-day close-to-close move above 15% (either way, adjusted closes) in the last 90 trading days.
-  * Sells first: a holding outside the top 20%, disqualified, no longer a member, or not trading. Then every
+  * Sells first: a holding outside the top 20%, disqualified, no longer a member, or delisted. Then every
     second signal date positions are reset to target when the difference exceeds 5%. Then, only if the NIFTY 500
     price index close is above its 200-day simple moving average, buy down the ranking (skipping held and
     disqualified names) at target value = NAV x 0.001 / (ATR20 / price) until the next buy would cost more
@@ -64,6 +64,7 @@ from ros.data import ace, corporate_actions, nifty500
 from ros.data.lineage import sha256_file, write_run_manifest
 from ros.data.loaders import synthetic_cash_series
 from ros.data.sources import ACE_PRICES_CSV, NIFTY500_HOLDINGS_XLSX, NSE_INDEX_WORKBOOK
+from ros.engine import missing_prices as mp
 from ros.governance.gates import gate_b
 from ros.validation import research
 from ros.validation.metrics import (
@@ -121,7 +122,7 @@ MANDATE_ALLOWS_CASH = CARD_OBJ.portfolio.mandate_allow_cash is True
 COST_LABEL = "zero cost" if P["cost_bp"] == 0 else f"{P['cost_bp']:g}bp round trip"
 COST_SWEEP_BP = [0, 10, 20, 30, 50, 75, 100]      # appendix: the 30bp house floor sits inside it
 CASH_SWEEP = sorted({0.0, 0.04, 0.06, 0.08, P["cash_rate"]})
-FFILL_LIMIT = 5    # a stale close is carried at most 5 trading days; beyond that the name is not trading
+FFILL_LIMIT = 5    # signals carry a stale close at most 5 sessions; holdings follow ros/engine/missing_prices.py
 BAND_PROXY = 0.095  # a close-to-close move above this on the fill day stands in for a price-band hit
 
 
@@ -233,8 +234,12 @@ def load_data() -> dict:
     # also exempt from the gap rule (operator's ruling 2026-11-11)
     dem = corporate_actions.load_table()
     dem = dem[dem["parent_isin"].isin(isins)]
+    # the missing-price rule (ros/engine/missing_prices.py): only a sourced filing date makes a delisting confirmed
+    dl = mp.load_delistings()
+    dl = dl[dl["isin"].isin(isins)]
     return dict(cal=cal, isins=isins, names=names, members=members, index=index, sleeves=sleeves, segments=segments,
-                stale=stale, idx_missing_days=idx_missing, prov_index=prov_bm["sha256"], demergers=dem, **panels)
+                stale=stale, idx_missing_days=idx_missing, prov_index=prov_bm["sha256"], demergers=dem, delistings=dl,
+                **panels)
 
 
 def build_signals(d: dict, regression_days: int, gap_limit: float) -> dict:
@@ -262,7 +267,8 @@ def build_signals(d: dict, regression_days: int, gap_limit: float) -> dict:
     return {"close": close, "score": pd.DataFrame(score, index=close.index, columns=close.columns),
                 "ann_slope": pd.DataFrame(ann_slope, index=close.index, columns=close.columns),
                 "r2": pd.DataFrame(r2, index=close.index, columns=close.columns), "sma": sma, "gap": gap, "biggest": biggest,
-                "atr_pct": atr_pct, "ret": ret, "traded": d["close"].notna(), "unadj": d["unadj_close"].ffill(limit=FFILL_LIMIT)}
+                "atr_pct": atr_pct, "ret": ret, "traded": d["close"].notna(), "unadj": d["unadj_close"].ffill(limit=FFILL_LIMIT),
+                "state": mp.states(d["close"], d.get("delistings"))}
 
 
 def signal_schedule(cal: pd.DatetimeIndex, weekday: int) -> list[tuple[pd.Timestamp, pd.Timestamp]]:
@@ -299,6 +305,7 @@ def simulate(d: dict, sig: dict, cfg: dict, write_logs: bool = False) -> dict:
     pos_of = {i: k for k, i in enumerate(cal)}
     close = sig["close"].to_numpy(dtype=float)
     traded = sig["traded"].to_numpy()
+    state = sig["state"].to_numpy()
     unadj = sig["unadj"].to_numpy(dtype=float)
     score = sig["score"].to_numpy(dtype=float)
     sma = sig["sma"].to_numpy(dtype=float)
@@ -333,6 +340,8 @@ def simulate(d: dict, sig: dict, cfg: dict, write_logs: bool = False) -> dict:
     trades, holdings, selection, rebal, worst_sells = [], [], [], [], []
     n_sig = 0
     n_band_buys = n_band_sells = 0
+    pending_sells, pending_buys = {}, {}     # orders whose name had no price on the fill day: j -> (why or target, signal)
+    NO_PRICE = (mp.HOLD, mp.SUSPENDED)
 
     for ti in range(start_i, len(cal)):
         t = cal[ti]
@@ -343,7 +352,49 @@ def simulate(d: dict, sig: dict, cfg: dict, write_logs: bool = False) -> dict:
         cash *= (1.0 + day_rate)
         nav_before = cash + float(np.nansum(units[held] * last_px[held]))
 
+        # ---- orders rolled from an earlier fill day: they fill on the first day the name trades again
+        for j in list(pending_sells):
+            if units[j] <= 0:
+                pending_sells.pop(j)
+            elif state[ti][j] in (mp.TRADED, mp.DELISTED):
+                why, s0 = pending_sells.pop(j)
+                p = px[j] if state[ti][j] == mp.TRADED and np.isfinite(px[j]) else last_px[j]
+                val = units[j] * p
+                cash += val * (1 - half_cost)
+                worst_sells.append({"isin": isins[j], "symbol": names[isins[j]][0], "reason": "rolled",
+                                    "entry_date": entry_date.get(j), "exit_date": t,
+                                    "return": p / entry_px[j] - 1 if j in entry_px else np.nan})
+                if write_logs:
+                    trades.append({"date": t, "symbol": names[isins[j]][0], "action": "SELL", "weight_before": val / nav_before,
+                                   "weight_after": 0.0, "isin": isins[j], "signal_date": s0, "execution_date": t, "price_date": t,
+                                   "price": unadj[ti][j], "price_basis": "Ace unadjusted close", "value_rs": val, "adjusted_close": p,
+                                   "shares": round(val / unadj[ti][j]) if np.isfinite(unadj[ti][j]) and unadj[ti][j] > 0 else np.nan,
+                                   "why": f"Sold: {why} (rolled: no price on the fill day)"})
+                units[j] = 0.0
+                entry_date.pop(j, None)
+                entry_px.pop(j, None)
+        for j in list(pending_buys):
+            if state[ti][j] != mp.TRADED or not np.isfinite(px[j]) or not (np.isfinite(unadj[ti][j]) and unadj[ti][j] > 0):
+                continue
+            target, s0, rk = pending_buys.pop(j)
+            sh = math.floor(target / unadj[ti][j])
+            val = sh * unadj[ti][j]
+            if sh <= 0 or not members[ti][j] or val * (1 + half_cost) > cash or units[j] > 0:
+                continue
+            cash -= val * (1 + half_cost)
+            units[j] = val / px[j]
+            entry_date[j], entry_px[j] = t, px[j]
+            if write_logs:
+                trades.append({"date": t, "symbol": names[isins[j]][0], "action": "BUY", "weight_before": 0.0,
+                               "weight_after": val / nav_before, "isin": isins[j], "signal_date": s0, "execution_date": t,
+                               "price_date": t, "price": unadj[ti][j], "price_basis": "Ace unadjusted close", "shares": sh,
+                               "value_rs": val, "adjusted_close": px[j],
+                               "why": f"Rank {rk} at the signal; rolled: no price on the fill day, bought the next day it traded"})
+        held = units > 0
+        nav_before = cash + float(np.nansum(units[held] * last_px[held]))
+
         if t in fills:
+            pending_buys.clear()                 # a new signal's decisions replace buy orders still waiting
             s = fills[t]
             si = pos_of[s]
             n_sig += 1
@@ -367,10 +418,14 @@ def simulate(d: dict, sig: dict, cfg: dict, write_logs: bool = False) -> dict:
             sells = []
             for j in sorted(held_before):
                 why = None
-                if not members[si][j]:
+                if state[si][j] == mp.DELISTED:
+                    why = "delisted (sourced filing): exit at the last available close"
+                elif state[si][j] in NO_PRICE:
+                    if not members[si][j]:          # it must go, but has no price: the sale waits for a day it trades
+                        pending_sells[j] = ("left the NIFTY 500 list at the latest quarterly snapshot", s)
+                    continue                        # no price: held at its last close, not scored, not sold for it
+                elif not members[si][j]:
                     why = "left the NIFTY 500 list at the latest quarterly snapshot"
-                elif not traded[si][j]:
-                    why = "not trading (no close at the signal date): sold at the last available close"
                 elif not np.isfinite(rank[j]):
                     why = "could not be scored at the signal date"
                 elif rank[j] > top_n:
@@ -381,13 +436,17 @@ def simulate(d: dict, sig: dict, cfg: dict, write_logs: bool = False) -> dict:
                     why = f"a one-day move of {biggest[si][j]:.1%} in the last 90 days exceeds the 15% limit"
                 if why:
                     sells.append((j, why))
+            rolled = [(j, why) for j, why in sells if state[ti][j] in NO_PRICE]
+            for j, why in rolled:
+                pending_sells[j] = (why, s)        # no price on the fill day: the order rolls to the next day it trades
+            sells = [(j, why) for j, why in sells if state[ti][j] not in NO_PRICE]
             for j, why in sells:
-                p = px[j] if np.isfinite(px[j]) and traded[ti][j] else last_px[j]
+                p = px[j] if np.isfinite(px[j]) and state[ti][j] == mp.TRADED else last_px[j]
                 val = units[j] * p
                 cash += val * (1 - half_cost)
                 traded_value += val
                 sh = round(val / unadj[ti][j]) if np.isfinite(unadj[ti][j]) and unadj[ti][j] > 0 else np.nan
-                reason_tag = ("membership" if "left the NIFTY 500" in why else "not trading" if "not trading" in why
+                reason_tag = ("membership" if "left the NIFTY 500" in why else "delisted" if "delisted" in why
                               else "rank" if "rank" in why else "sma" if "100-day" in why else "gap")
                 ret_since_entry = p / entry_px[j] - 1 if j in entry_px else np.nan
                 worst_sells.append({"isin": isins[j], "symbol": names[isins[j]][0], "reason": reason_tag,
@@ -454,7 +513,9 @@ def simulate(d: dict, sig: dict, cfg: dict, write_logs: bool = False) -> dict:
                     skipped.append((j, "no 20-day ATR"))
                     continue
                 if not (traded[ti][j] and np.isfinite(px[j]) and np.isfinite(unadj[ti][j]) and unadj[ti][j] > 0):
-                    skipped.append((j, "did not trade on the fill day"))
+                    if not stopped:
+                        pending_buys[j] = (nav_s * P["risk_factor"] / atr_pct[si][j], s, int(rank[j]))
+                    skipped.append((j, "no price on the fill day: the order rolls to the next day it trades"))
                     continue
                 if stopped:
                     not_needed.append(j)
@@ -504,6 +565,10 @@ def simulate(d: dict, sig: dict, cfg: dict, write_logs: bool = False) -> dict:
                         dec, why = "SOLD", next(w for jj, w in sells if jj == j)
                     elif j in buys:
                         dec, why = "BOUGHT", f"rank {int(rank[j])}, passes both filters, bought at NAV x 0.001 / ATR%"
+                    elif units[j] > 0 and state[si][j] in NO_PRICE:
+                        dec, why = "HELD, NO PRICE", ("must be sold, but has no price: the sale waits for the next day it trades"
+                                                      if j in pending_sells else
+                                                      "no price at the signal: kept at its last close, not ranked")
                     elif units[j] > 0:
                         dec, why = "KEPT", f"rank {int(rank[j])} stays inside the top {top_n}; passes both filters"
                     elif j in not_needed:
@@ -526,7 +591,8 @@ def simulate(d: dict, sig: dict, cfg: dict, write_logs: bool = False) -> dict:
                               "n_top_eligible": int((~disq[top_band]).sum()), "gate_open": gate_open,
                               "index_close": idx_close[si], "index_sma200": idx_sma[si], "n_sold": len(sells),
                               "n_sold_membership": sum(1 for _, w in sells if "left the NIFTY 500" in w),
-                              "n_sold_not_trading": sum(1 for _, w in sells if "not trading" in w),
+                              "n_sold_delisted": sum(1 for _, w in sells if "delisted" in w),
+                              "n_orders_rolled": len(rolled) + len(pending_buys),
                               "n_resized": n_resized, "n_bought": len(buys), "n_held": len(held_now),
                               "cash_share": cash / nav_after if nav_after > 0 else 1.0,
                               "max_weight": float(wts_now.max()) if len(wts_now) else 0.0,
@@ -548,7 +614,9 @@ def simulate(d: dict, sig: dict, cfg: dict, write_logs: bool = False) -> dict:
                 "weights": pd.DataFrame(weights, index=idx, columns=isins), "turnover": turnover_daily,
                 "trades": pd.DataFrame(trades), "holdings": pd.DataFrame(holdings), "selection": pd.DataFrame(selection),
                 "rebalances": pd.DataFrame(rebal), "sells": pd.DataFrame(worst_sells), "pnl_by_name": pd.Series(pnl_by_name, index=isins),
-                "n_band_buys": n_band_buys, "n_band_sells": n_band_sells, "schedule": sched}
+                "n_band_buys": n_band_buys, "n_band_sells": n_band_sells, "schedule": sched,
+                "missing_price_events": mp.flagged_events(sig["state"].loc[idx],
+                                                          pd.DataFrame(weights, index=idx, columns=isins) > 0)}
 
 
 # ------------------------------------------------------------------------------------------------- comparators
@@ -800,6 +868,13 @@ def write_fixed_notes(raw: dict, out: str) -> str:
          f"Start: first signal {u['first_signal_date']} (the first signal weekday on or after the sample start), first fill "
          f"{raw['first_fill']}; the book is in cash until then."),
     ]
+    mpx = raw.get("missing_prices") or {}
+    sus = "; ".join(f"{r['symbol']} {r['first']} to {r['last']} ({r['sessions']} sessions)" for r in mpx.get("suspensions", []))
+    dls = "; ".join(f"{r['symbol']} from {r['first']}" for r in mpx.get("delistings", []))
+    notes.append("Missing prices (ros/engine/missing_prices.py): a held name with no price is kept at its last close, "
+                 "not traded, and its orders roll to the next day it trades. Suspensions held through (over 20 sessions "
+                 f"without a price, no delisting on record): {sus or 'none'}. Delistings exited at the last close: {dls or 'none'}. "
+                 "See out/missing_prices.csv.")
     p = os.path.join(out, "notes_fixed.json")
     with open(p, "w", encoding="utf-8") as fh:
         json.dump(notes, fh, indent=1)
@@ -1145,6 +1220,11 @@ def main() -> int:
                              (isin, dte) in known)})
     gap_df = pd.DataFrame(gap_rows)
     gap_df.to_csv(os.path.join(out, "gap_events.csv"), index=False)
+    # the missing-price rule: every suspension (> 20 sessions without a price) and delisting the book sat through
+    mpe = base["missing_price_events"].copy()
+    mpe["symbol"] = [d["names"][i][0] for i in mpe["isin"]]
+    mpe.to_csv(os.path.join(out, "missing_prices.csv"), index=False)
+    produced.append(os.path.join(out, "missing_prices.csv"))
     produced.append(os.path.join(out, "gap_events.csv"))
     sells = base["sells"]
     sells.to_csv(os.path.join(out, "exits.csv"), index=False)
@@ -1200,6 +1280,8 @@ def main() -> int:
         produced.append(os.path.join(run_dir, f))
 
     raw = {
+        "missing_prices": {"suspensions": mpe[mpe["kind"] == "suspended"][["symbol", "first", "last", "sessions"]].astype(str).to_dict("records"),
+                           "delistings": mpe[mpe["kind"] == "delisted"][["symbol", "first"]].astype(str).to_dict("records")},
         "performance": perf_rows, "cost_sweep": sweep_rows, "breakeven_bp": breakeven, "cash_rate_sweep": cash_df.to_dict("records"),
         "sensitivities": sens.to_dict("records"), "calendar_years": cal_years.reset_index().to_dict("records"),
         "walk_forward": oos.to_dict("records"), "subperiod_cagr": sub.reset_index().to_dict("records"),
@@ -1222,7 +1304,7 @@ def main() -> int:
         "exits": {"by_reason": exit_summary.to_dict("records"), "n_exits": len(sells),
                   "mean_holding_days": float(hold_days.mean()) if len(hold_days) else None,
                   "median_holding_days": float(hold_days.median()) if len(hold_days) else None,
-                  "membership_sells": int(rb["n_sold_membership"].sum()), "not_trading_sells": int(rb["n_sold_not_trading"].sum())},
+                  "membership_sells": int(rb["n_sold_membership"].sum()), "delisting_exits": int(rb["n_sold_delisted"].sum()), "orders_rolled": int(rb["n_orders_rolled"].sum())},
         "band_days": {"buys_on_up_9_5pct_days": base["n_band_buys"], "sells_on_down_9_5pct_days": base["n_band_sells"],
                       "n_buys": int((tr["action"] == "BUY").sum()), "n_sells": int((tr["action"] == "SELL").sum())},
         "gap_events": {"n_member_days_over_15pct": len(gap_df), "n_with_adjustment_factor_change": int(gap_df["adjustment_factor_changed"].sum()) if len(gap_df) else 0,
