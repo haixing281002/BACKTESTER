@@ -317,6 +317,7 @@ class Rerun(BaseModel):
     by: str
     note: str = ""
     notes: list[str] = []  # several revisions at once (each logged with its own timestamp); `note` is kept for the page
+    hold_at_gate_a: bool = False   # stop at Gate A for a named human to approve on the page, instead of inheriting the approval
     src_dir: str = ""      # optional: an archived run folder to inherit from (its state.json), when the run is no longer under outputs/
 
 
@@ -335,7 +336,7 @@ def rerun(rid: str, r: Rerun):
         raise HTTPException(400, "A named human re-runs from the approved card.")
     _busy_guard()
     notes = [n.strip() for n in r.notes if n.strip()] or r.note.strip()
-    new_id = jobs.rerun_from(rid, r.by.strip(), notes, src_dir=r.src_dir or None)
+    new_id = jobs.rerun_from(rid, r.by.strip(), notes, src_dir=r.src_dir or None, hold_at_gate_a=r.hold_at_gate_a)
     return {"id": new_id}
 
 

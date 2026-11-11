@@ -937,12 +937,14 @@ def approve(rid, by, notes=""):
     return st
 
 
-def rerun_from(src_rid, by, extra_note="", src_dir=None):
+def rerun_from(src_rid, by, extra_note="", src_dir=None, hold_at_gate_a=False):
     """A NEW run that starts at Phase B from an existing run's approved card: it inherits the paper, the Gate A
     hand-off (phase_a.json, paper_facts.json), every revision on record and the approval notes, re-pins the card at
     its current sha256 and runs stages 03-07 again. Used after a code fix, or after a human edits the card directly
     (pass the edit as `extra_note`, which is recorded as one more revision). `src_dir` points at an archived run
-    folder when the source run has been moved out of outputs/. `extra_note` may be a list: one revision each."""
+    folder when the source run has been moved out of outputs/. `extra_note` may be a list: one revision each.
+    With `hold_at_gate_a` the new run is NOT approved here: it waits at Gate A for a named human to approve on the page,
+    and stages 03-07 start only then."""
     src_dir = src_dir or run_dir(src_rid)
     with open(os.path.join(src_dir, "state.json"), encoding="utf-8") as fh:
         src = json.load(fh)
@@ -977,6 +979,9 @@ def rerun_from(src_rid, by, extra_note="", src_dir=None):
     log(rid, "server", f"Re-run of {src_rid} from its approved card; {len(revisions)} revision(s) carried over.")
     for r in revisions:
         log(rid, "gate", f"Revision on record (from {src_rid}): {r.get('notes', '')}")
+    if hold_at_gate_a:
+        log(rid, "gate", "Waiting at Gate A: a named human approves on the page before stages 03-07 run.")
+        return rid
     approve(rid, by, (src.get("approval") or {}).get("notes") or "")
     return rid
 

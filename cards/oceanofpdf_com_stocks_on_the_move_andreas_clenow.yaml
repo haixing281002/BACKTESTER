@@ -23,7 +23,15 @@ card_version: "1.0"
 #   6. mandate: "my allow_cash: true note meant the mandate allows cash for this test", so
 #      portfolio.mandate_allow_cash is now true and Gate B's "implementable within mandate" is
 #      judged with cash allowed. Nothing else in the construction changed.
-# Quant AI Researcher by Harshil Pahuja
+#
+# REVISED 2026-11-11 (Gate A revision 5, operator's instruction "cash earns 0 percent"):
+#   7. cash rate: idle cash earns 0% (universe.cash_asset CASH_PROXY_CONSTANT_0PCT; it was 6%). Cash is still a drift
+#      only. Nothing else in the construction changed: rules, universe, dates and the 0bp cost are as they were.
+#
+# REVISED 2026-11-11 (Gate A revision 6, operator's answer "next close, as it runs now"):
+#   8. fill price: signal.params.fill_price is now stated as "close": a Tuesday-close signal fills at Wednesday's close,
+#      which is what every run of this card has done. It records the rule; it changes no trade.
+# Quant AI Researcher
 
 paper:
   id: oceanofpdf_com_stocks_on_the_move_andreas_clenow
@@ -67,7 +75,7 @@ intent:
     position is sized at shares = NAV x 0.001 / ATR20. Every second Wednesday, reset
     every holding to its target size if the difference exceeds 5%. Cash is only ever a
     drift: what the sizing leaves unspent and what the index filter keeps out of the
-    market; it earns a flat 6%. No trading cost is charged, at the operator's
+    market; it earns 0% (Gate A revision 5; it was a flat 6%). No trading cost is charged, at the operator's
     instruction, so gross equals net in the headline; a 0 to 100 basis point cost sweep
     is reported in the appendix.
   broken_assumptions:
@@ -128,7 +136,7 @@ universe:
   assets:
     - nifty_500_constituent_prices
   benchmark: NIFTY 500
-  cash_asset: CASH_PROXY_CONSTANT_6PCT
+  cash_asset: CASH_PROXY_CONSTANT_0PCT
   # Gate A revision 3 (2026-11-02): universe v2 = the holdings workbook with every name ISIN-mapped, Alpha Lab
   # membership on NSE effective dates for 2017-2018 (the workbook's truncated pulls), NSE-confirmed fills elsewhere.
   # Unpriced members stay in the universe and cannot be traded. See data/processed/universe/reports/.
@@ -192,7 +200,7 @@ universe_translation:
     - ACE_EQUITY_STOCK_PRICES
     - nifty_500_membership_history
     - NIFTY 500
-    - CASH_PROXY_CONSTANT_6PCT
+    - CASH_PROXY_CONSTANT_0PCT
   evidence_page: 98
 
 strategy:
@@ -255,7 +263,7 @@ strategy:
     - "long only, unlevered, no stop losses (page 94)"
     - "only current NIFTY 500 members may be bought; a holding that leaves the index is sold at the first snapshot that omits it (pages 40, 99)"
     - "new buys only while the NIFTY 500 index close is above its 200-day simple moving average; sells are always allowed (pages 96, 99)"
-    - "positions sized at a 10-basis-point risk factor over ATR20; cash is a drift only (unspent sizing and the index filter), never a target allocation, and earns the declared 6% (pages 88, 98; operator's note 2026-10-30)"
+    - "positions sized at a 10-basis-point risk factor over ATR20; cash is a drift only (unspent sizing and the index filter), never a target allocation, and earns 0% (Gate A revision 5, 2026-11-11; it was the declared 6%) (pages 88, 98; operator's note 2026-10-30)"
     - "signals at Tuesday close, fills at Wednesday close: lag_days is 1"
     - "zero trading cost at the operator's instruction (2026-10-30), so gross equals net; the appendix sweeps 0 to 100 basis points a round trip because the house floor is 30bp"
     - "a stock needs 100 trading days of its own history to be scored"
@@ -303,6 +311,9 @@ signal:
     start_capital_inr: 100000000
     signal_weekday: "Tuesday"
     fill_weekday: "Wednesday"
+    # Gate A revision 6 (2026-11-11): trades fill at the CLOSE of the fill day (the session after the signal). Stated so the
+    # audit can check it; the rule itself is unchanged.
+    fill_price: "close"
     # Gate A revision 4 (2026-11-02): the first signal is Tuesday 2013-12-31 on the Sep-2013 NSE review list (interim
     # changes to 31 Dec 2013 reported, not applied), filled 2014-01-01, so the book is invested from the window's
     # first day and the benchmark starts the same day. Lookbacks read price history before 2013-12-31.
@@ -331,7 +342,7 @@ data_requirements:
   - {name: ACE_EQUITY_STOCK_PRICES, kind: price, frequency: daily, start: "2013-07-01", mandatory: true, evidence_page: 88, purpose: "adjusted daily high and low per stock for the 20-day average true range that sizes every position"}
   - {name: nifty_500_membership_history, kind: membership, frequency: quarterly, start: "2013-12-31", mandatory: true, evidence_page: 107, purpose: "which names may be bought on each signal date and which holdings must be sold because they left the index; the 2013-12-31 snapshot (466 priced of 500) is the first one used"}
   - {name: "NIFTY 500", kind: price, frequency: daily, start: "2013-03-01", mandatory: true, evidence_page: 99, purpose: "the 200-day moving-average gate on new buys (200 closes before 2014-01-07 are held from 2013-03-12) and the headline benchmark, as a PRICE index: the NIFTY 500 TRI the operator asked for is not in the three files; the workbook's last NIFTY 500 close, 2026-09-18, sets the end of the run"}
-  - {name: CASH_PROXY_CONSTANT_6PCT, kind: risk_free_rate, frequency: daily, mandatory: true, evidence_page: 96, purpose: "the book holds cash by design (unspent sizing and the whole book under a bear filter); cash earns the declared constant, swept 4 to 8%"}
+  - {name: CASH_PROXY_CONSTANT_0PCT, kind: risk_free_rate, frequency: daily, mandatory: true, evidence_page: 96, purpose: "the book holds cash by design (unspent sizing and the whole book under a bear filter); cash earns the declared constant, swept 4 to 8%"}
 
 ambiguities:
   - field: strategy.signal_definition
@@ -400,7 +411,7 @@ ambiguities:
   - field: portfolio.allow_cash
     headline: "Cash kept as a drift only, and the mandate allows cash for this test (operator rulings, 2026-10-30)"
     issue: "Cash is the book's main defence (pages 96, 111, 219 to 221), and sizing leftovers also sit in cash. The fund's standing mandate is fully invested, so this run holds cash the fund could not under it. The operator's Gate A note rules: 'keep the cash as a drift only'; a second ruling the same day says that note meant the mandate allows cash for this test."
-    resolution: "Cash arises only as a drift, from unspent sizing and from the index filter holding buys back; there is no cash target and no separate cash sleeve, and the headline keeps the book's drift exactly as the book runs it. portfolio.mandate_allow_cash is true, so Gate B's 'implementable within mandate' is judged with cash allowed. Cash earns the declared 6%, swept 0, 4, 6 and 8% (0% bounds how much of the result is the rate rather than the stocks; the book never says what its cash earned). The average and maximum cash share, and the share of total return earned by cash, are reported so the PM can see how much of any result is the filter rather than the stocks. The no-filter variant (the book's own Table 14-44) stays a sensitivity in the appendix."
+    resolution: "Cash arises only as a drift, from unspent sizing and from the index filter holding buys back; there is no cash target and no separate cash sleeve, and the headline keeps the book's drift exactly as the book runs it. portfolio.mandate_allow_cash is true, so Gate B's 'implementable within mandate' is judged with cash allowed. Cash earns 0% (Gate A revision 5, 2026-11-11; it was the declared 6%), with the rates in config/fund.yaml swept in the appendix (0% bounds how much of the result is the rate rather than the stocks; the book never says what its cash earned). The average and maximum cash share, and the share of total return earned by cash, are reported so the PM can see how much of any result is the filter rather than the stocks. The no-filter variant (the book's own Table 14-44) stays a sensitivity in the appendix."
     confidence: high
     material: true
     evidence_page: 96
@@ -465,7 +476,7 @@ backtest_plan:
     index is above its 200-day average until the cash is spent. No trades on other days.
   weights_rule: >
     Shares = NAV x 0.001 / ATR20 per position, whole shares, start Rs 10 crore; weights
-    are not normalised, leftover cash is a drift that stays in cash at 6%. Gross never
+    are not normalised, leftover cash is a drift that stays in cash at 0%. Gross never
     above 1.0.
   explicit_weights: {}
   benchmarks:
@@ -514,7 +525,7 @@ backtest_plan:
     - "BENCHMARK BASIS: the operator asked for NIFTY 500 TRI; it is not held, so the price index is used, and the run ends 2026-09-18 where that series ends rather than on the operator's 2026-09-30."
     - "ONE CRASH IN THE WINDOW: 2020 was a three-week fall and a fast recovery; a 200-day filter is designed for slow bear markets and can lose on both legs of a V."
     - "PRICE RETURN ONLY on both sides; the book's figures include dividends."
-    - "CASH RATE IS A CONSTANT: 6% swept 4 to 8%; every cash-heavy stretch is rate-dependent."
+    - "CASH RATE IS A CONSTANT: 0% (Gate A revision 5; it was 6%), swept in the appendix; every cash-heavy stretch is rate-dependent."
 
 data_requests:
   - item: "NIFTY 500 membership changes with their effective dates between the quarterly snapshots (the NSE semi-annual review lists plus ad-hoc replacements), 2012 to date"

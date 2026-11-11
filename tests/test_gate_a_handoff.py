@@ -150,6 +150,20 @@ def test_rerun_from_approved_card_inherits_revisions(client):
     assert all(s == "done" for s in st["stages"].values())
 
 
+def test_a_rerun_can_wait_at_gate_a_for_a_named_human(client):
+    """hold_at_gate_a: the re-run inherits the hand-off and revisions but NOT the approval. Nothing runs until a person approves."""
+    rid = start_run(client)
+    client.post(f"/api/runs/{rid}/approve", json={"by": "Auditor", "notes": "first approval"})
+    wait_for(client, rid, ["gate_b", "failed"])
+    new = client.post(f"/api/runs/{rid}/rerun", json={"by": "Auditor", "note": "SENTINEL-HOLD cash 0%", "hold_at_gate_a": True}).json()["id"]
+    st = client.get(f"/api/runs/{new}").json()
+    assert st["status"] == "gate_a" and not st.get("approval") and st["rerun_of"] == rid
+    assert [r["notes"] for r in st["revisions"]] == ["SENTINEL-HOLD cash 0%"]
+    assert client.post(f"/api/runs/{new}/approve", json={"by": "Operator", "notes": "ok"}).status_code == 200
+    st = wait_for(client, new, ["gate_b", "failed"])
+    assert st["status"] == "gate_b" and st["approval"]["by"] == "Operator"
+
+
 def test_card_consistency_check_catches_a_run_that_ignored_the_card(tmp_path):
     from lightyear import contract
     card = tmp_path / "card.yaml"
