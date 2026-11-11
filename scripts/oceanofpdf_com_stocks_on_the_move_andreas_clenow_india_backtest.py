@@ -122,6 +122,7 @@ MANDATE_ALLOWS_CASH = CARD_OBJ.portfolio.mandate_allow_cash is True
 COST_LABEL = "zero cost" if P["cost_bp"] == 0 else f"{P['cost_bp']:g}bp round trip"
 COST_SWEEP_BP = [0, 10, 20, 30, 50, 75, 100]      # appendix: the 30bp house floor sits inside it
 CASH_SWEEP = sorted({0.0, 0.04, 0.06, 0.08, P["cash_rate"]})
+SENS_FROM_2015 = "2015-01-01"   # survivorship sensitivity window (Wave 2, item 4)
 FFILL_LIMIT = 5    # signals carry a stale close at most 5 sessions; holdings follow ros/engine/missing_prices.py
 BAND_PROXY = 0.095  # a close-to-close move above this on the fill day stands in for a price-band hit
 
@@ -820,6 +821,8 @@ FIXED_VALIDATION_SPEC = [
     {"label": "Members at the first signal", "group": "other", "format": "int", "fn": lambda r: r["universe"]["first_signal_members"], "source": "out/universe_coverage.csv"},
     {"label": "Members with an Ace close at the first signal", "group": "other", "format": "int", "fn": lambda r: r["universe"]["first_signal_priced"], "source": "out/universe_coverage.csv"},
     {"label": "Members never priced over the run (in universe, never tradable)", "group": "other", "format": "int", "fn": lambda r: len(r["universe"]["never_priced"]), "source": "out/universe_coverage.csv"},
+    {"label": "CAGR from 2015 (survivorship sensitivity)", "group": "robustness", "format": "pct", "fn": lambda r: _sens(r, "From 2015")["cagr"], "source": "out/sensitivities.csv"},
+    {"label": "Edge over NIFTY 500 from 2015 (survivorship sensitivity)", "group": "robustness", "format": "pct", "fn": lambda r: _sens(r, "From 2015")["minus_nifty500_cagr"], "source": "out/sensitivities.csv"},
 ]
 
 
@@ -855,7 +858,15 @@ def write_fixed_notes(raw: dict, out: str) -> str:
     u = raw["universe"]
     by = {r["year"]: r for r in u["by_year"]}
     cov = "; ".join(f"{y}: {by[y]['members_mean']:.0f} members, {by[y]['priced_mean']:.0f} priced" for y in sorted(by))
+    unp = "; ".join(f"{y}: {1 - by[y]['priced_mean'] / by[y]['members_mean']:.1%}" for y in sorted(by)
+                    if by[y]["members_mean"] and by[y]["priced_mean"] < by[y]["members_mean"])
+    s15 = _sens(raw, "From 2015")
     notes = [
+        (f"SURVIVORSHIP BIAS, UPWARD: {len(u['never_priced'])} NIFTY 500 members over the run have no Ace price at all, so the "
+         f"book can never hold them into their fall. Share of member-days with no price, by year: {unp or 'none'}. "
+         f"Names: {', '.join(u['never_priced']) or 'none'}. Measured from 2015 (leaving out the worst years) the book "
+         f"returns {s15['cagr']:.1%} a year, {s15['minus_nifty500_cagr']:+.1%} against NIFTY 500 over the same years."
+         if s15 else "Survivorship: see the unpriced members below."),
         f"Universe: membership_source = {u['source']} ({nifty500.MEMBERSHIP_SOURCES.get(u['source'], '')}).",
         f"Universe coverage by year, mean per session on the run's own panel: {cov}.",
         (f"Unpriced members (in the universe, never tradable, so the survivorship bias they carry remains): "
@@ -1044,6 +1055,13 @@ def main() -> int:
                          for nm, x in [("Base: Tuesday signal, 15% gap, 90-day regression, index filter", nav),
                                        ("Thursday signal, Friday fill", thu["nav"]), ("20% gap limit", gap20["nav"]),
                                        ("120-day regression", reg120["nav"]), ("No 200-day index filter", nofilter["nav"])]])
+    # survivorship sensitivity: the same run measured from 2015, leaving out 2013-14, the years with the most members
+    # Ace never priced (they cannot be held into their fall, so the bias is upward)
+    s15, b15 = nav.loc[SENS_FROM_2015:], bench.loc[SENS_FROM_2015:]
+    m15 = nav_metrics(s15, rf_daily.loc[SENS_FROM_2015:], "From 2015")
+    sens = pd.concat([sens, pd.DataFrame([{"variant": "From 2015 (survivorship: 2013-14 hold the most unpriced members)",
+                                           **{k: m15[k] for k in ("cagr", "vol", "sharpe_card", "max_dd")},
+                                           "minus_nifty500_cagr": cagr(s15) - cagr(b15)}])], ignore_index=True)
     sens.to_csv(os.path.join(out, "sensitivities.csv"), index=False)
     produced.append(os.path.join(out, "sensitivities.csv"))
 

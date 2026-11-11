@@ -2,7 +2,8 @@
 """Ace Equity daily prices: the one stock-level price source in this repository.
 
 THE FILE (ros/data/sources.py: ACE_PRICES_CSV)
-    One row per (Accord Code, trading day) for every company Ace Equity covers, January 2000 onward, about
+    One row per (Accord Code, trading day) for the companies Ace Equity covers (NOT every listed company: 41 former
+    NIFTY 500 members have no price at all, see corporate_actions/missing_prices), January 2000 onward, about
     9.5 million rows and 4,500 companies. Columns used:
         Accord Code                  Ace's stable numeric security id. Never reused, never renamed.
         NDP_Date                     trading day (YYYY-MM-DD)

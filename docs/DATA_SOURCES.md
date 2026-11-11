@@ -10,7 +10,7 @@ gitignored `config/local.yaml` (copy `config/local.example.yaml`).
 
 | # | What | Default path | Env variable / `config/local.yaml` key | Loader |
 |---|---|---|---|---|
-| 1 | Ace Equity daily prices, every listed company, 2000 onward | none: must be configured | `LIGHTYEAR_ACE_PRICES` / `ace_prices` | `ros/data/ace.py` |
+| 1 | Ace Equity daily prices for the companies Ace covers, 2000 onward (not every listed company: 41 former NIFTY 500 members have no price) | none: must be configured | `LIGHTYEAR_ACE_PRICES` / `ace_prices` | `ros/data/ace.py` |
 | 2 | NIFTY 500 quarterly constituents since 2012, with sub-index split, plus the Accord/ISIN/symbol master | none: must be configured | `LIGHTYEAR_NIFTY500_HOLDINGS` / `nifty500_holdings` | `ros/data/nifty500.py` |
 | 3 | NSE index levels: broad-market and factor sleeves | `data/raw/NSE_Broad_Factor_Indices_Historical_Data.xlsx` (not in git; copy it there) | `LIGHTYEAR_INDEX_WORKBOOK` / `nse_index_workbook` | `ros/data/loaders.py` |
 

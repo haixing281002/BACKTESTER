@@ -1,7 +1,7 @@
 # Quant AI Researcher
 """The three files this repository reads market data from. Nothing else is a source.
 
-    1. ACE_PRICES_CSV          Ace Equity daily prices for every listed Indian company, 2000 onward
+    1. ACE_PRICES_CSV          Ace Equity daily prices for the companies Ace covers, 2000 onward (not every listed company)
                                (adjusted and unadjusted OHLC, market cap, volume, traded value, PE, P/BV).
                                Keyed by Accord Code. Loader: ros/data/ace.py
     2. NIFTY500_HOLDINGS_XLSX  Quarterly NIFTY 500 constituent snapshots since 2012 (Bloomberg members), with
@@ -67,7 +67,7 @@ BUILD_SOURCES = {
 NIFTY500_UPDATES_DIR = os.path.join(REPO, "data", "raw", "nifty500_updates")
 
 SOURCES = {
-    "ace_prices": ("Ace Equity daily prices (all companies, 2000 onward)", ACE_PRICES_CSV),
+    "ace_prices": ("Ace Equity daily prices (the companies Ace covers, 2000 onward)", ACE_PRICES_CSV),
     "nifty500_holdings": ("NIFTY 500 quarterly constituents + Accord/ISIN/symbol master", NIFTY500_HOLDINGS_XLSX),
     "nse_index_workbook": ("NSE index levels: broad-market and factor sleeves", NSE_INDEX_WORKBOOK),
 }

@@ -404,8 +404,8 @@ Every price, membership and index number comes from one of three files named
 in `ros/data/sources.py`. There is no downloader in the repository and a run
 never fetches anything. See `docs/DATA_SOURCES.md`.
 
-1. **Stock prices: the Ace Equity daily file** (`ros/data/ace.py`). Every
-   listed Indian company from January 2000: adjusted and unadjusted OHLC,
+1. **Stock prices: the Ace Equity daily file** (`ros/data/ace.py`). The companies Ace Equity covers from January 2000
+   (not every listed company: 41 former NIFTY 500 members have no price at all, so survivorship bias remains): adjusted and unadjusted OHLC,
    market cap, volume, traded value, PE and P/BV. Keyed by Accord Code in
    the file; the loader bridges to ISIN through the holdings workbook's
    security master, and every panel the engines see is dates x ISIN.

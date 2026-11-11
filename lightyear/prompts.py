@@ -29,7 +29,7 @@ Hard rules (from CLAUDE.md, restated):
 - Data: exactly THREE files, read through ros/data/sources.py, and nothing else. Never download or fetch
   anything; there is no downloader in this repository.
     1. Stock prices: Ace Equity daily file (ros.data.ace). Adjusted and unadjusted OHLC, market cap, volume,
-       traded value, PE and P/BV for every listed company, Jan 2000 onward. ace.wide("close") gives a
+       traded value, PE and P/BV for the companies Ace covers (not every listed company), Jan 2000 onward. ace.wide("close") gives a
        dates x ISIN panel; ace.panel([...]) several fields; ace.security_master() the Accord Code / ISIN /
        NSE symbol bridge; ace.trading_calendar() the NSE calendar (the file's own dates, never weekdays).
     2. Index membership: the NIFTY 500 holdings workbook (ros.data.nifty500). members_on(d) and
