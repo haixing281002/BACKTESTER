@@ -44,7 +44,7 @@ def test_ros_table_and_universal_backtester_agree_with_core(data):
     rf = pd.Series(CASH, index=r.index)
     a, u = ros_m.compute_metrics(res, rf), ub_m.compute_metrics(res, rf)
     v = res.value
-    want = {"cagr": core.cagr(v), "vol": core.ann_vol(r), "sharpe": core.sharpe(r, CASH), "max_dd": core.max_drawdown(v),
+    want = {"cagr": core.cagr(v), "vol": core.ann_vol(r), "sharpe": core.sharpe(r, HURDLE), "max_dd": core.max_drawdown(v),   # the hurdle, never the cash series passed in
             "turnover": core.annual_turnover(res.turnover)}
     for k, x in want.items():
         assert getattr(a, k) == pytest.approx(x, rel=1e-12), k
@@ -81,18 +81,36 @@ def test_the_dashboard_tiles_agree_with_core(data):
     ch = charts.build(_frame(r, b), {"strategy": "S"}, cash_rate=RATE)
     m = ch["metrics"]["strategy"]
     assert ch["cash_rate"] == RATE and ch["sharpe_hurdle"] == 0.05
-    assert m["sharpe"] == pytest.approx(core.sharpe(r, HURDLE), rel=1e-12)       # Wave 4: the 5% hurdle, not the cash rate
-    assert m["sortino"] == pytest.approx(core.sortino(r, HURDLE), rel=1e-12)
+    v = core.value_from_returns(r, start=charts.start_date(pd.Series(r.index)))
+    assert m["sharpe"] == pytest.approx(core.sharpe_geometric(v, 0.05, r), rel=1e-12)       # the headline: (CAGR - 5%) / volatility
+    assert m["sharpe"] == pytest.approx((m["cagr"] - 0.05) / m["vol"], rel=1e-12)
+    assert m["sortino"] == pytest.approx(core.sortino_geometric(v, 0.05, r), rel=1e-12)
+    assert m["sharpe_arithmetic"] == pytest.approx(core.sharpe(r, HURDLE), rel=1e-12)      # yearly and Gate B figures use this form
+    assert m["sortino_arithmetic"] == pytest.approx(core.sortino(r, HURDLE), rel=1e-12)
     assert m["beta"] == pytest.approx(core.beta(r, b, CASH), rel=1e-12)
     assert m["vol"] == pytest.approx(core.ann_vol(r), rel=1e-12)
     assert m["information_ratio"] == pytest.approx(core.information_ratio(r, b), rel=1e-12)
+
+
+def test_yearly_sharpe_is_arithmetic_and_the_headline_is_geometric(data):
+    r, b = data
+    ch = charts.build(_frame(r, b), {"strategy": "S"}, cash_rate=RATE)
+    assert ch["sharpe_basis"] == "geometric"
+    by_year = core.calendar_year_sharpe(r, HURDLE)
+    assert ch["calendar"]["sharpe_arithmetic"]["strategy"] == pytest.approx(list(by_year), rel=1e-12)
+    assert by_year.iloc[1] == pytest.approx(core.sharpe(r[r.index.year == by_year.index[1]], HURDLE), rel=1e-12)
+    # the cash rate on the card moves neither Sharpe: only the hurdle does
+    other = charts.build(_frame(r, b), {"strategy": "S"}, cash_rate=0.0)
+    for k in ("sharpe", "sortino", "sharpe_arithmetic", "sortino_arithmetic"):
+        assert other["metrics"]["strategy"][k] == ch["metrics"]["strategy"][k], k
 
 
 def test_with_no_cash_rate_on_the_card_beta_is_blank_not_guessed(data):
     r, b = data
     m = charts.build(_frame(r, b), {"strategy": "S"})["metrics"]["strategy"]
     assert m["beta"] is None                                              # beta needs the card's cash rate
-    assert m["sharpe"] == pytest.approx(core.sharpe(r, HURDLE), rel=1e-12)   # Sharpe needs only the hurdle
+    assert m["sharpe_arithmetic"] == pytest.approx(core.sharpe(r, HURDLE), rel=1e-12)   # Sharpe needs only the hurdle
+    assert m["sharpe"] == pytest.approx((m["cagr"] - 0.05) / m["vol"], rel=1e-12)
     assert m["cagr"] is not None       # what needs no cash rate is still there
 
 
@@ -159,10 +177,10 @@ def test_at_zero_on_the_card_gross_is_the_only_number_and_no_other_cost_appears(
     t = pd.Series(0.05, index=r.index)
     zero = charts.build(_frame(r, b), {"strategy": "S"}, cash_rate=RATE, turnover=t, card_bp=0.0)
     assert zero["card_bp"] == 0.0 and zero["gross"] is None
-    assert zero["metrics"]["strategy"]["sharpe"] == pytest.approx(core.sharpe(r, HURDLE), rel=1e-12)
+    assert zero["metrics"]["strategy"]["sharpe_arithmetic"] == pytest.approx(core.sharpe(r, HURDLE), rel=1e-12)
     costed = charts.build(_frame(r, b), {"strategy": "S"}, cash_rate=RATE, turnover=t, card_bp=30.0)
     assert costed["gross"]["cagr"] > costed["metrics"]["strategy"]["cagr"]
-    assert costed["metrics"]["strategy"]["sharpe"] == pytest.approx(core.sharpe(r, HURDLE), rel=1e-12)    # as run is the card's cost
+    assert costed["metrics"]["strategy"]["sharpe_arithmetic"] == pytest.approx(core.sharpe(r, HURDLE), rel=1e-12)    # as run is the card's cost
 
 
 def test_no_cost_or_cash_number_is_written_into_live_code():

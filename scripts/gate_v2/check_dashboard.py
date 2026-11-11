@@ -125,7 +125,7 @@ def main() -> int:
     chk("Manifest records versions", man.get("gate_version") and man.get("metrics_version") == "v2", (man.get("gate_version"), man.get("metrics_version")))
     chk("Workbook records versions", "gate_version v2" in str(s["A3"].value) and "metrics_version v2" in str(s["A3"].value), str(s["A3"].value)[-80:])
     chk("Workbook cash rate is the card's", s["B4"].value == ch["cash_rate"] and "the card" in str(s["A4"].value), s["A4"].value)
-    chk("Workbook Sharpe is the one formula", wf["Summary"]["B14"].value == "=(AVERAGE(Ret_Strat)-Hurdle_Daily)*252/B13", wf["Summary"]["B14"].value)
+    chk("Workbook Sharpe is the one formula", wf["Summary"]["B14"].value == "=(B12-Sharpe_Hurdle)/B13", wf["Summary"]["B14"].value)
     for label, cell, key in (("CAGR", "B12", "cagr"), ("Volatility", "B13", "vol"), ("Sharpe", "B14", "sharpe"), ("Max drawdown", "B15", "max_dd"), ("Sortino", "B16", "sortino"), ("Calmar", "B17", "calmar")):
         v = s[cell].value
         chk(f"Excel agrees with the dashboard: {label}", isinstance(v, (int, float)) and abs(v - m[key]) < 1e-6, f"Excel {v} / page {m[key]}")

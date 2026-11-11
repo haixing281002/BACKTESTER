@@ -152,7 +152,7 @@ def one_sim(args) -> dict:
     row.update(sp_ir_pos=int(sum(i > 0 for i in irs)), sp_ir_worst=float(min(irs)))
 
     # deflated Sharpe, every combination of how the bar could be set
-    x_ex = r - CASH
+    x_ex = r - HURDLE          # the deflated Sharpe columns are arithmetic over the hurdle, like every gate Sharpe
     sr_d, sk, ku = float(x_ex.mean() / x_ex.std(ddof=1)), core.skew(x_ex), core.kurtosis(x_ex)
     bench_sr = row["bench_sharpe"]
 
@@ -163,7 +163,7 @@ def one_sim(args) -> dict:
         active = versions.sub(b, axis=0)
         rho_active = float(active.corr().to_numpy()[np.triu_indices(n_sel, k=1)].mean())
         rho_raw = float(versions.corr().to_numpy()[np.triu_indices(n_sel, k=1)].mean())
-        v_obs = float(np.var([core.sharpe(versions[c], CASH) for c in versions.columns], ddof=1))
+        v_obs = float(np.var([core.sharpe(versions[c], HURDLE) for c in versions.columns], ddof=1))
     else:
         rho_active = rho_raw = float("nan")
         v_obs = float("nan")
@@ -178,7 +178,7 @@ def one_sim(args) -> dict:
     # N stated but near-identical versions: the same strategy with a little noise, to test the floor on V
     if kind == "level":
         noisy = np.column_stack([r.to_numpy() + garch_t(DAYS, 0.02, rng) for _ in range(N_VARIANTS)])
-        v_var = float(np.var((noisy.mean(axis=0) - CASH) / noisy.std(axis=0, ddof=1) * np.sqrt(core.ANN), ddof=1))
+        v_var = float(np.var((noisy.mean(axis=0) - HURDLE) / noisy.std(axis=0, ddof=1) * np.sqrt(core.ANN), ddof=1))
         act = noisy - b.to_numpy()[:, None]
         rho_n = float(np.corrcoef(act, rowvar=False)[np.triu_indices(N_VARIANTS, k=1)].mean())
         row.update(n10_rho=rho_n, n10_v_obs=v_var)

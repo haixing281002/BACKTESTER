@@ -316,7 +316,9 @@ def main(argv=None) -> int:
     refs = [c for c in ["NIFTY 500", "NIFTY500 MULTIFACTOR MQVLV 50"] if c in snap.frame.columns]
     runset = align_runs(execute_card(card, snap, cash_rate=args.cash_rate if args.cash_rate is not None else cash_rate_for(card)[0],
                                      reference_assets=refs))
-    rf = runset.inputs["rf"]
+    rf = runset.inputs["rf"]                       # the card's cash rate: what idle cash earns; beta and factor alpha subtract it
+    from ros import config as ros_config
+    hurdle_s = pd.Series(ros_config.hurdle_daily(), index=rf.index)    # every Sharpe subtracts the hurdle, never the cash rate
     results = runset.all_results()
 
     R.p(f"  configurations executed : {runset.n_configs_run}")
@@ -381,13 +383,13 @@ def main(argv=None) -> int:
         R.p("  REPLICATION GAP: N/A -- this is an ADAPTATION card. It is not scored")
         R.p("  against the source paper's numbers, and it may never claim REPLICATED.")
 
-    sub = rv.subperiod_table(results, rf_daily=rf, n_periods=4, metric="sharpe")
+    sub = rv.subperiod_table(results, rf_daily=hurdle_s, n_periods=4, metric="sharpe")
     R.p("")
     R.p("  SHARPE BY SUB-PERIOD (regime dependence):")
     R.block("    " + sub.round(2).to_string().replace("\n", "\n    "))
 
     splits = rv.walk_forward_split(primary.value.index, n_folds=4, min_train_years=5.0)
-    oos = rv.oos_summary(primary, splits, rf_daily=rf, bench=runset.by_name(card.universe.benchmark))
+    oos = rv.oos_summary(primary, splits, rf_daily=hurdle_s, bench=runset.by_name(card.universe.benchmark))
     if not oos.empty:
         R.p("")
         R.p("  SUB-PERIOD STABILITY (windows after a 5-year start, judged on excess over the benchmark;"
@@ -396,7 +398,7 @@ def main(argv=None) -> int:
         research["oos_min_sharpe"] = float(oos["sharpe"].min())
 
     ret_map = {r.name: r.returns for r in results}
-    boot = rv.stationary_bootstrap(ret_map, rf_daily=rf, n_boot=args.n_boot,
+    boot = rv.stationary_bootstrap(ret_map, rf_daily=hurdle_s, n_boot=args.n_boot,
                                    mean_block="auto", baseline=primary.name)
     research["bootstrap"] = boot
     if "intervals" in boot:
@@ -439,7 +441,7 @@ def main(argv=None) -> int:
                              factor_fingerprint=this_fingerprint,
                              exclude_fingerprint=card.fingerprint())
     n_trials = max(card.n_configs_tried, runset.n_configs_run) + prior["n_trials"]
-    dsr = rv.deflated_sharpe(primary.returns, n_trials=n_trials, rf_daily=rf)
+    dsr = rv.deflated_sharpe(primary.returns, n_trials=n_trials, rf_daily=hurdle_s)
     research["deflated_sharpe"] = dsr
     research["prior_trials"] = prior
     R.p("")
@@ -486,12 +488,12 @@ def main(argv=None) -> int:
         return run_one(card.signal.template, card.signal.params, "lag",
                        card.portfolio.rebalance, allow_cash, lag_days=L)
 
-    cs = rv.cost_sensitivity(at_cost, [0, 5, 15, 30, 50, 75, 100], rf_daily=rf)
+    cs = rv.cost_sensitivity(at_cost, [0, 5, 15, 30, 50, 75, 100], rf_daily=hurdle_s)
     R.p("")
     R.p("  COST SENSITIVITY (breakeven analysis):")
     R.block("    " + cs.round(4).to_string(index=False).replace("\n", "\n    "))
 
-    ls = rv.lag_sensitivity(at_lag, [0, 1, 2, 5, 10], rf_daily=rf)
+    ls = rv.lag_sensitivity(at_lag, [0, 1, 2, 5, 10], rf_daily=hurdle_s)
     R.p("")
     R.p("  IMPLEMENTATION-LAG SENSITIVITY (a real signal decays gently):")
     R.block("    " + ls.round(4).to_string(index=False).replace("\n", "\n    "))
@@ -508,7 +510,7 @@ def main(argv=None) -> int:
         from ros.validation.metrics import cagr as _c
         from ros.validation.metrics import max_drawdown as _m
         sweep_rows.append({"target_vol": tv, "cagr": _c(res.value), "vol": _v(res.returns),
-                           "sharpe": sharpe(res.returns, rf),
+                           "sharpe": sharpe(res.returns, hurdle_s),
                            "max_dd": _m(res.value)})
     if sweep_rows:
         R.p("")
@@ -522,8 +524,8 @@ def main(argv=None) -> int:
             rs2 = align_runs(execute_card(card, snap, cash_rate=cr, reference_assets=[]))
             tgt = rs2.mandate if rs2.mandate is not None else rs2.primary
             rows.append({"cash_rate": cr,
-                         "sharpe_primary": sharpe(rs2.primary.returns, rs2.inputs["rf"]),
-                         "sharpe_mandate": sharpe(tgt.returns, rs2.inputs["rf"])})
+                         "sharpe_primary": sharpe(rs2.primary.returns, ros_config.hurdle_daily()),
+                         "sharpe_mandate": sharpe(tgt.returns, ros_config.hurdle_daily())})
         R.p("")
         R.p("  CASH-RATE PROXY SWEEP (the proxy is an assumption, so it gets swept):")
         R.block("    " + pd.DataFrame(rows).round(4).to_string(index=False).replace("\n", "\n    "))

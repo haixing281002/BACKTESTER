@@ -60,7 +60,7 @@ def metrics(r: pd.Series, dates: pd.Series, cash_rate=None, bench: pd.Series = N
     x = pd.Series(r.to_numpy(dtype=float), index=pd.DatetimeIndex(dates)).fillna(0.0)
     b = None if bench is None else pd.Series(bench.to_numpy(dtype=float), index=pd.DatetimeIndex(dates)).fillna(0.0)
     cash = core.daily_cash(cash_rate) if cash_rate is not None else None
-    out = core.summary(x, cash, b, start=t0, hurdle=core.daily_cash(_hurdle(sharpe_hurdle)))
+    out = core.summary(x, cash, b, start=t0, hurdle_annual=_hurdle(sharpe_hurdle))
     out["years"] = core.years_between(t0, x.index[-1])
     if cash_rate is None and b is not None:
         out["beta"] = float("nan")
@@ -85,7 +85,7 @@ def observations(df, met, names, sharpe_hurdle=None):
         f"Grew {_p(s['cagr'])} a year against {_p(b['cagr'])} for {bn}, {'ahead' if gap > 0 else 'behind'} by {_p(abs(gap))} a year.")
     if not (math.isnan(s["sharpe"]) or math.isnan(b["sharpe"])):
         (pos if s["sharpe"] > b["sharpe"] else neg).append(
-            f"Return per unit of risk (Sharpe, over the {_hurdle(sharpe_hurdle):.0%} hurdle) of {s['sharpe']:.2f} against {b['sharpe']:.2f} for {bn}"
+            f"Return per unit of risk (geometric Sharpe, over the {_hurdle(sharpe_hurdle):.0%} hurdle) of {s['sharpe']:.2f} against {b['sharpe']:.2f} for {bn}"
             + (": better risk-adjusted." if s["sharpe"] > b["sharpe"] else ": the extra return came with even more extra risk."))
     if s["vol"] < b["vol"]:
         pos.append(f"Smoother ride: yearly volatility {_p(s['vol'])} against {_p(b['vol'])} for {bn}.")
@@ -152,7 +152,9 @@ def build(df: pd.DataFrame, names: dict, cash_rate=None, comparators: pd.DataFra
     out = {"dates": dates, "start": dates[0], "calendar_source": nse_sessions()[1],
            "names": {c: names.get(c, c) for c in cols},
            "growth": {}, "drawdown": {}, "rolling_vol": {}, "metrics": {}, "cash_rate": cash_rate, "cash_source": cash_source,
-           "sharpe_hurdle": (sharpe_hurdle := _hurdle(sharpe_hurdle))}
+           "sharpe_hurdle": (sharpe_hurdle := _hurdle(sharpe_hurdle)),
+           # the headline Sharpe and Sortino are geometric, (CAGR - hurdle) / risk; yearly and Gate B figures are arithmetic
+           "sharpe_basis": "geometric"}
     for c in cols:
         r = df[c].fillna(0.0)
         v = value_path(r)
@@ -165,6 +167,11 @@ def build(df: pd.DataFrame, names: dict, cash_rate=None, comparators: pd.DataFra
     yr = df.assign(year=d.dt.year).groupby("year")
     out["calendar"] = {"years": [str(y) for y in yr.groups.keys()],
                        **{c: [float((1 + g[c].fillna(0)).prod() - 1) for _, g in yr] for c in cols}}
+    hd = core.daily_cash(sharpe_hurdle)
+    out["calendar"]["sharpe_arithmetic"] = {c: [float(v) for v in core.calendar_year_sharpe(
+        pd.Series(df[c].fillna(0.0).to_numpy(dtype=float), index=pd.DatetimeIndex(d)), hd)] for c in cols}
+    out["calendar"]["sortino_arithmetic"] = {c: [float(v) for v in core.calendar_year_sortino(
+        pd.Series(df[c].fillna(0.0).to_numpy(dtype=float), index=pd.DatetimeIndex(d)), hd)] for c in cols}
     out["observations"] = observations(df, out["metrics"], out["names"], sharpe_hurdle)
 
     m = df.assign(ym=d.dt.to_period("M")).groupby("ym")["strategy"].apply(lambda x: (1 + x.fillna(0)).prod() - 1)

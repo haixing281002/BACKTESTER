@@ -40,9 +40,12 @@ _BOTH = [
     ("Negative Volatility", "ARRAY:=STDEV(IF(Ret_{x}<0,Ret_{x}))*SQRT(252)", PCT, "sample stdev of the days with a loss x sqrt(252)"),
     ("Max Drawdown", "=MAX(DD_{x})", PCT, "worst fall from a previous high on daily values, positive"),
     ("Average Annual Max Drawdown", "=AVERAGE(YearDD_{x})", PCT, "mean of each calendar year's worst fall; the year's peak starts at the prior year-end value"),
-    ("Sharpe Ratio", "=(AVERAGE(Ret_{x})-Hurdle_Daily)/STDEV(Ret_{x})*SQRT(252)", NUM, "mean(r - h) / stdev(r - h) x sqrt(252), h the daily hurdle"),
-    ("Sortino Ratio", "=(AVERAGE(Ret_{x})-Hurdle_Daily)*252/(SQRT(SUMPRODUCT((Ex_{x}<0)*Ex_{x}^2)/COUNT(Ret_{x}))*SQRT(252))", NUM,
-     "mean(r - h) x 252 / downside deviation; downside deviation = sqrt(mean(min(r - h, 0)^2)) x sqrt(252)"),
+    ("Sharpe (geometric)", "=({c}{r[CAGR]}-Hurdle)/{c}{r[Annualized Volatility]}", NUM, "the headline: (CAGR - hurdle) / annualised volatility"),
+    ("Sharpe (arithmetic)", "=(AVERAGE(Ret_{x})-Hurdle_Daily)/STDEV(Ret_{x})*SQRT(252)", NUM, "mean(r - h) / stdev(r - h) x sqrt(252), h the daily hurdle"),
+    ("Sortino (geometric)", "=({c}{r[CAGR]}-Hurdle)/(SQRT(SUMPRODUCT((Ex_{x}<0)*Ex_{x}^2)/COUNT(Ret_{x}))*SQRT(252))", NUM,
+     "(CAGR - hurdle) / downside deviation; downside deviation = sqrt(mean(min(r - h, 0)^2)) x sqrt(252)"),
+    ("Sortino (arithmetic)", "=(AVERAGE(Ret_{x})-Hurdle_Daily)*252/(SQRT(SUMPRODUCT((Ex_{x}<0)*Ex_{x}^2)/COUNT(Ret_{x}))*SQRT(252))", NUM,
+     "mean(r - h) x 252 / downside deviation"),
     ("Calmar Ratio", "={c}{r[CAGR]}/{c}{r[Max Drawdown]}", NUM, "CAGR / max drawdown"),
     ("Sterling Ratio", "={c}{r[CAGR]}/{c}{r[Average Annual Max Drawdown]}", NUM, "CAGR / average annual max drawdown"),
     ("Omega Ratio", "=SUMPRODUCT((Ex_{x}>0)*Ex_{x})/-SUMPRODUCT((Ex_{x}<0)*Ex_{x})", NUM, "daily gains above the hurdle / daily shortfalls below it"),
@@ -142,20 +145,27 @@ def write_return_analytics_workbook(path: str, strategy_returns: pd.Series, benc
     widths(wm, [14, 24, 24])
     years = sorted(set(df.index.year))
     fys = sorted({d.year + (1 if d.month >= 4 else 0) for d in df.index})
-    header(wy, 1, ["Calendar year", "Return S", "Return B", "Max drawdown S", "Max drawdown B", "", "Financial year (ends March)", "Return S", "Return B"])
+    header(wy, 1, ["Calendar year", "Return S", "Return B", "Max drawdown S", "Max drawdown B", "", "Financial year (ends March)", "Return S", "Return B",
+                   "", "Sharpe (arithmetic) S", "Sharpe (arithmetic) B", "Sortino (arithmetic) S", "Sortino (arithmetic) B"])
     for k, y in enumerate(years, start=2):
         put(wy, f"A{k}", y, F_BASE, "0")
         for col, x in (("B", "S"), ("C", "B")):
             _cell(wy, f"{col}{k}", f"ARRAY:=PRODUCT(IF(Yr=$A{k},1+Ret_{x},1))-1", PCT)
         for col, x in (("D", "S"), ("E", "B")):
             _cell(wy, f"{col}{k}", f"ARRAY:=MAX(IF(Yr=$A{k},YDD_{x}))", PCT)
+        # per-calendar-year ratios are the ARITHMETIC form, over the daily hurdle
+        for col, x in (("K", "S"), ("L", "B")):
+            _cell(wy, f"{col}{k}", f"ARRAY:=(AVERAGE(IF(Yr=$A{k},Ret_{x}))-Hurdle_Daily)/STDEV(IF(Yr=$A{k},Ret_{x}))*SQRT(252)", NUM)
+        for col, x in (("M", "S"), ("N", "B")):
+            _cell(wy, f"{col}{k}", f"ARRAY:=(AVERAGE(IF(Yr=$A{k},Ret_{x}))-Hurdle_Daily)*252/"
+                                   f"(SQRT(SUMPRODUCT((Yr=$A{k})*(Ex_{x}<0)*Ex_{x}^2)/COUNTIF(Yr,$A{k}))*SQRT(252))", NUM)
     for k, y in enumerate(fys, start=2):
         put(wy, f"G{k}", y, F_BASE, "0")
         for col, x in (("H", "S"), ("I", "B")):
             _cell(wy, f"{col}{k}", f"ARRAY:=PRODUCT(IF(FY=$G{k},1+Ret_{x},1))-1", PCT)
     name(wb, "YearDD_S", f"Years!$D$2:$D${len(years) + 1}")
     name(wb, "YearDD_B", f"Years!$E$2:$E${len(years) + 1}")
-    widths(wy, [14, 12, 12, 16, 16, 4, 26, 12, 12])
+    widths(wy, [14, 12, 12, 16, 16, 4, 26, 12, 12, 4, 20, 20, 20, 20])
 
     # ---- Analytics
     put(ws, "A1", "Return analytics", F_TITLE)
@@ -196,4 +206,6 @@ def python_values(strategy_returns: pd.Series, benchmark_returns: pd.Series, sta
             "monthly": {"strategy": core.monthly_returns(s), "benchmark": core.monthly_returns(b)},
             "calendar_year": {"strategy": core.calendar_year_returns(s), "benchmark": core.calendar_year_returns(b)},
             "financial_year": {"strategy": core.financial_year_returns(s), "benchmark": core.financial_year_returns(b)},
-            "year_max_drawdown": {"strategy": core.calendar_year_max_drawdown(s), "benchmark": core.calendar_year_max_drawdown(b)}}
+            "year_max_drawdown": {"strategy": core.calendar_year_max_drawdown(s), "benchmark": core.calendar_year_max_drawdown(b)},
+            "year_sharpe": {"strategy": core.calendar_year_sharpe(s, core.daily_cash(h)), "benchmark": core.calendar_year_sharpe(b, core.daily_cash(h))},
+            "year_sortino": {"strategy": core.calendar_year_sortino(s, core.daily_cash(h)), "benchmark": core.calendar_year_sortino(b, core.daily_cash(h))}}

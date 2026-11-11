@@ -95,9 +95,9 @@ def stats_row(name: str, r: pd.Series, b: pd.Series, factors: pd.DataFrame, floo
     row = {"name": name, "cagr": core.cagr(v), "bench_cagr": core.cagr(vb), "edge": core.cagr(v) - core.cagr(vb), "sharpe": core.sharpe(r, HURDLE),
            "bench_sharpe": core.sharpe(b, HURDLE), "max_dd": core.max_drawdown(v), "ir": core.information_ratio(r, b) if (r - b).std() > 0 else float("nan"),
            **_boot(r, b)}
-    d = ev.deflated_sharpe(r, b, CASH, 1.0, floors["1overT"], null="benchmark")
+    d = ev.deflated_sharpe(r, b, HURDLE, 1.0, floors["1overT"], null="benchmark")
     row["dsr_bench_n1"] = d["dsr"]
-    row["dsr_zero_n1"] = ev.deflated_sharpe(r, b, CASH, 1.0, floors["1overT"], null="zero")["dsr"]
+    row["dsr_zero_n1"] = ev.deflated_sharpe(r, b, HURDLE, 1.0, floors["1overT"], null="zero")["dsr"]
     sp = ev.sub_period(r, b, HURDLE)
     row.update(sp_n=sp["n"], sp_pos=sp["positive"], sp_worst=sp["worst"])
     if (r - b).std() > 0:

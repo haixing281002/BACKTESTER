@@ -73,7 +73,8 @@ def test_every_return_analytics_metric_equals_python(analytics):
         pairs.append((f"{lab} (strategy)", ws[f"B{row}"].value, py["strategy"][lab]))
         if lab in py["benchmark"]:
             pairs.append((f"{lab} (benchmark)", ws[f"C{row}"].value, py["benchmark"][lab]))
-    assert len(pairs) == len(xt.METRIC_LABELS) + 26, "every metric row must be compared"
+    assert len(pairs) == len(xt.METRIC_LABELS) + len(xt._BOTH), "every metric row must be compared"
+    assert {"Sharpe (geometric)", "Sharpe (arithmetic)", "Sortino (geometric)", "Sortino (arithmetic)"} <= set(where["rows"])
     assert not _diffs(pairs), _diffs(pairs)
 
 
@@ -87,7 +88,9 @@ def test_every_month_and_year_table_cell_equals_python(analytics):
             pairs.append((f"month {ym} {who}", wm[f"{col}{k}"].value, m[(m.index.year * 100 + m.index.month) == ym].iloc[0]))
     for k, y in enumerate(where["years"]["calendar"], start=2):
         for col, who, key in (("B", "strategy", "calendar_year"), ("C", "benchmark", "calendar_year"),
-                              ("D", "strategy", "year_max_drawdown"), ("E", "benchmark", "year_max_drawdown")):
+                              ("D", "strategy", "year_max_drawdown"), ("E", "benchmark", "year_max_drawdown"),
+                              ("K", "strategy", "year_sharpe"), ("L", "benchmark", "year_sharpe"),          # arithmetic, by year
+                              ("M", "strategy", "year_sortino"), ("N", "benchmark", "year_sortino")):
             pairs.append((f"{key} {y} {who}", wy[f"{col}{k}"].value, py[key][who][y]))
     for k, y in enumerate(where["years"]["financial"], start=2):
         for col, who in (("H", "strategy"), ("I", "benchmark")):
@@ -124,7 +127,7 @@ def test_the_lightyear_workbook_summary_and_comparators_equal_the_dashboard(tmp_
     wb = openpyxl.load_workbook(out, data_only=True)
     ws = wb["Summary"]
     labels = {str(ws[f"A{r}"].value): r for r in range(7, 30) if ws[f"A{r}"].value}
-    hl = f"({config.hurdle_annual():.0%} hurdle)"
+    hl = f"(geometric, {config.hurdle_annual():.0%} hurdle)"
     want = {"CAGR": "cagr", "Annualised volatility": "vol", f"Sharpe {hl}": "sharpe", "Maximum drawdown": "max_dd",
             f"Sortino {hl}": "sortino", "Calmar": "calmar", "Final value (100 = start)": "final"}
     pairs = []

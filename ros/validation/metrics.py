@@ -24,6 +24,7 @@ from ros.metrics.core import (
     sortino,
 )
 from ros.metrics.core import annual_turnover as ann_turnover
+from ros import config
 from ros.metrics.legacy_v1 import sharpe_geometric
 
 __all__ = ["ANN", "Metrics", "ann_turnover", "ann_vol", "cagr", "compute_metrics", "drawdown_series", "max_drawdown",
@@ -51,14 +52,17 @@ class Metrics:
         return asdict(self)
 
 
-def compute_metrics(result, rf_daily: pd.Series | None = None) -> Metrics:
+def compute_metrics(result, rf_daily: pd.Series | None = None, hurdle: float | None = None) -> Metrics:
+    """`hurdle` is the daily Sharpe hurdle (config.hurdle_daily()): Sharpe and Sortino subtract it. `rf_daily`, the card's
+    cash series, is used only for sharpe_paper_basis, which compares with a paper's printed Sharpe on the paper's basis."""
+    h = config.hurdle_daily() if hurdle is None else hurdle
     v, r = result.value, result.returns
     return Metrics(
         name=result.name,
         cagr=cagr(v),
         vol=ann_vol(r),
-        sharpe=sharpe(r, rf_daily),
-        sortino=sortino(r, rf_daily),
+        sharpe=sharpe(r, h),
+        sortino=sortino(r, h),
         calmar=calmar(v),
         max_dd=max_drawdown(v),
         dd_duration_days=drawdown_duration(v),

@@ -7,6 +7,7 @@ from typing import Any
 
 import pandas as pd
 
+from ros import config
 from ros.metrics import core
 
 ANN = core.ANN
@@ -47,12 +48,14 @@ class Metrics:
 
 
 def compute_metrics(result, rf_daily: pd.Series | None = None, ann: int = ANN) -> Metrics:
+    """Sharpe is the arithmetic form over the Sharpe hurdle in config/fund.yaml. `rf_daily` is kept for callers that pass
+    it; no Sharpe subtracts a cash rate."""
     v, r = result.value, result.returns
     return Metrics(
         name=result.name,
         cagr=cagr(v, ann),
         vol=ann_vol(r, ann),
-        sharpe=sharpe(v, r, rf_daily, ann),
+        sharpe=core.sharpe(r, config.hurdle_daily()),
         max_dd=max_drawdown(v),
         turnover=ann_turnover(result.turnover, ann),
         n_obs=len(v),

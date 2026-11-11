@@ -109,7 +109,7 @@ def integrity_row(checks: list[dict[str, Any]] | None, reconciles: bool | None, 
 def _boot_evidence(e: dict) -> str:
     s = "share of draws where the Sharpe gap to the benchmark is at or below zero"
     if e.get("sharpe_hurdle") is not None:
-        s += f"; both Sharpes over the {e['sharpe_hurdle']:.0%} hurdle"
+        s += f"; both Sharpes arithmetic, over the {e['sharpe_hurdle']:.0%} hurdle"
     if e.get("bootstrap_block") is not None:
         s += f"; mean block {e['bootstrap_block']:.1f} days ({e.get('bootstrap_block_method', 'automatic')})"
     sens = e.get("bootstrap_sensitivity") or {}

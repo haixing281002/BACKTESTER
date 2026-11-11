@@ -160,7 +160,9 @@ def worst_days(returns: pd.Series, n: int = 5) -> pd.Series:
 
 # ---------------------------------------------------------------------------------------------- risk-adjusted
 def sharpe(returns: pd.Series, cash: float | pd.Series | None = None) -> float:
-    """mean(r - c) / stdev(r - c) * sqrt(252). The only Sharpe in the repository's reports and gates."""
+    """The ARITHMETIC Sharpe: mean(r - h) / stdev(r - h) * sqrt(252), h the daily hurdle (config.hurdle_daily()). Used for
+    per-calendar-year figures and for every Gate B test (bootstrap, sub-period, post-publication, deflated Sharpe), whose
+    pass marks were calibrated on this form. The headline is sharpe_geometric()."""
     x = excess(returns, cash)
     if len(x) < 3:
         return float("nan")
@@ -175,6 +177,32 @@ def sortino(returns: pd.Series, cash: float | pd.Series | None = None) -> float:
         return float("nan")
     dd = float(np.sqrt((np.minimum(x.to_numpy(), 0.0) ** 2).mean()) * np.sqrt(ANN))
     return float(x.mean() * ANN / dd) if dd > 0 else float("nan")
+
+
+def sharpe_geometric(value: pd.Series, hurdle_annual: float, returns: pd.Series | None = None) -> float:
+    """The GEOMETRIC Sharpe, the headline: (CAGR - hurdle) / annualised volatility. `value` starts at the base date."""
+    r = value.pct_change().dropna() if returns is None else returns.dropna()
+    vol = ann_vol(r)
+    return float((cagr(value) - hurdle_annual) / vol) if vol and vol > 0 else float("nan")
+
+
+def sortino_geometric(value: pd.Series, hurdle_annual: float, returns: pd.Series | None = None) -> float:
+    """(CAGR - hurdle) / downside deviation, with downside deviation = sqrt(mean(min(r - h, 0)^2)) * sqrt(252)."""
+    r = value.pct_change().dropna() if returns is None else returns.dropna()
+    x = r - daily_cash(hurdle_annual)
+    dd = float(np.sqrt((np.minimum(x.to_numpy(), 0.0) ** 2).mean()) * np.sqrt(ANN)) if len(x) else 0.0
+    return float((cagr(value) - hurdle_annual) / dd) if dd > 0 else float("nan")
+
+
+def calendar_year_sharpe(returns: pd.Series, hurdle: float) -> pd.Series:
+    """The arithmetic Sharpe of each calendar year's daily returns, over the daily hurdle."""
+    r = returns.dropna()
+    return r.groupby(r.index.year).apply(lambda x: sharpe(x, hurdle))
+
+
+def calendar_year_sortino(returns: pd.Series, hurdle: float) -> pd.Series:
+    r = returns.dropna()
+    return r.groupby(r.index.year).apply(lambda x: sortino(x, hurdle))
 
 
 def calmar(value: pd.Series) -> float:
@@ -346,7 +374,8 @@ def tearsheet(returns: pd.Series, start, hurdle_annual: float, bench: pd.Series 
     out = {"Total Return": total_return(r), "Years": years_between(start, r.index[-1]), "CAGR": g,
            "Annualized Volatility": ann_vol(r), "Positive Volatility": positive_vol(r), "Negative Volatility": negative_vol(r),
            "Max Drawdown": mdd, "Average Annual Max Drawdown": average_annual_max_drawdown(r),
-           "Sharpe Ratio": sharpe(r, h), "Sortino Ratio": sortino(r, h),
+           "Sharpe (geometric)": sharpe_geometric(v, hurdle_annual, r), "Sharpe (arithmetic)": sharpe(r, h),
+           "Sortino (geometric)": sortino_geometric(v, hurdle_annual, r), "Sortino (arithmetic)": sortino(r, h),
            "Calmar Ratio": float(g / mdd) if mdd > 0 else float("nan"), "Sterling Ratio": sterling(r, start),
            "Omega Ratio": omega(r, h), "Gain to Pain Ratio": gain_to_pain(r), "Tail Ratio": tail_ratio(r),
            "Avg Month Ret": float(m.mean()), "Max Month Ret": float(m.max()), "Min Month Ret": float(m.min()),
@@ -536,13 +565,18 @@ def post_publication(returns: pd.Series, bench: pd.Series, cash: float | pd.Seri
 
 # ---------------------------------------------------------------------------------------------- one block of metrics
 def summary(returns: pd.Series, cash: float | pd.Series | None = None, bench: pd.Series | None = None, start=None,
-            hurdle: float | None = None) -> dict[str, float]:
+            hurdle_annual: float | None = None) -> dict[str, float]:
     """The core block for one return series. `start` is the value-100 date before the first return, when there is one.
-    `hurdle` is the daily Sharpe yardstick (config.hurdle_daily()): Sharpe and Sortino subtract it. Beta subtracts `cash`."""
+    `hurdle_annual` is the yearly Sharpe hurdle (config.hurdle_annual()). "sharpe" and "sortino" are the GEOMETRIC headline,
+    (CAGR - hurdle) / risk; "sharpe_arithmetic" and "sortino_arithmetic" are the daily-mean form. Beta subtracts `cash`."""
     r = returns.dropna()
     v = value_from_returns(r, start=start)
-    h = cash if hurdle is None else hurdle
-    out = {"final": float(v.iloc[-1]), "cagr": cagr(v), "vol": ann_vol(r), "sharpe": sharpe(r, h), "sortino": sortino(r, h),
+    if hurdle_annual is None:
+        raise ValueError("summary() needs hurdle_annual: every Sharpe is over the hurdle in config/fund.yaml, none over a cash rate")
+    h = daily_cash(hurdle_annual)
+    out = {"final": float(v.iloc[-1]), "cagr": cagr(v), "vol": ann_vol(r),
+           "sharpe": sharpe_geometric(v, hurdle_annual, r), "sortino": sortino_geometric(v, hurdle_annual, r),
+           "sharpe_arithmetic": sharpe(r, h), "sortino_arithmetic": sortino(r, h),
            "calmar": calmar(v), "max_dd": max_drawdown(v), "dd_duration_days": drawdown_duration(v), "cvar_95": cvar_95(r),
            "skew": skew(r), "best_days_removed_cagr": cagr_without_best_days(r), "days": len(r)}
     if bench is not None:
