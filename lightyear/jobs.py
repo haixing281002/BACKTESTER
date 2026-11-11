@@ -119,7 +119,10 @@ def provenance(st, boot_hash=None):
             "card_sha256_on_disk": _sha(card_path) if card_path else None,
             "card_sha256_run": ((man.get("inputs") or {}).get("card") or {}).get("sha256"),
             "script_sha256": (man.get("script") or {}).get("sha256"), "manifest_written_at": man.get("written_at"),
-            "code_hash_server": boot_hash, "code_hash_disk": code_hash(), "git_commit": git_commit(),
+            "code_hash_server": boot_hash, "code_hash_disk": code_hash(),
+            # the commit the BACKTEST ran on (its manifest), not whatever HEAD is when the page is drawn
+            "git_commit": (man.get("git_commit") or "")[:7] or "unknown (no manifest)", "git_dirty": man.get("git_dirty"),
+            "git_commit_now": git_commit(),
             "workbook": st.get("workbook")}
 
 

@@ -1,3 +1,4 @@
+# Quant AI Researcher
 """Step 04 -- POINT-IN-TIME DATA. Frozen snapshots with full lineage.
 
 The board's second non-negotiable upgrade: no result without lineage. A snapshot
@@ -28,7 +29,28 @@ _ENGINE_FILES = [
     "ros/validation/metrics.py", "ros/validation/research.py", "ros/validation/portfolio.py",
     "ros/data/loaders.py", "ros/data/ace.py", "ros/data/nifty500.py", "ros/data/sources.py",
     "ros/data/snapshot.py", "ros/feasibility.py",
+    "ros/cards/schema.py", "ros/governance/gates.py", "ros/data/lineage.py",
+    "universal_backtester/data.py", "universal_backtester/clean_charts.py",
 ]
+# Text files hash with line endings folded to LF, so a CRLF checkout of the same source gives the same hash.
+TEXT_EXT = {".py", ".md", ".yaml", ".yml", ".csv", ".json", ".txt", ".html", ".js", ".css", ".toml", ".cfg", ".ini"}
+
+
+def is_text_path(path: str) -> bool:
+    return os.path.splitext(path)[1].lower() in TEXT_EXT
+
+
+def lf_chunks(fh, size: int = 1 << 20):
+    """Yield a binary file's bytes with every CRLF turned into LF, safely across chunk boundaries."""
+    carry = b""
+    for chunk in iter(lambda: fh.read(size), b""):
+        chunk = carry + chunk
+        carry = b"\r" if chunk.endswith(b"\r") else b""
+        if carry:
+            chunk = chunk[:-1]
+        yield chunk.replace(b"\r\n", b"\n")
+    if carry:
+        yield carry
 
 
 def frame_hash(df: pd.DataFrame) -> str:
@@ -52,8 +74,19 @@ def code_hash(files: list[str] | None = None, root: str = ".") -> str:
         if os.path.exists(p):
             with open(p, "rb") as fh:
                 h.update(f.encode())
-                h.update(fh.read())
+                for chunk in (lf_chunks(fh) if is_text_path(p) else iter(lambda: fh.read(1 << 20), b"")):
+                    h.update(chunk)
     return h.hexdigest()
+
+
+def git_dirty(root: str = ".") -> list[str] | None:
+    """`git status --porcelain` lines: what in the working tree differs from the commit (None if git is absent)."""
+    try:
+        out = subprocess.check_output(["git", "-C", root, "status", "--porcelain"],
+                                      stderr=subprocess.DEVNULL, text=True)
+    except Exception:
+        return None
+    return [line for line in out.splitlines() if line.strip()]
 
 
 def git_commit(root: str = ".") -> str | None:

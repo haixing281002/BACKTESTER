@@ -1,3 +1,4 @@
+# Quant AI Researcher
 """Run lineage: one manifest.json per run folder, so a reported number can be traced to exact bytes.
 
 A run script calls write_run_manifest() after it has written its hand-off files. The manifest records
@@ -21,7 +22,7 @@ from importlib import metadata
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from ros.data.snapshot import _ENGINE_FILES, code_hash, git_commit
+from ros.data.snapshot import _ENGINE_FILES, code_hash, git_commit, git_dirty, is_text_path, lf_chunks
 
 IST = ZoneInfo("Asia/Kolkata")
 SCHEMA = "lightyear-run-manifest/1"
@@ -29,12 +30,29 @@ _PACKAGES = ("pandas", "numpy", "scipy", "statsmodels", "openpyxl", "pyyaml", "p
 _CHUNK = 1 << 20
 
 
-def sha256_file(path: str) -> str:
-    h = hashlib.sha256()
+def sha256_both(path: str) -> tuple[str, str]:
+    """(sha256 with CRLF folded to LF for text files, sha256 of the raw bytes), in one pass."""
+    norm, raw = hashlib.sha256(), hashlib.sha256()
+    text = is_text_path(path)
     with open(path, "rb") as fh:
+        carry = b""
         for chunk in iter(lambda: fh.read(_CHUNK), b""):
-            h.update(chunk)
-    return h.hexdigest()
+            raw.update(chunk)
+            if text:
+                chunk = carry + chunk
+                carry = b"\r" if chunk.endswith(b"\r") else b""
+                if carry:
+                    chunk = chunk[:-1]
+                chunk = chunk.replace(b"\r\n", b"\n")
+            norm.update(chunk)
+        if carry:
+            norm.update(carry)
+    return norm.hexdigest(), raw.hexdigest()
+
+
+def sha256_file(path: str) -> str:
+    """sha256 of a file; text files are hashed with line endings folded to LF (a CRLF checkout hashes the same)."""
+    return sha256_both(path)[0]
 
 
 def sha256_tree(path: str) -> dict[str, Any]:
@@ -58,7 +76,8 @@ def hash_input(path: str) -> dict[str, Any]:
     if os.path.isdir(path):
         return sha256_tree(path)
     if os.path.isfile(path):
-        return {"kind": "file", "sha256": sha256_file(path), "bytes": os.path.getsize(path)}
+        norm, raw = sha256_both(path)
+        return {"kind": "file", "sha256": norm, "sha256_raw": raw, "bytes": os.path.getsize(path)}
     return {"kind": "missing"}
 
 
@@ -96,6 +115,8 @@ def write_run_manifest(run_dir: str, script: str, inputs: dict[str, str], params
         "run_dir": _rel(run_dir, repo),
         "script": {"path": _rel(script_abs, repo), "sha256": sha256_file(script_abs)},
         "git_commit": git_commit(repo),
+        "git_dirty": bool(dirty := (git_dirty(repo) or [])),
+        "dirty_files": dirty[:200],
         "code_hash": code_hash(list(_ENGINE_FILES) + [_rel(script_abs, repo)], root=repo),
         "python": sys.version.split()[0],
         "platform": platform.platform(),
@@ -124,6 +145,16 @@ def verify_run_manifest(path: str, repo: str | None = None) -> dict[str, Any]:
         now = hash_input(p)
         if now.get("kind") == "missing":
             missing.append(name)
-        elif now.get("sha256") != rec.get("sha256"):
+        elif rec.get("sha256") not in (now.get("sha256"), now.get("sha256_raw")):   # older manifests hashed raw bytes
             changed.append(name)
-    return {"ok": not changed and not missing, "changed": changed, "missing": missing}
+    script = m.get("script") or {}
+    script_changed = code_changed = None
+    if script.get("path"):
+        sp = script["path"] if os.path.isabs(script["path"]) else os.path.join(repo, script["path"])
+        if os.path.isfile(sp):
+            script_changed = script.get("sha256") not in sha256_both(sp)
+            code_changed = m.get("code_hash") != code_hash(list(_ENGINE_FILES) + [_rel(sp, repo)], root=repo)
+        else:
+            missing.append("script")
+    return {"ok": not changed and not missing and not script_changed and not code_changed,
+            "changed": changed, "missing": missing, "script_changed": script_changed, "code_changed": code_changed}

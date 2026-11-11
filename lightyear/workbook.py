@@ -1,4 +1,4 @@
-# Quant AI Researcher by Harshil Pahuja
+# Quant AI Researcher
 """The results workbook for any Lightyear run, built to the xlsx skill's rules from the run's hand-off files.
 
 Sheets
@@ -375,7 +375,8 @@ def build(run_dir, results, df, title, out_path, hurdle=0.06, holdings=None, tra
     put(ws, "A3", (f"Run {pv.get('run_id', '?')} created {str(pv.get('created', '?')).replace('T', ' ')} · card "
                    f"{pv.get('card_path', '?')} sha256 {(pv.get('card_sha256_approved') or pv.get('card_sha256_run') or '?')[:12]} · "
                    f"script sha256 {(pv.get('script_sha256') or '?')[:12]} · Lightyear code {pv.get('code_hash_disk', '?')} · "
-                   f"git {pv.get('git_commit', '?')} · Quant AI Researcher by Harshil Pahuja"), F_NOTE)
+                   f"backtest ran on git {pv.get('git_commit', '?')}{' (uncommitted changes)' if pv.get('git_dirty') else ''}"
+                   " · Quant AI Researcher"), F_NOTE)
     put(ws, "A4", "Hurdle rate for Sharpe", F_BOLD)
     put(ws, "B4", hurdle, F_INPUT, PCT, FILL_KEY, border=True,
         comment="Key assumption: flat 6% proxy for the Indian short rate (the repo's convention).")
@@ -765,7 +766,8 @@ def build(run_dir, results, df, title, out_path, hurdle=0.06, holdings=None, tra
     if pv:
         gate_a_lines.append(f"Provenance: run {pv.get('run_id')} created {pv.get('created')}; card {pv.get('card_path')} sha256 "
                             f"{pv.get('card_sha256_approved') or pv.get('card_sha256_run')}; script sha256 {pv.get('script_sha256')}; "
-                            f"Lightyear code {pv.get('code_hash_disk')}; git {pv.get('git_commit')}.")
+                            f"Lightyear code {pv.get('code_hash_disk')}; backtest ran on git {pv.get('git_commit')}"
+                            f"{' with uncommitted changes' if pv.get('git_dirty') else ''}.")
     for c in results.get("wording_corrections") or []:
         gate_a_lines.append(f"Wording corrected to follow the numbers in {c['field']}: '{c['was']}' -> '{c['now']}'.")
     gate_a_lines += [str(line) for line in (change_log or [])]
@@ -773,7 +775,7 @@ def build(run_dir, results, df, title, out_path, hurdle=0.06, holdings=None, tra
         "Data: Ace Equity daily prices (adjusted; price returns, no dividends), the NIFTY 500 holdings workbook for "
         "quarterly index membership, and the NSE index workbook for the benchmark. Nothing else.",
         "Gate B is a human decision. Nothing in this workbook assigns one.",
-        "Quant AI Researcher by Harshil Pahuja"]
+        "Quant AI Researcher"]
     for i, t in enumerate(notes, start=3):
         put(wn, f"A{i}", t, align=Alignment(wrap_text=True, vertical="top"))
     wn.column_dimensions["A"].width = 130

@@ -368,7 +368,7 @@ async function tick(){
   const codeStale = pv.code_hash_server && pv.code_hash_disk && pv.code_hash_server !== pv.code_hash_disk;
   $("#rprov").innerHTML = `<b>Run ${esc(st.id)}</b> · created ${esc((st.created||"").replace("T"," "))}${st.rerun_of?` · re-run of ${esc(st.rerun_of)}`:""}
     · card ${esc(pv.card_path||"?")} sha256 <code>${esc((shaA||"?").slice(0,12))}</code>${stale?` <span style="color:var(--red)"><b>card on disk has changed since approval (now ${esc(shaNow.slice(0,12))})</b></span>`:""}
-    · code ${esc(pv.code_hash_server||"?")}${codeStale?` <span style="color:var(--red)"><b>server is running old code (disk ${esc(pv.code_hash_disk)}); restart Lightyear</b></span>`:""} · git ${esc(pv.git_commit||"?")}
+    · code ${esc(pv.code_hash_server||"?")}${codeStale?` <span style="color:var(--red)"><b>server is running old code (disk ${esc(pv.code_hash_disk)}); restart Lightyear</b></span>`:""} · backtest ran on git ${esc(pv.git_commit||"?")}${pv.git_dirty?` <span style="color:var(--red)"><b>with uncommitted changes</b></span>`:""}
     ${RUNS.length && RUNS[0].id !== st.id ? ` · <span style="color:#8a5a00"><b>a newer run exists:</b> <a href="#" onclick="openRun('${esc(RUNS[0].id)}');return false">${esc(RUNS[0].id)}</a></span>`:""}`;
   const running = RUNNING.includes(st.status);
   $("#ractions").innerHTML = `<span class="pill ${st.status}">${esc(STATUS_TEXT[st.status]||st.status)}</span>

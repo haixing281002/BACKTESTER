@@ -1231,7 +1231,8 @@ def main() -> int:
     produced.append(write_fixed_notes(raw, out))
 
     mp = write_run_manifest(run_dir, __file__, {"ace_prices": ACE_PRICES_CSV, "nifty500_holdings": NIFTY500_HOLDINGS_XLSX,
-                                               "nse_index_workbook": NSE_INDEX_WORKBOOK, "card": CARD},
+                                               "nse_index_workbook": NSE_INDEX_WORKBOOK, "card": CARD,
+                                               **nifty500.membership_inputs(MEMBERSHIP_SOURCE, FIRST_SIGNAL_UNIVERSE)},
                             params={**CARD_PARAMS, **P, "n_trials": N_TRIALS, "cost_sweep_bp": COST_SWEEP_BP, "cash_sweep": CASH_SWEEP,
                                     "start": str(START.date()), "end": str(END.date()), "start_capital": START_CAPITAL,
                                     "mandate_allow_cash": MANDATE_ALLOWS_CASH, "sensitivities": list(SENSITIVITIES),

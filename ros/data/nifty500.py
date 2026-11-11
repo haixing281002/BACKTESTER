@@ -253,6 +253,17 @@ def load_membership_v2(path: str | None = None) -> pd.DataFrame:
         .sort_values(["start_date", "isin"]).reset_index(drop=True)
 
 
+def membership_inputs(source: str = "holdings_workbook", first_signal_universe: str | None = None) -> dict[str, str]:
+    """The universe files a run reads beyond the three sources, for its manifest (so verify_run_manifest checks them)."""
+    out = {}
+    if source == "nifty500_members_v2":
+        out["universe_v2_spells"] = V2_SPELLS
+    m = re.fullmatch(r"nse_review_(\d{4}-\d{2}-\d{2})", str(first_signal_universe or ""))
+    if m:
+        out[first_signal_universe] = os.path.join(UNIVERSE_DIR, f"nse_review_{m.group(1)}_members.csv")
+    return out
+
+
 def first_signal_universe(name: str) -> pd.DataFrame:
     """A named NSE list used as the universe on one signal date (a card's signal.params.first_signal_universe), e.g.
     'nse_review_2013-09-27'. Columns: isin (the Ace-keyed ISIN), nse_isin, symbol, company_name, in_ace_master."""

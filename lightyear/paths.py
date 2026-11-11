@@ -44,11 +44,11 @@ def code_hash() -> str:
     for f in sorted(os.listdir(here)):
         if f.endswith(".py"):
             with open(os.path.join(here, f), "rb") as fh:
-                h.update(f.encode() + fh.read())
+                h.update(f.encode() + fh.read().replace(b"\r\n", b"\n"))     # same hash on a CRLF checkout
     page = os.path.join(STATIC, "index.html")
     if os.path.exists(page):
         with open(page, "rb") as fh:
-            h.update(fh.read())
+            h.update(fh.read().replace(b"\r\n", b"\n"))
     return h.hexdigest()[:12]
 
 
