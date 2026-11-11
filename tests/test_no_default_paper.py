@@ -216,22 +216,14 @@ def test_claude_md_carries_the_rule():
 # ---------------------------------------------------------------------------
 @needs_real_paper
 def test_run_interpret_reaches_gate_a_with_the_workbook_absent(tmp_path):
-    """The claim, tested by removing the data rather than by reading the code."""
-    xlsx = ROOT / "data/raw/NSE_Broad_Factor_Indices_Historical_Data.xlsx"
-    stash = tmp_path / xlsx.name
-    had = xlsx.exists()
-    if had:
-        xlsx.rename(stash)
-    try:
-        r = _run("run_interpret.py", "--pdf", EXAMPLE,
-                 "--card", "examples/cards/devanathan_2026_india_factor_adaptation.yaml")
-        assert r.returncode == 0, r.stdout[-3000:] + r.stderr[-3000:]
-        assert "GATE A" in r.stdout
-        assert "decision: PENDING" in r.stdout
-        assert "WHAT THIS PAPER WOULD NEED FROM YOU" in r.stdout
-    finally:
-        if had:
-            stash.rename(xlsx)
+    """The claim, tested by pointing the loader at a workbook that does not exist (never by touching data/raw/)."""
+    env = dict(os.environ, LIGHTYEAR_INDEX_WORKBOOK=str(tmp_path / "no_such_workbook.xlsx"))
+    r = _run("run_interpret.py", "--pdf", EXAMPLE,
+             "--card", "examples/cards/devanathan_2026_india_factor_adaptation.yaml", env=env)
+    assert r.returncode == 0, r.stdout[-3000:] + r.stderr[-3000:]
+    assert "GATE A" in r.stdout
+    assert "decision: PENDING" in r.stdout
+    assert "WHAT THIS PAPER WOULD NEED FROM YOU" in r.stdout
 
 
 def test_run_interpret_never_imports_a_data_loader():

@@ -20,6 +20,7 @@ from ros.agents.client import (
     shared_system,
 )
 from ros.agents.orchestrator import AgenticPipeline, reconcile_feasibility
+from ros.governance.library import StrategyLibrary
 
 from data_needs import SYNTHETIC_PAPER
 
@@ -61,7 +62,7 @@ def test_invalid_drafted_card_is_caught_and_queued_not_executed(tmp_path):
     fx = _fixtures()
     fx["card_drafter"] = dict(fx["card_drafter"])
     fx["card_drafter"]["card_yaml"] = "paper: {id: x}\nnot_a_real_section: 1\n"
-    pipe = AgenticPipeline(mode="replay", fixtures=fx)
+    pipe = AgenticPipeline(mode="replay", fixtures=fx, library=StrategyLibrary(str(tmp_path / "library")))
     res = pipe.run_interpretation(SYNTHETIC_PAPER,
                                   "adaptation", str(tmp_path))
     assert res.card_valid is False
@@ -101,27 +102,27 @@ def test_disagreement_between_model_and_gate_is_surfaced_not_resolved():
     assert det.verdict == "FAIL_FAST"
 
 
-def test_review_queue_routes_low_confidence_to_humans():
+def test_review_queue_routes_low_confidence_to_humans(tmp_path):
     fx = _fixtures()
     fx["paper_analyst"] = dict(fx["paper_analyst"])
     fx["paper_analyst"]["overall_confidence"] = "low"
-    res = AgenticPipeline(mode="replay", fixtures=fx).run_interpretation(
-        SYNTHETIC_PAPER, "adaptation", "/tmp/agq")
+    res = AgenticPipeline(mode="replay", fixtures=fx, library=StrategyLibrary(str(tmp_path / "library"))).run_interpretation(
+        SYNTHETIC_PAPER, "adaptation", str(tmp_path / "out"))
     assert any("confidence is low" in q for q in res.human_review_queue)
 
 
-def test_material_critic_findings_always_reach_the_queue():
-    res = AgenticPipeline(mode="replay", fixtures=_fixtures()).run_interpretation(
-        SYNTHETIC_PAPER, "adaptation", "/tmp/agq2")
+def test_material_critic_findings_always_reach_the_queue(tmp_path):
+    res = AgenticPipeline(mode="replay", fixtures=_fixtures(), library=StrategyLibrary(str(tmp_path / "library"))).run_interpretation(
+        SYNTHETIC_PAPER, "adaptation", str(tmp_path / "out"))
     material = [f for f in res.critique.findings if f.materiality == S.Materiality.high]
     assert material
     for f in material:
         assert any(f.field in q for q in res.human_review_queue)
 
 
-def test_multiple_accounting_bases_trigger_a_human_check():
-    res = AgenticPipeline(mode="replay", fixtures=_fixtures()).run_interpretation(
-        SYNTHETIC_PAPER, "adaptation", "/tmp/agq3")
+def test_multiple_accounting_bases_trigger_a_human_check(tmp_path):
+    res = AgenticPipeline(mode="replay", fixtures=_fixtures(), library=StrategyLibrary(str(tmp_path / "library"))).run_interpretation(
+        SYNTHETIC_PAPER, "adaptation", str(tmp_path / "out"))
     assert any("accounting bases" in q for q in res.human_review_queue)
 
 
