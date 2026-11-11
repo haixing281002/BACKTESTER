@@ -1,3 +1,4 @@
+# Quant AI Researcher
 """Checks added with the 2026-10-28 checkup fixes: one Sharpe formula, run lineage, process hygiene."""
 import importlib
 import json
@@ -50,7 +51,7 @@ def test_run_manifest_round_trip_and_detects_a_changed_input(tmp_path):
     assert m["inputs"]["cache"]["files"] == 2 and m["inputs"]["cache"]["last"] == "2024-01-02.pkl"
     assert len(m["inputs"]["card"]["sha256"]) == 64 and m["script"]["sha256"]
     assert m["outputs"]["daily_returns.csv"] and m["outputs"]["missing.csv"] is None
-    assert m["written_at"].endswith("+05:30"), "manifest timestamps are Asia/Kolkata"
+    assert m["written_at"].endswith("+00:00"), "manifest timestamps are stored in UTC with their offset"
     assert m["params"] == {"sample_end": "2024-01-02"} and m["packages"]["pandas"]
     assert verify_run_manifest(p)["ok"]
     card.write_text("a: 2\n", encoding="utf-8")

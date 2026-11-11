@@ -182,8 +182,10 @@ def test_contract_rejects_a_model_decision(tmp_path):
         contract.check_results(str(tmp_path))
 
 
-def test_chart_metrics_count_every_return_including_the_first():
+def test_chart_metrics_count_every_return_including_the_first(monkeypatch):
     from lightyear import charts
+    sessions = pd.DatetimeIndex(pd.bdate_range("2021-12-01", "2023-12-31"))       # stands in for the NSE calendar
+    monkeypatch.setattr(charts, "nse_sessions", lambda: (sessions, "test calendar"))
     d = pd.Series(pd.bdate_range("2022-01-03", periods=300))
     r = pd.Series(np.random.default_rng(1).normal(5e-4, 0.01, 300))
     m = charts.metrics(r, d)
@@ -193,6 +195,14 @@ def test_chart_metrics_count_every_return_including_the_first():
     assert abs(m["cagr"] - ((v[-1] / 100) ** (1 / years) - 1)) < 1e-12
     assert abs(m["vol"] - r.std(ddof=1) * np.sqrt(252)) < 1e-12
     assert abs(m["max_dd"] - (-(v / np.maximum.accumulate(v) - 1).min())) < 1e-12
+
+
+def test_the_base_date_is_the_previous_nse_session_not_the_previous_weekday(monkeypatch):
+    """2021-12-31 (a Friday) is removed from the calendar as if it were a holiday: the base must be Thursday."""
+    from lightyear import charts
+    sessions = pd.DatetimeIndex([d for d in pd.bdate_range("2021-12-01", "2022-02-28") if d != pd.Timestamp("2021-12-31")])
+    monkeypatch.setattr(charts, "nse_sessions", lambda: (sessions, "test calendar"))
+    assert charts.start_date(pd.Series([pd.Timestamp("2022-01-03")])) == pd.Timestamp("2021-12-30")
 
 
 def test_the_repo_has_no_downloader():

@@ -78,8 +78,18 @@ _lock = threading.RLock()
 _procs = {}            # run_id -> Popen
 
 
+IST = dt.timezone(dt.timedelta(hours=5, minutes=30), "IST")
+
+
 def now():
-    return dt.datetime.now().isoformat(timespec="seconds")
+    """Every stored timestamp: UTC, ISO 8601 with its offset. The page shows it in IST."""
+    return dt.datetime.now(dt.UTC).isoformat(timespec="seconds")
+
+
+def parse_ts(s):
+    """A stored timestamp as an aware datetime. Runs before 2026-11-11 stored naive local (IST) times."""
+    t = dt.datetime.fromisoformat(s)
+    return t if t.tzinfo else t.replace(tzinfo=IST)
 
 
 def _sha(path):
@@ -301,7 +311,7 @@ def recover_interrupted():
 
 # ------------------------------------------------------------------ creating a run
 def create(pdf_rel, slug, operator, model, auto_continue):
-    rid = dt.datetime.now().strftime("%Y%m%d-%H%M%S") + "-" + uuid.uuid4().hex[:4]
+    rid = dt.datetime.now(IST).strftime("%Y%m%d-%H%M%S") + "-" + uuid.uuid4().hex[:4]   # an id, named in IST
     os.makedirs(run_dir(rid), exist_ok=True)
     stages = {sid: "pending" for sid, _ in prompts.STAGES_A + prompts.STAGES_B}
     st = {"id": rid, "slug": slug, "pdf": pdf_rel, "operator": operator, "model": model or "",
@@ -397,7 +407,7 @@ def stage_estimates():
                 continue
             for s, tt in times.items():
                 if s in samples and tt.get("start") and tt.get("end"):
-                    m = (dt.datetime.fromisoformat(tt["end"]) - dt.datetime.fromisoformat(tt["start"])).total_seconds() / 60
+                    m = (parse_ts(tt["end"]) - parse_ts(tt["start"])).total_seconds() / 60
                     if 0.1 <= m <= 240:
                         samples[s].append(m)
     est = {}
@@ -421,7 +431,7 @@ def eta(st):
     cur = st.get("current_stage") if st.get("current_stage") in ids else None
     elapsed = 0.0
     if cur and (st.get("stage_times", {}).get(cur) or {}).get("start"):
-        elapsed = (dt.datetime.now() - dt.datetime.fromisoformat(st["stage_times"][cur]["start"])).total_seconds() / 60
+        elapsed = (dt.datetime.now(dt.UTC) - parse_ts(st["stage_times"][cur]["start"])).total_seconds() / 60
     ci = ids.index(cur) if cur else -1
     left = sum(est[s] for s in ids[ci + 1:])
     if cur:
@@ -649,7 +659,7 @@ def build_outputs(rid, review=True):
     # an earlier session, or a results.json older than the approval, is a stale result and is refused)
     approved_at = (st.get("approval") or {}).get("at")
     if approved_at:
-        t_ok = dt.datetime.fromisoformat(approved_at).timestamp() - 120
+        t_ok = parse_ts(approved_at).timestamp() - 120
         old = [f for f in ("results.json", "daily_returns.csv", "manifest.json")
                if os.path.exists(os.path.join(rd, f)) and os.path.getmtime(os.path.join(rd, f)) < t_ok]
         if old:
@@ -763,7 +773,7 @@ def _workbook(rid, res, df, extra, observations, review):
         except PermissionError:
             # Windows locks a workbook that is open in Excel. Writing nothing would leave the page serving the
             # previous run's workbook beside this run's charts, so write a new file and serve that one instead.
-            xlsx = os.path.join(rd, f"{st['slug']}_results_{dt.datetime.now():%Y%m%d-%H%M%S}.xlsx")
+            xlsx = os.path.join(rd, f"{st['slug']}_results_{dt.datetime.now(IST):%Y%m%d-%H%M%S}.xlsx")
             log(rid, "error", f"The workbook is open in another program (Excel?) and could not be replaced; "
                 f"writing {os.path.basename(xlsx)} instead. Close the old file and use Rebuild to go back to one name.")
             workbook.build(rd, res, df, title, xlsx, **kw)

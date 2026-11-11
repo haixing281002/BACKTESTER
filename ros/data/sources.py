@@ -78,8 +78,8 @@ def now_ist() -> dt.datetime:
 
 
 def stamp() -> str:
-    """ISO timestamp, tz-aware Asia/Kolkata, for provenance records."""
-    return now_ist().isoformat(timespec="seconds")
+    """ISO 8601 timestamp for provenance records: stored in UTC with its offset (shown in IST where displayed)."""
+    return dt.datetime.now(dt.UTC).isoformat(timespec="seconds")
 
 
 def require(path: str, what: str) -> str:

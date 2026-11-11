@@ -1,12 +1,15 @@
+# Quant AI Researcher
 """Series for the interactive charts, computed once on the server from daily_returns.csv.
 
 The page only draws; every number comes from here. Definitions match the workbook's formulas:
-  - value starts at 100 at the close BEFORE the first return (start = first date minus one business day),
-    so every daily return counts, including the first;
+  - value starts at 100 at the close BEFORE the first return (start = the NSE session before the first date, from the
+    NSE index workbook's own dates; never weekday logic), so every daily return counts, including the first;
   - CAGR on calendar days from that start / 365.25; volatility = stdev(daily) * sqrt(252);
   - Sharpe = (CAGR - hurdle) / volatility.
 """
+import functools
 import math
+import os
 
 import numpy as np
 import pandas as pd
@@ -15,8 +18,32 @@ HURDLE = 0.06
 ROLL = 63   # three months of trading days for rolling volatility
 
 
+@functools.lru_cache(maxsize=4)
+def _sessions(path: str, mtime: float) -> pd.DatetimeIndex:
+    from ros.data.loaders import load_nse_factor_workbook
+    frame, _ = load_nse_factor_workbook(path)
+    return pd.DatetimeIndex(sorted(pd.to_datetime(frame.index).unique()))
+
+
+def nse_sessions() -> tuple[pd.DatetimeIndex | None, str]:
+    """The NSE trading calendar as the index workbook saw it, and where it came from."""
+    from ros.data import sources
+    p = sources.NSE_INDEX_WORKBOOK
+    if p and os.path.isfile(p):
+        return _sessions(p, os.path.getmtime(p)), "NSE index workbook"
+    return None, "none: no NSE index workbook on this machine"
+
+
 def start_date(dates: pd.Series) -> pd.Timestamp:
-    return pd.Timestamp(dates.iloc[0]) - pd.offsets.BDay(1)
+    """The NSE session before the first return. Without the workbook (a data-less test machine) the previous calendar
+    day is used and calendar_source says so; a real run always has the workbook."""
+    first = pd.Timestamp(dates.iloc[0])
+    sessions, _ = nse_sessions()
+    if sessions is not None:
+        before = sessions[sessions < first]
+        if len(before):
+            return before[-1]
+    return first - pd.Timedelta(days=1)
 
 
 def value_path(r: pd.Series) -> np.ndarray:
@@ -103,7 +130,8 @@ def build(df: pd.DataFrame, names: dict, hurdle=HURDLE, comparators: pd.DataFram
     d = df["date"]
     t0 = start_date(d)
     dates = [t0.strftime("%Y-%m-%d")] + d.dt.strftime("%Y-%m-%d").tolist()
-    out = {"dates": dates, "start": dates[0], "names": {c: names.get(c, c) for c in cols},
+    out = {"dates": dates, "start": dates[0], "calendar_source": nse_sessions()[1],
+           "names": {c: names.get(c, c) for c in cols},
            "growth": {}, "drawdown": {}, "rolling_vol": {}, "metrics": {}, "hurdle": hurdle}
     for c in cols:
         r = df[c].fillna(0.0)

@@ -17,14 +17,12 @@ import os
 import platform
 import sys
 from collections.abc import Iterable
-from datetime import datetime
+from datetime import UTC, datetime
 from importlib import metadata
 from typing import Any
-from zoneinfo import ZoneInfo
 
 from ros.data.snapshot import _ENGINE_FILES, code_hash, git_commit, git_dirty, is_text_path, lf_chunks
 
-IST = ZoneInfo("Asia/Kolkata")
 SCHEMA = "lightyear-run-manifest/1"
 _PACKAGES = ("pandas", "numpy", "scipy", "statsmodels", "openpyxl", "pyyaml", "pydantic")
 _CHUNK = 1 << 20
@@ -111,7 +109,7 @@ def write_run_manifest(run_dir: str, script: str, inputs: dict[str, str], params
     script_abs = os.path.abspath(script)
     manifest = {
         "schema": SCHEMA,
-        "written_at": datetime.now(IST).isoformat(timespec="seconds"),
+        "written_at": datetime.now(UTC).isoformat(timespec="seconds"),     # stored in UTC with its offset
         "run_dir": _rel(run_dir, repo),
         "script": {"path": _rel(script_abs, repo), "sha256": sha256_file(script_abs)},
         "git_commit": git_commit(repo),

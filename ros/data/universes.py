@@ -1,3 +1,4 @@
+# Quant AI Researcher
 """Universe translation: what the paper studied -> what we can test in India.
 
 THE PROBLEM THIS SOLVES
@@ -892,12 +893,13 @@ class UniverseFit:
 
 
 def _years_since(date_str: str) -> float:
-    from datetime import date
+    from datetime import date, datetime
+    from zoneinfo import ZoneInfo
     try:
         y, m, d = (int(x) for x in date_str.split("-"))
     except (ValueError, AttributeError):
         return 0.0
-    return (date.today() - date(y, m, d)).days / 365.25
+    return (datetime.now(ZoneInfo("Asia/Kolkata")).date() - date(y, m, d)).days / 365.25   # today in IST
 
 
 def score_universe(u: UniverseDef, req: MechanismRequirements) -> UniverseFit:

@@ -248,6 +248,13 @@ function md(s){ if(window.marked && window.DOMPurify) return DOMPurify.sanitize(
 function pct(x,d=1){ return (x==null||isNaN(x)) ? "–" : (x*100).toFixed(d)+"%" }
 function num(x,d=2){ return (x==null||isNaN(x)) ? "–" : Number(x).toFixed(d) }
 function mins(m){ if(m==null) return "–"; if(m < 1) return "under a minute"; const r = Math.round(m); return r >= 60 ? `${Math.floor(r/60)} h ${r%60} min` : `${r} min` }
+// Timestamps are stored in UTC with an offset and shown in IST. Older runs stored naive local (IST) times: shown as is.
+function ist(iso){ if(!iso) return ""; iso = String(iso);
+  if(!/(Z|[+-]\d\d:\d\d)$/.test(iso)) return iso.replace("T"," ");
+  const p = new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Kolkata",year:"numeric",month:"2-digit",day:"2-digit",
+    hour:"2-digit",minute:"2-digit",second:"2-digit",hourCycle:"h23"}).formatToParts(new Date(iso));
+  const g = t => p.find(x => x.type === t).value;
+  return `${g("year")}-${g("month")}-${g("day")} ${g("hour")}:${g("minute")}:${g("second")} IST` }
 function ago(iso){ if(!iso) return ""; const s = (Date.now() - new Date(iso).getTime())/1000; return s < 60 ? "just now" : s < 3600 ? `${Math.round(s/60)} min ago` : "" }
 function yamlHL(s){ return esc(s).split("\n").map(l => {
   if(/^\s*#/.test(l)) return `<span class="yc">${l}</span>`;
@@ -277,7 +284,7 @@ async function refreshRuns(){
   const runs = await api("/api/runs"); RUNS = runs;
   $("#runlist").innerHTML = runs.length ? runs.map(r => `<li class="${r.id===CUR?'sel':''}" onclick="openRun('${r.id}')">
      <div class="t">${esc(r.paper_title || r.slug)}</div>
-     <div class="s"><span class="pill ${r.status}">${esc(STATUS_TEXT[r.status]||r.status)}</span> ${esc((r.created||"").replace("T"," ").slice(0,16))}</div>
+     <div class="s"><span class="pill ${r.status}">${esc(STATUS_TEXT[r.status]||r.status)}</span> ${esc(ist(r.created).slice(0,16))}</div>
      <div class="s" style="font-family:monospace;font-size:11px">${esc(r.id)}</div></li>`).join("")
     : `<li class="muted small" style="cursor:default">No runs yet.</li>`;
 }
@@ -366,7 +373,7 @@ async function tick(){
   const shaA = pv.card_sha256_approved || pv.card_sha256_run, shaNow = pv.card_sha256_on_disk;
   const stale = shaA && shaNow && shaA !== shaNow;
   const codeStale = pv.code_hash_server && pv.code_hash_disk && pv.code_hash_server !== pv.code_hash_disk;
-  $("#rprov").innerHTML = `<b>Run ${esc(st.id)}</b> · created ${esc((st.created||"").replace("T"," "))}${st.rerun_of?` · re-run of ${esc(st.rerun_of)}`:""}
+  $("#rprov").innerHTML = `<b>Run ${esc(st.id)}</b> · created ${esc(ist(st.created))}${st.rerun_of?` · re-run of ${esc(st.rerun_of)}`:""}
     · card ${esc(pv.card_path||"?")} sha256 <code>${esc((shaA||"?").slice(0,12))}</code>${stale?` <span style="color:var(--red)"><b>card on disk has changed since approval (now ${esc(shaNow.slice(0,12))})</b></span>`:""}
     · code ${esc(pv.code_hash_server||"?")}${codeStale?` <span style="color:var(--red)"><b>server is running old code (disk ${esc(pv.code_hash_disk)}); restart Lightyear</b></span>`:""} · backtest ran on git ${esc(pv.git_commit||"?")}${pv.git_dirty?` <span style="color:var(--red)"><b>with uncommitted changes</b></span>`:""}
     ${RUNS.length && RUNS[0].id !== st.id ? ` · <span style="color:#8a5a00"><b>a newer run exists:</b> <a href="#" onclick="openRun('${esc(RUNS[0].id)}');return false">${esc(RUNS[0].id)}</a></span>`:""}`;
@@ -378,7 +385,7 @@ async function tick(){
   if(st.error && !running) b = `<div class="banner err">${esc(st.error)}</div>`;
   else if(st.status==="gate_a") b = `<div class="banner info"><b>Gate A is ready for you.</b> Read what will be tested, tick each item you agree with, then approve. Or ask for changes.</div>`;
   else if(st.status==="gate_b") b = `<div class="banner info"><b>The backtest is done.</b> Look at the results, then record your decision on the Gate B tab.</div>`;
-  else if(st.status==="decided") b = `<div class="banner ok">Decision recorded: <b>${esc(st.decision.decision)}</b> by ${esc(st.decision.decided_by)} at ${esc(st.decision.at.replace("T"," "))}.</div>`;
+  else if(st.status==="decided") b = `<div class="banner ok">Decision recorded: <b>${esc(st.decision.decision)}</b> by ${esc(st.decision.decided_by)} at ${esc(ist(st.decision.at))}.</div>`;
   $("#rbanner").innerHTML = b;
   renderTrack(st);
   if(prev && prev !== st.status){ if(!USER_TAB || ["gate_a","gate_b"].includes(st.status)) TAB = defaultTab(st); USER_TAB = false; refreshRuns(); H = await api("/api/health") }
@@ -466,7 +473,7 @@ async function pullLog(){
   if(!r.items.length) return;
   LOGNEXT = r.next;
   const box = $("#log");
-  box.insertAdjacentHTML("beforeend", r.items.map(e => `<div class="e ${e.kind}"><span class="k">${esc(e.t.slice(11))}</span>${esc(e.kind==="tool_out"? "  ↳ "+e.msg : e.msg)}</div>`).join(""));
+  box.insertAdjacentHTML("beforeend", r.items.map(e => `<div class="e ${e.kind}"><span class="k">${esc(ist(e.t).slice(11,19))}</span>${esc(e.kind==="tool_out"? "  ↳ "+e.msg : e.msg)}</div>`).join(""));
   if($("#follow")?.checked) box.scrollTop = box.scrollHeight;
 }
 
@@ -510,14 +517,14 @@ function renderGateA(st){
      <p class="small muted" style="margin-top:0">Where our data or system is weaker than the paper's. These limit what the result can prove.</p>
      ${gaps.map(g=>`<div class="gap"><div><span class="tag ${esc(g.severity)}">${esc(g.severity)}</span></div><div><b>${esc(g.gap)}</b></div><div class="e">${esc(g.effect)}</div></div>`).join("")}</div>`:""}
    ${(st.revisions||[]).length?`<div class="card"><h2>Changes you asked for at Gate A</h2>
-     <ol>${st.revisions.map(r=>`<li><span class="small muted">${esc((r.at||"").replace("T"," "))}</span> ${esc(r.notes)}</li>`).join("")}</ol>
+     <ol>${st.revisions.map(r=>`<li><span class="small muted">${esc(ist(r.at))}</span> ${esc(r.notes)}</li>`).join("")}</ol>
      <p class="small muted" style="margin:0">Each one was applied to the card, and all of them are handed to the backtest session together with the approved card.</p></div>`:""}
    ${at?`<div class="card"><h2>Your call at Gate A</h2>
      <div class="grid2"><div><label>Approved by</label><input id="ga_by" value="${esc(LS.get('ly_operator',st.operator))}"></div><div></div></div>
      <label>Notes: instructions for the backtest, or what to change in the card</label><textarea id="ga_notes"></textarea>
      <div class="row" style="margin-top:12px"><button class="primary" id="ga_go" onclick="approveA()">Approve and run the backtest</button>
        <button onclick="reviseA()">Revise the card with these notes</button><span class="small muted" id="ga_msg"></span></div></div>`
-   : st.approval?`<div class="banner ok">Approved by ${esc(st.approval.by)} at ${esc(st.approval.at.replace("T"," "))}${st.approval.notes?` · notes: ${esc(st.approval.notes)}`:""}${st.approval.card_sha256?` · card pinned at sha256 ${esc(st.approval.card_sha256.slice(0,12))}`:""}${(st.revisions||[]).length?` · ${st.revisions.length} revision(s) handed to the backtest`:""}</div>`:""}
+   : st.approval?`<div class="banner ok">Approved by ${esc(st.approval.by)} at ${esc(ist(st.approval.at))}${st.approval.notes?` · notes: ${esc(st.approval.notes)}`:""}${st.approval.card_sha256?` · card pinned at sha256 ${esc(st.approval.card_sha256.slice(0,12))}`:""}${(st.revisions||[]).length?` · ${st.revisions.length} revision(s) handed to the backtest`:""}</div>`:""}
    <div class="card"><h2>Details for reviewers</h2>
      <div class="facts" style="margin-bottom:8px"><div>Card file</div><div><div class="path"><span title="${esc(cardAbs)}">${esc(cardAbs)}</span><button onclick="copy(this.previousElementSibling.title,this)">copy</button></div></div></div>
      ${(pa.open_questions||[]).length?`<details><summary>Other open questions (${pa.open_questions.length})</summary><ul>${pa.open_questions.map(q=>`<li>${esc(q)}</li>`).join("")}</ul></details>`:""}
@@ -767,7 +774,7 @@ function renderGateB(st){
       <label>Rationale</label><textarea id="gb_why"></textarea>
       <div class="row" style="margin-top:12px"><button class="primary" onclick="decideB()">Record decision</button><span class="small muted" id="gb_msg"></span></div>
       <p class="small muted">Recording it from a terminal instead (run_pipeline.py --decision)? It needs this server's token, valid while Lightyear runs: <code>${esc(LY_TOKEN)}</code></p></div>`
-    : st.decision?`<div class="card"><h2>Decision on record</h2><div class="facts"><div>Decision</div><div class="d-${esc(st.decision.decision)}"><b>${esc(st.decision.decision)}</b></div><div>By</div><div>${esc(st.decision.decided_by)}</div><div>When</div><div>${esc(st.decision.at.replace("T"," "))}</div><div>Rationale</div><div>${esc(st.decision.rationale)}</div></div></div>`:""}
+    : st.decision?`<div class="card"><h2>Decision on record</h2><div class="facts"><div>Decision</div><div class="d-${esc(st.decision.decision)}"><b>${esc(st.decision.decision)}</b></div><div>By</div><div>${esc(st.decision.decided_by)}</div><div>When</div><div>${esc(ist(st.decision.at))}</div><div>Rationale</div><div>${esc(st.decision.rationale)}</div></div></div>`:""}
     <div class="card"><h2>Gate B brief</h2><div class="md">${st.gate_b_md?md(st.gate_b_md):"(no brief file)"}</div></div>`;
 }
 function pickDec(d){ DEC = d; document.querySelectorAll(".decide button").forEach(b=>b.classList.toggle("on", b.textContent===d)) }
