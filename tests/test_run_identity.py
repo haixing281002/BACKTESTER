@@ -85,9 +85,11 @@ def test_two_runs_two_ids_two_card_shas_newest_first(client):
     assert [r["id"] for r in runs[:2]] == [rid2, rid1]        # newest first on the page
     for rid, st in ((rid1, st1), (rid2, st2)):
         assert rid in st["workbook"]                          # file name carries the run id
-        wb = load_workbook(os.path.join(run_dir(rid), st["workbook"]), read_only=True)
-        a3 = str(wb["Summary"]["A3"].value)
-        assert rid in a3 and st["provenance"]["card_sha256_approved"][:12] in a3
+        # Wave 6: two workbooks per run; each names the run and the approved card on its first sheet
+        for name, sheet, cell in ((st["workbook"], "Returns overview", "A4"), (st["diagnostics_workbook"], "Summary", "A3")):
+            assert rid in name
+            line = str(load_workbook(os.path.join(run_dir(rid), name), read_only=True)[sheet][cell].value)
+            assert rid in line and st["provenance"]["card_sha256_approved"][:12] in line
         r = client.get(f"/api/runs/{rid}/workbook")
         assert r.status_code == 200 and rid in r.headers["content-disposition"] and r.headers["cache-control"] == "no-store"
 

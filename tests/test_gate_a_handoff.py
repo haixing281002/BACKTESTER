@@ -95,7 +95,7 @@ def test_revision_at_gate_a_reaches_phase_b_page_and_workbook(client):
     assert any(n.startswith("PROMPT-NOTES:") and sentinel in n for n in results["notes"])
     assert st["approval"]["card_sha256"] and len(st["approval"]["card_sha256"]) == 64   # the card is pinned at approval
     assert st["card_checks"] and all(c["ok"] for c in st["card_checks"])                 # and the run matched it
-    notes_sheet = load_workbook(os.path.join(rd, st["workbook"]))["Notes"]
+    notes_sheet = load_workbook(os.path.join(rd, st["diagnostics_workbook"]))["Notes"]     # Wave 6: the run notes are in the diagnostics workbook
     cells = " ".join(str(c.value) for row in notes_sheet.iter_rows() for c in row if c.value)
     assert sentinel in cells and "approved by auditor" in cells.lower()  # the workbook records both
 
