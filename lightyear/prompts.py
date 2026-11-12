@@ -93,6 +93,23 @@ EARLY, as soon as you have read the paper (during stage 01, before drafting the 
 one line, two or three surprising details, the paper's history/influence if you know it reliably, and 4-6 terms
 from the paper explained simply. Only things that are in the paper or that you are certain of.
 
+BEFORE the hand-off, write the ANALYST READ  {run_dir}/analyst_read.json : one page, your own read of this paper and
+card, written now, before any backtest exists. It is pinned (hashed) with the card when the operator approves and is
+shown beside the results afterwards, so that what you expected can be compared with what happened. It is an opinion,
+labelled as written by a model: compute nothing, and quote only numbers that are in the paper (with the page).
+Exactly these keys, each a plain-English string of 60 to 130 words unless stated:
+{{
+  "claims": "<what the paper claims, with its own reported numbers and its sample>",
+  "why_it_should_work": "<the mechanism, and which known factor it resembles>",
+  "expect_in_india": "<likely behaviour in each market phase named in config/market_phases.yaml, likely turnover, concentration and cash share>",
+  "data_and_feasibility": "<what the rules need, what is on file, what is missing or approximated>",
+  "risks_and_traps": "<look-ahead, survivorship, crowding, costs: how THIS test could mislead>",
+  "what_would_change_my_mind": "<the results that would count as a failure, stated now, as checkable statements>",
+  "read": "backtest as written" | "backtest with listed changes" | "do not backtest",
+  "read_reason": "<one or two sentences>",
+  "listed_changes": ["<only for 'backtest with listed changes': one sentence each; otherwise empty>"]
+}}
+
 STOP after Gate A. Do NOT start stage 03, do NOT run a backtest.
 
 Finally write the hand-off file  {run_dir}/phase_a.json  with exactly these keys. Be CONCISE: this is what the

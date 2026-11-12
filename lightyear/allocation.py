@@ -21,7 +21,19 @@ import numpy as np
 import pandas as pd
 
 from ros import config
-from universal_backtester.xlsx_style import BOX, DATE, F_BASE, F_BOLD, F_INPUT, F_NOTE, F_TITLE, PCT2, header, put, widths
+from universal_backtester.xlsx_style import (
+    BOX,
+    DATE,
+    F_BASE,
+    F_BOLD,
+    F_INPUT,
+    F_NOTE,
+    F_TITLE,
+    PCT2,
+    header,
+    put,
+    widths,
+)
 
 CAP = ["Large cap (Nifty 100)", "Mid cap (Midcap 150)", "Small cap (Smallcap 250)", "Not in the quarterly list"]
 SHEET = "Allocation"
@@ -110,7 +122,7 @@ def build(df: pd.DataFrame, holdings: pd.DataFrame | None, se_block: dict[str, A
             "sector_status": "shown" if sector_ok else "left out: the 45-to-11 sector grouping in config/sector_groups.yaml is a draft awaiting the operator's approval",
             "no_price": sorted(no_price),
             "note": (f"Financial years April to March, by execution date, {first.date()} to {last.date()}; the first and last years are part years. "
-                     f"{len(per)} holding periods. Prices are Ace adjusted closes; {len(no_price)} holding(s) with no price in a period are counted at a zero return. "
+                     f"{len(per)} holding periods. A bucket holding one small position takes that one stock's return, so a year's figure can be extreme. Prices are Ace adjusted closes; {len(no_price)} holding(s) with no price in a period are counted at a zero return. "
                      + ("" if sector_ok else "Sector tables are left out until the sector grouping is approved."))}
 
 

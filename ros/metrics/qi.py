@@ -163,7 +163,7 @@ def quarterly_capture(quarters: list[dict[str, Any]]) -> dict[str, Any]:
     q = [t for t in quarters if not t["part"]]
     s, b = np.asarray([t["strategy"] for t in q]), np.asarray([t["benchmark"] for t in q])
     up, dn = b >= 0, b < 0
-    m = lambda x, k: float(x[k].mean()) if k.any() else NAN   # noqa: E731
+    m = lambda x, k: float(x[k].mean()) if k.any() else NAN
     su, sd, bu, bd = m(s, up), m(s, dn), m(b, up), m(b, dn)
     uc, dc = _div(su, bu), _div(sd, bd)
     return {"quarters": len(q), "rising_quarters": int(up.sum()), "falling_quarters": int(dn.sum()),

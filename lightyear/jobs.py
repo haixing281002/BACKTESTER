@@ -32,7 +32,7 @@ from ros import config
 from ros.cards.schema import load_card
 from ros.metrics import core
 
-from . import allocation, changelog, charts, contract, gate_run, gates, main_workbook, prompts, spec_audit, wording, workbook
+from . import allocation, analyst_read, changelog, charts, contract, gate_run, gates, main_workbook, prompts, spec_audit, wording, workbook
 from .paths import LEDGER, REPO, RUNS, code_hash, find_claude, git_bash, git_commit, rel, run_dir
 
 _log = logging.getLogger("lightyear")
@@ -984,9 +984,18 @@ def approve(rid, by, notes=""):
         if os.path.isfile(src):
             with open(src, encoding="utf-8") as fh, open(os.path.join(run_dir(rid), "card_approved.yaml"), "w", encoding="utf-8") as out:
                 out.write(fh.read())
+        try:        # the analyst read, written before any backtest, is hashed with the card it was written for
+            origin = st.get("analyst_read_origin") or {}
+            approval["analyst_read"] = analyst_read.pin(run_dir(rid), src, now(), origin.get("written", analyst_read.BEFORE))
+            if approval["analyst_read"] and origin:
+                approval["analyst_read"]["first_pinned_at"] = origin.get("first_pinned_at") or origin.get("pinned_at")
+        except (ValueError, json.JSONDecodeError) as e:
+            approval["analyst_read"] = None
+            log(rid, "error", f"Analyst read not pinned: {e}")
         st = update(rid, approval=approval, status="phase_b")
     log(rid, "gate", f"Gate A approved by {by}. Card {card_path} pinned at sha256 {(approval['card_sha256'] or '?')[:12]}; "
-        f"{len(st.get('revisions') or [])} revision(s) on record.")
+        f"{len(st.get('revisions') or [])} revision(s) on record; analyst read "
+        + (f"pinned with it ({approval['analyst_read']['card_and_read_sha256'][:12]})." if approval.get("analyst_read") else "not written, so none is pinned."))
     start(phase_b, rid)
     return st
 
@@ -1010,6 +1019,11 @@ def rerun_from(src_rid, by, extra_note="", src_dir=None, hold_at_gate_a=False):
         if os.path.exists(p):
             with open(p, encoding="utf-8") as fh, open(os.path.join(run_dir(rid), f), "w", encoding="utf-8") as out:
                 out.write(fh.read())
+    # the analyst read travels with the card, byte for byte, and keeps the label it was first pinned under
+    origin = (src.get("approval") or {}).get("analyst_read") or src.get("analyst_read_pin")
+    if origin and os.path.exists(os.path.join(src_dir, analyst_read.FILE)):
+        with open(os.path.join(src_dir, analyst_read.FILE), "rb") as fh, open(os.path.join(run_dir(rid), analyst_read.FILE), "wb") as out:
+            out.write(fh.read())
     revisions = list(src.get("revisions") or [])
     if not revisions and os.path.exists(os.path.join(src_dir, "log.jsonl")):
         with open(os.path.join(src_dir, "log.jsonl"), encoding="utf-8") as fh:
@@ -1027,7 +1041,7 @@ def rerun_from(src_rid, by, extra_note="", src_dir=None, hold_at_gate_a=False):
         st = load(rid)
         for s, _ in prompts.STAGES_A:
             st["stages"][s] = "done"
-        st.update(phase_a=src["phase_a"], paper_title=src.get("paper_title"), revisions=revisions,
+        st.update(phase_a=src["phase_a"], paper_title=src.get("paper_title"), revisions=revisions, analyst_read_origin=origin,
                   rerun_of=src_rid, current_stage="GA", status="gate_a")   # inherited Gate A; approved just below
         save(st)
     log(rid, "server", f"Re-run of {src_rid} from its approved card; {len(revisions)} revision(s) carried over.")

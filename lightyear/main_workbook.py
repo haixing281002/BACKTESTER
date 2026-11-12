@@ -26,13 +26,30 @@ from typing import Any
 
 from openpyxl import Workbook
 from openpyxl.chart import BarChart, LineChart, Reference
+from openpyxl.chart.data_source import NumFmt
 from openpyxl.utils import get_column_letter as L
 from openpyxl.worksheet.formula import ArrayFormula
 
 from ros.metrics import qi as qi_mod
 from ros.metrics import se
-from universal_backtester.xlsx_style import (BOX, DATE, F_BASE, F_BOLD, F_INPUT, F_LINK, F_NOTE, F_SUB, F_TITLE, FILL_KEY, INT, NUM2, PCT2,
-                                             header, name, put, widths)
+from universal_backtester.xlsx_style import (
+    BOX,
+    DATE,
+    F_BASE,
+    F_BOLD,
+    F_INPUT,
+    F_LINK,
+    F_NOTE,
+    F_TITLE,
+    FILL_KEY,
+    INT,
+    NUM2,
+    PCT2,
+    header,
+    name,
+    put,
+    widths,
+)
 
 from . import se_sheet, workbook
 
@@ -61,12 +78,22 @@ def _lab(ws, ref, text, font=F_BASE):
     put(ws, ref, text, font, border=True)
 
 
+def _frame(ch, title, y_fmt, y_title, r0, r1, width, height):
+    """Title above the plot, legend below it, month labels along the bottom edge."""
+    ch.height, ch.width = height, width
+    if title:
+        ch.title = title
+        ch.title.overlay = False
+    ch.y_axis.number_format = y_fmt       # no axis title: Excel draws it over the tick labels; the chart title says what is plotted
+    ch.x_axis.numFmt = NumFmt(formatCode="mmm yy", sourceLinked=False)
+    ch.x_axis.tickLblSkip, ch.x_axis.tickLblPos = max(1, (r1 - r0) // 10), "low"
+    ch.x_axis.delete = ch.y_axis.delete = False
+    ch.legend.position, ch.legend.overlay = "b", False
+
+
 def _line(title, ws, cols, r0, r1, colours, y_fmt, y_title, head=4, width=22, height=9):
     ch = LineChart()
-    ch.title, ch.height, ch.width = title, height, width
-    ch.y_axis.title, ch.y_axis.number_format = y_title, y_fmt
-    ch.x_axis.number_format, ch.x_axis.tickLblSkip = "mmm yy", max(1, (r1 - r0) // 10)
-    ch.x_axis.delete = ch.y_axis.delete = False
+    _frame(ch, title, y_fmt, y_title, r0, r1, width, height)
     for c in cols:
         ch.add_data(Reference(ws, min_col=c, min_row=head, max_row=r1), titles_from_data=True)
     ch.set_categories(Reference(ws, min_col=1, min_row=r0, max_row=r1))
@@ -74,16 +101,13 @@ def _line(title, ws, cols, r0, r1, colours, y_fmt, y_title, head=4, width=22, he
         s.graphicalProperties.line.solidFill = colour
         s.graphicalProperties.line.width = 17000
         s.smooth = False
-    ch.legend.position = "b"
     return ch
 
 
 def _bars(title, ws, cols, r0, r1, colours, y_fmt, y_title, head=4, stacked=False, width=22, height=9):
     ch = BarChart()
-    ch.type, ch.title, ch.height, ch.width = "col", title, height, width
-    ch.y_axis.title, ch.y_axis.number_format = y_title, y_fmt
-    ch.x_axis.number_format, ch.x_axis.tickLblSkip = "mmm yy", max(1, (r1 - r0) // 10)
-    ch.x_axis.delete = ch.y_axis.delete = False
+    ch.type = "col"
+    _frame(ch, title, y_fmt, y_title, r0, r1, width, height)
     if stacked:
         ch.grouping, ch.overlap = "stacked", 100
     for c in cols:
@@ -91,8 +115,8 @@ def _bars(title, ws, cols, r0, r1, colours, y_fmt, y_title, head=4, stacked=Fals
     ch.set_categories(Reference(ws, min_col=1, min_row=r0, max_row=r1))
     for s, colour in zip(ch.series, colours):
         s.graphicalProperties.solidFill = colour
+        s.invertIfNegative = False
         s.graphicalProperties.line.solidFill = colour
-    ch.legend.position = "b"
     return ch
 
 
@@ -112,8 +136,8 @@ def build(run_dir: str, results: dict[str, Any], df, title: str, out_path: str, 
     R = where["rows"]
     rf = SEQ + where["inputs"]["RF"]
     n = len(blk["months"])
-    K = lambda lab: f"={SEQ}K{R[lab]}"      # noqa: E731  the strategy's SE cell
-    B = lambda lab: f"={SEQ}L{R[lab]}"      # noqa: E731  the benchmark's SE cell
+    K = lambda lab: f"={SEQ}K{R[lab]}"
+    B = lambda lab: f"={SEQ}L{R[lab]}"
     cm = blk["complete_months"]
     foot = (f"Complete calendar months only: {n} months, {cm['first_month']} to {cm['last_month']}. "
             + (" ".join(f"Left out: {x['days']} daily returns of {x['month']} ({x['from']} to {x['to']}); {x['why']}." for x in cm["left_out"]) or "No daily return is left out.")
@@ -129,14 +153,14 @@ def build(run_dir: str, results: dict[str, Any], df, title: str, out_path: str, 
     for k_ in (12, 36):
         heads += [f"{k_}m return, strategy", f"{k_}m return, benchmark", f"{k_}m alpha", f"{k_}m Sharpe, strategy", f"{k_}m Sharpe, benchmark", f"{k_}m excess Sharpe"]
     heads += [f"12m coefficient: {x}" for x in (fac or ["", "", "", ""])]
-    for who in (s_name, b_name, "Alpha"):
+    for who in ("Strategy", "Benchmark", "Alpha"):
         heads += [f"{who} {x}" for x in ("95% VaR", "99% VaR", "95% CVaR", "99% CVaR")]
     heads += ["Phase band A", "Phase band B"]
     put(wm, "A1", "Monthly series behind the charts", F_TITLE)
     put(wm, "A2", "Formulas over the SE Return Analytics sheet, month by month. Blue = the factor indices' monthly returns, compounded from the NSE index workbook's daily "
         f"closes on the run's own days (price indices, no dividends). {SIGN}", F_NOTE)
     header(wm, 4, heads, height=58)
-    put(wm, "A5", "start", F_NOTE)
+    _f(wm, "A5", f"=EOMONTH(A{m0},-1)", DATE)      # the start row: the month-end before the first month
     for c in ("E", "F"):
         put(wm, f"{c}5", 100, F_INPUT, "0.00")
     C = {"r12": 13, "r36": 19, "coef": 25, "var": 29, "band": 41}      # first column of each block (1-based)
@@ -237,7 +261,7 @@ def build(run_dir: str, results: dict[str, Any], df, title: str, out_path: str, 
     widths(wo, [46, 22, 26, 14, 10, 16])
 
     # ------------------------------------------------------------------------------------------------ Market phases
-    wp = sheet("Market phases", f"NIFTY 500 phases named by the operator (config/market_phases.yaml). Annualised = (1 + absolute return)^(12 / months) - 1, whatever the "
+    wp = sheet("Market phases", "NIFTY 500 phases named by the operator (config/market_phases.yaml). Annualised = (1 + absolute return)^(12 / months) - 1, whatever the "
                                 "length, as the reference deck's table does; a phase shorter than a year is therefore scaled up. Months after the last named phase are Unclassified.")
     r = r0 = table(wp, 4, ["Phase", "Months covered", "Strategy annualised", f"{b_lab} annualised", "Alpha", "Length (months)", "Wyckoff phase", "Market term",
                            "Strategy absolute", f"{b_lab} absolute", "Chart label"])
@@ -262,18 +286,16 @@ def build(run_dir: str, results: dict[str, Any], df, title: str, out_path: str, 
         r += 1
     put(wp, f"A{r}", "The chart shades each phase in turn; its name and the index's absolute return in it are in the Chart label column.", F_NOTE)
     band = BarChart()
-    band.type, band.gapWidth, band.title, band.height, band.width = "col", 0, f"Market phases: {b_name} (100 at start), each phase shaded", 10, 30
+    band.type, band.gapWidth = "col", 0
+    _frame(band, f"Market phases: {b_name} (100 at start), each phase shaded", "0", "Value (100 = start)", 5, m1, 30, 10)
     for c, colour in ((C["band"], "DCE6F1"), (C["band"] + 1, "F2F2F2")):
         band.add_data(Reference(wm, min_col=c, min_row=4, max_row=m1), titles_from_data=True)
         band.series[-1].graphicalProperties.solidFill = colour
         band.series[-1].graphicalProperties.line.solidFill = colour
     band.set_categories(Reference(wm, min_col=1, min_row=5, max_row=m1))
-    band.x_axis.number_format, band.x_axis.tickLblSkip = "mmm yy", max(1, n // 12)
-    band.x_axis.delete = band.y_axis.delete = False
     band.overlap = 100
     idx_line = _line("", wm, [6], 5, m1, [C_BENCH], "0", "")
     band += idx_line
-    band.legend.position = "b"
     wp.add_chart(band, f"A{r + 2}")
     widths(wp, [34, 22, 16, 18, 12, 12, 20, 26, 16, 18, 30])
 
@@ -306,7 +328,7 @@ def build(run_dir: str, results: dict[str, Any], df, title: str, out_path: str, 
                 items.append((f"Rolling {win} months: series", f"{blk['months'][e][:7]}, {key}", v, f"{MSQ}{L(c0 + j)}{m0 + e}"))
         c1 = _line(f"Rolling {win // 12}-year: alpha and excess Sharpe", wm, [c0 + 2], 5, m1, [C_STRAT], "0%", "Alpha" + (" (annualised)" if win > 12 else ""))
         c2 = _line("", wm, [c0 + 5], 5, m1, [C_BENCH], "0.0", "Excess Sharpe")
-        c2.y_axis.axId, c2.y_axis.crosses = 200, "max"
+        c2.y_axis.axId, c2.y_axis.crosses, c2.y_axis.majorGridlines = 200, "max", None
         c1 += c2
         wl.add_chart(c1, anchor)
     widths(wl, [44, 18, 18])
@@ -412,7 +434,6 @@ def build(run_dir: str, results: dict[str, Any], df, title: str, out_path: str, 
         bar = _bars(f"Monthly returns, {nm}: tail risk", wm, [src], 5, m1, [C_STRAT if g != 1 else C_BENCH], "0%", "Monthly return", width=24, height=9)
         ln = _line("", wm, [c0 + j for j in range(4)], 5, m1, ["C00000", "7F0000", "ED7D31", "7030A0"], "0%", "")
         bar += ln
-        bar.legend.position = "b"
         wt.add_chart(bar, f"F{4 + 19 * g}")
     widths(wt, [30, 22, 26, 16])
 

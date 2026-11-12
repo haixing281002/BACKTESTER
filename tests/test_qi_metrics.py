@@ -130,3 +130,25 @@ def test_risk_table_tail_risk_and_quarterly_capture():
     assert c["upside_capture"] == pytest.approx(qs[qb >= 0].mean() / qb[qb >= 0].mean())
     assert c["capture_ratio"] == pytest.approx(c["upside_capture"] / c["downside_capture"])
     assert q["drawdown"]["strategy"][0] == 0.0 and min(q["drawdown"]["strategy"]) == pytest.approx(blk["values"]["Max Drawdown"][0])
+
+
+def test_the_analyst_read_is_pinned_with_the_card_and_a_changed_read_is_withheld(tmp_path):
+    import hashlib
+    import json
+
+    from lightyear import analyst_read as ar
+    card = tmp_path / "card.yaml"
+    card.write_text("strategy: x\n", encoding="utf-8")
+    assert ar.pin(str(tmp_path), str(card), "t0") is None and ar.for_page(str(tmp_path), None)["status"] == "none"
+    read = {k: f"text for {k}" for k, _ in ar.HEADINGS} | {"read": "backtest as written", "read_reason": "why", "listed_changes": []}
+    (tmp_path / ar.FILE).write_text(json.dumps(read), encoding="utf-8")
+    pin = ar.pin(str(tmp_path), str(card), "t0")
+    assert pin["card_and_read_sha256"] == hashlib.sha256(card.read_bytes() + (tmp_path / ar.FILE).read_bytes()).hexdigest() and pin["written"] == ar.BEFORE
+    page = ar.for_page(str(tmp_path), pin)
+    assert page["status"] == "pinned" and [s["heading"] for s in page["sections"]] == [h for _, h in ar.HEADINGS] and "model" in page["label"]
+    (tmp_path / ar.FILE).write_text(json.dumps(read | {"claims": "edited after the results"}), encoding="utf-8")
+    changed = ar.for_page(str(tmp_path), pin)
+    assert changed["status"] == "changed" and "sections" not in changed
+    (tmp_path / ar.FILE).write_text(json.dumps(read | {"read": "buy it"}), encoding="utf-8")
+    with pytest.raises(ValueError):
+        ar.load(str(tmp_path))

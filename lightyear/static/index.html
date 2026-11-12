@@ -520,6 +520,7 @@ function renderGateA(st){
    ${(st.revisions||[]).length?`<div class="card"><h2>Changes you asked for at Gate A</h2>
      <ol>${st.revisions.map(r=>`<li><span class="small muted">${esc(ist(r.at))}</span> ${esc(r.notes)}</li>`).join("")}</ol>
      <p class="small muted" style="margin:0">Each one was applied to the card, and all of them are handed to the backtest session together with the approved card.</p></div>`:""}
+   ${analystReadCard(st, "gate_a")}
    ${at?`<div class="card"><h2>Your call at Gate A</h2>
      <div class="grid2"><div><label>Approved by</label><input id="ga_by" value="${esc(LS.get('ly_operator',st.operator))}"></div><div></div></div>
      <label>Notes: instructions for the backtest, or what to change in the card</label><textarea id="ga_notes"></textarea>
@@ -613,6 +614,7 @@ function renderResults(st){
         ${renderValidationBlocks(r.validation||[])}
         ${(r.notes||[]).length?`<div class="card"><h3 style="margin-top:0">Caveats</h3><ul>${r.notes.map(n=>`<li>${esc(n)}</li>`).join("")}</ul></div>`:""}
         </div></details>`;
+    $("#garead").innerHTML = analystReadCard(st, "results");
     if(TAB==="results") drawCharts(true);
   }
   renderReview(st);
@@ -685,6 +687,20 @@ function fillPVB(){
     ? `<tr><th>Metric</th><th>Paper</th><th>Our backtest</th><th>Why different</th></tr>` +
       rows.map(x=>`<tr><td><b>${esc(x.metric)}</b></td><td>${esc(x.paper_value)}</td><td>${esc(x.our_value)}</td><td class="small muted">${esc(x.why_different||"")}</td></tr>`).join("")
     : `<tr><td class="small muted">Not available for this run.</td></tr>`;
+}
+function analystReadCard(st, where){
+  const a = st.analyst_read; if(!a) return "";
+  if(a.status==="none") return where==="gate_a" ? `<div class="card"><h2>Analyst read</h2><p class="small muted">${esc(a.why)} A read is written before the backtest and pinned with the card when you approve.</p></div>` : "";
+  if(a.status==="invalid" || a.status==="changed") return `<div class="card"><h2>Analyst read</h2><div class="banner err">${esc(a.why)}</div></div>`;
+  const p = a.pin, after = a.written==="after the fact";
+  return `<div class="card review"><div class="row" style="justify-content:space-between"><h2 style="margin:0">Analyst read at Gate A <span class="small muted">(${esc(a.label)})</span></h2>
+      <span class="tag ${a.read==="do not backtest"?"bad":a.read==="backtest as written"?"ok":"warn"}">read: ${esc(a.read)}</span></div>
+    <div class="banner ${after?"warn":"info"}" style="margin-top:8px">${after?`<b>Written after the fact.</b> This run was approved before the read existed. It was written from the card and the paper only, by a session that was not shown the results, and pinned on ${esc((p||{}).pinned_at||"")}.`:`Written before any backtest was run${p?` and pinned with the card at approval (${esc(p.pinned_at||"")})`:"; it will be pinned with the card when Gate A is approved"}.`}
+      ${p?` <span class="small">card + read sha256 ${esc(p.card_and_read_sha256.slice(0,12))} · read sha256 ${esc(p.sha256.slice(0,12))}</span>`:""}</div>
+    ${a.sections.map(s=>`<h3>${esc(s.heading)}</h3><p style="margin:0 0 6px">${esc(s.text)}</p>`).join("")}
+    <h3>Read: ${esc(a.read)}</h3><p style="margin:0 0 6px">${esc(a.read_reason)}</p>
+    ${(a.listed_changes||[]).length?`<ul>${a.listed_changes.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`:""}
+    ${where==="results"?`<p class="small muted" style="margin:6px 0 0">Compare "What to expect in India" and "What would change my mind" with the sections below.</p>`:""}</div>`;
 }
 function resizeCharts(el){ if(el.open && window.Plotly) el.querySelectorAll(".chart").forEach(c => { if(c.data) Plotly.Plots.resize(c) }) }
 function fillCore(c){
