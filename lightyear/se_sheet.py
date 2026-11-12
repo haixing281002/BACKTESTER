@@ -111,7 +111,7 @@ def write_se_sheet(wb, block: dict[str, Any], strategy_name: str, daily_first: i
              "calendar_year": table(cy0, "Calander Year Performance", tables["calendar_year"], lambda g: f"=PRODUCT({g}+1)-1"),
              "calendar_year_drawdown": table(dd0, "Max Calendar Year Drawdown", tables["calendar_year_drawdown"], None)}
     put(ws, f"J{note0}", f"*Returns from {months[0]:%B %Y}", F_NOTE)
-    put(ws, f"J{note0 + 1}", f"**Returns till {pd.Timestamp(block['last_return']):%d %B %Y}", F_NOTE)
+    put(ws, f"J{note0 + 1}", f"**Returns till {months[-1]:%B %Y}, the last complete month", F_NOTE)
     for k, (lab, key) in enumerate((("Drawdown limit", "drawdown_limit"), ("Threshold for Omega ratio", "omega_threshold"), ("Risk Free Rate", "risk_free_rate"))):
         put(ws, f"I{in0 + k}", lab, F_BOLD)
         put(ws, f"J{in0 + k}", block["inputs"][key], F_INPUT, "0.00%", FILL_KEY, border=True,

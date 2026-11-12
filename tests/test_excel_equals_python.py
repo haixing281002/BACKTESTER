@@ -124,10 +124,16 @@ def test_the_lightyear_workbook_summary_and_comparators_equal_the_dashboard(tmp_
            "gate_b": {"decision": "PENDING", "criteria": []}, "validation": [], "notes": []}
     out = tmp_path / "w.xlsx"
     workbook.build(str(tmp_path), res, df, "t", str(out), comparators=cmp, observations=ch["observations"], core_metrics=ch)
-    rec = recalculate(out)
+    # Wave 6: the main workbook holds the monthly display, Daily calculations and its own check sheet: every figure,
+    # Python beside Excel, at 1e-9. The diagnostics workbook (workbook.build) keeps the daily Summary and the comparators.
+    from lightyear import main_workbook
+    main = tmp_path / "m.xlsx"
+    main_workbook.build(str(tmp_path), res, df, "t", str(main), ch)
+    rec = recalculate(main)
+    chk = [[c.value for c in r] for r in openpyxl.load_workbook(main, data_only=True)["Python vs Excel"].iter_rows(min_row=6) if r[1].value]
+    assert any(str(r[0]) == "Daily calculations" for r in chk) and any(str(r[0]).startswith("Rolling") for r in chk)
+    recalculate(out)
     wb = openpyxl.load_workbook(out, data_only=True)
-    # the workbook's own check sheet: every Core, Summary and SE figure, Python beside Excel, at 1e-9
-    chk = [[c.value for c in r] for r in wb["Python vs Excel"].iter_rows(min_row=6) if r[1].value]
     fails = [r for r in chk if r[5] != "OK"]
     if rec["engine"] == "excel":
         assert len(chk) > 100 and not fails, fails[:8]

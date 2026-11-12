@@ -32,7 +32,7 @@ from ros import config
 from ros.cards.schema import load_card
 from ros.metrics import core
 
-from . import changelog, charts, contract, gate_run, gates, prompts, spec_audit, wording, workbook
+from . import allocation, changelog, charts, contract, gate_run, gates, main_workbook, prompts, spec_audit, wording, workbook
 from .paths import LEDGER, REPO, RUNS, code_hash, find_claude, git_bash, git_commit, rel, run_dir
 
 _log = logging.getLogger("lightyear")
@@ -866,7 +866,8 @@ def python_vs_excel(xlsx):
 
 
 def _workbook(rid, res, df, extra, observations, review, ch=None):
-    """Build the workbook and recalculate it. Never loses the run over a workbook problem."""
+    """Build the two workbooks (main: the monthly display, Daily calculations, Python vs Excel; diagnostics: everything
+    else) and recalculate them. Never loses the run over a workbook problem."""
     st = load(rid)
     rd = run_dir(rid)
     xlsx = os.path.join(rd, f"{st['slug']}_results_{rid}.xlsx")       # the run id is in the file name: no two runs share one
@@ -882,17 +883,34 @@ def _workbook(rid, res, df, extra, observations, review, ch=None):
               revisions=st.get("revisions"), approval=st.get("approval"), provenance=provenance(st),
               core_metrics=ch,
               change_log=(st.get("change_log") or {}).get("lines"))
+    diag = os.path.join(rd, f"{st['slug']}_diagnostics_{rid}.xlsx")
+    alloc = None
     try:
+        if not ch or "qi" not in ch:
+            raise ValueError("this run's chart series predate the monthly display; press Rebuild")
         try:
-            workbook.build(rd, res, df, title, xlsx, **kw)
+            alloc = allocation.build(df, extra.get("holdings"), ch["se"])
+        except Exception as e:  # noqa: BLE001 -- the allocation tables are left out and the reason is shown
+            alloc = None
+            log(rid, "error", f"Allocation tables not built: {type(e).__name__}: {e}")
+        ch["allocation"] = allocation.for_page(alloc)
+        write_json_atomic(os.path.join(rd, "charts.json"), ch, default=float)
+        try:
+            main_workbook.build(rd, res, df, title, xlsx, ch, provenance(st), alloc)
         except PermissionError:
             # Windows locks a workbook that is open in Excel. Writing nothing would leave the page serving the
             # previous run's workbook beside this run's charts, so write a new file and serve that one instead.
             xlsx = os.path.join(rd, f"{st['slug']}_results_{dt.datetime.now(IST):%Y%m%d-%H%M%S}.xlsx")
             log(rid, "error", f"The workbook is open in another program (Excel?) and could not be replaced; "
                 f"writing {os.path.basename(xlsx)} instead. Close the old file and use Rebuild to go back to one name.")
-            workbook.build(rd, res, df, title, xlsx, **kw)
+            main_workbook.build(rd, res, df, title, xlsx, ch, provenance(st), alloc)
         update(rid, workbook=os.path.basename(xlsx), workbook_error=None)
+        try:
+            workbook.build(rd, res, df, title + ": run diagnostics", diag, **kw)
+            update(rid, diagnostics_workbook=os.path.basename(diag))
+        except Exception as e:  # noqa: BLE001 -- the main workbook stands; the page says the diagnostics one is missing
+            update(rid, diagnostics_workbook=None)
+            log(rid, "error", f"Diagnostics workbook not built: {type(e).__name__}: {e}")
         if os.environ.get("LIGHTYEAR_SKIP_RECALC"):
             return {"error": "recalc skipped (LIGHTYEAR_SKIP_RECALC set)"}
         # Desktop Excel where it exists (the SE sheet's LET / SCAN / LAMBDA cells need it), LibreOffice otherwise. The engine
@@ -904,6 +922,11 @@ def _workbook(rid, res, df, extra, observations, review, ch=None):
         log(rid, "server", f"Recalc with {recalc.get('engine', '?')}: {recalc.get('status', recalc.get('error'))}, "
             f"{recalc.get('total_formulas', '?')} formulas, {recalc.get('total_errors', '?')} errors, "
             f"{recalc.get('n_not_calculated', 0)} cell(s) this engine cannot calculate.")
+        if load(rid).get("diagnostics_workbook"):
+            p2 = subprocess.run([sys.executable, os.path.join(REPO, "scripts", "xlsx_recalc.py"), diag], capture_output=True, text=True, timeout=900)
+            d2 = json.loads(p2.stdout) if p2.stdout.strip().startswith("{") else {"error": (p2.stderr or p2.stdout)[-500:]}
+            recalc["diagnostics"] = {k: d2.get(k) for k in ("status", "engine", "total_formulas", "total_errors", "error") if d2.get(k) is not None}
+            log(rid, "server", f"Diagnostics workbook recalc: {d2.get('status', d2.get('error'))}, {d2.get('total_formulas', '?')} formulas, {d2.get('total_errors', '?')} errors.")
         recalc["python_vs_excel"] = python_vs_excel(xlsx)
         pv = recalc["python_vs_excel"]
         log(rid, "server" if not pv.get("fail") else "error", f"Python vs Excel: {pv.get('result', pv.get('error'))}.")

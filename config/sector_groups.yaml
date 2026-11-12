@@ -1,0 +1,21 @@
+# Quant AI Researcher
+# Ace Equity's sector labels grouped into the eleven sector groups of the reference deck, plus "Others".
+# DRAFT by the model (Wave 6, 2026-11-12): the grouping is a judgement, so the sector tables are left out of the page
+# and the workbook until the operator sets `approved: true`. Ace gives one sector per company, as it is today: it is
+# not dated, so a company that changed business is shown under its present sector for every year.
+# Used only by lightyear/allocation.py (sector allocation and returns). Never by a backtest or by Gate B.
+approved: false
+groups:
+  Autos: ["Automobile & Ancillaries"]
+  BFSI: ["Bank", "Finance", "Insurance", "Ratings"]
+  Capital Goods: ["Capital Goods", "Electricals", "Abrasives", "Ship Building"]
+  Chemicals: ["Chemicals", "Plastic Products", "Inds. Gases & Fuels"]
+  Consumption: ["Consumer Durables", "Retailing", "Hospitality", "Textile", "Media & Entertainment", "Diamond  &  Jewellery", "Aviation",
+                "Education & Training", "Photographic Product"]
+  Energy: ["Crude Oil", "Power", "Gas Transmission"]
+  FMCG: ["FMCG", "Alcohol", "Agri"]
+  Healthcare: ["Healthcare"]
+  Infra: ["Infrastructure", "Construction Materials", "Realty", "Logistics", "Telecom"]
+  IT: ["IT"]
+  Metals & Mining: ["Iron & Steel", "Non - Ferrous Metals", "Mining", "Ferro Manganese"]
+  Others: ["Trading", "Business Services", "Diversified", "Miscellaneous", "Others", "Paper", "ETF"]

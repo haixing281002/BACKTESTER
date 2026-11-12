@@ -77,7 +77,7 @@ def test_full_flow(client):
     assert all(st["stages"][s] == "done" for s in ["03", "04", "05", "06", "07", "GB"])
     ch = client.get(f"/api/runs/{rid}/charts").json()
     assert len(ch["dates"]) == 401 and ch["growth"]["strategy"][0] == 100
-    assert client.get(f"/api/runs/{rid}/workbook").status_code == 200
+    assert client.get(f"/api/runs/{rid}/workbook").status_code == 200, st.get("workbook_error")
 
     bad = client.post(f"/api/runs/{rid}/decide", json={"decision": "APPROVE", "by": "Tester", "rationale": ""})
     assert bad.status_code == 400

@@ -1,5 +1,9 @@
 # Quant AI Researcher
-"""The results workbook for any Lightyear run, built to the xlsx skill's rules from the run's hand-off files.
+"""The DIAGNOSTICS workbook of a Lightyear run (Wave 6), built to the xlsx skill's rules from the run's hand-off files.
+
+The main results workbook, with the monthly display, Daily calculations and Python vs Excel, is lightyear/main_workbook.py.
+This one holds everything else: the daily summary, Gate B, comparators, holdings, trades, the run's validation rows and
+tables. Gate B's evidence is read from the run's files, never from either workbook.
 
 Sheets
   Summary        metrics as formulas over named ranges; Gate B with live PASS/FAIL formulas against editable
@@ -27,7 +31,6 @@ from openpyxl.styles import Alignment, PatternFill
 from openpyxl.worksheet.formula import ArrayFormula
 
 from ros import config
-from lightyear import se_sheet
 from ros.versions import GATE_VERSION, METRICS_VERSION
 from universal_backtester.xlsx_style import (
     BOX,
@@ -348,93 +351,12 @@ def _gate_v2_sheet(wb, g):
     widths(w, [42, 12, 12, 44, 110])
 
 
-def _core_sheet(wb, ch, s_name, b_name, first, last, n_months):
-    """Core performance (daily) as LIVE formulas over the Returns sheet, each reproducing ros/metrics/core.py. Returns the
-    (group, metric, Python value, cell) list the "Python vs Excel" sheet checks. Three things stay Python values, in blue:
-    the gross column (its returns are not in the workbook), turnover (from the trades) and the after-publication block."""
-    wk = wb.create_sheet("Core metrics")
-    gross, bp = ch.get("gross"), ch.get("card_bp")
-    m, b = ch["metrics"]["strategy"], ch["metrics"]["benchmark"]
-    put(wk, "A1", "Core performance (daily)", F_TITLE)
-    put(wk, "A2", "Formulas over the Returns sheet; each reproduces ros/metrics/core.py, and the Python vs Excel sheet checks them. "
-        f"The cost is the card's: {bp if bp is not None else 'not read'}bp round trip. Quant AI Researcher", F_NOTE)
-    header(wk, 4, ["Metric", f"{s_name}, at the card's cost" + (" (net)" if gross else " (gross = net)"), f"{s_name}, gross (Python value)" if gross else "", b_name])
-    rf_label = f"{ch['sharpe_hurdle']:.0%}" if ch.get("sharpe_hurdle") is not None else "n/a"
-    n = last - first + 1
-    sm, sb = f"'SE Return Analytics'!$C$5:$C${4 + n_months}", f"'SE Return Analytics'!$D$5:$D${4 + n_months}"
-    dur = "ARRAY:=MAX(_xlfn.SCAN(0,{dd},_xlfn.LAMBDA(_xlpm.a,_xlpm.x,IF(_xlpm.x<-0.000000000001,_xlpm.a+1,0))))"
-    cvar = "ARRAY:=-AVERAGE(IF({r}<=_xlfn.PERCENTILE.INC({r},0.05),{r}))"
-    best = "ARRAY:=(PRODUCT(1+{r})/PRODUCT(1+LARGE({r},{{1;2;3;4;5;6;7;8;9;10}})))^(365.25/(MAX(Dates)-INDEX(Dates,2)))-1"
-    roll = (f"=SUMPRODUCT(--((Returns!$D${first + 251}:$D${last}/Returns!$D$2:$D${last - 252})<(Returns!$E${first + 251}:$E${last}/Returns!$E$2:$E${last - 252})))/{n - 251}"
-            if n > 252 else None)
-    S, B = {"r": "Ret_Strat", "dd": "DD_Strat"}, {"r": "Ret_Bench", "dd": "DD_Bench"}
-    # label, key, format, strategy formula, benchmark formula (None = the metric has no benchmark column)
-    rows = [("CAGR", "cagr", PCT, "=Summary!$B$12", "=Summary!$C$12"), ("Volatility", "vol", PCT, "=Summary!$B$13", "=Summary!$C$13"),
-            (f"Sharpe (risk-free rate {rf_label})", "sharpe", NUM2, "=Summary!$B$14", "=Summary!$C$14"),
-            (f"Sortino (risk-free rate {rf_label})", "sortino", NUM2, "=Summary!$B$16", "=Summary!$C$16"),
-            ("Calmar", "calmar", NUM2, "=Summary!$B$17", "=Summary!$C$17"), ("Maximum drawdown", "max_dd", PCT, "=Summary!$B$15", "=Summary!$C$15"),
-            ("Drawdown duration (trading days)", "dd_duration_days", INT, dur.format(**S), dur.format(**B)),
-            ("95% CVaR (daily loss)", "cvar_95", PCT, cvar.format(**S), cvar.format(**B)),
-            ("Skew", "skew", NUM2, "=SKEW(Ret_Strat)", "=SKEW(Ret_Bench)"),
-            ("CAGR without the 10 best days", "best_days_removed_cagr", PCT, best.format(**S), best.format(**B)),
-            ("Beta", "beta", NUM2, "=SLOPE(Ret_Strat,Ret_Bench)", None),
-            ("Tracking error", "tracking_error", PCT, "ARRAY:=STDEV(Ret_Strat-Ret_Bench)*SQRT(252)", None),
-            ("Information ratio", "information_ratio", NUM2, "ARRAY:=AVERAGE(Ret_Strat-Ret_Bench)*252/(STDEV(Ret_Strat-Ret_Bench)*SQRT(252))", None),
-            ("Up capture (monthly)", "up_capture", NUM2, f'=AVERAGEIFS({sm},{sb},">0")/AVERAGEIFS({sb},{sb},">0")', None),
-            ("Down capture (monthly)", "down_capture", NUM2, f'=AVERAGEIFS({sm},{sb},"<0")/AVERAGEIFS({sb},{sb},"<0")', None),
-            ("Rolling one-year periods behind", "rolling_behind", PCT, roll, None)]
-
-    def cell(x):
-        return None if x is None or pd.isna(x) else x
-
-    def formula(ref, text, fmt):
-        if text.startswith("ARRAY:"):
-            wk[ref] = ArrayFormula(ref, text[6:])
-            wk[ref].font, wk[ref].number_format, wk[ref].border = F_BASE, fmt, BOX
-        else:
-            put(wk, ref, text, F_LINK if "!" in text else F_BASE, fmt, border=True)
-
-    items = []
-    for i, (label, key, fmt, fs, fb) in enumerate(rows, start=5):
-        put(wk, f"A{i}", label, F_BASE, border=True)
-        if fs is None or m.get(key) is None:
-            put(wk, f"B{i}", cell(m.get(key)), F_INPUT, fmt, border=True)
-        else:
-            formula(f"B{i}", fs, fmt)
-            items.append(("Core metrics (daily)", f"{label}, strategy", m.get(key), f"'Core metrics'!B{i}"))
-        put(wk, f"C{i}", cell((gross or {}).get(key)), F_INPUT, fmt, border=True)
-        if fb is not None and b.get(key) is not None:
-            formula(f"D{i}", fb, fmt)
-            items.append(("Core metrics (daily)", f"{label}, benchmark", b.get(key), f"'Core metrics'!D{i}"))
-        else:
-            put(wk, f"D{i}", None, F_BASE, fmt, border=True)
-    r = 6 + len(rows)
-    put(wk, f"A{r}", "Two-way turnover a year (x capital), from the trades (Python value)", F_BASE, border=True)
-    put(wk, f"B{r}", cell(ch.get("annual_turnover")), F_INPUT, NUM2, border=True)
-    pp = ch.get("post_publication")
-    if pp:
-        r += 2
-        put(wk, f"A{r}", f"After publication, from {pp['from']} (Python values; Sharpe is arithmetic)", F_BOLD)
-        for j, (label, key, fmt) in enumerate((("CAGR", "cagr", PCT), ("Benchmark CAGR", "benchmark_cagr", PCT), ("Edge", "edge", PCT), ("Sharpe (arithmetic)", "sharpe", NUM2),
-                                               ("Benchmark Sharpe (arithmetic)", "benchmark_sharpe", NUM2), ("Maximum drawdown", "max_dd", PCT)), start=r + 1):
-            put(wk, f"A{j}", label, F_BASE, border=True)
-            put(wk, f"B{j}", cell(pp[key]), F_INPUT, fmt, border=True)
-    widths(wk, [44, 24, 26, 24])
-    return items
-
-
-def build(run_dir, results, df, title, out_path, holdings=None, trades=None, comparators=None,
-          observations=None, review=None, selection=None, selection_rule=None, revisions=None, approval=None,
-          provenance=None, change_log=None, core_metrics=None):
-    s_name = results.get("strategy_name") or "Strategy"
-    b_name = results.get("benchmark_name") or "NIFTY 500"
-    df = df.sort_values("date").reset_index(drop=True)
+def returns_sheet(wb, wr, df, s_name, b_name, run_dir, results):
+    """The Returns sheet on `wr`: the start row (100 at the close before the first return), the run's daily returns in
+    blue, value and drawdown as formulas, and the workbook's named ranges over them. `df` is sorted by date.
+    Returns (the sheet, first data row, last data row)."""
     n = len(df)
     first, last = 3, n + 2           # row 2 is the start row; data rows 3..n+2
-    wb = Workbook()
-
-    # ---------------------------------------------------------------- Returns
-    wr = wb.active
     wr.title = "Returns"
     header(wr, 1, ["Date", f"{s_name} daily return", f"{b_name} daily return", f"{s_name} value (100 = start)",
                    f"{b_name} value (100 = start)", f"{s_name} drawdown", f"{b_name} drawdown"], height=44)
@@ -472,6 +394,20 @@ def build(run_dir, results, df, title, out_path, holdings=None, trades=None, com
         name(wb, label, f"Returns!${col}${first}:${col}${last}")
     for label, col in (("Val_Strat", "D"), ("Val_Bench", "E"), ("DD_Strat", "F"), ("DD_Bench", "G")):
         name(wb, label, f"Returns!${col}$2:${col}${last}")
+
+    return wr, first, last
+
+
+def build(run_dir, results, df, title, out_path, holdings=None, trades=None, comparators=None,
+          observations=None, review=None, selection=None, selection_rule=None, revisions=None, approval=None,
+          provenance=None, change_log=None, core_metrics=None):
+    s_name = results.get("strategy_name") or "Strategy"
+    b_name = results.get("benchmark_name") or "NIFTY 500"
+    df = df.sort_values("date").reset_index(drop=True)
+    n = len(df)
+    wb = Workbook()
+
+    wr, first, last = returns_sheet(wb, wb.active, df, s_name, b_name, run_dir, results)
 
     # ---------------------------------------------------------------- Summary
     ws = wb.create_sheet("Summary", 0)
@@ -547,20 +483,6 @@ def build(run_dir, results, df, title, out_path, holdings=None, trades=None, com
     _line_chart("Drawdown from peak", wr, 6, 7, last, "H24", ws, "0%", "Drawdown")
 
     used = {"summary", "returns", "validation", "notes"}
-    if core_metrics:
-        se_block = core_metrics.get("se")
-        items = [("Summary (daily)", f"{lab}, {who}", core_metrics["metrics"][who].get(key), f"Summary!{col}{row}")
-                 for lab, key, row in (("CAGR", "cagr", 12), ("Annualised volatility", "vol", 13), ("Sharpe", "sharpe", 14), ("Maximum drawdown", "max_dd", 15),
-                                       ("Sortino", "sortino", 16), ("Calmar", "calmar", 17), ("Final value", "final", 11))
-                 for col, who in (("B", "strategy"), ("C", "benchmark"))]
-        items += _core_sheet(wb, core_metrics, s_name, b_name, first, last, len(se_block["months"]) if se_block else 0)
-        used.add("core metrics")
-        if se_block:
-            where = se_sheet.write_se_sheet(wb, se_block, s_name, first, last)
-            items += se_sheet.check_items(se_block, where)
-            used.add(se_sheet.SHEET.lower())
-        se_sheet.write_check_sheet(wb, items)
-        used.add(se_sheet.CHECK.lower())
     if (results.get("gate_v2") or {}).get("status"):
         _gate_v2_sheet(wb, results["gate_v2"])
         used.add("gate b")

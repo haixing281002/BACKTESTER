@@ -242,6 +242,15 @@ def rebuild(rid: str):
     return {"ok": True}
 
 
+@app.get("/api/runs/{rid}/diagnostics")
+def run_diagnostics_workbook(rid: str):
+    st = _state(rid)
+    if not st.get("diagnostics_workbook"):
+        raise HTTPException(404, "diagnostics workbook not built yet")
+    return FileResponse(os.path.join(run_dir(rid), st["diagnostics_workbook"]), filename=st["diagnostics_workbook"], headers={"Cache-Control": "no-store"},
+                        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+
 @app.get("/api/runs/{rid}/workbook")
 def run_workbook(rid: str):
     st = _state(rid)

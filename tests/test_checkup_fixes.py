@@ -33,7 +33,7 @@ def test_workbook_sharpe_is_the_one_formula_everywhere(tmp_path):
     assert wb["Summary"]["C14"].value == "=(C12-Risk_Free_Rate)/C13"
     assert wb["Summary"]["B4"].value == 0.06 and wb["Summary"]["B5"].value == 0.05
     assert "Risk_Free_Rate" in wb["Comparators"]["D5"].value
-    assert "Core metrics" in wb.sheetnames
+    assert "Python vs Excel" not in wb.sheetnames      # Wave 6: the checked sheets are in the main workbook (lightyear/main_workbook.py)
 
 
 def test_run_manifest_round_trip_and_detects_a_changed_input(tmp_path):
