@@ -153,7 +153,9 @@ def test_workbook_has_trades_holdings_comparators_and_gate_formulas(tmp_path):
     for sh in ("Summary", "Returns", "Comparators", "Holdings", "Rebalances", "Trades", "Positives & negatives"):
         assert sh in wb.sheetnames, sh
     assert wb["Returns"]["D2"].value == 100 and wb["Returns"]["D3"].value == "=D2*(1+B3)"
-    assert wb["Summary"]["B21"].value.startswith("=IF(C21<=E21")
+    # the folded v1 checklist left the Summary on 2026-11-12: rows 20 on are the Gate B status, with the detail on its sheet
+    assert str(wb["Summary"]["A20"].value).startswith("Gate B") and wb["Summary"]["A21"].value == "Status"
+    assert "PENDING" in [wb["Summary"][f"B{r}"].value for r in range(21, 27)]
     tr = workbook.derive_trades(hold)
     assert set(zip(tr.symbol, tr.action)) == {("A", "BUY"), ("B", "BUY"), ("C", "SHORT"), ("A", "ADD"), ("B", "SELL"),
                                               ("C", "COVER"), ("D", "SHORT")}

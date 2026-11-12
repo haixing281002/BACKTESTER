@@ -323,8 +323,8 @@ def derive_trades(h):
 
 
 def _gate_v2_sheet(wb, g):
-    """Gate v2 as Lightyear scored it: hard blocks, then the scorecard. The decision stays PENDING until a named human records one."""
-    w = wb.create_sheet("Gate v2")
+    """Gate B as Lightyear scored it: hard blocks, then the scorecard. The decision stays PENDING until a named human records one."""
+    w = wb.create_sheet("Gate B")
     put(w, "A1", f"Gate B {g['gate_version']}: {g['status']}", F_TITLE)
     put(w, "A2", f"Computed on {g['basis']}. Thresholds: config/gate_thresholds.yaml ({g['thresholds_status']}). Decision: PENDING until a named human records one. "
         "Quant AI Researcher", F_NOTE)
@@ -527,41 +527,20 @@ def build(run_dir, results, df, title, out_path, holdings=None, trades=None, com
         "sqrt(252). Rows 7 to 17 are formulas over the Returns sheet (green = pulls from another sheet). The benchmark is "
         "the NIFTY 500 PRICE index unless this run supplied a total-return one: relative figures flatter the strategy.", F_NOTE)
 
-    header(ws, 20, ["Gate v1 checklist, for comparison (ros/governance/gates.py). Gate v2 is on its own sheet", "Result", "Value", "Rule", "Threshold (editable)",
-                    "Counts toward decision"])
-    grows = gates.rows(results["gate_b"].get("criteria", []))
-    for i, g in enumerate(grows, start=21):
-        put(ws, f"A{i}", g["name"], F_BASE, border=True)
-        if g["value"] is not None and g["threshold"] is not None and g["op"]:
-            fmt = PCT if "%" in str(g["threshold_raw"]) or "%" in str(g["value_raw"]) else NUM2
-            put(ws, f"C{i}", g["value"], F_INPUT, fmt, border=True, comment=g.get("evidence") or None)
-            put(ws, f"D{i}", ("|value| " if g["abs"] else "value ") + g["op"], F_INPUT, border=True)
-            put(ws, f"E{i}", g["threshold"], F_INPUT, fmt, FILL_KEY, border=True)
-            lhs = f"ABS(C{i})" if g["abs"] else f"C{i}"
-            put(ws, f"B{i}", f'=IF({lhs}{g["op"]}E{i},"PASS",IF(F{i}="advisory","FAIL (advisory)","FAIL"))',
-                F_BOLD, border=True, align=Alignment(horizontal="center"))
-        else:
-            put(ws, f"C{i}", str(g["value_raw"]), F_INPUT, border=True, comment=g.get("evidence") or None)
-            put(ws, f"D{i}", "", F_INPUT, border=True)
-            put(ws, f"E{i}", str(g["threshold_raw"]), F_INPUT, border=True)
-            put(ws, f"B{i}", g["result"], F_BOLD, border=True, align=Alignment(horizontal="center"),
-                comment="Not computed: there was nothing to compare against in this run.")
-        put(ws, f"F{i}", "blocking" if g["blocking"] else "advisory", F_INPUT, border=True)
-    g_last = 20 + len(grows)
-    if grows:
-        pass_fail(ws, f"B21:B{g_last}")
-        ws.conditional_formatting.add(f"B21:B{g_last}", CellIsRule(operator="equal", formula=['"FAIL (advisory)"'], fill=FILL_ADV))
-    r = g_last + 1
-    put(ws, f"A{r}", "Blocking criteria passed", F_BOLD, border=True)
-    put(ws, f"B{r}", f'=COUNTIFS(B21:B{g_last},"PASS",F21:F{g_last},"blocking")&" of "&COUNTIF(F21:F{g_last},"blocking")',
-        F_BOLD, border=True, align=Alignment(horizontal="center"))
-    put(ws, f"A{r+1}", "Evidence supports", F_BOLD, border=True)
-    put(ws, f"B{r+1}", results.get("evidence_supports", ""), F_BOLD, border=True, align=Alignment(horizontal="center"))
-    put(ws, f"A{r+2}", "Decision", F_BOLD, border=True)
-    put(ws, f"B{r+2}", "PENDING", F_BOLD, border=True, align=Alignment(horizontal="center"))
-    put(ws, f"A{r+3}", "Values are what gate_b() measured in the run (blue). Thresholds are the fund's policy, editable in "
-        "yellow: change one and the Result recalculates. 'Advisory' criteria are reported but do not block. "
-        "Decision stays PENDING until a named human records one on the Lightyear page.", F_NOTE)
+    # Gate B on the Summary: the status Lightyear scored, with the detail on the Gate B sheet. (The folded v1 checklist that
+    # used to sit here was removed on 2026-11-12; v1 is still shown, folded, on the Lightyear page.)
+    g2 = results.get("gate_v2") or {}
+    header(ws, 20, [f"Gate B {g2.get('gate_version', '')} (detail on the Gate B sheet)", "Result"])
+    gb = [("Status", g2.get("status") or "not scored"), ("Computed on", g2.get("basis") or ""),
+          ("Tests not run, so not passed", ", ".join(g2.get("tests_not_run") or []) or "none"),
+          ("Evidence supports (Claude's written read, not calculated)", results.get("evidence_supports", "")), ("Decision", "PENDING")]
+    for i, (k, v) in enumerate(gb, start=21):
+        put(ws, f"A{i}", k, F_BOLD, border=True)
+        put(ws, f"B{i}", v, F_BOLD, border=True, align=Alignment(horizontal="center", wrap_text=True))
+    if g2.get("status"):
+        pass_fail(ws, "B21")
+    r = 21 + len(gb) - 4
+    put(ws, f"A{r+3}", "The decision stays PENDING until a named human records one on the Lightyear page.", F_NOTE)
     legend(ws, r + 5)
     widths(ws, [52, 26, 18, 14, 20, 22])
     _line_chart(f"Growth of 100: {s_name} vs {b_name}", wr, 4, 5, last, "H6", ws, "0", "Value (100 = start)")
@@ -584,7 +563,7 @@ def build(run_dir, results, df, title, out_path, holdings=None, trades=None, com
         used.add(se_sheet.CHECK.lower())
     if (results.get("gate_v2") or {}).get("status"):
         _gate_v2_sheet(wb, results["gate_v2"])
-        used.add("gate v2")
+        used.add("gate b")
 
     # ---------------------------------------------------------------- Comparators (daily)
     if comparators is not None and len(comparators.columns) > 1:

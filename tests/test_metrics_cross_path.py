@@ -123,10 +123,10 @@ def test_the_workbook_formulas_agree_with_the_dashboard_after_recalculation(data
            "gate_b": {"decision": "PENDING", "criteria": []}, "validation": [], "notes": []}
     out = tmp_path / "w.xlsx"
     workbook.build(str(tmp_path), res, df, "t", str(out), observations=ch["observations"], core_metrics=ch)
-    p = subprocess.run([sys.executable, os.path.join(REPO, "scripts", "xlsx_recalc_libreoffice.py"), str(out)], capture_output=True, text=True, timeout=300, check=False)
+    p = subprocess.run([sys.executable, os.path.join(REPO, "scripts", "xlsx_recalc.py"), str(out)], capture_output=True, text=True, timeout=300, check=False)
     rec = json.loads(p.stdout) if p.stdout.strip().startswith("{") else {}
     # never skipped (hard rule, 2026-11-11): a machine that cannot recalculate cannot vouch for the workbook
-    assert rec.get("status") == "success", f"LibreOffice is required to check Excel against Python (set SOFFICE): {(p.stdout or p.stderr)[:200]}"
+    assert rec.get("status") == "success", f"Excel or LibreOffice is required to check Excel against Python: {(p.stdout or p.stderr)[:300]}"
     ws = openpyxl.load_workbook(out, data_only=True)["Summary"]
     m = ch["metrics"]["strategy"]
     assert ws["B12"].value == pytest.approx(m["cagr"], rel=1e-9)

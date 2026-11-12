@@ -36,7 +36,7 @@ def _row(res, key):
 
 def test_a_clean_result_passes_and_the_decision_stays_pending():
     res = g.evaluate(_good(), TH, LIMITS)
-    assert res.status == g.PASS and res.decision == "PENDING" and res.gate_version == "v2"
+    assert res.status == g.PASS and res.decision == "PENDING" and res.gate_version == "v3"
     assert g.all_green(res)
 
 
@@ -50,11 +50,15 @@ def test_a_positive_alpha_below_the_bar_is_not_green():
     assert _row(g.evaluate(_good(alpha=0.02, alpha_t=1.5), TH, LIMITS), "factor_alpha").status == g.AMBER
 
 
-def test_a_missing_book_is_shown_as_not_run_and_does_not_hold_the_gate_up():
-    res = g.evaluate(_good(book_corr=None, book_ir_gain=None), TH, LIMITS)
-    assert res.status == g.PASS
-    assert _row(res, "book_correlation").status == g.NOT_RUN
-    assert "Correlation to the existing book" in res.tests_not_run
+def test_gate_v3_holds_statistical_tests_and_the_mandate_only():
+    """v3 (2026-11-12): capacity and the two book rows are not gate tests. Supplying them, good or bad, changes nothing."""
+    res = g.evaluate(_good(), TH, LIMITS)
+    assert res.gate_version == "v3"
+    assert [r.key for r in res.hard_blocks] == ["mandate", "data_integrity", "net_edge", "bootstrap"]
+    assert [r.key for r in res.scorecard] == ["sub_period", "factor_alpha", "post_publication"]
+    worst = g.evaluate(_good(book_corr=0.99, book_ir_gain=-1.0, capacity={"status": "computed", "p95": 0.9, "names_above_limit": ["X"]}), TH, LIMITS)
+    assert worst.status == res.status == g.PASS and g.all_green(worst) == g.all_green(res)
+    assert not any("book" in t.lower() or "capacity" in t.lower() for t in worst.tests_not_run)
 
 
 def test_a_failed_hard_block_fails_with_no_book():
@@ -80,11 +84,9 @@ def test_a_named_timestamped_override_passes_and_is_shown():
     assert r.status == g.PASS and "A Person" in r.evidence and "2026-11-05" in r.evidence
 
 
-def test_blank_mandate_limits_or_capacity_are_not_run_and_listed():
+def test_blank_mandate_limits_are_not_run_and_listed():
     blank = g.evaluate(_good(), TH, {"long_only": None, "max_cash_share": None, "max_single_weight": None})
     assert blank.status == g.PASS and _row(blank, "mandate").status == g.NOT_RUN and "Implementable within the fund's mandate" in blank.tests_not_run
-    no_aum = g.evaluate(_good(capacity={"status": "not computed", "why": "no AUM"}), TH, LIMITS)
-    assert no_aum.status == g.PASS and _row(no_aum, "capacity").status == g.NOT_RUN
 
 
 def test_a_gate_with_nothing_run_cannot_pass():
@@ -92,7 +94,7 @@ def test_a_gate_with_nothing_run_cannot_pass():
     assert empty.status == g.FAIL
 
 
-@pytest.mark.parametrize("kw", [{"net_edge": -0.01}, {"bootstrap_p": 0.2}, {"capacity": {"status": "computed", "p95": 0.5}}, {"priced_coverage": 0.5},
+@pytest.mark.parametrize("kw", [{"net_edge": -0.01}, {"bootstrap_p": 0.2}, {"priced_coverage": 0.5},
                                 {"reconciles": False}, {"checks": [{"check": "look-ahead", "passed": False}]}])
 def test_each_hard_block_can_fail_alone(kw):
     assert g.evaluate(_good(**kw), TH, LIMITS).status == g.FAIL
@@ -186,7 +188,7 @@ def test_the_shipped_thresholds_load_and_are_marked_with_their_status():
     import yaml
     with open(os.path.join(REPO, "config", "gate_thresholds.yaml"), encoding="utf-8") as fh:
         th = yaml.safe_load(fh)
-    assert th["gate_version"] == "v2" and th["status"]
+    assert th["gate_version"] == "v3" and th["status"]
     for k in TH:
         assert k in th
     assert th["deflated_sharpe"]["enabled"] is False and th["deflated_sharpe"]["bar_starts_at"] == "benchmark"
@@ -244,10 +246,10 @@ def test_a_run_folder_scores_at_the_cards_cost_and_no_other(tmp_path, monkeypatc
     heavy = pd.DataFrame({"date": list(b.index[:500]), "isin": ["A"] * 500, "weight_before": [0.0] * 500, "weight_after": [1.0] * 500})
     res = gate_run.score(str(tmp_path), card, df, heavy)
     light = gate_run.score(str(tmp_path), card, df)
-    assert res["status"] == "PASS" and res["decision"] == "PENDING" and res["gate_version"] == "v2"
+    assert res["status"] == "PASS" and res["decision"] == "PENDING" and res["gate_version"] == "v3"
     assert "0bp" in res["basis"]
     assert res["summary"]["net_edge"] == light["summary"]["net_edge"]     # however heavy the trading, a 0bp card is charged nothing
-    assert any("book" in x for x in res["tests_not_run"])
+    assert not any("book" in x.lower() or "capacity" in x.lower() for x in res["tests_not_run"])    # v3: not gate tests
     gate_run2, card2, df2 = _run_folder(tmp_path, b - 2e-4, b)
     assert gate_run2.score(str(tmp_path), card2, df2)["status"] == "FAIL"
 

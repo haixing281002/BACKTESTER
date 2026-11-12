@@ -386,7 +386,7 @@ async function tick(){
   else if(st.status==="gate_a") b = `<div class="banner info"><b>Gate A is ready for you.</b> Read what will be tested, tick each item you agree with, then approve. Or ask for changes.</div>`;
   else if(st.status==="gate_b") b = `<div class="banner info"><b>The backtest is done.</b> Look at the results, then record your decision on the Gate B tab.</div>`;
   else if(st.status==="decided") b = `<div class="banner ok">Decision recorded: <b>${esc(st.decision.decision)}</b> by ${esc(st.decision.decided_by)} at ${esc(ist(st.decision.at))}.</div>`;
-  if(st.card_unreadable) b = `<div class="banner err"><b>This run's card could not be read.</b> ${esc(st.card_unreadable)} Its cost, cash rate and beta are blank or missing, and Gate v2 could not be scored from the card.</div>` + b;
+  if(st.card_unreadable) b = `<div class="banner err"><b>This run's card could not be read.</b> ${esc(st.card_unreadable)} Its cost, cash rate and beta are blank or missing, and Gate B could not be scored from the card.</div>` + b;
   $("#rbanner").innerHTML = b;
   renderTrack(st);
   if(prev && prev !== st.status){ if(!USER_TAB || ["gate_a","gate_b"].includes(st.status)) TAB = defaultTab(st); USER_TAB = false; refreshRuns(); H = await api("/api/health") }
@@ -834,7 +834,7 @@ function renderGateB(st){
       <h3>Evidence scorecard</h3><p class="small muted" style="margin:0 0 6px">Feeds your decision and does not block by itself. PASS can sit beside a red row here: read both.</p>
       <table class="t"><tr><th>Test</th><th style="width:90px">Result</th><th style="width:90px">Value</th><th>Needs</th></tr>${v2rows(v2.scorecard)}</table>
       ${v2.tests_not_run.length?`<p class="small muted"><b>Not run, so not passed:</b> ${v2.tests_not_run.map(esc).join(", ")}.</p>`:""}
-      <p class="small muted">Thresholds: config/gate_thresholds.yaml (${esc(v2.thresholds_status)}). The deflated Sharpe is out of this gate for now, so nothing here tests for selection luck.</p></div>` : "";
+      <p class="small muted">Gate B ${esc(v2.gate_version)} holds statistical tests and the mandate check only. Thresholds: config/gate_thresholds.yaml (${esc(v2.thresholds_status)}), unchanged. The deflated Sharpe is outside this gate, so nothing here tests for selection luck. Capacity is information on the Results tab.</p></div>` : "";
   const v1open = v2 ? `<details class="card"><summary><b>Gate v1 checklist, for comparison</b></summary>` : `<div class="card"><h2>Gate B: investment decision</h2>${r.gate_v2&&r.gate_v2.error?`<div class="banner err">Gate v2 was not scored: ${esc(r.gate_v2.error)}</div>`:`<p class="small muted">This run was built before Gate v2. Press Rebuild on the Results tab to score it.</p>`}`;
   $('[data-p="gateb"]').innerHTML = `
     ${v2html}

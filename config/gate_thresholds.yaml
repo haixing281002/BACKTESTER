@@ -1,9 +1,9 @@
 # Quant AI Researcher
 # Gate B v2 thresholds. APPROVED by the operator on 2026-11-05, who asked for them to be easier than first proposed.
 # Set from 8,000 simulated strategies (docs/gate_b/calibration/), committed before any named strategy was scored on them.
-gate_version: v2
+gate_version: v3   # v3 (2026-11-12): capacity and the two book rows left the gate. Every mark below that v3 still reads is unchanged.
 status: "Approved 2026-11-05"
-capacity:
+capacity:                           # NOT a gate test since v3: information on the Results tab only
   p95_adv_participation_max: 0.10   # PLACEHOLDER for the operator's call (X). Not simulated. Capacity is reported per Rs 1 crore and as the capital where the 95th-percentile trade reaches X.
   limit_is_placeholder: true
 data_integrity:
@@ -25,7 +25,7 @@ sub_period:
 factor_alpha:
   t_green_min: 2.0                  # Not eased: below 2.0, no-skill false passes exceed the 5% target.
   t_amber_min: 1.0                  # Display only, not simulated
-book:
+book:                               # NOT a gate test since v3; kept for the calibration scripts' history
   corr_green_max: 0.80              # Reported when a book is supplied. Simulated on a synthetic book only.
   corr_amber_max: 0.90              # Display only, not simulated
   ir_gain_green_min: 0.05           # Reported when a book is supplied. Simulated on a synthetic book only.

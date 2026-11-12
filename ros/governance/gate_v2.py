@@ -14,7 +14,7 @@ import math
 from dataclasses import asdict, dataclass, field
 from typing import Any
 
-GATE_V2 = "v2"
+from ros.versions import GATE_VERSION as GATE_V2   # "v3" since 2026-11-12: statistical tests and the mandate check only
 PASS, FAIL = "PASS", "FAIL"
 GREEN, AMBER, RED, NOT_RUN = "green", "amber", "red", "not run"
 
@@ -122,7 +122,6 @@ def evaluate(e: dict[str, Any], th: dict[str, Any], mandate_limits: dict[str, An
     """`e` is the evidence (ros.validation.gate_evidence), `th` the loaded thresholds file. Every number is at the cost on the run's card."""
     h: list[Row] = [
         mandate_row(e.get("mandate_observed"), mandate_limits, overrides),
-        capacity_row(e.get("capacity"), th["capacity"]["p95_adv_participation_max"]),
         integrity_row(e.get("checks"), e.get("reconciles"), e.get("priced_coverage"), e.get("unpriced"), th["data_integrity"]["min_priced_coverage"]),
     ]
     edge = e.get("net_edge")
@@ -136,7 +135,6 @@ def evaluate(e: dict[str, Any], th: dict[str, Any], mandate_limits: dict[str, An
     d = th["deflated_sharpe"]
     sp = th["sub_period"]
     fa = th["factor_alpha"]
-    bk = th["book"]
     pp = th["post_publication"]
     alpha, t = e.get("alpha"), e.get("alpha_t")
     one_sided = None if alpha is None or t is None else (t if alpha > 0 else -abs(t))
@@ -154,8 +152,6 @@ def evaluate(e: dict[str, Any], th: dict[str, Any], mandate_limits: dict[str, An
     s += [Row("sub_period", e.get("sub_period_name", "Sub-period stability"), sub, value=worst, threshold=f"at least {sp['min_windows_ahead_share']:.0%} of windows ahead of the benchmark, none below {sp['window_floor']}",
              evidence=e.get("sub_period_evidence", "")),
          Row("factor_alpha", "Factor alpha, one-sided", _higher(one_sided, fa["t_green_min"], fa["t_amber_min"]), value=t, threshold=f"alpha > 0 and t >= {fa['t_green_min']}", evidence=e.get("alpha_evidence", "")),
-         Row("book_correlation", "Correlation to the existing book", _lower(e.get("book_corr"), bk["corr_green_max"], bk["corr_amber_max"]), value=e.get("book_corr"), threshold=f"<= {bk['corr_green_max']}"),
-         Row("book_ir_gain", "Gain in the book's information ratio", _higher(e.get("book_ir_gain"), bk["ir_gain_green_min"], bk["ir_gain_amber_min"]), value=e.get("book_ir_gain"), threshold=f">= {bk['ir_gain_green_min']}"),
          Row("post_publication", "Performance after publication", NOT_RUN if post is None else (GREEN if post > pp["edge_green_min"] else (AMBER if post > pp["edge_amber_min"] else RED)), value=post, threshold=f"edge > {pp['edge_green_min']}")]
 
     # The return-based blocks can always be run, so a PASS always rests on them.

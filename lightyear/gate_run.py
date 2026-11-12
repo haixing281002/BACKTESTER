@@ -70,7 +70,7 @@ def score(rd, card_path, df, trades=None, holdings=None, spec_failures=None) -> 
     card = load_card(card_path if os.path.isabs(card_path) else os.path.join(REPO, card_path))
     e = {"mandate_observed": _positions(holdings), "checks": _checks(rd), "reconciles": None if spec_failures is None else spec_failures == 0}
     e["priced_coverage"], e["unpriced"] = _coverage(rd)
-    e["capacity"] = capacity(df, trades, card)
+    # v3: capacity is not a gate test. It is still computed for the Results tab (jobs.build_outputs -> charts.json).
 
     series = r
     hurdle_annual = config.hurdle_annual()
@@ -101,10 +101,6 @@ def score(rd, card_path, df, trades=None, holdings=None, spec_failures=None) -> 
     pp = core.post_publication(series, b, cash, card.paper.date, hurdle=hurdle)
     if pp:
         e["post_publication_edge"] = pp["edge"]
-    book_path = config.fund().get("book_returns_csv")
-    if book_path:
-        bk = pd.read_csv(book_path, parse_dates=["date"]).set_index("date")["book"]
-        e.update(ev.book_tests(series, bk, b))
     res = gate_v2.evaluate(e, th, config.mandate()).to_dict()
     res["basis"] = basis
     res["summary"] = {k: e.get(k) for k in ("net_edge", "bootstrap_p", "bootstrap_max_dd_gap", "bootstrap_block", "bootstrap_sensitivity", "sharpe_hurdle", "alpha_hurdle", "alpha_t_hurdle", "alpha", "alpha_t", "sub_period_positive", "sub_period_n", "sub_period_worst", "post_publication_edge")}
