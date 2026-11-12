@@ -58,6 +58,11 @@ def cash_rate_for(card) -> tuple[float, str]:
         return 0.0, "nowhere: the card names no rate, so Sharpe here is over zero"
 
 
+def market_phases() -> list[dict[str, Any]]:
+    """The operator's NIFTY 500 market phases (config/market_phases.yaml), for the Market phases table and chart only."""
+    return list(_load("market_phases.yaml").get("phases") or [])
+
+
 def mandate() -> dict[str, Any]:
     return _load("mandate.yaml")
 

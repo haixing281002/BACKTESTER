@@ -1,0 +1,16 @@
+# Quant AI Researcher
+# NIFTY 500 market phases, named by the operator (Wave 6, 2026-11-12). Each phase covers whole calendar months, from
+# first_month to last_month inclusive. A phase written "Feb-15 to Feb-16" runs from the end of February 2015 to the end
+# of February 2016, so its first month of returns is March 2015. Months after the last phase are shown as
+# "Unclassified" until the operator names the phase. The first phase is clipped to a run's own start.
+# Used by ros/metrics/qi.py (the Market phases table and chart). Never by a backtest or by Gate B.
+phases:
+  - {label: "Apr-13 to Feb-15", first_month: "2013-04", last_month: "2015-02", wyckoff_phase: "Mark-Up", market_term: "Cyclical bull"}
+  - {label: "Feb-15 to Feb-16", first_month: "2015-03", last_month: "2016-02", wyckoff_phase: "Mark-Down", market_term: "Sharp correction"}
+  - {label: "Feb-16 to Jan-18", first_month: "2016-03", last_month: "2018-01", wyckoff_phase: "Mark-Up", market_term: "Bull impulse"}
+  - {label: "Jan-18 to Jan-20", first_month: "2018-02", last_month: "2020-01", wyckoff_phase: "Distribution", market_term: "Sideways, late-cycle"}
+  - {label: "Jan-20 to Mar-20", first_month: "2020-02", last_month: "2020-03", wyckoff_phase: "Mark-Down", market_term: "Crash (COVID)"}
+  - {label: "Mar-20 to Oct-21", first_month: "2020-04", last_month: "2021-10", wyckoff_phase: "Mark-Up", market_term: "V-shaped bull"}
+  - {label: "Oct-21 to Jun-22", first_month: "2021-11", last_month: "2022-06", wyckoff_phase: "Mark-Down", market_term: "Bear leg"}
+  - {label: "Jun-22 to Sep-24", first_month: "2022-07", last_month: "2024-09", wyckoff_phase: "Mark-Up", market_term: "Recovery bull"}
+  - {label: "Sep-24 to Jun-25", first_month: "2024-10", last_month: "2025-06", wyckoff_phase: "Early Distribution", market_term: "Correction, rapid recovery"}

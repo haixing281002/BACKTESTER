@@ -15,7 +15,7 @@ import numpy as np
 import pandas as pd
 
 from ros import config
-from ros.metrics import core, se
+from ros.metrics import core, qi, se
 
 ROLL = 63   # three months of trading days for rolling volatility
 
@@ -87,6 +87,32 @@ def _filter_betas(strat, bench, cash, index_filter):
     s = core.beta_on(strat, bench, (is_open == False) & known, cash)     # noqa: E712
     return {"status": "computed", "series": index_filter["series"], "days": n, "open": o, "shut": s,
             "rule": f"open on a day when {index_filter['series']} closed above its {n}-day average at the previous session"}
+
+
+def factor_monthly(dates: pd.DatetimeIndex, months: list[str]):
+    """Monthly returns of the four attribution indices on the SE block's months, each compounded from the index's daily
+    returns on the run's own dates, so a month covers exactly the days the strategy's month covers. Returns
+    (returns by index name, "") or (None, the reason)."""
+    try:
+        from ros.data.loaders import load_nse_workbook_combined
+        from ros.data.sources import NSE_INDEX_WORKBOOK
+        levels, _ = load_nse_workbook_combined(NSE_INDEX_WORKBOOK)
+    except Exception as e:  # noqa: BLE001 -- the reason is shown on the page; the attribution is then left out
+        return None, f"index workbook not read: {type(e).__name__}: {e}"[:200]
+    want = pd.DatetimeIndex(months).to_period("M")
+    out = {}
+    for nm in qi.FACTOR_INDICES:
+        if nm not in levels.columns:
+            return None, f"{nm} is not in the index workbook"
+        r = levels[nm].dropna().pct_change().reindex(dates)
+        r = r[(r.index.to_period("M") >= want[0]) & (r.index.to_period("M") <= want[-1])]
+        if r.isna().any():
+            return None, f"{nm} has no level on {int(r.isna().sum())} of the run's days, first {r[r.isna()].index[0].date()}"
+        m = (1.0 + r).resample("ME").prod() - 1.0
+        out[nm] = [float(x) for x in m.to_numpy()]
+        if len(out[nm]) != len(months):
+            return None, f"{nm}: {len(out[nm])} months against the run's {len(months)}"
+    return out, ""
 
 
 def _hurdle(sharpe_hurdle) -> float:
@@ -227,7 +253,10 @@ def build(df: pd.DataFrame, names: dict, cash_rate=None, comparators: pd.DataFra
     # SE Return Analytics (monthly): the reference sheet's own formulas on calendar-month returns. Separate from every
     # daily figure above and from Gate B. Its risk-free rate is the same one config setting.
     out["se"] = se.block(strat, bench, out["names"].get("benchmark", "Benchmark"), benchmark_basis,
-                         {"risk_free_rate": sharpe_hurdle})
+                         {"risk_free_rate": sharpe_hurdle}, sessions=nse_sessions()[0])
+    # Quant insights (monthly): the main display, built from the SE block's complete months. Not read by Gate B.
+    fac, why = factor_monthly(idx, out["se"]["months"])
+    out["qi"] = qi.block(out["se"], config.market_phases(), fac, why)
     up, dn = core.beta_on(strat, bench, bench > 0, cash), core.beta_on(strat, bench, bench < 0, cash)
     out["beta_split"] = {"up_market": up, "down_market": dn, "index_filter": _filter_betas(strat, bench, cash, index_filter)}
     wd = core.worst_days(strat)

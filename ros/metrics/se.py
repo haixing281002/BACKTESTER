@@ -38,6 +38,42 @@ def monthly_returns(daily: pd.Series) -> pd.Series:
     return (1.0 + r).resample("ME").prod().loc[lambda s: s.index >= r.index[0].to_period("M").to_timestamp("M")] - 1.0
 
 
+def complete_months(daily: pd.Series, sessions: pd.DatetimeIndex | None = None) -> tuple[pd.Period, pd.Period, dict[str, Any]]:
+    """The first and last COMPLETE calendar months of a daily return series, and what is left out (operator, Wave 6).
+
+    `sessions` is the NSE trading calendar. A month is complete when the series has a return for every session in it;
+    the first month also counts as complete when the only session without a return is the month's first, because that
+    session is the run's starting point (value 100 at its close). The last month is complete only when the calendar shows
+    no later session in it; a calendar that stops at the last return cannot show that, so the month is left out.
+    Without a calendar nothing can be judged: every month is kept and `calendar` says so."""
+    r = daily.dropna()
+    d0, d1 = r.index[0], r.index[-1]
+    p0, p1 = d0.to_period("M"), d1.to_period("M")
+    info: dict[str, Any] = {"first_return": str(d0.date()), "last_return": str(d1.date()), "calendar": "NSE sessions", "left_out": [], "notes": []}
+    if sessions is None:
+        info["calendar"] = "not available: months not checked"
+    else:
+        per = sessions.to_period("M")
+        before = sessions[(per == p0) & (sessions < d0)]
+        if len(before) > 1:
+            info["left_out"].append({"month": str(p0), "days": int((r.index.to_period("M") == p0).sum()), "from": str(d0.date()),
+                                     "to": str(r.index[r.index.to_period("M") == p0][-1].date()),
+                                     "why": f"the run starts inside the month: {len(before)} sessions of it come before the first return"})
+            p0 = p0 + 1
+        elif len(before) == 1:
+            info["notes"].append(f"{d0:%B %Y} is kept: its first session ({before[0]:%d %b %Y}) is the starting point, so it has no return of its own.")
+        after = sessions[(per == p1) & (sessions > d1)]
+        if len(after) or sessions[-1] <= d1:
+            first_day = r.index[r.index.to_period("M") == p1][0]
+            why = (f"the run ends inside the month: {len(after)} sessions of it come after the last return" if len(after)
+                   else "the trading calendar on file stops at the last return, so the month cannot be shown to be complete")
+            info["left_out"].append({"month": str(p1), "days": int((r.index.to_period("M") == p1).sum()), "from": str(first_day.date()),
+                                     "to": str(d1.date()), "why": why})
+            p1 = p1 - 1
+    info.update(first_month=str(p0), last_month=str(p1), left_out_days=sum(x["days"] for x in info["left_out"]))
+    return p0, p1, info
+
+
 def _dd(m: np.ndarray) -> float:
     """MIN(wealth / running peak - 1) on month-end wealth; the peak starts at the first month's own wealth."""
     if not len(m):
@@ -253,10 +289,13 @@ GLOSSARY = [
 
 
 def block(strategy_daily: pd.Series, benchmark_daily: pd.Series, benchmark_name: str = "Benchmark", benchmark_basis: str = "price",
-          inputs: dict[str, float] | None = None) -> dict[str, Any]:
-    """The SE block for a run: calendar-month returns compounded from its daily returns, then compute(). The result is
-    what the Results tab shows and what the workbook's "Python vs Excel" sheet holds as the Python side."""
-    ms, mb = monthly_returns(strategy_daily), monthly_returns(benchmark_daily)
+          inputs: dict[str, float] | None = None, sessions: pd.DatetimeIndex | None = None) -> dict[str, Any]:
+    """The SE block for a run: returns of its COMPLETE calendar months (complete_months) compounded from its daily
+    returns, then compute(). The result is what the Results tab shows and what the workbook's "Python vs Excel" sheet
+    holds as the Python side."""
+    p0, p1, cm = complete_months(strategy_daily, sessions)
+    keep = lambda m: m[(m.index.to_period("M") >= p0) & (m.index.to_period("M") <= p1)]   # noqa: E731
+    ms, mb = keep(monthly_returns(strategy_daily)), keep(monthly_returns(benchmark_daily))
     out = compute(ms, mb, inputs)
     basis = "price index, no dividends" if benchmark_basis != "total_return" else "total-return index"
     rows = []
@@ -269,6 +308,5 @@ def block(strategy_daily: pd.Series, benchmark_daily: pd.Series, benchmark_name:
     out.update(title="SE Return Analytics (monthly)", rows=rows, sections=SECTIONS, glossary=[list(g) for g in GLOSSARY],
                benchmark_name=benchmark_name, benchmark_basis=benchmark_basis, benchmark_label=f"{benchmark_name} ({basis})",
                first_return=str(r.index[0].date()), last_return=str(r.index[-1].date()), n_months=len(out["months"]),
-               last_month_is_partial=bool(r.index[-1] < r.index[-1].to_period("M").to_timestamp("M").normalize()
-                                          and (r.index[-1] + pd.offsets.BDay(1)).month == r.index[-1].month))
+               complete_months=cm)
     return out
