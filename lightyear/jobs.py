@@ -769,7 +769,8 @@ def build_outputs(rid, review=True):
              "sleeve": res.get("sleeve_name") or "Sleeve"}
     extras, warn_core = _core_inputs(st, res, df, extra)
     warn = list(warn) + warn_core
-    ch = charts.build(df, names, comparators=extra.get("comparators"), **extras)
+    ch = charts.build(df, names, comparators=extra.get("comparators"),
+                      benchmark_basis="total_return" if res.get("benchmark_is_total_return") else "price", **extras)
     try:
         ch["capacity"] = gate_run.capacity(df, extra.get("trades"), _card_or_none(st))
     except Exception as e:  # noqa: BLE001  a report; the failure is shown, and the run is not lost
@@ -813,6 +814,9 @@ def _core_inputs(st, res, df, extra):
         out["publication_date"] = card.paper.date
         out["card_bp"] = float(card.costs.spread_bps)
         out["cash_rate"], out["cash_source"] = config.cash_rate_for(card)
+        sp = dict(getattr(card.signal, "params", None) or {})
+        if sp.get("index_filter_days") and sp.get("index_filter_series"):
+            out["index_filter"] = {"days": sp["index_filter_days"], "series": sp["index_filter_series"]}
     except Exception as e:  # noqa: BLE001  an unreadable card must not lose the run; the warning is on the page
         warn.append(f"Card not read for the core metrics ({type(e).__name__}: {e}); beta left blank.")
     tr = extra.get("trades")
@@ -848,6 +852,19 @@ def _load_review(rd):
         return None
 
 
+def python_vs_excel(xlsx):
+    """Read the workbook's "Python vs Excel" sheet after recalculation: how many figures, and which ones FAIL."""
+    try:
+        import openpyxl
+        ws = openpyxl.load_workbook(xlsx, data_only=True, read_only=True)["Python vs Excel"]
+        rows = [r for r in ws.iter_rows(min_row=6, values_only=True) if r and r[1]]
+        fail = [{"group": r[0], "metric": r[1], "python": r[2], "excel": r[3]} for r in rows if r[5] != "OK"]
+        return {"n": len(rows), "n_fail": len(fail), "fail": fail[:60], "tolerance": 1e-9,
+                "result": f"all {len(rows)} figures agree within 1e-9" if not fail else f"{len(fail)} of {len(rows)} figures FAIL"}
+    except Exception as e:  # noqa: BLE001 -- the check is shown as not read; the workbook itself is unaffected
+        return {"error": f"not read: {type(e).__name__}: {e}"[:200]}
+
+
 def _workbook(rid, res, df, extra, observations, review, ch=None):
     """Build the workbook and recalculate it. Never loses the run over a workbook problem."""
     st = load(rid)
@@ -878,12 +895,18 @@ def _workbook(rid, res, df, extra, observations, review, ch=None):
         update(rid, workbook=os.path.basename(xlsx), workbook_error=None)
         if os.environ.get("LIGHTYEAR_SKIP_RECALC"):
             return {"error": "recalc skipped (LIGHTYEAR_SKIP_RECALC set)"}
-        log(rid, "server", "Workbook built; recalculating with LibreOffice.")
-        p = subprocess.run([sys.executable, os.path.join(REPO, "scripts", "xlsx_recalc_libreoffice.py"), xlsx],
-                           capture_output=True, text=True, timeout=600)
+        # Desktop Excel where it exists (the SE sheet's LET / SCAN / LAMBDA cells need it), LibreOffice otherwise. The engine
+        # and any cell it could not calculate are recorded with the run.
+        log(rid, "server", "Workbook built; recalculating (Excel where installed, LibreOffice otherwise).")
+        p = subprocess.run([sys.executable, os.path.join(REPO, "scripts", "xlsx_recalc.py"), xlsx],
+                           capture_output=True, text=True, timeout=900)
         recalc = json.loads(p.stdout) if p.stdout.strip().startswith("{") else {"error": (p.stderr or p.stdout)[-500:]}
-        log(rid, "server", f"Recalc: {recalc.get('status', recalc.get('error'))}, "
-            f"{recalc.get('total_formulas', '?')} formulas, {recalc.get('total_errors', '?')} errors.")
+        log(rid, "server", f"Recalc with {recalc.get('engine', '?')}: {recalc.get('status', recalc.get('error'))}, "
+            f"{recalc.get('total_formulas', '?')} formulas, {recalc.get('total_errors', '?')} errors, "
+            f"{recalc.get('n_not_calculated', 0)} cell(s) this engine cannot calculate.")
+        recalc["python_vs_excel"] = python_vs_excel(xlsx)
+        pv = recalc["python_vs_excel"]
+        log(rid, "server" if not pv.get("fail") else "error", f"Python vs Excel: {pv.get('result', pv.get('error'))}.")
         return recalc
     except Exception as e:
         # The page hides Download Excel when no workbook was built; say why there, not only in the log.

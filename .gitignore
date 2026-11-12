@@ -32,3 +32,6 @@ config/local.yaml
 # (~1 GB), the security master and the membership snapshots. Rebuilt automatically when the source changes.
 data/processed/ace/
 data/processed/nifty500/
+
+# The SE reference workbook holds real fund returns: never in git (Wave 5, 2026-11-12). The reference check runs only where it exists.
+/reference/

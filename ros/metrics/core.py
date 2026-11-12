@@ -224,6 +224,14 @@ def beta(returns: pd.Series, bench: pd.Series, cash: float | pd.Series | None = 
     return float(x.cov(y) / v) if v > 0 else float("nan")
 
 
+def beta_on(returns: pd.Series, bench: pd.Series, mask: pd.Series, cash: float | pd.Series | None = None) -> dict[str, float]:
+    """Beta on the days where `mask` is true (same definition as beta()), and how many days that is."""
+    r, b = _aligned(returns, bench)
+    m = mask.reindex(r.index).fillna(False).astype(bool)
+    n = int(m.sum())
+    return {"beta": beta(r[m], b[m], cash) if n > 2 else float("nan"), "days": n}
+
+
 def tracking_error(returns: pd.Series, bench: pd.Series) -> float:
     """stdev(r - b) * sqrt(252), sample standard deviation of daily gaps."""
     r, b = _aligned(returns, bench)

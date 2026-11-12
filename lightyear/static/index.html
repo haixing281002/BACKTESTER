@@ -565,7 +565,7 @@ function renderResults(st){
   if(RES_SIG !== sig){
     RES_SIG = sig; CHARTED = null; REV_SIG = null;
     const r = st.results, rc = st.recalc || {}, sn = r.strategy_name, bn = r.benchmark_name;
-    const rcText = rc.status ? `${rc.status==="success"?"✓":"!"} recalculated in LibreOffice · ${rc.total_formulas} formulas · ${rc.total_errors} errors` : (rc.error?`recalc: ${esc(rc.error).slice(0,160)}`:"");
+    const rcText = rc.status ? `${rc.status==="success"?"✓":"!"} recalculated in ${rc.engine==="excel"?"Excel":"LibreOffice"} · ${rc.total_formulas} formulas · ${rc.total_errors} errors` : (rc.error?`recalc: ${esc(rc.error).slice(0,160)}`:"");
     const key = `<span class="key"><i style="background:#1f4e79"></i>Strategy: ${esc(sn)}${costTag(r)}</span><span class="key"><i style="background:#d98324"></i>Benchmark: ${esc(bn)} (${r.benchmark_is_total_return?"total return":"price index"})</span>`;
     $('[data-p="results"]').innerHTML = `
       <div class="card" id="pvbcard"><h2>The paper's strategy vs our backtest</h2>
@@ -585,8 +585,9 @@ function renderResults(st){
           ${st.spec_audit.checks.map(c=>`<tr><td>${esc(c.rule)}</td><td style="color:${c.passed===true?'var(--green)':c.passed===false?'var(--red)':'inherit'}"><b>${c.passed===true?'PASS':c.passed===false?'FAIL':'n/a'}</b></td><td class="small">${esc(c.detail)}</td></tr>`).join("")}</table></div>`:""}
         <p style="margin:8px 0 4px">${key}</p>
         <p class="muted" style="margin:6px 0 14px">${esc(r.headline)}</p>
-        <div class="kpis" id="kpis"></div><div class="small muted">Big number = the strategy. Orange line = NIFTY 500 over exactly the same days. Sharpe is over the cash rate shown under Core performance. ${r.benchmark_is_total_return?"The benchmark includes dividends.":"The benchmark is the price index, with no dividends, which flatters every relative figure."}</div></div>
-      <div class="card" id="corecard"><h2>Core performance</h2><table class="t" id="coretab"></table><div id="coremore" class="small muted" style="margin-top:8px"></div></div>
+        <div class="kpis" id="kpis"></div><div class="small muted">Big number = the strategy. Orange line = NIFTY 500 over exactly the same days. Sharpe is (CAGR - risk-free rate) / volatility on daily returns; the risk-free rate is shown under Core performance. ${r.benchmark_is_total_return?"The benchmark includes dividends.":"The benchmark is the price index, with no dividends, which flatters every relative figure."}</div></div>
+      <div class="card" id="corecard"><h2>Core performance (daily)</h2><table class="t" id="coretab"></table><div id="coremore" class="small muted" style="margin-top:8px"></div></div>
+      <div class="card" id="secard"><h2>SE Return Analytics (monthly)</h2><div id="sebody" class="small muted">Not built for this run yet. Press Rebuild.</div></div>
       <div id="reviewcard"></div>
       <div class="card"><h2>Positives and negatives</h2>
         <div class="pn"><div class="pos"><h3 style="color:var(--green)">▲ What works</h3><ul id="pos"></ul></div>
@@ -706,6 +707,36 @@ function fillCore(c){
     c.cash_rate==null ? `Beta is blank: this run's card could not be read.` : `Idle cash earns ${pct(c.cash_rate,2)} a year, from ${esc(c.cash_source||"the card")}.`
   ].filter(Boolean).map(x=>`<div>${x}</div>`).join("");
 }
+function fillSE(c){
+  if(!$("#sebody")) return;
+  const se = c.se;
+  if(!se){ $("#sebody").innerHTML = "Not built for this run: it predates the SE block. Press Rebuild to add it from the run's own return files."; return }
+  const f = (v,t) => (v==null||Number.isNaN(v)) ? "–" : t==="pct" ? pct(v,2) : t==="int" ? Math.round(v) : num(v);
+  const pv = (ST && ST.recalc && ST.recalc.python_vs_excel) || null, rc = (ST && ST.recalc) || {};
+  const check = pv ? (pv.error ? `Python vs Excel: ${esc(pv.error)}.`
+      : `<b>Python vs Excel: ${esc(pv.result)}</b> (workbook recalculated in ${rc.engine==="excel"?"Excel":"LibreOffice"}${rc.n_not_calculated?`; ${rc.n_not_calculated} cell(s) LibreOffice cannot calculate: ${esc((rc.not_calculated||[]).slice(0,6).join(", "))}${rc.n_not_calculated>6?" ...":""}`:""}).${pv.n_fail?` Failing: ${pv.fail.slice(0,8).map(x=>esc(x.metric)).join("; ")}.`:""}`) : "Python vs Excel: not checked yet for this run. Press Rebuild.";
+  const head = `<tr><th>Metric (monthly)</th><th>Strategy</th><th>${esc(se.benchmark_label)}</th></tr>`;
+  const sect = se.sections.map(sec => `<h3 style="margin:14px 0 4px">${esc(sec)}</h3><table class="t">${head}` + se.rows.filter(r=>r.section===sec).map(r =>
+      `<tr><td>${esc(r.shown)}${r.depends_on_benchmark&&se.benchmark_basis!=="total_return"?` <span class="small muted">(vs price index)</span>`:""}</td><td>${f(r.strategy,r.format)}</td><td>${r.benchmark==null?"":f(r.benchmark,r.format)}</td></tr>`).join("") + `</table>`).join("");
+  const tab = (title, rows, note) => `<h3 style="margin:14px 0 4px">${title}</h3><table class="t"><tr><th>Period</th><th>Strategy</th><th>${esc(se.benchmark_label)}</th></tr>` +
+      rows.map(r=>`<tr><td>${esc(r.label)}${r.part?` <span class="small muted">(part)</span>`:""}</td><td>${pct(r.strategy,2)}</td><td>${pct(r.benchmark,2)}</td></tr>`).join("") + `</table>${note?`<div class="small muted">${note}</div>`:""}`;
+  const marks = `* returns from ${esc(se.months[0].slice(0,7))}. ** returns till ${esc(se.last_return)}.`;
+  const bs = c.beta_split || {}, fb = bs.index_filter;
+  const betas = bs.up_market ? `<h3 style="margin:14px 0 4px">Beta in different markets (daily)</h3><table class="t"><tr><th>Days</th><th>Beta</th><th>Days counted</th></tr>
+      <tr><td>Up-market days (benchmark rose)</td><td>${num(bs.up_market.beta)}</td><td>${bs.up_market.days}</td></tr>
+      <tr><td>Down-market days (benchmark fell)</td><td>${num(bs.down_market.beta)}</td><td>${bs.down_market.days}</td></tr>
+      ${fb && fb.status==="computed" ? `<tr><td>Index filter open</td><td>${num(fb.open.beta)}</td><td>${fb.open.days}</td></tr><tr><td>Index filter shut</td><td>${num(fb.shut.beta)}</td><td>${fb.shut.days}</td></tr>` : ""}</table>
+      <div class="small muted">${fb ? (fb.status==="computed" ? `The filter is ${esc(fb.rule)}.` : `Index-filter betas not computed: ${esc(fb.why||"")}`) : "This card has no index filter, so there are no filter betas."}</div>` : "";
+  $("#sebody").innerHTML = `<div>${check}</div>
+    <div style="margin-top:6px">The reference sheet's own formulas on calendar-month returns compounded from this run's daily returns: population standard deviation, CAGR = (1 + total return)^(12 / months) - 1, drawdowns on month-end values shown as negative numbers. These are <b>not</b> the daily figures above, and Gate B does not use them. Inputs: risk-free rate ${pct(se.inputs.risk_free_rate,0)}, Omega threshold ${pct(se.inputs.omega_threshold,0)} a month, drawdown limit ${pct(se.inputs.drawdown_limit,0)}. Benchmark: ${esc(se.benchmark_label)}${se.benchmark_basis!=="total_return"?"; the NIFTY 500 total-return index is not on file, so every row marked \"vs price index\" flatters the strategy by roughly the index's dividend yield":""}.</div>
+    ${sect}
+    ${tab("Financial Year Performance (April to March)", se.tables.financial_year, marks)}
+    ${tab("Calendar Year Performance", se.tables.calendar_year, marks)}
+    ${tab("Max Calendar Year Drawdown", se.tables.calendar_year_drawdown, "On month-end values within the year; a fall in the year's first month is not counted, as in the reference.")}
+    ${tab("Quarterly returns", se.tables.quarterly, "")}
+    ${betas}
+    <details style="margin-top:12px"><summary><b>Glossary</b></summary><table class="t">${se.glossary.map(g=>`<tr><td><b>${esc(g[0])}</b></td><td>${esc(g[1])}</td></tr>`).join("")}</table></details>`;
+}
 async function drawCharts(force){
   if(!ST?.results || (CHARTED===CUR && !force)) return;
   if(!$("#c_growth")) return;
@@ -717,6 +748,7 @@ async function drawCharts(force){
   const m = c.metrics, K = [["CAGR (a year)","cagr",pct],["Volatility (a year)","vol",pct],[shLabel,"sharpe",num],["Worst fall from peak","max_dd",pct],["100 became","final",v=>num(v,1)]];
   $("#kpis").innerHTML = K.map(([l,k,f]) => `<div class="kpi"><div class="l">${l}</div><div class="v">${f(m.strategy[k])}</div><div class="b">${esc(c.names.benchmark)}: ${f(m.benchmark[k])}</div></div>`).join("");
   fillCore(c);
+  fillSE(c);
   if(!window.Plotly){ document.querySelectorAll(".chart").forEach(el => el.innerHTML = `<p class="muted small">Chart library did not load.</p>`); return }
   const col = {strategy:"#1f4e79", benchmark:"#d98324", sleeve:"#6a994e"};
   const label = k => k==="strategy" ? "Strategy: "+c.names.strategy : k==="benchmark" ? "Benchmark: "+c.names.benchmark : "Sleeve: "+c.names.sleeve;

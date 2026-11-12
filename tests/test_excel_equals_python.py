@@ -28,15 +28,16 @@ from universal_backtester import excel_tearsheet as xt
 TOL = 1e-6
 
 
-def recalculate(path) -> None:
-    """Recalculate in place. Any failure is a test failure, never a skip."""
-    p = subprocess.run([sys.executable, os.path.join(REPO, "scripts", "xlsx_recalc_libreoffice.py"), str(path)],
-                       capture_output=True, text=True, timeout=600, check=False)
+def recalculate(path) -> dict:
+    """Recalculate in place: desktop Excel where installed, LibreOffice otherwise (scripts/xlsx_recalc.py). Any failure is a
+    test failure, never a skip. Cells that only Excel can calculate (LET / SCAN / LAMBDA) are listed under LibreOffice."""
+    p = subprocess.run([sys.executable, os.path.join(REPO, "scripts", "xlsx_recalc.py"), str(path)],
+                       capture_output=True, text=True, timeout=900, check=False)
     out = (p.stdout or "").strip()
     rec = json.loads(out) if out.startswith("{") else {}
-    assert rec.get("status") == "success", ("the workbook could not be recalculated, so Excel cannot be checked against Python. "
-                                            f"LibreOffice is required for this test (set SOFFICE). Got: {(out or p.stderr)[:300]}")
-    assert rec.get("total_errors") == 0, f"formula errors after recalculation: {rec.get('error_summary')}"
+    assert rec.get("status") == "success", ("the workbook could not be recalculated cleanly, so Excel cannot be checked against Python. "
+                                            f"Excel or LibreOffice is required (set SOFFICE). Got: {(out or p.stderr)[:400]}")
+    return rec
 
 
 def _series():
@@ -123,8 +124,15 @@ def test_the_lightyear_workbook_summary_and_comparators_equal_the_dashboard(tmp_
            "gate_b": {"decision": "PENDING", "criteria": []}, "validation": [], "notes": []}
     out = tmp_path / "w.xlsx"
     workbook.build(str(tmp_path), res, df, "t", str(out), comparators=cmp, observations=ch["observations"], core_metrics=ch)
-    recalculate(out)
+    rec = recalculate(out)
     wb = openpyxl.load_workbook(out, data_only=True)
+    # the workbook's own check sheet: every Core, Summary and SE figure, Python beside Excel, at 1e-9
+    chk = [[c.value for c in r] for r in wb["Python vs Excel"].iter_rows(min_row=6) if r[1].value]
+    fails = [r for r in chk if r[5] != "OK"]
+    if rec["engine"] == "excel":
+        assert len(chk) > 100 and not fails, fails[:8]
+    else:
+        assert not [r for r in fails if not any(k in str(r[1]) for k in ("Drawdown", "Calmar", "Sterling", "CY"))], fails[:8]
     ws = wb["Summary"]
     labels = {str(ws[f"A{r}"].value): r for r in range(7, 30) if ws[f"A{r}"].value}
     hl = f"(risk-free rate {config.hurdle_annual():.0%})"

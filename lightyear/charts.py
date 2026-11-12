@@ -15,7 +15,7 @@ import numpy as np
 import pandas as pd
 
 from ros import config
-from ros.metrics import core
+from ros.metrics import core, se
 
 ROLL = 63   # three months of trading days for rolling volatility
 
@@ -65,6 +65,28 @@ def metrics(r: pd.Series, dates: pd.Series, cash_rate=None, bench: pd.Series = N
     if cash_rate is None and b is not None:
         out["beta"] = float("nan")
     return out
+
+
+def _filter_betas(strat, bench, cash, index_filter):
+    """Beta on the days the card's index filter was open and on the days it was shut. The filter's state on day t is read
+    at the PREVIOUS session's close (index close above its N-day average), so nothing from day t is used. None when the
+    card has no index filter; a reason when the index series is not on this machine."""
+    if not index_filter or not index_filter.get("days") or not index_filter.get("series"):
+        return None
+    try:
+        from ros.data.loaders import load_nse_workbook_combined
+        from ros.data.sources import NSE_INDEX_WORKBOOK
+        levels, _ = load_nse_workbook_combined(NSE_INDEX_WORKBOOK)
+        px = levels[index_filter["series"]].dropna()
+    except Exception as e:  # noqa: BLE001 -- information only; the reason is shown on the page
+        return {"status": "not computed", "why": f"{type(e).__name__}: {e}"[:200]}
+    n = int(index_filter["days"])
+    is_open = (px > px.rolling(n).mean()).shift(1).reindex(strat.index)
+    known = is_open.notna()
+    o = core.beta_on(strat, bench, (is_open == True) & known, cash)      # noqa: E712
+    s = core.beta_on(strat, bench, (is_open == False) & known, cash)     # noqa: E712
+    return {"status": "computed", "series": index_filter["series"], "days": n, "open": o, "shut": s,
+            "rule": f"open on a day when {index_filter['series']} closed above its {n}-day average at the previous session"}
 
 
 def _hurdle(sharpe_hurdle) -> float:
@@ -143,7 +165,7 @@ def _blank_nans(x):
 
 
 def build(df: pd.DataFrame, names: dict, cash_rate=None, comparators: pd.DataFrame = None, turnover: pd.Series = None,
-          card_bp=None, publication_date=None, cash_source=None, sharpe_hurdle=None):
+          card_bp=None, publication_date=None, cash_source=None, sharpe_hurdle=None, benchmark_basis="price", index_filter=None):
     df = df.sort_values("date").reset_index(drop=True)
     cols = [c for c in ("strategy", "benchmark", "sleeve") if c in df.columns]
     d = df["date"]
@@ -202,6 +224,12 @@ def build(df: pd.DataFrame, names: dict, cash_rate=None, comparators: pd.DataFra
         gross = core.returns_at_cost(strat, turnover, 0.0, card_bp)
         out["gross"] = metrics(pd.Series(gross.to_numpy()), d, cash_rate, df["benchmark"], sharpe_hurdle)
     out["post_publication"] = core.post_publication(strat, bench, cash, publication_date, hurdle=core.daily_cash(sharpe_hurdle))
+    # SE Return Analytics (monthly): the reference sheet's own formulas on calendar-month returns. Separate from every
+    # daily figure above and from Gate B. Its risk-free rate is the same one config setting.
+    out["se"] = se.block(strat, bench, out["names"].get("benchmark", "Benchmark"), benchmark_basis,
+                         {"risk_free_rate": sharpe_hurdle})
+    up, dn = core.beta_on(strat, bench, bench > 0, cash), core.beta_on(strat, bench, bench < 0, cash)
+    out["beta_split"] = {"up_market": up, "down_market": dn, "index_filter": _filter_betas(strat, bench, cash, index_filter)}
     wd = core.worst_days(strat)
     out["worst_days"] = [{"date": str(k.date()), "return": float(v)} for k, v in wd.items()]
     return _blank_nans(out)
