@@ -909,8 +909,11 @@ def analyst_review(rid):
         log(rid, "error", "Analyst review did not write a valid review.json.")
         return
     try:
-        res, df = contract.check_results(rd)
-        res["validation"] = contract.relabel(res.get("validation"))
+        # Refresh the workbook from the SAME results the build put on the page (state.json): fixed rows first, house-cost rows
+        # filtered, labels as shown, Gate v2 included. Reading results.json raw here once produced a workbook without the
+        # Gate v2 sheet and with a row the page does not show (found 2026-11-11).
+        _, df = contract.check_results(rd)
+        res = load(rid).get("results") or {}
         extra, _ = contract.load_optional(rd, df["date"])
         ch = json.load(open(os.path.join(rd, "charts.json"), encoding="utf-8"))
         recalc = _workbook(rid, res, df, extra, ch.get("observations"), rev, ch)
