@@ -3,40 +3,41 @@
 <style>
 @page { size: A4; margin: 11mm 12mm 12mm 12mm; }
 * { box-sizing: border-box; }
-body { font: 9.4pt/1.32 Arial, Helvetica, sans-serif; color: #1c2430; margin: 0; }
+body { font: 9.1pt/1.28 Arial, Helvetica, sans-serif; color: #000; margin: 0; }
 .page { height: 272mm; display: flex; flex-direction: column; break-after: page; }
 .page:last-child { break-after: auto; }
-h1 { color: #1f4e79; font-size: 19pt; margin: 0 0 1mm; }
-.sub { color: #5f6b7a; font-size: 10pt; margin: 0 0 3mm; }
-.foot { margin-top: auto; padding-top: 2mm; border-top: 0.5pt solid #d9dee5; color: #6b7785; font-size: 8pt; display: flex; justify-content: space-between; }
-.lane { font-size: 8pt; font-weight: bold; letter-spacing: .5px; text-transform: uppercase; color: #5f6b7a; margin: 1.6mm 0 0.8mm; }
+h1 { color: #000; font-size: 19pt; margin: 0 0 1mm; }
+.sub { color: #000; font-size: 10pt; margin: 0 0 3mm; }
+.foot { margin-top: auto; padding-top: 2mm; border-top: 0.5pt solid #000; color: #000; font-size: 8pt; display: flex; justify-content: space-between; }
+.lane { font-size: 8pt; font-weight: bold; letter-spacing: .5px; text-transform: uppercase; color: #000; margin: 1.6mm 0 0.8mm; }
 .row { display: flex; gap: 2.5mm; align-items: stretch; }
-.box { flex: 1; border: 0.8pt solid #9aa5b1; border-radius: 2mm; padding: 1.6mm 2.4mm; background: #fff; }
-.box b { color: #1f4e79; }
-.box small { display: block; color: #4a5562; font-size: 8.2pt; margin-top: 0.4mm; }
-.model { background: #eef3f8; border-color: #1f4e79; }
-.code { background: #eef7ef; border-color: #2e7d4f; }
-.human { background: #fff4d6; border-color: #d9a514; }
-.out { background: #f6f8fa; }
-.miss { background: #fdecea; border-color: #b3261e; }
-.arrow { text-align: center; color: #1f4e79; font-size: 12pt; line-height: 1; margin: 0.6mm 0; }
-.rarrow { flex: 0 0 5mm; display: flex; align-items: center; justify-content: center; color: #1f4e79; font-size: 12pt; }
+.box { flex: 1; border: 0.8pt solid #000; border-radius: 2mm; padding: 1.3mm 2.4mm; background: #fff; }
+.box b { color: #000; }
+.box small { display: block; color: #222; font-size: 7.9pt; margin-top: 0.3mm; }
+.box::before { display: inline-block; font-size: 6.4pt; font-weight: bold; letter-spacing: .5px; color: #000; border: 0.5pt solid #000; border-radius: 0.8mm; padding: 0 1mm; margin: 0 1.2mm 0.4mm 0; vertical-align: 0.3mm; }
+.model { border: 0.8pt solid #000; } .p1 .model::before { content: "MODEL"; } .p2 .model::before { content: "SUPPLIED FILE"; }
+.code { border: 2.2pt double #000; } .code::before { content: "CODE"; }
+.human { border: 2pt solid #000; } .p1 .human::before { content: "YOU DECIDE"; } .p2 .human::before { content: "A PERSON'S SETTING"; }
+.out { border: 0.9pt dashed #000; } .p1 .out::before { content: "OUTPUT"; } .p2 .out::before { content: "ON THE PAGE"; }
+.miss { border: 1.4pt dotted #000; } .miss::before { content: "MISSING"; }
+.arrow { text-align: center; color: #000; font-size: 10.5pt; line-height: 1; margin: 0.4mm 0; }
+.rarrow { flex: 0 0 5mm; display: flex; align-items: center; justify-content: center; color: #000; font-size: 12pt; }
 .key { display: flex; gap: 5mm; font-size: 8.2pt; margin: 0 0 1mm; }
 .key span { display: inline-flex; align-items: center; gap: 1.5mm; }
-.key i { width: 4mm; height: 3mm; border-radius: 0.8mm; border: 0.8pt solid; display: inline-block; }
+.key i { width: 6mm; height: 3.4mm; border-radius: 0.8mm; display: inline-block; background: #fff; }
 .cols { display: grid; grid-template-columns: 1fr 5mm 1.15fr 5mm 1fr; gap: 0; align-items: stretch; }
 .col { display: flex; flex-direction: column; gap: 1.8mm; }
-.colh { font-size: 8pt; font-weight: bold; letter-spacing: .5px; text-transform: uppercase; color: #5f6b7a; margin-bottom: 0.5mm; }
-.mid { display: flex; align-items: center; justify-content: center; color: #1f4e79; font-size: 14pt; }
-ul { margin: 0.6mm 0 0 3.6mm; padding: 0; } li { margin: 0.2mm 0; font-size: 8.2pt; color: #4a5562; }
-.note { font-size: 8.4pt; color: #4a5562; margin: 1.5mm 0 0; }
+.colh { font-size: 8pt; font-weight: bold; letter-spacing: .5px; text-transform: uppercase; color: #000; margin-bottom: 0.5mm; }
+.mid { display: flex; align-items: center; justify-content: center; color: #000; font-size: 14pt; }
+ul { margin: 0.6mm 0 0 3.6mm; padding: 0; } li { margin: 0.2mm 0; font-size: 8.2pt; color: #222; }
+.note { font-size: 8.4pt; color: #222; margin: 1.5mm 0 0; }
 </style></head><body>
 
 <!-- ============================================================ page 1 -->
-<div class="page">
+<div class="page p1">
   <h1>1. The steps, from paper to decision</h1>
   <p class="sub">What happens when a paper is put into Lightyear, in order. A person decides twice: at Gate A and at Gate B.</p>
-  <div class="key"><span><i style="background:#eef3f8;border-color:#1f4e79"></i>The model reads and writes</span><span><i style="background:#eef7ef;border-color:#2e7d4f"></i>Code calculates</span><span><i style="background:#fff4d6;border-color:#d9a514"></i>A person decides</span><span><i style="background:#f6f8fa;border-color:#9aa5b1"></i>What you get</span></div>
+  <div class="key"><span><i style="border:0.8pt solid #000"></i>MODEL: the model reads and writes (thin line)</span><span><i style="border:2.2pt double #000"></i>CODE: code calculates (double line)</span><span><i style="border:2pt solid #000"></i>YOU DECIDE (thick line)</span><span><i style="border:0.9pt dashed #000"></i>OUTPUT: what you get (dashed)</span></div>
 
   <div class="lane">Before any backtest (no market data needed)</div>
   <div class="row">
@@ -87,10 +88,10 @@ ul { margin: 0.6mm 0 0 3.6mm; padding: 0; } li { margin: 0.2mm 0; font-size: 8.2
 </div>
 
 <!-- ============================================================ page 2 -->
-<div class="page">
+<div class="page p2">
   <h1>2. Where the data comes from</h1>
   <p class="sub">Every price, index member and index level comes from three files. Nothing is downloaded during a run.</p>
-  <div class="key"><span><i style="background:#eef3f8;border-color:#1f4e79"></i>A file someone supplied</span><span><i style="background:#eef7ef;border-color:#2e7d4f"></i>Built by code from those files</span><span><i style="background:#fff4d6;border-color:#d9a514"></i>A setting a person chose</span><span><i style="background:#fdecea;border-color:#b3261e"></i>Not on file</span></div>
+  <div class="key"><span><i style="border:0.8pt solid #000"></i>SUPPLIED FILE (thin line)</span><span><i style="border:2.2pt double #000"></i>CODE: built from those files (double line)</span><span><i style="border:2pt solid #000"></i>A PERSON'S SETTING (thick line)</span><span><i style="border:0.9pt dashed #000"></i>ON THE PAGE (dashed)</span><span><i style="border:1.4pt dotted #000"></i>MISSING (dotted)</span></div>
 
   <div class="cols">
     <div class="col">
