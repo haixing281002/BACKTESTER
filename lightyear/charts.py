@@ -247,7 +247,7 @@ def build(df: pd.DataFrame, names: dict, cash_rate=None, comparators: pd.DataFra
     out["card_bp"] = card_bp
     out["annual_turnover"] = core.annual_turnover(turnover) if turnover is not None else None
     out["gross"] = None
-    # the daily display block: the Barra site's formulas (core.site_block). Shown in "Daily calculations"; Gate B does not read it.
+    # Barra reconciliation mode (core.site_block): this book's daily returns on the site's conventions, kept for the tie-out. Not displayed.
     out["daily_site"] = {"days_per_year": core.SITE_ANN, "strategy": core.site_block(strat), "benchmark": core.site_block(bench), "gross": None}
     if turnover is not None and card_bp:
         gross = core.returns_at_cost(strat, turnover, 0.0, card_bp)

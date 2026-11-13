@@ -152,6 +152,7 @@ def run_state(rid: str, response: Response):
     st["gate_b_read"] = gate_b_read.for_page(run_dir(st["id"]), st.get("decision"))
     st["barra_site"] = barra_site.load(run_dir(st["id"]))
     st["barra_configured"] = barra_site.configured()
+    st["barra_home"] = _barra_home()
     res = st.get("results") or {}
     rv = os.path.join(run_dir(rid), "review.json")
     if os.path.exists(rv):
@@ -219,6 +220,26 @@ def rerun_review(rid: str):
         raise HTTPException(409, "A review is already running.")
     _busy_guard()
     jobs.start(jobs.analyst_review, rid)
+    return {"ok": True}
+
+
+_BARRA_HOME: list = []
+
+
+def _barra_home():
+    if not _BARRA_HOME:
+        _BARRA_HOME.append(barra_site.site_home())
+    return _BARRA_HOME[0]
+
+
+@app.post("/api/runs/{rid}/art")
+def open_art_signed_in(rid: str):
+    """Open the full site in the tester's own browser window, signed in. The login stays with the tester."""
+    st = _state(rid)
+    try:
+        barra_site.open_signed_in((barra_site.load(run_dir(st["id"])) or {}).get("url"))
+    except RuntimeError as e:
+        raise HTTPException(409, str(e)) from e
     return {"ok": True}
 
 

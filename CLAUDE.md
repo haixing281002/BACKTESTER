@@ -546,10 +546,11 @@ nothing to run on shows as not run: it is not a pass and does not hold the gate 
 now, so **the gate does not test for selection luck**. The decision stays PENDING until a named human records one.
 
 Three additions of 2026-11-13 (operator), none of which the gate's status reads:
-- **Daily calculations follow the Barra site's formulas** (`ros/metrics/core.py` `site_block()`, day count `site_days_per_year` in
-  `config/fund.yaml`): mean x 250, sample stdev x sqrt(250), Sharpe and Sortino with no risk-free rate, drawdown on the running sum.
-  The Results tab's "Daily calculations" and the workbook sheet of that name show them. Gate B's own daily tests, the monthly
-  figures and the diagnostics workbook keep their formulas (252 days, the risk-free rate).
+- **Barra reconciliation mode** (`ros/metrics/core.py` `site_block()`, day count `site_days_per_year` in `config/fund.yaml`): a
+  book's daily returns recomputed on the Barra site's conventions (mean x 250, sample stdev x sqrt(250), no risk-free rate,
+  drawdown on the running sum), so Lightyear's daily Python figures can be tied out to the site's. A check only: it replaces
+  nothing, and the Daily calculations sheet and block keep Lightyear's own formulas (252 days, CAGR, the risk-free rate).
+  The tie-out of one run is `docs/barra_reconciliation.md`.
 - **Barra site step** (`lightyear/barra_site.py`): a button on the Results tab sends a finished run's book to the Barra site through
   a separate local tester and shows `barra_site.json` beside Lightyear's figures. Lightyear holds no site address or login; the
   tester's folder is `barra_tester` in the gitignored `config/local.yaml`. A report only.

@@ -17,7 +17,7 @@ from scipy import stats
 from ros import config
 
 ANN = config.trading_days_per_year()     # trading days a year, config/fund.yaml (252)
-SITE_ANN = config.site_days_per_year()   # days a year of the daily display block, config/fund.yaml (250): the Barra site's
+SITE_ANN = config.site_days_per_year()   # days a year of the Barra reconciliation mode, config/fund.yaml (250)
 _CASH_CONSTANT = re.compile(r"^CASH_PROXY_CONSTANT_(\d+(?:\.\d+)?)PCT$")
 
 
@@ -573,11 +573,12 @@ def post_publication(returns: pd.Series, bench: pd.Series, cash: float | pd.Seri
             "sharpe": sharpe(r, cash if hurdle is None else hurdle), "benchmark_sharpe": sharpe(b, cash if hurdle is None else hurdle), "max_dd": max_drawdown(vr), "information_ratio": information_ratio(r, b)}
 
 
-# ---------------------------------------------------------------------------------------------- the daily display block
-# The Barra site's formulas for a book whose daily returns are added, not compounded (operator, 2026-11-13). The Results
-# tab's "Daily calculations" and the workbook sheet of that name show these, so a Lightyear book and the same book on the
-# site differ only by their data. No risk-free rate anywhere; a drawdown is a positive number, in points of return.
-# Gate B does not read this block.
+# ---------------------------------------------------------------------------------------------- Barra reconciliation mode
+# The Barra site's conventions for a book whose daily returns are added, not compounded: a RECONCILIATION MODE ONLY
+# (operator, 2026-11-13). It recomputes a Lightyear book the site's way so the two can be tied out; if they tie, what
+# Lightyear computed is right. It replaces and alters nothing: every Lightyear daily figure is the block above (252 days,
+# CAGR, the risk-free rate, compounded drawdown), and no page, workbook or gate shows or reads these functions.
+# No risk-free rate anywhere; a drawdown is a positive number, in points of return.
 def site_annual_return(returns: pd.Series) -> float:
     """Mean daily return x 250."""
     r = returns.dropna()

@@ -41,7 +41,7 @@ def trading_days_per_year() -> int:
 
 
 def site_days_per_year() -> int:
-    """Days a year of the daily display block (config/fund.yaml), which follows the Barra site's formulas: ros/metrics/core.py SITE_ANN."""
+    """Days a year of the Barra reconciliation mode (config/fund.yaml): ros/metrics/core.py SITE_ANN. Not a Lightyear figure's day count."""
     return int(_load("fund.yaml")["site_days_per_year"])
 
 

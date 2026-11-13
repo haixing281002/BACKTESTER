@@ -580,9 +580,9 @@ function renderResults(st){
         ${st.diagnostics_workbook?`<p class="small muted" style="margin:2px 0 8px"><b>What the diagnostics workbook is:</b> the second Excel file of this run. The main file (Download Excel) holds what is on this page. The diagnostics file holds the working behind it: every holding and trade, the simpler alternatives the strategy had to beat, the cost and cash-rate sweeps, the checks on the data and on the card's rules, and the Gate B rows. Open it to check how a number came about, not to read the result.</p>`:""}
         <div class="kpis" id="kpis"></div></div>
       <div id="qibody"><div class="card small muted">Not built for this run yet. Press Rebuild.</div></div>
-      <details class="card" ontoggle="resizeCharts(this)"><summary>Daily calculations <span class="small muted" style="font-weight:400">daily returns on the Barra site's formulas, each with its formula, beside the monthly figure</span></summary>
+      <details class="card" ontoggle="resizeCharts(this)"><summary>Daily calculations <span class="small muted" style="font-weight:400">every metric on daily returns, with its formula, beside the monthly figure</span></summary>
         <div id="dailybody" style="margin-top:10px"></div></details>
-      <details class="card" ontoggle="resizeCharts(this)"><summary>Barra site <span class="small muted" style="font-weight:400">the same book on the Barra risk model: where the return came from, factor exposures, forecast risk. A report; Gate B does not read it.</span></summary>
+      <details class="card" open ontoggle="resizeCharts(this)"><summary>Barra site <span class="small muted" style="font-weight:400">this book on the Barra risk model. A report; Gate B does not read it.</span></summary>
         <div id="barrabody" style="margin-top:10px"></div></details>
       <details class="card" ontoggle="resizeCharts(this)"><summary>Run diagnostics <span class="small muted" style="font-weight:400">cost tables, strategy rule rows, run facts, robustness rows, daily charts. Gate B's evidence reads from here.</span></summary>
         <div style="margin-top:12px">
@@ -711,34 +711,31 @@ function fillCore(c){
     $("#coremore").innerHTML = "";
     return;
   }
-  const ds = c.daily_site;
-  if(!ds){ $("#dailybody").innerHTML = `This run's daily figures were built before they followed the Barra site's formulas. Press Rebuild to redo them from its own files with no new backtest.`; $("#coremore").innerHTML = ""; return; }
-  const m = c.metrics, s = {...m.strategy, ...ds.strategy}, b = {...m.benchmark, ...ds.benchmark}, bp = c.card_bp, g = c.gross ? {...c.gross, ...(ds.gross||{})} : null, se = c.se;
-  const sd = ds.days_per_year;
+  const m = c.metrics, s = m.strategy, b = m.benchmark, bp = c.card_bp, g = c.gross, se = c.se;
   const f = (v,fmt) => (v==null||Number.isNaN(v)) ? "–" : fmt==="pct" ? pct(v,2) : fmt==="int" ? Math.round(v) : num(v);
   const rf = c.sharpe_hurdle==null ? "" : pct(c.sharpe_hurdle,0);
   const dpy = c.trading_days_per_year==null ? "N" : c.trading_days_per_year;   // trading days a year, config/fund.yaml, via charts.json; N on a run built before it was recorded
   const V = {}; ((se||{}).rows||[]).forEach(r => V[r.label] = r);
   // label, key, format, the daily formula in words, the monthly figure of the same kind
   const R = [["Final value (100 = start)","final","num","100 x product of (1 + daily return)","Total Return"],
-    ["Annualised return","annual_return","pct",`mean daily return x ${sd}`,"CAGR"],
-    ["Volatility","vol","pct",`sample stdev of daily returns x sqrt(${sd})`,"Annualized Volatility"],
-    ["Sharpe (no risk-free rate)","sharpe","num","annualised return / volatility","Sharpe Ratio"],
-    ["Sortino (no risk-free rate)","sortino","num",`annualised return / (sample stdev of the days with a loss x sqrt(${sd}))`,"Sortino Ratio"],
-    ["Maximum drawdown","max_dd","pct","largest fall of the running sum of daily returns from its previous high, as a positive number","Max Drawdown"],
-    ["Days with a gain","hit_rate","pct","days with a return above zero / all days",null],
-    ["Lightyear only: drawdown duration (trading days)","dd_duration_days","int","longest run of days the compounded value is below a previous high",null],
-    ["Lightyear only: 95% CVaR (daily loss)","cvar_95","pct","minus the average of the daily returns at or below their 5th percentile","95% CVaR"],
-    ["Lightyear only: skew","skew","num","sample skew of daily returns","Skewness"],
-    ["Lightyear only: CAGR without the 10 best days","best_days_removed_cagr","pct","the 10 best days removed, then compounded",null],
-    ["Lightyear only: beta to the benchmark","beta","num","Cov(r - c, b - c) / Var(b - c), each minus one day of the card's cash rate","Beta"],
-    ["Lightyear only: tracking error","tracking_error","pct",`sample stdev of (daily return - benchmark's) x sqrt(${dpy})`,"Tracking Error"],
-    ["Lightyear only: information ratio against the benchmark","information_ratio","num",`mean of (daily return - benchmark's) x ${dpy} / tracking error`,"Information Ratio"],
-    ["Lightyear only: rolling one-year periods behind","rolling_behind","pct",`share of ${dpy}-day windows with a compounded return below the benchmark's`,null]];
+    ["CAGR","cagr","pct","(final / 100)^(1 / years) - 1, years = calendar days / 365.25","CAGR"],
+    ["Volatility","vol","pct",`sample stdev of daily returns x sqrt(${dpy})`,"Annualized Volatility"],
+    [`Sharpe (risk-free rate ${rf})`,"sharpe","num","(CAGR - risk-free rate) / volatility","Sharpe Ratio"],
+    [`Sortino (risk-free rate ${rf})`,"sortino","num","(CAGR - risk-free rate) / downside deviation of daily returns below the daily risk-free rate","Sortino Ratio"],
+    ["Maximum drawdown","max_dd","pct","largest fall of the daily value from its previous high, as a positive number","Max Drawdown"],
+    ["Calmar","calmar","num","CAGR / maximum drawdown","Calmar Ratio"],
+    ["Drawdown duration (trading days)","dd_duration_days","int","longest run of days below a previous high",null],
+    ["95% CVaR (daily loss)","cvar_95","pct","minus the average of the daily returns at or below their 5th percentile","95% CVaR"],
+    ["Skew","skew","num","sample skew of daily returns","Skewness"],
+    ["CAGR without the 10 best days","best_days_removed_cagr","pct","the 10 best days removed, then compounded",null],
+    ["Beta","beta","num","slope of daily returns on the benchmark's, both over the card's cash rate","Beta"],
+    ["Tracking error","tracking_error","pct",`sample stdev of (daily return - benchmark's) x sqrt(${dpy})`,"Tracking Error"],
+    ["Information ratio","information_ratio","num",`mean of (daily return - benchmark's) x ${dpy} / tracking error`,"Information Ratio"],
+    ["Rolling one-year periods behind","rolling_behind","pct",`share of ${dpy}-day windows with a compounded return below the benchmark's`,null]];
   const mon = (lab, who) => { const r = V[lab]; return r ? f(r[who], r.format) : "" };
   $("#dailybody").innerHTML = `<table class="t"><tr><th>Metric (daily)</th><th>Daily formula</th>${g?`<th>Strategy, gross: daily</th>`:""}<th>Strategy${g?`, at the card's ${num(bp,0)}bp`:""}: daily</th><th>${esc(c.names.benchmark)}: daily</th><th>Monthly figure of the same kind</th><th>Strategy: monthly</th><th>Benchmark: monthly</th></tr>` +
     R.map(([l,k,t,w,ml])=>`<tr><td>${l}</td><td class="small muted">${w}</td>${g?`<td>${f(g[k],t)}</td>`:""}<td>${f(s[k],t)}</td><td>${f(b[k],t)}</td><td class="small">${ml?esc(ml)+" (monthly)":"none"}</td><td>${ml?mon(ml,"strategy"):""}</td><td>${ml?mon(ml,"benchmark"):""}</td></tr>`).join("") +
-    `</table><div class="small muted" style="margin-top:6px">The daily block follows the Barra site's formulas, so this book and the same book on the site differ only by their data: daily returns added (not compounded), sample standard deviation, ${sd} days a year, no risk-free rate, and a drawdown in points of summed return. Rows marked "Lightyear only" have no figure on the site and keep Lightyear's own formula (${dpy} days). The monthly block uses complete calendar months, population standard deviation and month counts. The two differ by construction. The monthly Max Drawdown and CVaR are shown as negative numbers and the daily ones as positive. Gate B uses its own daily tests.</div>`;
+    `</table><div class="small muted" style="margin-top:6px">The daily block uses every daily return, sample standard deviation and ${dpy} days a year; the monthly block uses complete calendar months, population standard deviation and month counts. The two differ by construction. The monthly Max Drawdown and CVaR are shown as negative numbers and the daily ones as positive. Gate B uses its own daily tests.</div>`;
   const pp = c.post_publication, cp = c.capacity || {};
   $("#coremore").innerHTML = [
     c.annual_turnover!=null ? `Two-way turnover ${num(c.annual_turnover)} times capital a year. The cost is the one on this run's card, approved at Gate A.` : `Turnover not computed: this run wrote no trades or holdings.`,
@@ -983,33 +980,36 @@ function renderGateB(st){
 let BARRA_SIG = null, GBR_SIG = null;
 function renderBarra(st){
   const el = $("#barrabody"); if(!el) return;
-  const b = st.barra_site, bs = st.barra_status, ds = (CH||{}).daily_site;
-  const sig = st.id + bs + (b?b.built_at:"") + !!ds + st.barra_configured; if(BARRA_SIG === sig && el.innerHTML) return; BARRA_SIG = sig;
+  const b = st.barra_site, bs = st.barra_status;
+  const sig = st.id + bs + (b?b.built_at:"") + st.barra_configured + st.barra_home; if(BARRA_SIG === sig && el.innerHTML) return; BARRA_SIG = sig;
   const fin = ["gate_b","decided"].includes(st.status);
-  const btn = t => st.barra_configured && fin ? `<button ${b?"":'class="primary"'} onclick="act('barra')">${t}</button>` : "";
-  if(bs==="running"){ el.innerHTML = `<div class="now"><div class="spin"></div><div><b>The book is on its way to the Barra site.</b><div class="small muted">Mapping takes seconds. The first time a run is sent, the site then builds its analytics, which takes about 20 minutes; after that it is read back in under a minute. Progress is on the Progress tab. Nothing on this page waits for it.</div></div></div>`; return }
-  if(!b){ el.innerHTML = st.barra_configured ? `<div class="row" style="justify-content:space-between"><span>${bs==="failed"?`The Barra site step did not finish: ${esc(st.barra_error||"see the Progress tab")}`:"This run has not been sent to the Barra site."}</span>${btn("Send this book to the Barra site")}</div>`
-      : `<span class="muted">The Barra site step is not set up on this machine (config/local.yaml, key barra_tester).</span>`; return }
-  const S = b.site, C = b.lightyear_site_formula_shared_days, L = ds ? ds.strategy : null, g = b.daily_agreement, m = b.mapping, fl = b.lightyear_flat_days || {};
-  const rows = [["Annualised return","annual_return","pct"],["Volatility","vol","pct","volatility"],["Sharpe (no risk-free rate)","sharpe","num"],["Sortino (no risk-free rate)","sortino","num"],["Maximum drawdown","max_dd","pct","max_drawdown"],["Days with a gain","hit_rate","pct"]];
-  const f = (v,t) => v==null ? "–" : t==="pct" ? pct(v,2) : num(v);
-  const gap = (a,c,t) => (a==null||c==null) ? "" : t==="pct" ? ((a-c)*100>=0?"+":"") + num((a-c)*100) + " pts" : ((a-c)>=0?"+":"") + num(a-c);
+  const url = (b && b.url) || st.barra_home;
+  // the full site in a new tab: signed in when this browser already holds the site's login, otherwise its login page.
+  // "signed in" starts the tester's own window, which logs in with the login the tester keeps. No login is on this page.
+  const art = url ? `<a class="btn" href="${esc(url)}" target="_blank" rel="noopener"><button type="button" class="primary">Open ART</button></a>
+      <button type="button" title="Opens the site in its own window, already signed in" onclick="act('art')">Open ART signed in</button>` : "";
+  const send = t => st.barra_configured && fin ? `<button type="button" onclick="act('barra')">${t}</button>` : "";
+  if(bs==="running"){ el.innerHTML = `<div class="now"><div class="spin"></div><div><b>The book is on its way to the Barra site.</b><div class="small muted">Mapping takes seconds. The first time a run is sent the site builds its analytics, about 20 minutes. Progress is on the Progress tab.</div></div></div><div class="row" style="margin-top:10px">${art}</div>`; return }
+  if(!b){ el.innerHTML = st.barra_configured ? `<div class="row" style="justify-content:space-between"><span>${bs==="failed"?`The Barra site step did not finish: ${esc(st.barra_error||"see the Progress tab")}`:"This run has not been sent to the Barra site."}</span><span class="row">${send("Send this book to the Barra site")}${art}</span></div>`
+      : `<span class="muted">The Barra site step is not set up on this machine.</span>`; return }
+  const f = (v,t) => v==null ? "–" : t==="pct" ? pct(v,2) : t==="x" ? num(v,1) + "x" : t==="d" ? num(v,0) : t==="ic" ? num(v,4) : num(v);
+  const books = b.books || [];
+  const R = [["Annualised return","annual_return","pct"],["Volatility","volatility","pct"],["Sharpe","sharpe","num"],["Sortino","sortino","num"],["Maximum drawdown","max_drawdown","pct"],
+    ["Information ratio","information_ratio_specific","num"],["Information coefficient","information_coefficient","ic"],["Days with a gain","hit_rate","pct"],
+    ["Turnover a year","annual_turnover","x"],["Holding period (days)","holding_period_days","d"],["Cost a year (the site's model)","annual_cost","pct"]];
   const legs = b.attribution_pct_a_year || {}, ex = Object.entries(b.mean_factor_exposure||{}).sort((x,y)=>Math.abs(y[1])-Math.abs(x[1])).slice(0,8), rk = b.mean_risk || {};
   const p1 = v => v==null ? "–" : num(v*100,1) + "%";
-  el.innerHTML = `<div class="row" style="justify-content:space-between"><span class="small muted">Site data to ${esc(b.site_last_date)} · weight book: ${esc(b.weight_book)} · read ${esc(ist(b.built_at))}${b.url?` · <a href="${esc(b.url)}" target="_blank" rel="noopener">open on the Barra site</a>`:""}</span>${btn("Read again from the site")}</div>
-    <h3>The same book on both systems</h3>
-    <table class="t"><tr><th>Metric (the site's formulas)</th><th>Lightyear daily, whole run</th><th>Lightyear, the days the site has</th><th>Barra site</th><th>Site minus Lightyear, same days</th></tr>` +
-    rows.map(([l,k,t,k2])=>`<tr><td>${l}</td><td>${L?f(L[k],t):"–"}</td><td>${f(C[k2||(k==="vol"?"volatility":k)],t)}</td><td>${f(S[k2||(k==="vol"?"volatility":k)],t)}</td><td>${gap(S[k2||(k==="vol"?"volatility":k)],C[k2||(k==="vol"?"volatility":k)],t)}</td></tr>`).join("") +
-    `</table><div class="small muted" style="margin-top:6px">The first column is the Daily calculations block above. The middle column is the same formulas on the ${num(g.shared_days,0)} days both systems have, so the last column is the data alone: the site's returns include dividends and Lightyear's prices do not, the site has no Muhurat or special sessions, and a holding with no Barra ID is not on the site. Daily returns correlate ${num(g.corr,4)}; the typical daily gap is ${num(g.mean_abs_gap_bp,1)} bp.${fl.days?` On ${fl.days} days Lightyear's book is wholly in cash and the site's still moves a little, which is most of the gap in days with a gain.`:""}</div>
-    <div class="grid2" style="margin-top:12px"><div><h3>Where the return came from <span class="small muted">(% a year, added)</span></h3>
-      <table class="t"><tr><th>Source</th><th>Return a year</th></tr>${["market","style","industry","specific"].map(k=>`<tr><td>${k==="specific"?"Stock-specific":k[0].toUpperCase()+k.slice(1)+(k==="market"?"":" factors")}</td><td>${legs[k]==null?"–":num(legs[k],1)+"%"}</td></tr>`).join("")}
-      <tr><td>Return per unit of risk on the stock-specific part (the site's information ratio)</td><td>${num(S.information_ratio_specific)}</td></tr></table></div>
-    <div><h3>Largest factor exposures <span class="small muted">(average, in standard deviations)</span></h3>
-      <table class="t"><tr><th>Barra factor</th><th>Exposure</th></tr>${ex.map(([k,v])=>`<tr><td>${esc(k)}</td><td>${(v>=0?"+":"")+num(v)}</td></tr>`).join("")}</table></div></div>
-    <h3>Forecast risk <span class="small muted">(the risk model's own estimate, average over all days)</span></h3>
-    <div class="facts"><div>Total risk a year</div><div>${p1(rk["Total Risk"])}</div><div>From factors / from stock-specific</div><div>${p1(rk["Factor Risk"])} / ${p1(rk["Specific Risk"])}</div>
-      <div>Share of variance</div><div>market ${p1(rk["Market Risk (%variance)"])}, style ${p1(rk["Style Risk (%variance)"])}, industry ${p1(rk["Industry Risk (%variance)"])}, stock-specific ${p1(rk["Specific Risk (%variance)"])}</div>
-      <div>Upload</div><div>${num((m.rows_by_status||{}).mapped,0)} of ${num(m.holdings_rows_to_end,0)} holdings rows mapped to a Barra ID; worst date ${pct(m.min_mapped_share,1)} of the book${(m.unmapped_names||[]).length?`; not on the site: ${m.unmapped_names.map(esc).join(", ")}`:""}. Stored weights equal the weights sent (largest difference ${b.round_trip.largest_difference}).</div></div>`;
+  el.innerHTML = `<div class="row" style="justify-content:space-between"><span class="small muted">Barra site figures to ${esc(b.site_last_date)}, read ${esc(ist(b.built_at))}</span><span class="row">${send("Read again")}${art}</span></div>
+    ${books.length?`<h3>The four weight books</h3>
+    <table class="t"><tr><th>Barra site</th>${books.map(k=>`<th>${esc(k.label)}</th>`).join("")}</tr>` +
+      R.map(([l,k,t])=>`<tr><td>${l}</td>${books.map(x=>`<td>${f(k==="max_drawdown" && x[k]!=null ? Math.abs(x[k]) : x[k],t)}</td>`).join("")}</tr>`).join("") + `</table>`:""}
+    <div class="grid2" style="margin-top:14px"><div><h3>Return by source <span class="small muted">(uploaded book, % a year)</span></h3>
+      <table class="t">${["market","style","industry","specific"].map(k=>`<tr><td>${k==="specific"?"Stock-specific":k[0].toUpperCase()+k.slice(1)}</td><td>${legs[k]==null?"–":num(legs[k],1)+"%"}</td></tr>`).join("")}</table>
+      <h3 style="margin-top:14px">Forecast risk <span class="small muted">(uploaded book)</span></h3>
+      <table class="t"><tr><td>Total</td><td>${p1(rk["Total Risk"])}</td></tr><tr><td>Factor</td><td>${p1(rk["Factor Risk"])}</td></tr><tr><td>Stock-specific</td><td>${p1(rk["Specific Risk"])}</td></tr>
+        <tr><td>Share of variance: market / style / industry / specific</td><td>${p1(rk["Market Risk (%variance)"])} / ${p1(rk["Style Risk (%variance)"])} / ${p1(rk["Industry Risk (%variance)"])} / ${p1(rk["Specific Risk (%variance)"])}</td></tr></table></div>
+    <div><h3>Largest factor exposures <span class="small muted">(uploaded book, standard deviations)</span></h3>
+      <table class="t">${ex.map(([k,v])=>`<tr><td>${esc(k)}</td><td>${(v>=0?"+":"")+num(v)}</td></tr>`).join("")}</table></div></div>`;
 }
 function renderGbRead(st){
   const el = $("#gbread"); if(!el) return;

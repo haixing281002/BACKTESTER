@@ -35,6 +35,31 @@ def configured() -> bool:
     return bool(d) and os.path.isfile(os.path.join(d, COMMAND))
 
 
+def site_home() -> str | None:
+    """The site's home page, as the tester states it. None when there is no tester."""
+    if not configured():
+        return None
+    p = subprocess.run([sys.executable, os.path.join(tester_dir(), "scripts", "site_info.py")], capture_output=True, text=True, encoding="utf-8")
+    try:
+        return json.loads(p.stdout)["home"] if p.returncode == 0 else None
+    except (json.JSONDecodeError, KeyError):
+        return None
+
+
+def open_signed_in(url: str | None = None) -> None:
+    """Start the tester's launcher: its own browser window on the site, signed in with the login the tester keeps
+    (encrypted, outside every repo). Lightyear never sees the login. `url` must be a page of the site."""
+    if not configured():
+        raise RuntimeError("The Barra site step is not set up on this machine (config/local.yaml key barra_tester).")
+    home = site_home()
+    target = url if (url and home and url.startswith(home.rstrip("/") + "/")) else home
+    if not target:
+        raise RuntimeError("The tester did not give the site's address.")
+    flags = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0) | getattr(subprocess, "DETACHED_PROCESS", 0)
+    subprocess.Popen([sys.executable, os.path.join(tester_dir(), "scripts", "barra_open.py"), target], stdout=subprocess.DEVNULL,
+                     stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL, creationflags=flags, close_fds=True)
+
+
 def load(run_dir: str) -> dict[str, Any] | None:
     p = os.path.join(run_dir, FILE)
     if not os.path.isfile(p):
