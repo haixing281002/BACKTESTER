@@ -62,7 +62,8 @@ def phases(months: pd.DatetimeIndex, s: np.ndarray, b: np.ndarray, cfg: list[dic
     per = months.to_period("M")
     pos = np.arange(len(per))
     rows, covered = [], np.zeros(len(per), dtype=bool)
-    spans = [(c, pd.Period(c["first_month"], "M"), pd.Period(c["last_month"], "M")) for c in cfg]
+    # a phase with no last_month is still running: it covers every month from its first on, and is not "clipped"
+    spans = [(c, pd.Period(c["first_month"], "M"), pd.Period(c["last_month"], "M") if c.get("last_month") else max(per[-1], pd.Period(c["first_month"], "M"))) for c in cfg]
     spans.append(({"label": "Unclassified", "wyckoff_phase": "Unclassified", "market_term": "not yet named"},
                   (spans[-1][2] + 1) if spans else per[0], per[-1]))
     for c, p0, p1 in spans:
@@ -78,7 +79,7 @@ def phases(months: pd.DatetimeIndex, s: np.ndarray, b: np.ndarray, cfg: list[dic
         ann_s, ann_b = float((1 + abs_s) ** (12.0 / n) - 1), float((1 + abs_b) ** (12.0 / n) - 1)
         rows.append({"label": c["label"], "wyckoff_phase": c["wyckoff_phase"], "market_term": c["market_term"], "first": i, "last": j,
                      "first_month": str(per[i]), "last_month": str(per[j]), "months": n,
-                     "clipped": bool(per[i] > p0 or per[j] < p1) and c["label"] != "Unclassified",
+                     "clipped": bool(per[i] > p0 or per[j] < p1) and c["label"] != "Unclassified", "open": not c.get("last_month") and c["label"] != "Unclassified",
                      "strategy_abs": abs_s, "benchmark_abs": abs_b, "strategy_ann": ann_s, "benchmark_ann": ann_b, "alpha": ann_s - ann_b})
     return rows
 

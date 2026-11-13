@@ -1,5 +1,7 @@
 # Quant AI Researcher
 """Quant insights (monthly), ros/metrics/qi.py, and the complete-months rule of ros/metrics/se.py. Synthetic data only."""
+import itertools
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -75,12 +77,19 @@ def test_phases_are_clipped_to_the_run_annualised_by_month_count_and_the_rest_is
     assert sum(r["months"] for r in (a, bb, u)) == 60
 
 
-def test_the_nine_configured_phases_are_contiguous_whole_months():
+def test_the_configured_phases_are_contiguous_whole_months_and_the_last_one_is_still_running():
     cfg = config.market_phases()
-    assert len(cfg) == 9 and cfg[0]["first_month"] == "2013-04" and cfg[-1]["last_month"] == "2025-06"
-    for x, y in zip(cfg, cfg[1:]):
+    assert len(cfg) == 10 and cfg[0]["first_month"] == "2013-04" and cfg[-2]["last_month"] == "2025-06"
+    assert cfg[-1]["first_month"] == "2025-07" and "last_month" not in cfg[-1] and cfg[-1]["wyckoff_phase"] == "Post-COVID phase"
+    for x, y in itertools.pairwise(cfg):
         assert pd.Period(y["first_month"], "M") == pd.Period(x["last_month"], "M") + 1
-    assert [(pd.Period(c["last_month"], "M") - pd.Period(c["first_month"], "M")).n + 1 for c in cfg] == [23, 12, 23, 24, 2, 19, 8, 27, 9]
+    assert [(pd.Period(c["last_month"], "M") - pd.Period(c["first_month"], "M")).n + 1 for c in cfg[:-1]] == [23, 12, 23, 24, 2, 19, 8, 27, 9]
+    blk, _months, _s, b = _block(n=152)                      # January 2014 to August 2026
+    rows = qi.block(blk, cfg)["phases"]
+    last = rows[-1]
+    assert len(rows) == 10 and last["label"] == "Jun-25 onward" and (last["first_month"], last["last_month"], last["months"]) == ("2025-07", "2026-08", 14)
+    assert last["open"] and not last["clipped"] and rows[0]["clipped"] and sum(r["months"] for r in rows) == 152
+    assert last["benchmark_abs"] == pytest.approx(np.prod(1 + b[-14:]) - 1)
 
 
 def test_rolling_alpha_and_excess_sharpe_follow_the_stated_definition():

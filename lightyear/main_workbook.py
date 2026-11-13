@@ -262,13 +262,13 @@ def build(run_dir: str, results: dict[str, Any], df, title: str, out_path: str, 
 
     # ------------------------------------------------------------------------------------------------ Market phases
     wp = sheet("Market phases", "NIFTY 500 phases named by the operator (config/market_phases.yaml). Annualised = (1 + absolute return)^(12 / months) - 1, whatever the "
-                                "length, as the reference deck's table does; a phase shorter than a year is therefore scaled up. Months after the last named phase are Unclassified.")
+                                "length, as the reference deck's table does; a phase shorter than a year is therefore scaled up. A phase with no end month is still running. Months no phase covers are Unclassified.")
     r = r0 = table(wp, 4, ["Phase", "Months covered", "Strategy annualised", f"{b_lab} annualised", "Alpha", "Length (months)", "Wyckoff phase", "Market term",
                            "Strategy absolute", f"{b_lab} absolute", "Chart label"])
     top = f"MAX({MSQ}$F$5:$F${m1})"
     for j, p in enumerate(q["phases"]):
         a, b_ = m0 + p["first"], m0 + p["last"]
-        _lab(wp, f"A{r}", p["label"] + (" (clipped to the run)" if p["clipped"] else ""))
+        _lab(wp, f"A{r}", p["label"] + (" (clipped to the run)" if p["clipped"] else " (still running)" if p.get("open") else ""))
         _lab(wp, f"B{r}", f"{p['first_month']} to {p['last_month']}")
         _f(wp, f"F{r}", f"=ROWS({MSQ}B{a}:B{b_})", INT)
         _f(wp, f"I{r}", f"ARRAY:=PRODUCT(1+{MSQ}B{a}:B{b_})-1", PCT2)

@@ -54,44 +54,6 @@ def strip(t):
     return re.sub(r"\s+", " ", re.sub(r"<[^>]+>", "", t)).replace("&gt;", ">").replace("&lt;", "<").replace("&amp;", "&").strip()
 
 
-# ---------------------------------------------------------------- MathML, for the boxed formulas
-def M(inner):
-    return f'<div class="f"><math display="inline">{inner}</math></div>'
-
-
-def mi(x):
-    return f"<mi>{x}</mi>"
-
-
-def mt(x):
-    return f"<mtext>{x}</mtext>"
-
-
-def mo(x):
-    return f"<mo>{x}</mo>"
-
-
-def mn(x):
-    return f"<mn>{x}</mn>"
-
-
-def frac(a, b):
-    return f"<mfrac><mrow>{a}</mrow><mrow>{b}</mrow></mfrac>"
-
-
-def sub(a, b):
-    return f"<msub><mrow>{a}</mrow><mrow>{b}</mrow></msub>"
-
-
-def sup(a, b):
-    return f"<msup><mrow>{a}</mrow><mrow>{b}</mrow></msup>"
-
-
-def box(sec, title, mathml, words, src):
-    CHECKS.append((sec, words, src))
-    return f'<p class="ft"><b>{title}</b></p>' + M(mathml)
-
-
 SE_READ = {
     "Total Return": "What 1 became over the whole window.", "CAGR": "Twelve months count as a year, whatever the calendar days.",
     "Avg Month Ret": "A typical month.", "Positive Months": "", "Negative Months": "A flat month counts as negative.",
@@ -159,7 +121,7 @@ def content():
     A('<h1 class="title">Financial metrics</h1><p class="sub">Every metric on the Lightyear dashboard and in the Excel workbook: where it is, the formula, and how to read it.</p>')
     A('<div class="note"><p><b>How this is arranged.</b> The sections follow the dashboard from top to bottom, one section per card, with the card\'s own name. Under each '
       'heading two lines say where to find it: the dashboard card, and the workbook sheet. <b>Part 1</b> is the main display, on monthly returns. <b>Part 2</b> is the daily '
-      'calculations and the run diagnostics, both collapsed on the page. <b>Part 3</b> is the Gate B tab. The last section lists every sheet of the two workbooks.</p><p>In the workbook, a <b>formula</b> means Excel calculates the figure itself; a <b>pasted value</b> means Python calculated it and the '
+      'calculations and the run diagnostics, both collapsed on the page. <b>Part 3</b> is the Gate B tab.</p><p>In the workbook, a <b>formula</b> means Excel calculates the figure itself; a <b>pasted value</b> means Python calculated it and the '
       'workbook only shows it. There are no run results or examples here.</p></div>')
     A('<p class="ft"><b>Notation used in every formula</b></p>' + table("Notation", ["Symbol", "Meaning"], [
         ("r, b", "One day's return on the strategy and on the benchmark, the NIFTY 500 price index.", ""),
@@ -192,9 +154,9 @@ def content():
       'months are left out and listed in a footnote on the page. Python and Excel calculate each figure separately, and the sheet "Python vs Excel" marks each OK or FAIL at 1e-9. '
       "The benchmark is the NIFTY 500 price index until a total-return series is on file.</p></div>")
     A('<h2 id="1.1">1.1 Strategy vs benchmark: the five tiles</h2>' + where('Results tab, card "Strategy vs benchmark (monthly)".', 'main workbook, sheet "Returns overview", rows 6 to 10, links to "SE Return Analytics".'))
-    A(table("1.1", H3, se_rows(["CAGR", "Annualized Volatility", "Sharpe Ratio", "Max Drawdown", "Total Return"])
-            + [("Complete months", "First and last complete calendar months of the run, and the daily returns outside them", "The footnote under the tiles gives the count and the dates.",
-                "ros/metrics/se.py complete_months(), block()")], W3))
+    A("<p>The tiles are CAGR and Total Return (formulas in 1.5) and Annualized Volatility, Sharpe Ratio and Max Drawdown (formulas in 1.9), for the strategy with the benchmark "
+      "under each. The footnote under them gives the first and last complete month and the daily returns left out.</p>")
+    CHECKS.append(("1.1", "Complete months: first and last complete calendar months, and the daily returns outside them", "ros/metrics/se.py complete_months(), block()"))
     A('<h2 id="1.2">1.2 Financial-year returns</h2>' + where('Results tab, card "Financial-year returns".', 'main workbook, sheet "Returns overview", second table.'))
     A(table("1.2", H3, [
         ("Financial Year Performance", "∏(1 + m) from April to March − 1", "* marks the first year, ** a last part-year. A part year is not annualised.", "ros/metrics/se.py periods(), compute() tables; workbook 'SE Return Analytics' rows under the analytics"),
@@ -213,7 +175,7 @@ def content():
                                 "Best Month Contri": "Best Month Contribution", "Worst Month Contri": "Worst Month Contribution"}), W3))
     A('<h2 id="1.6">1.6 Market phases</h2>' + where('Results tab, card "Market phases": the shaded chart, then the table.', 'main workbook, sheet "Market phases", formulas over "Monthly series".'))
     A(table("1.6", H3, [
-        ("Phase", "Whole calendar months from the phase table in config/market_phases.yaml; the first phase is clipped to the run", "Months after the last named phase are Unclassified.", f"{qi_} phases(); ros/config.py market_phases()"),
+        ("Phase", "Whole calendar months from the phase table in config/market_phases.yaml; the first phase is clipped to the run", "A phase with no end month is still running.", f"{qi_} phases(); ros/config.py market_phases()"),
         ("Absolute return", "∏(1 + m) over the phase's months − 1", "The chart labels each phase with the index's figure.", f"{qi_} phases()"),
         ("Annualised return", "(1 + absolute return)<sup>12 ÷ months</sup> − 1", "<b>Annualised whatever the length</b>, so a two-month phase is scaled up sixfold in the exponent.", f"{qi_} phases()"),
         ("Alpha", "Strategy annualised − benchmark annualised", "", f"{qi_} phases()"),
@@ -244,7 +206,7 @@ def content():
     A(table("1.9", H3, [("Monthly drawdown <i>(chart)</i>", "W ÷ highest W so far − 1 at each month-end, W = running ∏(1 + m)", "0% is a new month-end high.", f"{qi_} drawdown_series()")]
             + se_rows(["Annualized Volatility", "Negative Monthly Vol"])
             + [("Downside Deviation", "Negative Monthly Vol × √12", "The annualised figure. The reference deck prints this one under the name Negative Monthly Vol.", f"{qi_} block() risk, RISK")]
-            + se_rows(["Min Month Ret"], {"Min Month Ret": "Largest Monthly Loss"})
+            + [("Largest Monthly Loss", "Worst Month Ret of 1.5", "", "ros/metrics/qi.py RISK")]
             + se_rows(["Max Drawdown", "Average Annual Max Drawdown", "Sharpe Ratio", "Treynor Ratio", "Sortino Ratio", "Calmar Ratio", "Sterling Ratio", "Omega Ratio", "Gain to Pain ratio", "Tail Ratio"])
             + se_rows(["Positive Monthly Vol"], {"Positive Monthly Vol": "Positive Monthly Vol <i>(workbook only)</i>"}), W3))
     A('<h2 id="1.10">1.10 Tail risk</h2>' + where('Results tab, card "Tail risk": the table, then three charts of monthly returns with the VaR and CVaR lines.',
@@ -270,7 +232,7 @@ def content():
       'main workbook, sheet "Allocation": yearly tables are formulas over the per-rebalance figures to their right, which are pasted.'))
     A(table("1.13", H3, [
         ("Bucket", "Large = Nifty 100, mid = Midcap 150, small = Smallcap 250, from the latest quarterly NIFTY 500 list on or before the rebalance. Sector = Ace's present-day sector, grouped by config/sector_groups.yaml",
-         "Sector tables appear only once the grouping is approved. Sectors are not dated.", "lightyear/allocation.py build(); config/sector_groups.yaml"),
+         "Sectors are not dated: each company is under its present sector for every year.", "lightyear/allocation.py build(); config/sector_groups.yaml"),
         ("Allocation", "Average, over the year's rebalances, of the bucket's weight", "Cash is 1 − the sum of the buckets.", "lightyear/allocation.py build()"),
         ("Market-cap return", "Holdings' returns from one execution date to the next, weighted by their weights, compounded over the year", "A bucket holding one small position takes that stock's return.", "lightyear/allocation.py build()"),
         ("Sector return", "Plain average of the sector's holdings' returns per holding period, compounded over the year", "", "lightyear/allocation.py build()")], W3))
@@ -281,24 +243,13 @@ def content():
       "year, so they differ from the monthly figures of the same name in Part 1. Gate B reads the run diagnostics and its own daily tests.</p>")
     A('<h2 id="2.1">2.1 Daily calculations</h2>' + where('Results tab, section "Daily calculations": one row per metric, with its daily formula, the daily value and the monthly figure beside it.',
       'main workbook, sheet "Daily calculations", formulas over the "Returns" sheet, checked on "Python vs Excel". The "Summary" sheet of the diagnostics workbook repeats the first rows.'))
-    A(box("2.1", "CAGR: the steady yearly growth rate from start to finish",
-          mt("CAGR") + mo("=") + sup("<mo>(</mo>" + frac(sub(mi("V"), mt("end")), sub(mi("V"), mt("start"))) + "<mo>)</mo>", frac(mn(1), mt("years"))) + mo("−") + mn(1),
-          "CAGR = (V_end / V_start)^(1/years) − 1, V_start = 100 on the session before the first return", f"{core} cagr(), cagr_from_returns(); workbook 'Daily calculations'"))
-    A(box("2.1", "Volatility: how much returns swing in a year. Lower is a smoother ride",
-          mt("Vol") + mo("=") + mt("stdev") + mo("(") + sub(mi("r"), mt("daily")) + mo(")") + mo("×") + "<msqrt><mn>252</mn></msqrt>",
-          "Vol = stdev(daily r) × √252", f"{core} ann_vol(); workbook 'Daily calculations'"))
-    A(box("2.1", f"Sharpe (risk-free rate {RF}): return above the risk-free rate, per unit of risk. Higher is better",
-          mt("Sharpe") + mo("=") + frac(mt("CAGR") + mo("−") + mt(RF), mt("Vol")),
-          f"Sharpe = (CAGR − {RF}) / Vol", f"{core} sharpe_geometric(); config/fund.yaml sharpe_hurdle; workbook 'Daily calculations'"))
-    A(box("2.1", "Worst fall from peak (maximum drawdown): the biggest loss from a high to a later low",
-          mt("Max drawdown") + mo("=") + "<munder><mi>max</mi><mi>t</mi></munder>" + mo("(") + mn(1) + mo("−")
-          + frac(sub(mi("V"), mi("t")), "<munder><mi>max</mi><mrow><mi>s</mi><mo>≤</mo><mi>t</mi></mrow></munder>" + sub(mi("V"), mi("s"))) + mo(")"),
-          "Max drawdown = max over t of (1 − V_t / highest V so far)", f"{core} max_drawdown(); workbook 'Daily calculations'"))
-    A(box("2.1", "100 became: what 100 grew into, after every daily return",
-          mt("Final") + mo("=") + mn(100) + mo("×") + "<munder><mo>∏</mo><mi>t</mi></munder>" + mo("(") + mn(1) + mo("+") + sub(mi("r"), mi("t")) + mo(")"),
-          "Final = 100 × ∏(1 + r_t)", f"{core} value_from_returns(); workbook 'Daily calculations'"))
-
     A(table("2.1", H3, [
+        ("CAGR", "(V<sub>end</sub> ÷ V<sub>start</sub>)<sup>1 ÷ years</sup> − 1, with V<sub>start</sub> = 100 on the session before the first return", "The steady yearly growth rate from start to finish.",
+         f"{core} cagr(), cagr_from_returns(); workbook 'Daily calculations'"),
+        ("Volatility", "stdev(r) × √252", "How much returns swing in a year. Lower is a smoother ride.", f"{core} ann_vol(); workbook 'Daily calculations'"),
+        (f"Sharpe (risk-free rate {RF})", f"(CAGR − {RF}) ÷ Volatility", "Return above the risk-free rate, per unit of risk.", f"{core} sharpe_geometric(); config/fund.yaml sharpe_hurdle; workbook 'Daily calculations'"),
+        ("Maximum drawdown", "max over t of (1 − V<sub>t</sub> ÷ highest V so far)", "The biggest loss from a high to a later low, as a positive number.", f"{core} max_drawdown(); workbook 'Daily calculations'"),
+        ("Final value", "100 × ∏(1 + r)", "What 100 grew into after every daily return.", f"{core} value_from_returns(); workbook 'Daily calculations'"),
         (f"Sortino (risk-free rate {RF})", f"(CAGR − {RF}) ÷ DD, where DD = √mean(min(r − Rf per day, 0)²) × √252", "Like the Sharpe, but only falls below the risk-free rate count as risk.",
          f"{core} sortino_geometric(); workbook 'Daily calculations'"),
         ("Calmar", "CAGR ÷ maximum drawdown", "Return per unit of worst fall.", f"{core} calmar(); workbook 'Daily calculations'"),
@@ -440,41 +391,10 @@ def content():
     A('<p>The same tab also shows the older v1 checklist, folded shut, for comparison. "Evidence supports" is Claude\'s written read, not a calculation, and the decision '
       "stays PENDING until a named person records it.</p>")
 
-    # ------------------------------------------------------------ the two workbooks
-    A('<h1 class="brk" id="p4">The two workbooks, sheet by sheet</h1>')
-    A("<p>Both are downloaded from the Results tab. In the diagnostics workbook, sheets from \"Performance\" down exist only when the run wrote that table, so the list can differ by run.</p>")
-    A('<h3>Main workbook</h3>' + table("4", ["Sheet", "What is in it", "Formula or pasted", "In this document"], [
-        ("Returns overview", "The five tiles, financial-year returns, the NAV chart, trailing returns, key return metrics", "Formulas", "1.1 to 1.5", ""),
-        ("Market phases", "The shaded index chart and the phase table", "Formulas", "1.6", ""),
-        ("Rolling returns", "The rolling numbers and the two charts", "Formulas", "1.7", ""),
-        ("Factor attribution", "The regression tables and the rolling chart", "Formulas (LINEST)", "1.8", ""),
-        ("Drawdown and risk", "The drawdown chart and the risk ratios", "Formulas", "1.9", ""),
-        ("Tail risk", "The tail table and three charts", "Formulas", "1.10", ""),
-        ("Index and capture", "Performance versus the index, capture, quarterly performance", "Formulas", "1.11", ""),
-        ("Calendar years", "Calendar-year returns and drawdowns", "Formulas", "1.12", ""),
-        ("Allocation", "Market-cap and sector tables by financial year", "Yearly tables formulas; per-rebalance figures pasted", "1.13", ""),
-        ("Daily calculations", "Every daily metric, its formula in words, and the monthly figure beside it", "Formulas", "2.1", ""),
-        ("Python vs Excel", "Each Python value beside the cell Excel calculates, marked OK or FAIL", "Formulas", "Part 1, 2.1", ""),
-        ("SE Return Analytics", "The monthly returns and the reference-layout formulas the display sheets read", "Formulas", "Part 1", ""),
-        ("Monthly series", "Month-by-month series behind the charts; the factor indices' monthly returns", "Formulas; factor returns pasted", "1.3, 1.6 to 1.10", ""),
-        ("Returns", "Daily returns, value of 100 and drawdown", "Returns pasted; value and drawdown formulas", "2.1", "")], [24, 38, 22, 16]))
-    A('<h3>Diagnostics workbook</h3>' + table("4", ["Sheet", "What is in it", "Formula or pasted", "In this document"], [
-        ("Summary", "The daily headline figures and the Gate B status", "Formulas (B7 to B17); Gate B status pasted", "2.1", ""),
-        ("Returns; Monthly returns", "Daily returns with value and drawdown; month-by-month returns, part months included", "Returns pasted; the rest formulas", "2.2", ""),
-        ("Gate B", "The Gate B rows and results", "Pasted", "Part 3", ""),
-        ("Comparators", "The simpler alternatives: daily returns and their metrics", "Returns pasted; metrics formulas", "2.3", ""),
-        ("Validation", "Every row of the five cards in 2.4 to 2.8, and the run's assumptions", "Pasted", "2.4 to 2.8", ""),
-        ("Positives &amp; negatives", "The written positives, negatives and red flags", "Text", "Not metrics", ""),
-        ("Holdings, Rebalances, Trades", "Every position, a count and gross exposure per rebalance, every trade", "Pasted; counts and changes are formulas", "Positions tab", ""),
-        ("Why these N (N = names held)", "Each rebalance explained: bought, kept, sold, skipped", "Pasted", "Not metrics", ""),
-        ("Performance", "Headline figures for the strategy and each alternative", "Pasted", "2.3, 2.4", ""),
-        ("Appendix cost sweep; Cash-rate sweep; Sensitivities", "CAGR re-simulated at other costs, cash rates and rule settings", "Pasted", "2.5, 2.6", ""),
-        ("Calendar-year returns", "Return for each calendar year, from all its days", "Pasted", "2.2", ""),
-        ("Sub-period stability; Sub-period CAGR", "The windows behind the sub-period rows", "Pasted", "2.6, 3.2", ""),
-        ("Rebalance log; Exits by reason; Exits (every sell)", "The detail behind the diagnostics", "Pasted", "2.7", ""),
-        ("Worst days; Contributors; Cap mix by year; Gap events", "The five worst days, profit by name, size mix, large price moves", "Pasted", "Detail tables", ""),
-        ("Checks; Universe coverage; Missing prices", "The checks, members priced per year, names held with no price", "Pasted", "2.8, 3.1", ""),
-        ("Notes", "Assumptions and caveats", "Text", "Not metrics", "")], [24, 38, 22, 16]))
+    A('<h3>The two workbooks</h3><p>Both are downloaded from the Results tab, and every section above names its sheet. <b>Main workbook:</b> Returns overview, Market phases, '
+      "Rolling returns, Factor attribution, Drawdown and risk, Tail risk, Index and capture, Calendar years, Allocation, Daily calculations, Python vs Excel, SE Return Analytics, "
+      "Monthly series, Returns. <b>Diagnostics workbook:</b> Summary, Returns, Monthly returns, Gate B, Comparators, Validation, Holdings, Rebalances, Trades, and one sheet for each "
+      "table the run wrote.</p>")
     A('<p class="src">Sources: ros/metrics/se.py, ros/metrics/qi.py, ros/metrics/core.py, lightyear/charts.py, lightyear/main_workbook.py, lightyear/allocation.py, lightyear/workbook.py, '
       "lightyear/se_sheet.py, lightyear/gate_run.py, ros/governance/gate_v2.py, ros/validation/gate_evidence.py, research.py, portfolio.py, trials.py, config/fund.yaml, "
       "config/market_phases.yaml, config/sector_groups.yaml, config/gate_thresholds.yaml, config/mandate.yaml.</p>")
@@ -487,8 +407,7 @@ TOC = [("p1", "Part 1. The main display (monthly)", 0), ("1.1", "1.1 Strategy vs
        ("1.11", "1.11 Performance versus index and capture", 1), ("1.12", "1.12 Calendar-year tables", 1), ("1.13", "1.13 Market-cap and sector allocation", 1),
        ("p2", "Part 2. Daily calculations and run diagnostics", 0), ("2.1", "2.1 Daily calculations", 1), ("2.2", "2.2 The daily charts", 1), ("2.3", "2.3 Appendix: the simpler alternatives", 1),
        ("2.4", "2.4 Returns & risk", 1), ("2.5", "2.5 Costs & execution", 1), ("2.6", "2.6 Statistical robustness", 1), ("2.7", "2.7 Diagnostics", 1), ("2.8", "2.8 Other", 1),
-       ("p3", "Part 3. The Gate B tab", 0), ("3.1", "3.1 Hard blocks", 1), ("3.2", "3.2 Evidence scorecard", 1),
-       ("p4", "The two workbooks, sheet by sheet", 0)]
+       ("p3", "Part 3. The Gate B tab", 0), ("3.1", "3.1 Hard blocks", 1), ("3.2", "3.2 Evidence scorecard", 1)]
 
 CSS = """
 @page { size: A4; margin: 17mm 17mm 19mm 17mm;
@@ -497,21 +416,21 @@ CSS = """
   @bottom-right { content: "Page " counter(page); font: 8pt Arial; color: #6b7785; border-top: 0.5pt solid #d9dee5; padding-top: 2mm; }
   @bottom-center { content: ""; border-top: 0.5pt solid #d9dee5; } }
 @page :first { @top-left { content: ""; } }
-body { font: 9.7pt/1.45 Arial, Helvetica, sans-serif; color: #1c2430; }
+body { font: 9.5pt/1.36 Arial, Helvetica, sans-serif; color: #1c2430; }
 h1 { color: #1f4e79; font-size: 20pt; margin: 0 0 8pt; } h1.title { font-size: 27pt; margin: 0 0 4pt; } h1.brk { break-before: page; }
-h2 { color: #1f4e79; font-size: 13.5pt; margin: 13pt 0 5pt; break-after: avoid; } h2.c { font-size: 15pt; margin: 7pt 0 2pt; }
-h3 { color: #1f4e79; font-size: 12.5pt; margin: 14pt 0 4pt; break-after: avoid; }
+h2 { color: #1f4e79; font-size: 13pt; margin: 10pt 0 4pt; break-after: avoid; } h2.c { font-size: 15pt; margin: 7pt 0 2pt; }
+h3 { color: #1f4e79; font-size: 11.5pt; margin: 9pt 0 3pt; break-after: avoid; }
 p { margin: 4pt 0; } p.sub { color: #5f6b7a; font-size: 12pt; margin: 0 0 9pt; } p.ft { margin: 8pt 0 2pt; break-after: avoid; } p.src { color: #6b7785; font-size: 8.3pt; margin-top: 10pt; }
 p.where { font-size: 8.9pt; background: #f6f8fa; border-left: 3pt solid #9aa5b1; padding: 4pt 9pt; margin: 3pt 0 6pt; break-after: avoid; }
 p.cap { font-size: 8.4pt; margin: 6pt 0 2pt; break-after: avoid; } p.tiny { font-size: 7.6pt; color: #6b7785; margin: 2pt 0 4pt; }
 table { border-collapse: collapse; width: 100%%; margin: 4pt 0 8pt; table-layout: fixed; }
 th { text-align: left; color: #1f4e79; background: #eef3f8; border-bottom: 1.2pt solid #1f4e79; padding: 4pt 6pt; font-size: 8.8pt; }
-td { border-bottom: 0.5pt solid #d9dee5; padding: 4pt 6pt; vertical-align: top; font-size: 8.8pt; overflow-wrap: anywhere; } tr { break-inside: avoid; }
+td { border-bottom: 0.5pt solid #d9dee5; padding: 2.6pt 6pt; vertical-align: top; font-size: 8.6pt; overflow-wrap: anywhere; } tr { break-inside: avoid; }
 .f { background: #f6f8fa; border: 0.6pt solid #dfe4ea; padding: 7pt 12pt; margin: 2pt 0 6pt; break-inside: avoid; } .f math { font-size: 13pt; }
 .note { background: #eef3f8; border-left: 3pt solid #1f4e79; padding: 5pt 11pt; margin: 6pt 0; break-inside: avoid; font-size: 9.9pt; }
 .warn { background: #fff4d6; border-left: 3pt solid #d9a514; padding: 6pt 11pt; margin: 8pt 0; break-inside: avoid; font-size: 10.2pt; }
 ul { margin: 4pt 0 4pt 14pt; padding: 0; } li { margin: 2pt 0; }
-.toc { margin: 0; } .toc div { display: flex; align-items: baseline; font-size: 8.8pt; line-height: 1.14; margin: 0; }
+.toc { margin: 0; columns: 2; column-gap: 22pt; } .toc div { display: flex; align-items: baseline; font-size: 8.8pt; line-height: 1.14; margin: 0; }
 .toc .p0 { color: #1f4e79; font-weight: bold; font-size: 9.6pt; margin-top: 3pt; } .toc .p1 { padding-left: 12pt; }
 .toc .dots { flex: 1; border-bottom: 1.2pt dotted #9aa5b1; margin: 0 5pt 2.5pt; } .toc .p0 .dots { border-bottom-color: #1f4e79; }
 """ % {"run": RUNNING, "sig": SIG}
