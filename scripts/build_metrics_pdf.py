@@ -151,11 +151,11 @@ def content():
     A(f'<div class="warn"><p><b>Everything in Part 1 is on monthly returns.</b> Calendar-month returns m, the population standard deviation, CAGR by month count, and three '
       f'inputs: risk-free rate {RF}, Omega threshold {pc(om)} a month, drawdown limit {pc(dl)}. <b>Complete calendar months only:</b> a month counts when the run has a return '
       "for every trading session in it; the first month also counts when the only session without a return is its first, the run's starting point. Days outside complete "
-      'months are left out and listed in a footnote on the page. Python and Excel calculate each figure separately, and the sheet "Python vs Excel" marks each OK or FAIL at 1e-9. '
+      'months are left out and listed in the notes at the foot of the page. Python and Excel calculate each figure separately, and the sheet "Python vs Excel" marks each OK or FAIL at 1e-9. '
       "The benchmark is the NIFTY 500 price index until a total-return series is on file.</p></div>")
     A('<h2 id="1.1">1.1 Strategy vs benchmark: the five tiles</h2>' + where('Results tab, card "Strategy vs benchmark (monthly)".', 'main workbook, sheet "Returns overview", rows 6 to 10, links to "SE Return Analytics".'))
     A("<p>The tiles are CAGR and Total Return (formulas in 1.5) and Annualized Volatility, Sharpe Ratio and Max Drawdown (formulas in 1.9), for the strategy with the benchmark "
-      "under each. The footnote under them gives the first and last complete month and the daily returns left out.</p>")
+      "under each. "Notes on these figures", at the foot of the page, gives the first and last complete month and the daily returns left out.</p>")
     CHECKS.append(("1.1", "Complete months: first and last complete calendar months, and the daily returns outside them", "ros/metrics/se.py complete_months(), block()"))
     A('<h2 id="1.2">1.2 Financial-year returns</h2>' + where('Results tab, card "Financial-year returns".', 'main workbook, sheet "Returns overview", second table.'))
     A(table("1.2", H3, [
@@ -176,9 +176,8 @@ def content():
     A('<h2 id="1.6">1.6 Market phases</h2>' + where('Results tab, card "Market phases": the shaded chart, then the table.', 'main workbook, sheet "Market phases", formulas over "Monthly series".'))
     A(table("1.6", H3, [
         ("Phase", "Whole calendar months from the phase table in config/market_phases.yaml; the first phase is clipped to the run", "A phase with no end month is still running.", f"{qi_} phases(); ros/config.py market_phases()"),
-        ("Absolute return", "∏(1 + m) over the phase's months − 1", "The chart labels each phase with the index's figure.", f"{qi_} phases()"),
+        ("Absolute return", "∏(1 + m) over the phase's months − 1", "The strategy's figure. The chart is the strategy's NAV, and labels each phase with its name, its dates and this figure.", f"{qi_} phases()"),
         ("Annualised return", "(1 + absolute return)<sup>12 ÷ months</sup> − 1", "<b>Annualised whatever the length</b>, so a two-month phase is scaled up sixfold in the exponent.", f"{qi_} phases()"),
-        ("Alpha", "Strategy annualised − benchmark annualised", "", f"{qi_} phases()"),
         ("Length (months)", "Count of the run's months in the phase", "", f"{qi_} phases()")], W3))
     A('<h2 id="1.7">1.7 Rolling returns</h2>' + where('Results tab, card "Rolling returns": two charts, then the numbers.', 'main workbook, sheet "Rolling returns"; the series are on "Monthly series", columns M to X, formulas.'))
     A(table("1.7", H3, [
@@ -191,16 +190,16 @@ def content():
         ("Average, minimum, maximum rolling return", "mean, min and max of the rolling returns, strategy and benchmark", "", f"{qi_} rolling()")], W3))
     A('<h2 id="1.8">1.8 Returns attribution to factor indices</h2>' + where('Results tab, card "Returns attribution to factor indices": three tables, then the rolling chart.',
       'main workbook, sheet "Factor attribution", LINEST formulas; the indices\' monthly returns are on "Monthly series", columns I to L (pasted), rolling coefficients in Y to AB.'))
-    A('<div class="warn"><p><b>No alpha term.</b> The regression has no intercept, so it only splits the return across the four indices. Gate B\'s factor test (3.2) is a separate '
+    A('<div class="warn"><p><b>No alpha term.</b> The regression has no intercept, so it only splits the return across the indices. Gate B\'s factor test (3.2) is a separate '
       "regression: daily returns, seven factors, with an intercept.</p></div>")
     A(table("1.8", H3, [
-        ("Coefficients", "Least squares of m on the four indices' monthly returns, through the origin", "The indices: NIFTY500 Quality 50, Momentum 50, Value 50 and NIFTY Smallcap 250, price indices.", f"{qi_} factor_attribution(), _ols0(), FACTOR_INDICES; lightyear/charts.py factor_monthly()"),
+        ("Coefficients", "Least squares of m on the three indices' monthly returns, through the origin", "The indices: NIFTY500 Quality 50, NIFTY500 Momentum 50 and NIFTY Smallcap 250, price indices. Value 50 is left out: its coefficient is not different from zero beside the other three.", f"{qi_} factor_attribution(), _ols0(), FACTOR_INDICES; lightyear/charts.py factor_monthly()"),
         ("R Square; Multiple R", "Σ fitted² ÷ Σ m²; its square root", "The uncentred R Square a no-intercept regression reports.", f"{qi_} factor_attribution()"),
-        ("Adjusted R Square", "1 − (1 − R Square) × n ÷ (n − 4)", "n is the number of months.", f"{qi_} factor_attribution()"),
-        ("Standard Error", "√(Σ residual² ÷ (n − 4))", "", f"{qi_} factor_attribution()"),
-        ("ANOVA: SS, MS, F, Significance F", "Regression SS = Σ fitted², residual SS = Σ residual², MS = SS ÷ df, F = MS<sub>regression</sub> ÷ MS<sub>residual</sub>, with 4 and n − 4 degrees of freedom", "", f"{qi_} factor_attribution()"),
-        ("Standard error, t stat, P-value, 95% range", "se from the residual variance; t = coefficient ÷ se; two-sided p from Student's t with n − 4 degrees of freedom; coefficient ± t<sub>0.975</sub> × se", "", f"{qi_} factor_attribution()"),
-        ("One-year rolling attribution", "The same coefficients on each 12-month window", "Twelve months and four coefficients: they move a great deal.", f"{qi_} factor_attribution() rolling, FACTOR_WINDOW")], W3))
+        ("Adjusted R Square", "1 − (1 − R Square) × n ÷ (n − k)", "n is the number of months, k the number of indices (3).", f"{qi_} factor_attribution()"),
+        ("Standard Error", "√(Σ residual² ÷ (n − k))", "", f"{qi_} factor_attribution()"),
+        ("ANOVA: SS, MS, F, Significance F", "Regression SS = Σ fitted², residual SS = Σ residual², MS = SS ÷ df, F = MS<sub>regression</sub> ÷ MS<sub>residual</sub>, with k and n − k degrees of freedom", "", f"{qi_} factor_attribution()"),
+        ("Standard error, t stat, P-value, 95% range", "se from the residual variance; t = coefficient ÷ se; two-sided p from Student's t with n − k degrees of freedom; coefficient ± t<sub>0.975</sub> × se", "", f"{qi_} factor_attribution()"),
+        ("One-year rolling attribution", "The same coefficients on each 12-month window", "Twelve months in each window, so they move a great deal.", f"{qi_} factor_attribution() rolling, FACTOR_WINDOW")], W3))
     A('<h2 id="1.9">1.9 Drawdown and advanced risk ratios</h2>' + where('Results tab, card "Drawdown and advanced risk ratios": the chart, then the table.',
       'main workbook, sheet "Drawdown and risk", links to "SE Return Analytics"; the drawdown series is on "Monthly series", columns G and H.'))
     A(table("1.9", H3, [("Monthly drawdown <i>(chart)</i>", "W ÷ highest W so far − 1 at each month-end, W = running ∏(1 + m)", "0% is a new month-end high.", f"{qi_} drawdown_series()")]
@@ -212,7 +211,8 @@ def content():
     A('<h2 id="1.10">1.10 Tail risk</h2>' + where('Results tab, card "Tail risk": the table, then three charts of monthly returns with the VaR and CVaR lines.',
       'main workbook, sheet "Tail risk": strategy and benchmark link to "SE Return Analytics"; the alpha column is formulas over "Monthly series" column D.'))
     A("<p>Three columns: the strategy, the benchmark, and the monthly alpha m − b. Each row is the same formula on that column's months.</p>")
-    A(table("1.10", H3, [("Mean", "mean of the months", "", f"{qi_} tail()"), ("Volatility (monthly)", "pop stdev of the months", "Not annualised.", f"{qi_} tail()")]
+    A(table("1.10", H3, [("Distribution chart", "Count of months in each 2-point band of monthly return, strategy and benchmark", "The left end is the tail; lines mark the strategy's VaR and CVaR.", f"{qi_} histogram()"),
+                         ("Mean", "mean of the months", "", f"{qi_} tail()"), ("Volatility (monthly)", "pop stdev of the months", "Not annualised.", f"{qi_} tail()")]
             + se_rows(["Skewness", "Kurtosis", "95% VaR", "99% VaR", "95% CVaR", "99% CVaR"]), W3))
     A('<h2 id="1.11">1.11 Performance versus index and capture</h2>' + where('Results tab, card "Performance versus index and capture": three tables, then the quarterly table.',
       'main workbook, sheet "Index and capture", links to "SE Return Analytics"; quarterly returns are in its columns F and G.'))

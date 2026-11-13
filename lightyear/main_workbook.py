@@ -5,7 +5,7 @@ Sheets, in order
   Returns overview      headline (monthly), financial-year returns with alpha, NAV chart, trailing returns, key return metrics
   Market phases         the operator's NIFTY 500 phases: chart and table
   Rolling returns       rolling 1-year and 3-year return, alpha and excess Sharpe: numbers and charts
-  Factor attribution    regression on four factor indices with no intercept, and its rolling 12-month coefficients
+  Factor attribution    regression on the factor indices with no intercept, and its rolling 12-month coefficients
   Drawdown and risk     monthly drawdown chart and the risk ratios
   Tail risk             strategy, benchmark and monthly alpha, with three charts
   Index and capture     performance versus the index, capture, and average quarterly performance
@@ -149,10 +149,10 @@ def build(run_dir: str, results: dict[str, Any], df, title: str, out_path: str, 
     m0, m1 = 6, 5 + n                       # month rows; row 5 is the start row (value 100)
     fa = q.get("factor_attribution")
     fac = list(fa["factors"]) if fa else []
-    heads = ["Month", s_name, b_lab, "Monthly alpha", f"{s_name} value (100 = start)", f"{b_name} value (100 = start)", f"{s_name} drawdown", f"{b_name} drawdown"] + (fac or ["", "", "", ""])
+    heads = ["Month", s_name, b_lab, "Monthly alpha", f"{s_name} value (100 = start)", f"{b_name} value (100 = start)", f"{s_name} drawdown", f"{b_name} drawdown"] + fac + [""] * (4 - len(fac))
     for k_ in (12, 36):
         heads += [f"{k_}m return, strategy", f"{k_}m return, benchmark", f"{k_}m alpha", f"{k_}m Sharpe, strategy", f"{k_}m Sharpe, benchmark", f"{k_}m excess Sharpe"]
-    heads += [f"12m coefficient: {x}" for x in (fac or ["", "", "", ""])]
+    heads += [f"12m coefficient: {x}" for x in fac] + [""] * (4 - len(fac))
     for who in ("Strategy", "Benchmark", "Alpha"):
         heads += [f"{who} {x}" for x in ("95% VaR", "99% VaR", "95% CVaR", "99% CVaR")]
     heads += ["Phase band A", "Phase band B"]
@@ -188,8 +188,8 @@ def build(run_dir: str, results: dict[str, Any], df, title: str, out_path: str, 
             _f(wm, f"{L(c0 + 5)}{r}", f"={L(c0 + 3)}{r}-{L(c0 + 4)}{r}", NUM2)
         if fac and k + 1 >= fa["window"]:
             a = r - fa["window"] + 1
-            for j in range(4):
-                _f(wm, f"{L(C['coef'] + j)}{r}", f"ARRAY:=INDEX(LINEST(B{a}:B{r},I{a}:L{r},FALSE,FALSE),1,{4 - j})", NUM2)
+            for j in range(len(fac)):       # LINEST lists its coefficients last column first
+                _f(wm, f"{L(C['coef'] + j)}{r}", f"ARRAY:=INDEX(LINEST(B{a}:B{r},I{a}:{L(8 + len(fac))}{r},FALSE,FALSE),1,{len(fac) - j})", NUM2)
     widths(wm, [12] + [16] * (len(heads) - 1))
     wm.freeze_panes = "B5"
     rs, rb, ra = f"{MSQ}$B${m0}:$B${m1}", f"{MSQ}$C${m0}:$C${m1}", f"{MSQ}$D${m0}:$D${m1}"
@@ -261,43 +261,41 @@ def build(run_dir: str, results: dict[str, Any], df, title: str, out_path: str, 
     widths(wo, [46, 22, 26, 14, 10, 16])
 
     # ------------------------------------------------------------------------------------------------ Market phases
-    wp = sheet("Market phases", "NIFTY 500 phases named by the operator (config/market_phases.yaml). Annualised = (1 + absolute return)^(12 / months) - 1, whatever the "
-                                "length, as the reference deck's table does; a phase shorter than a year is therefore scaled up. A phase with no end month is still running. Months no phase covers are Unclassified.")
-    r = r0 = table(wp, 4, ["Phase", "Months covered", "Strategy annualised", f"{b_lab} annualised", "Alpha", "Length (months)", "Wyckoff phase", "Market term",
-                           "Strategy absolute", f"{b_lab} absolute", "Chart label"])
-    top = f"MAX({MSQ}$F$5:$F${m1})"
+    wp = sheet("Market phases", "The strategy in each market phase. The phases are NIFTY 500 phases named by the operator (config/market_phases.yaml); every figure is the "
+                                "strategy's. Annualised = (1 + absolute return)^(12 / months) - 1, whatever the length, so a phase shorter than a year is scaled up. A phase "
+                                "with no end month is still running. Months no phase covers are Unclassified.")
+    r = table(wp, 4, ["Phase", "From (month-end)", "To (month-end)", "Strategy absolute", "Strategy annualised", "Length (months)", "Wyckoff phase", "Market term", "Chart label"])
+    top = f"MAX({MSQ}$E$5:$E${m1})"
     for j, p in enumerate(q["phases"]):
         a, b_ = m0 + p["first"], m0 + p["last"]
         _lab(wp, f"A{r}", p["label"] + (" (clipped to the run)" if p["clipped"] else " (still running)" if p.get("open") else ""))
-        _lab(wp, f"B{r}", f"{p['first_month']} to {p['last_month']}")
+        _f(wp, f"B{r}", f"={MSQ}A{a - 1}", DATE)
+        _f(wp, f"C{r}", f"={MSQ}A{b_}", DATE)
+        _f(wp, f"D{r}", f"ARRAY:=PRODUCT(1+{MSQ}B{a}:B{b_})-1", PCT2)
         _f(wp, f"F{r}", f"=ROWS({MSQ}B{a}:B{b_})", INT)
-        _f(wp, f"I{r}", f"ARRAY:=PRODUCT(1+{MSQ}B{a}:B{b_})-1", PCT2)
-        _f(wp, f"J{r}", f"ARRAY:=PRODUCT(1+{MSQ}C{a}:C{b_})-1", PCT2)
-        _f(wp, f"C{r}", f"=(1+I{r})^(12/F{r})-1", PCT2, F_BASE)
-        _f(wp, f"D{r}", f"=(1+J{r})^(12/F{r})-1", PCT2, F_BASE)
-        _f(wp, f"E{r}", f"=C{r}-D{r}", PCT2)
+        _f(wp, f"E{r}", f"=(1+D{r})^(12/F{r})-1", PCT2, F_BASE)
         _lab(wp, f"G{r}", p["wyckoff_phase"])
         _lab(wp, f"H{r}", p["market_term"])
-        _f(wp, f"K{r}", f'=G{r}&": "&TEXT(J{r},"0%")', None, F_BASE)
-        for key, c in (("strategy_ann", "C"), ("benchmark_ann", "D"), ("alpha", "E"), ("months", "F"), ("strategy_abs", "I"), ("benchmark_abs", "J")):
+        _f(wp, f"I{r}", f'=G{r}&", "&TEXT(B{r},"mmm-yy")&" to "&TEXT(C{r},"mmm-yy")&": "&TEXT(D{r},"0%")', None, F_BASE)
+        for key, c in (("strategy_abs", "D"), ("strategy_ann", "E"), ("months", "F")):
             items.append(("Market phases", f"{p['label']}, {key}", p[key], f"'Market phases'!{c}{r}"))
-        for rr in range(a, b_ + 1):       # the shading band behind the index line: alternate phases, alternate columns
+        for rr in range(a, b_ + 1):       # the shading band behind the strategy's line: alternate phases, alternate columns
             _f(wm, f"{L(C['band'] + j % 2)}{rr}", f"={top}", "0.00")
         r += 1
-    put(wp, f"A{r}", "The chart shades each phase in turn; its name and the index's absolute return in it are in the Chart label column.", F_NOTE)
+    put(wp, f"A{r}", "The chart shades each phase in turn; its name, its dates and the strategy's absolute return in it are in the Chart label column.", F_NOTE)
     band = BarChart()
     band.type, band.gapWidth = "col", 0
-    _frame(band, f"Market phases: {b_name} (100 at start), each phase shaded", "0", "Value (100 = start)", 5, m1, 30, 10)
+    _frame(band, f"Market phases: {s_name} (100 at start), each phase shaded", "0", "Value (100 = start)", 5, m1, 30, 10)
     for c, colour in ((C["band"], "DCE6F1"), (C["band"] + 1, "F2F2F2")):
         band.add_data(Reference(wm, min_col=c, min_row=4, max_row=m1), titles_from_data=True)
         band.series[-1].graphicalProperties.solidFill = colour
         band.series[-1].graphicalProperties.line.solidFill = colour
     band.set_categories(Reference(wm, min_col=1, min_row=5, max_row=m1))
     band.overlap = 100
-    idx_line = _line("", wm, [6], 5, m1, [C_BENCH], "0", "")
+    idx_line = _line("", wm, [5], 5, m1, [C_STRAT], "0", "")
     band += idx_line
     wp.add_chart(band, f"A{r + 2}")
-    widths(wp, [34, 22, 16, 18, 12, 12, 20, 26, 16, 18, 30])
+    widths(wp, [34, 16, 16, 16, 18, 14, 20, 26, 44])
 
     # ------------------------------------------------------------------------------------------------ Rolling returns
     wl = sheet("Rolling returns", "Rolling windows on monthly returns. A 3-year return is annualised; a 1-year return is the 12-month return. Rolling Sharpe = (window return - "
@@ -334,12 +332,12 @@ def build(run_dir: str, results: dict[str, Any], df, title: str, out_path: str, 
     widths(wl, [44, 18, 18])
 
     # ------------------------------------------------------------------------------------------------ Factor attribution
-    wf = sheet("Factor attribution", "Strategy monthly returns regressed on the monthly returns of four factor indices, with NO intercept, as the reference deck does. "
+    wf = sheet("Factor attribution", "Strategy monthly returns regressed on the monthly returns of the factor indices, with NO intercept, as the reference deck does. "
                                      "This regression has no alpha term. Gate B's factor test is a separate regression: daily returns, seven factors, with an intercept.")
     if not fa:
         put(wf, "A4", "Not calculated: " + (q.get("factors_missing") or "the factor indices' returns are not on file") + ".", F_BOLD)
     else:
-        y, X = rs, f"{MSQ}$I${m0}:$L${m1}"
+        y, X = rs, f"{MSQ}$I${m0}:${L(8 + len(fac))}${m1}"
         lin = f"LINEST({y},{X},FALSE,TRUE)"
         r = table(wf, 4, ["Regression statistics", "Value"])
         st_rows = [("R Square", f"ARRAY:=INDEX({lin},3,1)", NUM2), ("Multiple R", "=SQRT(B5)", NUM2), ("Observations", f"=COUNT({y})", INT),
@@ -374,8 +372,8 @@ def build(run_dir: str, results: dict[str, Any], df, title: str, out_path: str, 
         r = table(wf, r + 4, ["Index", "Coefficient", "Standard error", "t stat", "P-value", "Lower 95%", "Upper 95%"])
         for j, c in enumerate(fa["coefficients"]):
             _lab(wf, f"A{r}", c["factor"])
-            _f(wf, f"B{r}", f"ARRAY:=INDEX({lin},1,{4 - j})", NUM2)
-            _f(wf, f"C{r}", f"ARRAY:=INDEX({lin},2,{4 - j})", NUM2)
+            _f(wf, f"B{r}", f"ARRAY:=INDEX({lin},1,{len(fac) - j})", NUM2)
+            _f(wf, f"C{r}", f"ARRAY:=INDEX({lin},2,{len(fac) - j})", NUM2)
             _f(wf, f"D{r}", f"=B{r}/C{r}", NUM2)
             _f(wf, f"E{r}", f"=TDIST(ABS(D{r}),$B$8,2)", "0.0000")
             _f(wf, f"F{r}", f"=B{r}-TINV(0.05,$B$8)*C{r}", NUM2)
@@ -386,8 +384,8 @@ def build(run_dir: str, results: dict[str, Any], df, title: str, out_path: str, 
                 items.append(("Factor attribution: rolling 12 months", f"{blk['months'][e][:7]}, {c['factor']}", v, f"{MSQ}{L(C['coef'] + j)}{m0 + e}"))
             r += 1
         put(wf, f"A{r}", "The factor indices are NSE price indices, backfilled before their launch dates. The rolling chart shows the same regression's coefficients on each "
-                         "12-month window (12 months, four coefficients: they move a great deal).", F_NOTE)
-        wf.add_chart(_bars("Rolling 12-month attribution: coefficient on each factor index", wm, [C["coef"] + j for j in range(4)], 5, m1,
+                         "12-month window (twelve months per window, so they move a great deal).", F_NOTE)
+        wf.add_chart(_bars("Rolling 12-month attribution: coefficient on each factor index", wm, [C["coef"] + j for j in range(len(fac))], 5, m1,
                            [C_STRAT, C_BENCH, C_3, C_4], "0.0", "Coefficient", stacked=True, width=28, height=10), f"A{r + 2}")
         widths(wf, [34, 14, 16, 12, 12, 16, 12])
 
@@ -435,6 +433,19 @@ def build(run_dir: str, results: dict[str, Any], df, title: str, out_path: str, 
         ln = _line("", wm, [c0 + j for j in range(4)], 5, m1, ["C00000", "7F0000", "ED7D31", "7030A0"], "0%", "")
         bar += ln
         wt.add_chart(bar, f"F{4 + 19 * g}")
+    hg = q["histogram"]
+    r = h0 = table(wt, t0 + 10, ["Monthly return from", "to (not including)", f"{s_name}: months", f"{b_lab}: months"])
+    for lo_, hi_, cs, cb in zip(hg["from"], hg["to"], hg["strategy"], hg["benchmark"]):
+        put(wt, f"A{r}", lo_, F_INPUT, "0%", border=True)
+        put(wt, f"B{r}", hi_, F_INPUT, "0%", border=True)
+        for col, rng, v, who in (("C", rs, cs, "strategy"), ("D", rb, cb, "benchmark")):
+            _f(wt, f"{col}{r}", f"=SUMPRODUCT(({rng}>=$A{r})*({rng}<$B{r}))", INT)
+            items.append(("Tail risk: distribution", f"{lo_:+.0%} to {hi_:+.0%}, {who}", v, f"'Tail risk'!{col}{r}"))
+        r += 1
+    put(wt, f"A{r}", "Months counted in each band of monthly return (the band edges are pasted, in blue). The left tail is the tail risk.", F_NOTE)
+    dist = _bars("Distribution of monthly returns: strategy and benchmark", wt, [3, 4], h0, r - 1, [C_STRAT, C_BENCH], "0", "Months", head=h0 - 1, width=24, height=9)
+    dist.x_axis.numFmt, dist.x_axis.tickLblSkip = NumFmt(formatCode="0%", sourceLinked=False), 1
+    wt.add_chart(dist, f"F{4 + 19 * 3}")
     widths(wt, [30, 22, 26, 16])
 
     # ------------------------------------------------------------------------------------------------ Index and capture

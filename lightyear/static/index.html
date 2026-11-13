@@ -577,8 +577,8 @@ function renderResults(st){
           <button onclick="rerunB()" title="A new run: stages 03 to 07 again from this run's approved card, revisions and approval carried over">Re-run from approved card</button><span class="small muted">${rcText}</span></div></div>
         ${(st.handoff_warnings||[]).length?`<div class="banner info"><b>Hand-off warnings from the run's files:</b> ${st.handoff_warnings.map(esc).join(" · ")}</div>`:""}
         <p style="margin:8px 0 4px">${key}</p>
-        <div class="kpis" id="kpis"></div><div class="small muted" id="kpinote"></div></div>
-      <div id="garead"></div>
+        ${st.diagnostics_workbook?`<p class="small muted" style="margin:2px 0 8px"><b>What the diagnostics workbook is:</b> the second Excel file of this run. The main file (Download Excel) holds what is on this page. The diagnostics file holds the working behind it: every holding and trade, the simpler alternatives the strategy had to beat, the cost and cash-rate sweeps, the checks on the data and on the card's rules, and the Gate B rows. Open it to check how a number came about, not to read the result.</p>`:""}
+        <div class="kpis" id="kpis"></div></div>
       <div id="qibody"><div class="card small muted">Not built for this run yet. Press Rebuild.</div></div>
       <details class="card" ontoggle="resizeCharts(this)"><summary>Daily calculations <span class="small muted" style="font-weight:400">every metric on daily returns, with its formula, beside the monthly figure</span></summary>
         <div id="dailybody" style="margin-top:10px"></div></details>
@@ -614,7 +614,6 @@ function renderResults(st){
         ${renderValidationBlocks(r.validation||[])}
         ${(r.notes||[]).length?`<div class="card"><h3 style="margin-top:0">Caveats</h3><ul>${r.notes.map(n=>`<li>${esc(n)}</li>`).join("")}</ul></div>`:""}
         </div></details>`;
-    $("#garead").innerHTML = analystReadCard(st, "results");
     if(TAB==="results") drawCharts(true);
   }
   renderReview(st);
@@ -770,14 +769,15 @@ function fillQI(c){
   const check = pv ? (pv.error ? `Python vs Excel: ${esc(pv.error)}.` : `<b>Python vs Excel: ${esc(pv.result)}</b> (workbook recalculated in ${rc.engine==="excel"?"Excel":"LibreOffice"}${rc.n_not_calculated?`; ${rc.n_not_calculated} cell(s) LibreOffice cannot calculate`:""}).${pv.n_fail?` Failing: ${pv.fail.slice(0,8).map(x=>esc(x.metric)).join("; ")}.`:""}`) : "Python vs Excel: not checked yet for this run. Press Rebuild.";
   const K = [["CAGR","CAGR"],["Annualized Volatility","Annualized Volatility"],[`Sharpe (risk-free rate ${pct(se.inputs.risk_free_rate,0)})`,"Sharpe Ratio"],["Max Drawdown","Max Drawdown"],["Total Return","Total Return"]];
   $("#kpis").innerHTML = K.map(([l,k]) => `<div class="kpi"><div class="l">${l}</div><div class="v">${f(V[k].strategy,V[k].format)}</div><div class="b">${esc(c.names.benchmark)}: ${f(V[k].benchmark,V[k].format)}</div></div>`).join("");
-  $("#kpinote").innerHTML = `Monthly figures, calculated as the reference analytics sheet does: calendar-month returns, population standard deviation, CAGR by month count, risk-free rate ${pct(se.inputs.risk_free_rate,0)}. Big number = the strategy; orange = ${bl}. ${foot} ${price?"<b>The benchmark is the NIFTY 500 price index: the total-return index is not on file, so every alpha and every row marked \"vs price index\" flatters the strategy by about the index's dividend yield.</b>":""}<div style="margin-top:4px">${check}</div>`;
+  const figNotes = `${foot} ${price?"The benchmark is the NIFTY 500 price index: the total-return index is not on file, so every alpha flatters the strategy by about the index's dividend yield.":""}<div style="margin-top:4px">${check}</div>`;
 
   const fy = T(["Financial year (April to March)","Strategy",bl,al], q.financial_year.map(r=>[esc(r.label)+(r.part?` <span class="small muted">(part year)</span>`:""), pct(r.strategy,2), pct(r.benchmark,2), pct(r.alpha,2)])
       .concat([["<b>Annualised alpha</b> (CAGR minus benchmark CAGR)","","",`<b>${pct(q.annualised_alpha,2)}</b>`]]));
   const tr = T(["Trailing returns","Strategy",bl,al,"Basis"], q.trailing.map(r=>[esc(r.label), r.strategy==null?"n/a":pct(r.strategy,2), r.benchmark==null?"n/a":pct(r.benchmark,2), r.alpha==null?"n/a":pct(r.alpha,2), r.annualised?"annualised":"not annualised"]));
   const kr = T(["Key return metrics","Strategy",bl,al], q.key_return.map(r=>[esc(r.label), f(r.strategy,r.format), r.benchmark==null?"":f(r.benchmark,r.format), r.alpha==null?"":f(r.alpha,r.format)]));
-  const ph = T(["#","Start to end","Strategy annualised",bl+" annualised",al,"Length (months)","Wyckoff phase","Market term","Strategy absolute",bl+" absolute"],
-      q.phases.map((p,i)=>[i+1, esc(p.label)+(p.clipped?` <span class="small muted">(clipped to the run: ${esc(p.first_month)} to ${esc(p.last_month)})</span>`:(p.label==="Unclassified"||p.open)?` <span class="small muted">(${p.open?"still running; ":""}${esc(p.first_month)} to ${esc(p.last_month)})</span>`:""), pct(p.strategy_ann,1), pct(p.benchmark_ann,1), pct(p.alpha,1), p.months, esc(p.wyckoff_phase), esc(p.market_term), pct(p.strategy_abs,1), pct(p.benchmark_abs,1)]));
+  const mm = d => new Date(d).toLocaleString("en-GB", {month:"short", year:"2-digit", timeZone:"UTC"}).replace(" ", "-");
+  const ph = T(["#","Phase","From","To","Strategy absolute","Strategy annualised","Length (months)","Wyckoff phase","Market term"],
+      q.phases.map((p,i)=>[i+1, esc(p.label)+(p.clipped?` <span class="small muted">(clipped to the run)</span>`:p.open?` <span class="small muted">(still running)</span>`:""), esc(p.from_date), esc(p.to_date), pct(p.strategy_abs,1), pct(p.strategy_ann,1), p.months, esc(p.wyckoff_phase), esc(p.market_term)]));
   const R = q.rolling, r12 = R["12"], r36 = R["36"], rv = (o,k,fmt) => o ? fmt(o[k]) : "n/a";
   const rl = T(["Number","Rolling 1-year","Rolling 3-year (annualised)"], [["Observations","observations",v=>v],["Share of observations with positive alpha","positive_alpha_share",v=>pct(v,1)],
       ["Strategy: average rolling return","strategy_avg",v=>pct(v,1)],["Strategy: minimum","strategy_min",v=>pct(v,1)],["Strategy: maximum","strategy_max",v=>pct(v,1)],
@@ -785,13 +785,13 @@ function fillQI(c){
       .map(([l,k,fm])=>[l, rv(r12,k,fm), rv(r36,k,fm)]));
   const fa = q.factor_attribution;
   const fhtml = !fa ? `<p class="small muted">Not calculated: ${esc(q.factors_missing||"the factor indices' returns are not on file")}.</p>` :
-      `<div class="banner info">This regression has <b>no alpha term</b> (no intercept, as the reference deck runs it), so it only splits the return across the four indices. Gate B's factor test is a separate regression: daily returns, seven factors, with an intercept.</div>
+      `<div class="banner info">This regression has <b>no alpha term</b> (no intercept, as the reference deck runs it), so it only splits the return across the indices. Gate B's factor test is a separate regression: daily returns, seven factors, with an intercept.</div>
        <div class="grid2"><div>${T(["Regression statistics","Value"], Object.entries(fa.statistics).map(([k,v])=>[esc(k), k==="Observations"?v:num(v,k==="Standard Error"?4:2)]).concat([["Start month",esc(se.months[0].slice(0,7))],["End month",esc(se.months[se.months.length-1].slice(0,7))]]))}</div>
        <div>${T(["ANOVA","df","SS","MS","F","Significance F"], [["Regression",fa.anova.regression.df,num(fa.anova.regression.ss,4),num(fa.anova.regression.ms,4),num(fa.anova.regression.f),Number(fa.anova.regression.significance_f).toExponential(2)],
           ["Residual",fa.anova.residual.df,num(fa.anova.residual.ss,4),num(fa.anova.residual.ms,6),"",""],["Total",fa.anova.total.df,num(fa.anova.total.ss,4),"","",""]])}</div></div>
        ${T(["Index (price index)","Coefficient","Standard error","t stat","P-value","Lower 95%","Upper 95%"], fa.coefficients.map(x=>[esc(x.factor),num(x.coefficient),num(x.standard_error),num(x.t_stat),num(x.p_value,4),num(x.lower_95),num(x.upper_95)]))}
        ${note("R Square is the uncentred one a no-intercept regression reports. Adjusted R Square = 1 - (1 - R Square) x observations / residual degrees of freedom. The factor indices are NSE price indices, backfilled before their launch dates.")}
-       <h3>One-year rolling attribution</h3><div class="chartsub" style="margin:0 0 6px">The same regression on each 12-month window: the coefficient on each index. Twelve months and four coefficients, so they move a great deal.</div><div class="chart" id="q_fac"></div>`;
+       <h3>One-year rolling attribution</h3><div class="chartsub" style="margin:0 0 6px">The same regression on each 12-month window: the coefficient on each index. Twelve months in each window, so they move a great deal.</div><div class="chart" id="q_fac"></div>`;
   const risk = T(["Risk and ratios (monthly)","Strategy",bl], q.risk.map(r=>[esc(r.label)+(["Treynor Ratio"].includes(r.label)&&price?` <span class="small muted">(vs price index)</span>`:""), f(r.strategy,r.format), f(r.benchmark,r.format)]));
   const tk = ["Mean","Volatility (monthly)","Skewness","Kurtosis","95% VaR","99% VaR","95% CVaR","99% CVaR"], tnum = k => ["Skewness","Kurtosis"].includes(k);
   const tail = T(["Tail risk (monthly)","Strategy",bl,"Monthly alpha"+(price?" (vs price index)":"")], tk.map(k=>[k].concat(["strategy","benchmark","alpha"].map(w=>tnum(k)?num(q.tail[w][k]):pct(q.tail[w][k],2)))));
@@ -811,19 +811,20 @@ function fillQI(c){
     card("s_nav",`Strategy against index NAV (100 at start)`, `<div class="chart" id="q_nav"></div>`, `Month-end values. ${sn} against ${bl}.`) +
     card("s_trail","Trailing returns", tr + note(`To the end of ${esc(cm.last_month||"")}. Periods over one year are annualised: (1 + return)^(12 / months) - 1. Periods longer than the run show n/a.`)) +
     card("s_key","Key return metrics", kr + note("Best and Worst Month Contribution = the month's return / Total Return, as the reference has it. Hit Rate = months ahead of the benchmark / months ahead or behind.")) +
-    card("s_phase","Market phases", `<div class="chart" id="q_phase" style="height:400px"></div>` + ph + note("Phases are the operator's, stored in config/market_phases.yaml. Annualised = (1 + absolute return)^(12 / months) - 1 whatever the length, as the reference deck's table does, so a phase shorter than a year is scaled up. A phase with no end month is still running. Months no phase covers are Unclassified."),
-        `${bl}, 100 at start, with each phase shaded and labelled with its name and the index's absolute return in it.`) +
+    card("s_phase","Market phases", `<div class="chart" id="q_phase" style="height:400px"></div>` + ph + note("Every figure is the strategy's. The phases are NIFTY 500 market phases named by the operator, stored in config/market_phases.yaml. From and To are month-ends. Annualised = (1 + absolute return)^(12 / months) - 1 whatever the length, as the reference deck's table does, so a phase shorter than a year is scaled up. A phase with no end month is still running. Months no phase covers are Unclassified."),
+        `The strategy, 100 at start. Each phase is shaded and labelled with its name, its dates and the strategy's absolute return in it.`) +
     card("s_roll","Rolling returns", `<div class="grid2"><div><h3>Rolling 1-year: alpha and excess Sharpe</h3><div class="chart" id="q_r12"></div></div><div><h3>Rolling 3-year: alpha and excess Sharpe</h3><div class="chart" id="q_r36"></div></div></div>` + rl +
         note(`<b>Assumption (the operator's, not from the reference):</b> excess Sharpe = strategy rolling Sharpe - benchmark rolling Sharpe, each (annualised return of the window - ${pct(se.inputs.risk_free_rate,0)}) / annualised volatility of the window (population stdev of its months x sqrt(12)). 3-year returns and alpha are annualised.`)) +
     card("s_fac","Returns attribution to factor indices", fhtml) +
     card("s_dd","Drawdown and advanced risk ratios", `<div class="chart" id="q_dd"></div>` + risk + note("Drawdown on month-end values. Downside Deviation = Negative Monthly Vol x sqrt(12). Largest Monthly Loss = the worst month. Sterling uses a drawdown limit of " + pct(se.inputs.drawdown_limit,0) + " and Omega a threshold of " + pct(se.inputs.omega_threshold,0) + " a month, as the reference sheet does."),
         "Monthly drawdown of the strategy and the index, then the reference sheet's ratios.") +
-    card("s_tail","Tail risk", tail + `<div class="grid2" style="margin-top:10px"><div><h3>Monthly returns, strategy</h3><div class="chart" id="q_t0"></div></div><div><h3>Monthly returns, ${bl}</h3><div class="chart" id="q_t1"></div></div></div><h3>Monthly alpha</h3><div class="chart" id="q_t2"></div>` +
+    card("s_tail","Tail risk", tail + `<div class="grid2" style="margin-top:10px"><div><h3>Monthly returns, strategy</h3><div class="chart" id="q_t0"></div></div><div><h3>Monthly returns, ${bl}</h3><div class="chart" id="q_t1"></div></div></div><h3>Monthly alpha</h3><div class="chart" id="q_t2"></div><h3>Distribution of monthly returns</h3><div class="chartsub" style="margin:0 0 6px">How many months fell in each band of return. The left end is the tail; the lines mark the strategy's VaR and CVaR.</div><div class="chart" id="q_th"></div>` +
         note("VaR = the 5th and 1st percentile of the months; CVaR = the average of the months at or below that VaR. Volatility here is the population standard deviation of the months, not annualised.")) +
     card("s_cap","Performance versus index and capture", grp("Performance Vs Index") + grp("Capture Ratio") + grp("Extreme Capture Ratio") + `<h3>Average quarterly performance in rising and falling quarters</h3>` + qcap +
         note("Complete calendar quarters only" + (qc.part_quarters_left_out.length?`; left out: ${qc.part_quarters_left_out.map(esc).join(", ")}`:"") + ". Upside capture = the strategy's average rising-quarter return / the benchmark's; capture ratio = upside / downside.")) +
     card("s_cal","Calendar-year performance and max calendar-year drawdown", `<div class="grid2"><div>${cy}</div><div>${cyd}</div></div>` + note("Drawdown inside each calendar year on month-end values; a fall in a year's first month is not counted, as in the reference.")) +
     alloc +
+    `<details class="card"><summary>Notes on these figures</summary><div class="small muted" style="margin-top:8px">${figNotes}</div></details>` +
     `<details class="card"><summary>Glossary</summary><table class="t" style="margin-top:8px">${se.glossary.map(g=>`<tr><td><b>${esc(g[0])}</b></td><td>${esc(g[1])}</td></tr>`).join("")}</table></details>`;
 
   if(!window.Plotly) return;
@@ -835,10 +836,10 @@ function fillQI(c){
   const S = "#1f4e79", B = "#d98324", bn = c.names.benchmark + (price?" (price index)":"");
   const ln = (x,y,name,color,extra={}) => ({x, y, name, type:"scatter", mode:"lines", line:{color, width:2}, ...extra});
   Plotly.newPlot("q_nav", [ln(X,q.nav.strategy,c.names.strategy,S,{hovertemplate:"%{y:.1f}"}), ln(X,q.nav.benchmark,bn,B,{hovertemplate:"%{y:.1f}"})], lay(",.0f","Value of 100"), cfg);
-  const top = Math.max(...q.nav.benchmark), xs = i => i===0 ? start : M[i-1];
-  Plotly.newPlot("q_phase", [ln(X,q.nav.benchmark,bn,B,{hovertemplate:"%{y:.1f}"})], lay(",.0f","Value of 100", {showlegend:false, margin:{l:56,r:16,t:64,b:36},
+  const xs = i => i===0 ? start : M[i-1];
+  Plotly.newPlot("q_phase", [ln(X,q.nav.strategy,c.names.strategy,S,{hovertemplate:"%{y:.1f}"})], lay(",.0f","Value of 100", {showlegend:false, margin:{l:56,r:16,t:92,b:36},
       shapes:q.phases.map((p,i)=>({type:"rect", xref:"x", yref:"paper", x0:xs(p.first), x1:M[p.last], y0:0, y1:1, fillcolor:i%2?"#f2f2f2":"#dce6f1", opacity:.6, line:{width:0}, layer:"below"})),
-      annotations:q.phases.map((p,i)=>({x:M[Math.floor((p.first+p.last)/2)], y:i%2?1.13:1.02, xref:"x", yref:"paper", showarrow:false, font:{size:10}, text:`${esc(p.wyckoff_phase)}<br>${pct(p.benchmark_abs,0)}`}))}), cfg);
+      annotations:q.phases.map((p,i)=>({x:M[Math.floor((p.first+p.last)/2)], y:i%2?1.24:1.03, xref:"x", yref:"paper", showarrow:false, font:{size:10}, text:`${esc(p.wyckoff_phase)}<br>${mm(p.from_date)} to ${mm(p.to_date)}<br><b>${pct(p.strategy_abs,0)}</b>`}))}), cfg);
   const roll = (id, o) => { if(!o){ $("#"+id).innerHTML = `<p class="small muted">The run is shorter than this window.</p>`; return }
     const x = o.end.map(e=>M[e]);
     Plotly.newPlot(id, [ln(x,o.alpha,"Alpha"+(price?" (vs price index)":""),S,{hovertemplate:"%{y:.1%}"}), ln(x,o.excess_sharpe,"Excess Sharpe",B,{yaxis:"y2",hovertemplate:"%{y:.2f}"})],
@@ -850,6 +851,12 @@ function fillQI(c){
   const tailc = (id, y, who, color, nm) => { const t = q.tail[who], L = [["95% VaR","#c00000","dash"],["99% VaR","#7f0000","dash"],["95% CVaR","#ed7d31","dot"],["99% CVaR","#7030a0","dot"]];
     Plotly.newPlot(id, [{x:M, y, name:nm, type:"bar", marker:{color}, hovertemplate:"%{y:.1%}"}].concat(L.map(([k,col,dash])=>({x:[M[0],M[M.length-1]], y:[t[k],t[k]], name:`${k} ${pct(t[k],1)}`, type:"scatter", mode:"lines", line:{color:col, width:1.5, dash}, hoverinfo:"skip"}))),
       lay(".0%","Monthly return", {hovermode:"closest"}), cfg) };
+  const H = q.histogram;
+  if(H){ const mid = H.from.map((a,i)=>(a+H.to[i])/2), t = q.tail.strategy, VL = [["95% VaR","#c00000","dash"],["99% VaR","#7f0000","dash"],["95% CVaR","#ed7d31","dot"],["99% CVaR","#7030a0","dot"]];
+    Plotly.newPlot("q_th", [{x:mid, y:H.strategy, name:c.names.strategy, type:"bar", marker:{color:S}}, {x:mid, y:H.benchmark, name:bn, type:"bar", marker:{color:B}}],
+      lay("d","Months", {barmode:"group", hovermode:"closest", xaxis:{tickformat:".0%", title:"Monthly return", gridcolor:"#f3f5f7"},
+        shapes:VL.map(([k,col,dash])=>({type:"line", xref:"x", yref:"paper", x0:t[k], x1:t[k], y0:0, y1:1, line:{color:col, width:1.5, dash}})),
+        annotations:VL.map(([k,col],i)=>({x:t[k], y:1-0.08*i, xref:"x", yref:"paper", showarrow:false, xanchor:"left", font:{size:10, color:col}, text:` ${k} ${pct(t[k],1)}`}))}), cfg) }
   tailc("q_t0", se.monthly.strategy, "strategy", S, c.names.strategy); tailc("q_t1", se.monthly.benchmark, "benchmark", B, bn); tailc("q_t2", q.monthly_alpha, "alpha", "#6a994e", "Monthly alpha"+(price?" (vs price index)":""));
 }
 async function drawCharts(force){

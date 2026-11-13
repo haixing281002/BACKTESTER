@@ -161,3 +161,14 @@ def test_the_analyst_read_is_pinned_with_the_card_and_a_changed_read_is_withheld
     (tmp_path / ar.FILE).write_text(json.dumps(read | {"read": "buy it"}), encoding="utf-8")
     with pytest.raises(ValueError):
         ar.load(str(tmp_path))
+
+
+def test_the_tail_distribution_counts_every_month_once_and_phases_carry_their_dates():
+    blk, _, s, b = _block()
+    q = qi.block(blk, [{"label": "A", "first_month": "2013-04", "last_month": "2015-02", "wyckoff_phase": "Mark-Up", "market_term": "bull"}])
+    h = q["histogram"]
+    assert sum(h["strategy"]) == len(s) and sum(h["benchmark"]) == len(b) and h["from"][0] <= min(s.min(), b.min()) and h["to"][-1] > max(s.max(), b.max())
+    k = h["strategy"].index(max(h["strategy"]))
+    assert h["strategy"][k] == int(((s >= h["from"][k]) & (s < h["to"][k])).sum())
+    assert (q["phases"][0]["from_date"], q["phases"][0]["to_date"]) == ("2013-12-31", "2015-02-28")
+    assert len(qi.FACTOR_INDICES) == 3 and "NIFTY500 VALUE 50" not in qi.FACTOR_INDICES

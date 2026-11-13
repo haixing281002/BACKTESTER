@@ -26,8 +26,11 @@ NAN = float("nan")
 TRAILING = [("1M", 1), ("3M", 3), ("6M", 6), ("1Y", 12), ("3Y", 36), ("5Y", 60), ("10Y", 120)]
 ROLL_WINDOWS = (12, 36)
 FACTOR_WINDOW = 12
-# the four indices of the attribution regression, by their names in the NSE index workbook
-FACTOR_INDICES = ["NIFTY500 QUALITY 50", "NIFTY500 MOMENTUM 50", "NIFTY500 VALUE 50", "NIFTY SMALLCAP 250"]
+# the indices of the attribution regression, by their names in the NSE index workbook. Three, by the operator's
+# instruction of 2026-11-13 to keep only the ones that matter: quality, momentum and size. NIFTY500 Value 50 was dropped
+# because its coefficient is not statistically different from zero once the other three are in the regression.
+FACTOR_INDICES = ["NIFTY500 QUALITY 50", "NIFTY500 MOMENTUM 50", "NIFTY SMALLCAP 250"]
+HIST_WIDTH = 0.02      # the tail-risk distribution chart counts months in bands this wide
 
 
 def _f(x) -> float | None:
@@ -79,6 +82,8 @@ def phases(months: pd.DatetimeIndex, s: np.ndarray, b: np.ndarray, cfg: list[dic
         ann_s, ann_b = float((1 + abs_s) ** (12.0 / n) - 1), float((1 + abs_b) ** (12.0 / n) - 1)
         rows.append({"label": c["label"], "wyckoff_phase": c["wyckoff_phase"], "market_term": c["market_term"], "first": i, "last": j,
                      "first_month": str(per[i]), "last_month": str(per[j]), "months": n,
+                     # the phase runs from the month-end before its first month to its last month-end
+                     "from_date": str((per[i] - 1).to_timestamp("M").date()), "to_date": str(per[j].to_timestamp("M").date()),
                      "clipped": bool(per[i] > p0 or per[j] < p1) and c["label"] != "Unclassified", "open": not c.get("last_month") and c["label"] != "Unclassified",
                      "strategy_abs": abs_s, "benchmark_abs": abs_b, "strategy_ann": ann_s, "benchmark_ann": ann_b, "alpha": ann_s - ann_b})
     return rows
@@ -159,6 +164,15 @@ def tail(x: np.ndarray) -> dict[str, float | None]:
             "95% CVaR": float(x[x <= v95].mean()), "99% CVaR": float(x[x <= v99].mean())}
 
 
+def histogram(s: np.ndarray, b: np.ndarray, width: float = HIST_WIDTH) -> dict[str, list]:
+    """Months counted in bands of monthly return [from, to), strategy and benchmark, over one set of bands."""
+    k0 = int(np.floor(min(s.min(), b.min()) / width))
+    k1 = int(np.floor(max(s.max(), b.max()) / width)) + 1
+    lo, hi = [k * width for k in range(k0, k1)], [(k + 1) * width for k in range(k0, k1)]
+    count = lambda x: [int(((x >= a) & (x < c)).sum()) for a, c in zip(lo, hi)]   # noqa: E731
+    return {"from": lo, "to": hi, "strategy": count(s), "benchmark": count(b)}
+
+
 def quarterly_capture(quarters: list[dict[str, Any]]) -> dict[str, Any]:
     """Average quarterly return in rising and falling quarters, from the SE block's quarterly table; part quarters out."""
     q = [t for t in quarters if not t["part"]]
@@ -212,7 +226,7 @@ def block(se_block: dict[str, Any], phase_cfg: list[dict[str, Any]], factors: di
            "rolling": {str(k): rolling(s, b, k, rf) for k in ROLL_WINDOWS},
            "drawdown": {"strategy": drawdown_series(s), "benchmark": drawdown_series(b)}, "risk": risk,
            "tail": {"strategy": tail(s), "benchmark": tail(b), "alpha": tail(s - b)},
-           "monthly_alpha": [float(x) for x in s - b],
+           "monthly_alpha": [float(x) for x in s - b], "histogram": histogram(s, b),
            "quarterly_capture": quarterly_capture(se_block["tables"]["quarterly"]),
            "factor_attribution": None, "factors_missing": factors_missing, "factor_returns": None}
     if factors:
