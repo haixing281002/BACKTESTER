@@ -545,6 +545,18 @@ A Lightyear run no longer writes the old eight-criterion checklist, an "evidence
 nothing to run on shows as not run: it is not a pass and does not hold the gate up. The deflated Sharpe is out of the gate for
 now, so **the gate does not test for selection luck**. The decision stays PENDING until a named human records one.
 
+Three additions of 2026-11-13 (operator), none of which the gate's status reads:
+- **Daily calculations follow the Barra site's formulas** (`ros/metrics/core.py` `site_block()`, day count `site_days_per_year` in
+  `config/fund.yaml`): mean x 250, sample stdev x sqrt(250), Sharpe and Sortino with no risk-free rate, drawdown on the running sum.
+  The Results tab's "Daily calculations" and the workbook sheet of that name show them. Gate B's own daily tests, the monthly
+  figures and the diagnostics workbook keep their formulas (252 days, the risk-free rate).
+- **Barra site step** (`lightyear/barra_site.py`): a button on the Results tab sends a finished run's book to the Barra site through
+  a separate local tester and shows `barra_site.json` beside Lightyear's figures. Lightyear holds no site address or login; the
+  tester's folder is `barra_tester` in the gitignored `config/local.yaml`. A report only.
+- **Analyst read at Gate B** (`lightyear/gate_b_read.py`, `gate_b_read.json`): a model's page on what the risk exposures say and
+  changes worth testing, each as a new run. It may not vote: a read that says approve or reject is refused, and its sha256 goes
+  into the decision record.
+
 ## Non-negotiables when working in this repo
 
 - **Every Excel formula equals its Python definition (hard rule; reworded 2026-11-12).** No metric may be defined in
