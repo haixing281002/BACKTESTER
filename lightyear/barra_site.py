@@ -45,7 +45,7 @@ def site_home() -> str | None:
     """The site's home page, as the tester states it. None when there is no tester."""
     if not configured():
         return None
-    p = subprocess.run([sys.executable, os.path.join(tester_dir(), "scripts", "site_info.py")], capture_output=True, text=True, encoding="utf-8")
+    p = subprocess.run([sys.executable, os.path.join(tester_dir(), "scripts", "site_info.py")], check=False, capture_output=True, text=True, encoding="utf-8")
     try:
         return json.loads(p.stdout)["home"] if p.returncode == 0 else None
     except (json.JSONDecodeError, KeyError):
