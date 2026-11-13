@@ -393,7 +393,7 @@ async function tick(){
   tabsFor(st);
   renderProgress(st);
   if(st.phase_a) renderGateA(st);
-  if(st.results){ renderResults(st); renderGateB(st); if(TAB==="positions") renderPositions(false) }
+  if(st.results){ renderResults(st); renderBarra(st); renderGateB(st); renderGbRead(st); if(TAB==="positions") renderPositions(false) }
   renderFiles(st);
   await pullLog();
 }
@@ -582,6 +582,8 @@ function renderResults(st){
       <div id="qibody"><div class="card small muted">Not built for this run yet. Press Rebuild.</div></div>
       <details class="card" ontoggle="resizeCharts(this)"><summary>Daily calculations <span class="small muted" style="font-weight:400">daily returns on the Barra site's formulas, each with its formula, beside the monthly figure</span></summary>
         <div id="dailybody" style="margin-top:10px"></div></details>
+      <details class="card" ontoggle="resizeCharts(this)"><summary>Barra site <span class="small muted" style="font-weight:400">the same book on the Barra risk model: where the return came from, factor exposures, forecast risk. A report; Gate B does not read it.</span></summary>
+        <div id="barrabody" style="margin-top:10px"></div></details>
       <details class="card" ontoggle="resizeCharts(this)"><summary>Run diagnostics <span class="small muted" style="font-weight:400">cost tables, strategy rule rows, run facts, robustness rows, daily charts. Gate B's evidence reads from here.</span></summary>
         <div style="margin-top:12px">
         <p class="muted" style="margin:6px 0 14px">${esc(r.headline)} <span class="small">(the run's own summary line; its figures are the daily ones)</span></p>
@@ -965,8 +967,10 @@ function renderGateB(st){
       ${v2.tests_not_run.length?`<p class="small muted"><b>Not run, so not passed:</b> ${v2.tests_not_run.map(esc).join(", ")}.</p>`:""}
       <p class="small muted">Gate B ${esc(v2.gate_version)} holds data integrity and statistical tests only. Thresholds: config/gate_thresholds.yaml (${esc(v2.thresholds_status)}), unchanged. The deflated Sharpe is outside this gate, so nothing here tests for selection luck. Capacity is information on the Results tab.</p></div>` : "";
   const none = `<div class="card"><h2>Gate B: investment decision</h2>${r.gate_v2&&r.gate_v2.error?`<div class="banner err">Gate B was not scored: ${esc(r.gate_v2.error)}</div>`:`<p class="small muted">This run has no Gate B score yet. Press Rebuild on the Results tab to score it.</p>`}</div>`;
+  GBR_SIG = null;
   $('[data-p="gateb"]').innerHTML = `
     ${v2html || none}
+    <div id="gbread"></div>
     ${at?`<div class="card"><h2>Record the decision</h2>
       <p class="small muted">This is the one stop in the chain. No model votes. The record is written to the run folder and to outputs/lightyear/decisions.jsonl.</p>
       <div class="decide">${["APPROVE","OBSERVE","FIX","REJECT"].map(d=>`<button class="d-${d} ${DEC===d?'on':''}" onclick="pickDec('${d}')">${d}</button>`).join("")}</div>
@@ -975,6 +979,50 @@ function renderGateB(st){
       <div class="row" style="margin-top:12px"><button class="primary" onclick="decideB()">Record decision</button><span class="small muted" id="gb_msg"></span></div>
       <p class="small muted">Recording it from a terminal instead (run_pipeline.py --decision)? It needs this server's token, valid while Lightyear runs: <code>${esc(LY_TOKEN)}</code></p></div>`
     : st.decision?`<div class="card"><h2>Decision on record</h2><div class="facts"><div>Decision</div><div class="d-${esc(st.decision.decision)}"><b>${esc(st.decision.decision)}</b></div><div>By</div><div>${esc(st.decision.decided_by)}</div><div>When</div><div>${esc(ist(st.decision.at))}</div><div>Rationale</div><div>${esc(st.decision.rationale)}</div></div></div>`:""}`;
+}
+let BARRA_SIG = null, GBR_SIG = null;
+function renderBarra(st){
+  const el = $("#barrabody"); if(!el) return;
+  const b = st.barra_site, bs = st.barra_status, ds = (CH||{}).daily_site;
+  const sig = st.id + bs + (b?b.built_at:"") + !!ds + st.barra_configured; if(BARRA_SIG === sig && el.innerHTML) return; BARRA_SIG = sig;
+  const fin = ["gate_b","decided"].includes(st.status);
+  const btn = t => st.barra_configured && fin ? `<button ${b?"":'class="primary"'} onclick="act('barra')">${t}</button>` : "";
+  if(bs==="running"){ el.innerHTML = `<div class="now"><div class="spin"></div><div><b>The book is on its way to the Barra site.</b><div class="small muted">Mapping takes seconds. The first time a run is sent, the site then builds its analytics, which takes about 20 minutes; after that it is read back in under a minute. Progress is on the Progress tab. Nothing on this page waits for it.</div></div></div>`; return }
+  if(!b){ el.innerHTML = st.barra_configured ? `<div class="row" style="justify-content:space-between"><span>${bs==="failed"?`The Barra site step did not finish: ${esc(st.barra_error||"see the Progress tab")}`:"This run has not been sent to the Barra site."}</span>${btn("Send this book to the Barra site")}</div>`
+      : `<span class="muted">The Barra site step is not set up on this machine (config/local.yaml, key barra_tester).</span>`; return }
+  const S = b.site, C = b.lightyear_site_formula_shared_days, L = ds ? ds.strategy : null, g = b.daily_agreement, m = b.mapping, fl = b.lightyear_flat_days || {};
+  const rows = [["Annualised return","annual_return","pct"],["Volatility","vol","pct","volatility"],["Sharpe (no risk-free rate)","sharpe","num"],["Sortino (no risk-free rate)","sortino","num"],["Maximum drawdown","max_dd","pct","max_drawdown"],["Days with a gain","hit_rate","pct"]];
+  const f = (v,t) => v==null ? "–" : t==="pct" ? pct(v,2) : num(v);
+  const gap = (a,c,t) => (a==null||c==null) ? "" : t==="pct" ? ((a-c)*100>=0?"+":"") + num((a-c)*100) + " pts" : ((a-c)>=0?"+":"") + num(a-c);
+  const legs = b.attribution_pct_a_year || {}, ex = Object.entries(b.mean_factor_exposure||{}).sort((x,y)=>Math.abs(y[1])-Math.abs(x[1])).slice(0,8), rk = b.mean_risk || {};
+  const p1 = v => v==null ? "–" : num(v*100,1) + "%";
+  el.innerHTML = `<div class="row" style="justify-content:space-between"><span class="small muted">Site data to ${esc(b.site_last_date)} · weight book: ${esc(b.weight_book)} · read ${esc(ist(b.built_at))}${b.url?` · <a href="${esc(b.url)}" target="_blank" rel="noopener">open on the Barra site</a>`:""}</span>${btn("Read again from the site")}</div>
+    <h3>The same book on both systems</h3>
+    <table class="t"><tr><th>Metric (the site's formulas)</th><th>Lightyear daily, whole run</th><th>Lightyear, the days the site has</th><th>Barra site</th><th>Site minus Lightyear, same days</th></tr>` +
+    rows.map(([l,k,t,k2])=>`<tr><td>${l}</td><td>${L?f(L[k],t):"–"}</td><td>${f(C[k2||(k==="vol"?"volatility":k)],t)}</td><td>${f(S[k2||(k==="vol"?"volatility":k)],t)}</td><td>${gap(S[k2||(k==="vol"?"volatility":k)],C[k2||(k==="vol"?"volatility":k)],t)}</td></tr>`).join("") +
+    `</table><div class="small muted" style="margin-top:6px">The first column is the Daily calculations block above. The middle column is the same formulas on the ${num(g.shared_days,0)} days both systems have, so the last column is the data alone: the site's returns include dividends and Lightyear's prices do not, the site has no Muhurat or special sessions, and a holding with no Barra ID is not on the site. Daily returns correlate ${num(g.corr,4)}; the typical daily gap is ${num(g.mean_abs_gap_bp,1)} bp.${fl.days?` On ${fl.days} days Lightyear's book is wholly in cash and the site's still moves a little, which is most of the gap in days with a gain.`:""}</div>
+    <div class="grid2" style="margin-top:12px"><div><h3>Where the return came from <span class="small muted">(% a year, added)</span></h3>
+      <table class="t"><tr><th>Source</th><th>Return a year</th></tr>${["market","style","industry","specific"].map(k=>`<tr><td>${k==="specific"?"Stock-specific":k[0].toUpperCase()+k.slice(1)+(k==="market"?"":" factors")}</td><td>${legs[k]==null?"–":num(legs[k],1)+"%"}</td></tr>`).join("")}
+      <tr><td>Return per unit of risk on the stock-specific part (the site's information ratio)</td><td>${num(S.information_ratio_specific)}</td></tr></table></div>
+    <div><h3>Largest factor exposures <span class="small muted">(average, in standard deviations)</span></h3>
+      <table class="t"><tr><th>Barra factor</th><th>Exposure</th></tr>${ex.map(([k,v])=>`<tr><td>${esc(k)}</td><td>${(v>=0?"+":"")+num(v)}</td></tr>`).join("")}</table></div></div>
+    <h3>Forecast risk <span class="small muted">(the risk model's own estimate, average over all days)</span></h3>
+    <div class="facts"><div>Total risk a year</div><div>${p1(rk["Total Risk"])}</div><div>From factors / from stock-specific</div><div>${p1(rk["Factor Risk"])} / ${p1(rk["Specific Risk"])}</div>
+      <div>Share of variance</div><div>market ${p1(rk["Market Risk (%variance)"])}, style ${p1(rk["Style Risk (%variance)"])}, industry ${p1(rk["Industry Risk (%variance)"])}, stock-specific ${p1(rk["Specific Risk (%variance)"])}</div>
+      <div>Upload</div><div>${num((m.rows_by_status||{}).mapped,0)} of ${num(m.holdings_rows_to_end,0)} holdings rows mapped to a Barra ID; worst date ${pct(m.min_mapped_share,1)} of the book${(m.unmapped_names||[]).length?`; not on the site: ${m.unmapped_names.map(esc).join(", ")}`:""}. Stored weights equal the weights sent (largest difference ${b.round_trip.largest_difference}).</div></div>`;
+}
+function renderGbRead(st){
+  const el = $("#gbread"); if(!el) return;
+  const r = st.gate_b_read || {}, rs = st.gate_b_read_status, at = st.status==="gate_b";
+  const sig = st.id + st.status + rs + r.status + (r.sha256||""); if(GBR_SIG === sig) return; GBR_SIG = sig;
+  const head = `<h2 style="margin:0">Analyst read at Gate B <span class="small muted">(Claude, from the book's risk exposures. An opinion and a list of things to test. It does not vote.)</span></h2>`;
+  if(rs==="running"){ el.innerHTML = `<div class="card review">${head}<div class="now" style="margin-top:10px"><div class="spin"></div><div><b>Claude is reading the risk exposures.</b><div class="small muted">The read appears here in a few minutes. The gate above is already final and does not depend on it.</div></div></div></div>`; return }
+  if(r.status==="ok"){ el.innerHTML = `<div class="card review"><div class="row" style="justify-content:space-between">${head}${at?`<button onclick="act('gate_b_read')">Write it again</button>`:""}</div>
+      <p class="small muted" style="margin:6px 0 0">${r.used_barra_site?"Written with the Barra site's figures for this book.":"Written without the Barra site's figures: send the book to the Barra site on the Results tab, then write it again."} ${r.pinned?"Fixed with the decision on record.":"When a decision is recorded, this text is fixed with it."} <code>${esc((r.sha256||"").slice(0,12))}</code></p>
+      ${r.sections.map(s=>`<h3>${esc(s.heading)}</h3><p style="margin:4px 0">${esc(s.text)}</p>`).join("")}
+      <h3>How the strategy could be made better <span class="small muted">(each is a change to test in a new run, not a change to this one)</span></h3>
+      <table class="t"><tr><th>Change to test</th><th>Why</th><th>How to test it</th></tr>${r.suggestions.map(s=>`<tr><td>${esc(s.change)}</td><td>${esc(s.why)}</td><td>${esc(s.how_to_test)}</td></tr>`).join("")}</table></div>`; return }
+  el.innerHTML = `<div class="card review row" style="justify-content:space-between"><span>${head}<span class="small muted">${esc(rs==="failed"?"The last attempt was not accepted (see the Progress tab). ":"")}${esc(r.note||"")}</span></span>${at?`<button class="primary" onclick="act('gate_b_read')">Ask Claude for the read</button>`:""}</div>`;
 }
 function pickDec(d){ DEC = d; document.querySelectorAll(".decide button").forEach(b=>b.classList.toggle("on", b.textContent===d)) }
 async function decideB(){
@@ -1007,7 +1055,7 @@ async function act(what){
   if(what==="cancel" && !confirm("Cancel the running phase? Claude Code is stopped; files written so far stay.")) return;
   try{ await api(`/api/runs/${CUR}/${what}`, {method:"POST"}); H = await api("/api/health");
     if(what==="resume"){ USER_TAB=false; TAB="progress" }
-    if(what==="rebuild"){ RES_SIG = null; CHARTED = null; POS_RUN = null }
+    if(what==="rebuild"){ RES_SIG = null; CHARTED = null; POS_RUN = null; BARRA_SIG = null }
     tick(); refreshRuns() }catch(e){ alert(e.message) }
 }
 window.addEventListener("resize", () => { if(window.Plotly) document.querySelectorAll(".chart .js-plotly-plot").forEach(p => Plotly.Plots.resize(p)) });

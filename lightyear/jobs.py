@@ -32,7 +32,7 @@ from ros import config
 from ros.cards.schema import load_card
 from ros.metrics import core
 
-from . import allocation, analyst_read, changelog, charts, contract, gate_run, main_workbook, prompts, spec_audit, wording, workbook
+from . import allocation, analyst_read, barra_site, changelog, charts, contract, gate_b_read, gate_run, main_workbook, prompts, spec_audit, wording, workbook
 from .paths import LEDGER, REPO, RUNS, code_hash, find_claude, git_bash, git_commit, rel, run_dir
 
 _log = logging.getLogger("lightyear")
@@ -969,6 +969,41 @@ def analyst_review(rid):
     log(rid, "server", "Analyst review ready.")
 
 
+def gate_b_analyst_read(rid):
+    """Claude reads the run's risk exposures (and the Barra site step's result when there is one) and writes
+    gate_b_read.json: what the exposures say and changes worth testing. It never votes and never holds Gate B up."""
+    update(rid, gate_b_read_status="running")
+    log(rid, "server", "Analyst read at Gate B: Claude is reading the risk exposures.")
+    st = load(rid)
+    card = ((st.get("phase_a") or {}).get("card_path")) or "(no card)"
+    before = gate_b_read.sha256(run_dir(rid))
+    run_claude(rid, _fmt(prompts.GATE_B_READ, rid, card=card), "Analyst read at Gate B", [])
+    try:
+        ok = gate_b_read.load(run_dir(rid)) is not None and gate_b_read.sha256(run_dir(rid)) != before
+        why = "no new gate_b_read.json was written"
+    except (ValueError, json.JSONDecodeError) as e:
+        ok, why = False, str(e)
+    update(rid, gate_b_read_status="done" if ok else "failed")
+    log(rid, "server" if ok else "error", "Analyst read at Gate B ready." if ok else f"Analyst read at Gate B was not accepted: {why}.")
+
+
+def barra_site_step(rid, then_read=True):
+    """Send the run's book to the Barra site through the local tester, copy its result into the run folder, then have
+    the Gate B analyst read written from it. A report: no result file and no gate status changes."""
+    update(rid, barra_status="running")
+    log(rid, "server", "Barra site step started.")
+    try:
+        res = barra_site.run(run_dir(rid), lambda m: log(rid, "server", m))
+    except Exception as e:
+        update(rid, barra_status="failed", barra_error=str(e))
+        log(rid, "error", str(e))
+        return
+    update(rid, barra_status="done", barra_error=None)
+    log(rid, "server", f"Barra site step done: the site's figures to {res.get('site_last_date')} are on the Results tab.")
+    if then_read and load(rid)["status"] == "gate_b" and not live_session():
+        gate_b_analyst_read(rid)
+
+
 # ------------------------------------------------------------------ human actions
 def approve(rid, by, notes=""):
     """Record the approval AND pin the card: its sha256 at this moment is what Phase B must run from."""
@@ -1065,7 +1100,8 @@ def decide(rid, decision, by, rationale):
         rec = {"run": rid, "decision": decision, "decided_by": by, "rationale": rationale, "at": now()}
         rec.update(slug=st["slug"], card=(st.get("phase_a") or {}).get("card_path"), paper=st["pdf"],
                    gate_status=((st.get("results") or {}).get("gate_v2") or {}).get("status"),
-                   gate_version=((st.get("results") or {}).get("gate_v2") or {}).get("gate_version"))
+                   gate_version=((st.get("results") or {}).get("gate_v2") or {}).get("gate_version"),
+                   gate_b_read_sha256=gate_b_read.sha256(run_dir(rid)))     # the read the decider had in front of them, if any
         write_json_atomic(os.path.join(run_dir(rid), "decision.json"), rec, indent=1)
         os.makedirs(RUNS, exist_ok=True)
         with open(LEDGER, "a", encoding="utf-8") as f:

@@ -10,7 +10,7 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTex
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from . import __version__, analyst_read, jobs, prompts, security, workbook
+from . import __version__, analyst_read, barra_site, gate_b_read, jobs, prompts, security, workbook
 from .paths import PAPERS, REPO, STATIC, code_hash, find_claude, git_commit, run_dir, slugify
 
 
@@ -149,6 +149,9 @@ def run_state(rid: str, response: Response):
         except HTTPException:
             st["gate_a_md"] = None
     st["analyst_read"] = analyst_read.for_page(run_dir(st["id"]), (st.get("approval") or {}).get("analyst_read") or st.get("analyst_read_pin"))
+    st["gate_b_read"] = gate_b_read.for_page(run_dir(st["id"]), st.get("decision"))
+    st["barra_site"] = barra_site.load(run_dir(st["id"]))
+    st["barra_configured"] = barra_site.configured()
     res = st.get("results") or {}
     rv = os.path.join(run_dir(rid), "review.json")
     if os.path.exists(rv):
@@ -216,6 +219,33 @@ def rerun_review(rid: str):
         raise HTTPException(409, "A review is already running.")
     _busy_guard()
     jobs.start(jobs.analyst_review, rid)
+    return {"ok": True}
+
+
+@app.post("/api/runs/{rid}/barra")
+def run_barra_site(rid: str):
+    """Send this run's book to the Barra site (through the local tester) and show its figures on the Results tab."""
+    st = _state(rid)
+    if st["status"] not in ("gate_b", "decided"):
+        raise HTTPException(409, "The Barra site step runs on a finished backtest.")
+    if not barra_site.configured():
+        raise HTTPException(409, "The Barra site step is not set up on this machine (config/local.yaml key barra_tester).")
+    if st.get("barra_status") == "running":
+        raise HTTPException(409, "The Barra site step is already running.")
+    jobs.update(rid, barra_status="running")
+    jobs.start(jobs.barra_site_step, rid)
+    return {"ok": True}
+
+
+@app.post("/api/runs/{rid}/gate_b_read")
+def write_gate_b_read(rid: str):
+    st = _state(rid)
+    if st["status"] != "gate_b":
+        raise HTTPException(409, "The analyst read at Gate B is written while the run waits at Gate B.")
+    if st.get("gate_b_read_status") == "running":
+        raise HTTPException(409, "The analyst read at Gate B is already being written.")
+    _busy_guard()
+    jobs.start(jobs.gate_b_analyst_read, rid)
     return {"ok": True}
 
 

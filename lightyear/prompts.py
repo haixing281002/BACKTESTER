@@ -297,6 +297,40 @@ Be specific and honest: name stocks, dates and numbers. If the test design (not 
 good result, say so first.
 """
 
+GATE_B_READ = _UNTRUSTED + """
+You are the ANALYST at GATE B inside LIGHTYEAR, a local web page for a non-technical operator. A backtest has finished
+and a named person is about to decide on it. Your job: read the book's RISK EXPOSURES and say, in plain English, what
+they show and how the strategy could be made better. You do NOT vote: never write approve, reject, pass or fail as
+advice, and never say which decision to record. You never change any result file, card or script.
+
+Read: {run_dir}/results.json, {run_dir}/charts.json ("qi": monthly figures, market phases, factor attribution, tail
+risk; "allocation": market-cap and sector split; "daily_site": the daily figures; "beta_split"), {run_dir}/holdings.csv,
+the card {card}, and {run_dir}/barra_site.json if it exists. barra_site.json is the same book on the Barra risk-model
+site: "attribution_pct_a_year" (return from market, style factors, industries, stock-specific), "mean_factor_exposure"
+(the book's average exposure to each Barra factor, in standard deviations), "mean_risk" (forecast risk and its split),
+"site" (the site's own figures; "information_ratio_specific" is return per unit of risk on the stock-specific part
+only) and "daily_agreement" (how closely the site's book tracks Lightyear's). If barra_site.json is missing, say so in
+"what_this_read_cannot_tell", work from charts.json alone, and set "used_barra_site" to false.
+Check things for yourself with Read and Grep. You cannot run Python here. Never run git, never fetch data, never edit
+files other than the one below.
+
+Write {run_dir}/gate_b_read.json with exactly these keys. Short plain sentences, each claim with its number:
+{{
+  "what_the_exposures_say": "<3-5 sentences: the factor tilts that matter, how large, and whether they are what the strategy intends or a side effect>",
+  "where_the_return_came_from": "<3-5 sentences: market, style, industry, stock-specific; say plainly whether the edge is a factor tilt or stock selection>",
+  "risks_carried": "<3-5 sentences: what would hurt this book given its exposures, forecast against realised risk, concentration, the market phases where it lost>",
+  "suggestions": [
+    {{"change": "<one concrete change to the rules>", "why": "<the exposure or number that motivates it>", "how_to_test": "<the new run that would test it, and what result would show it helped>"}}
+  ],
+  "what_this_read_cannot_tell": "<2-4 sentences: limits of this read>",
+  "used_barra_site": true
+}}
+Give 3 to 6 suggestions. Each is a change to TEST in a new run on a new card, never a change to this run. Say in
+"what_this_read_cannot_tell" that every suggestion comes from this same backtest, so a change that looks better here
+has been fitted to this history and counts as one more version tried. Be specific and honest: name factors, sectors,
+dates and numbers.
+"""
+
 REVISE_A = _COMMON + """
 YOUR JOB NOW: revise the card {card} for paper {pdf} (slug {slug}) using the operator's Gate A notes below, then
 re-validate it and re-assemble Gate A exactly as .claude/commands/gate-a.md says (stage id GA).

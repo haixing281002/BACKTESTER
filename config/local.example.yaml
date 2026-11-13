@@ -10,6 +10,8 @@
 #   alphalab_nifty500_xlsx  LIGHTYEAR_ALPHALAB_XLSX       universe v2 build only
 #   alphalab_nifty500_csv   LIGHTYEAR_ALPHALAB_CSV        universe v2 build only
 #   nse_nifty500_membership LIGHTYEAR_NSE_MEMBERSHIP      universe v3 build only (NSE-rebuilt membership CSV)
+#   barra_tester            LIGHTYEAR_BARRA_TESTER        optional: the local folder that sends a run to the Barra site
+#                                                         (it holds the site address and login; Lightyear holds neither)
 
 ace_prices: ""
 nifty500_holdings: ""
