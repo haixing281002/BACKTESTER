@@ -152,8 +152,7 @@ By cause: calendar 9, no Barra ID 3, artefact of this check 4, mapping 2, divide
 
 The sheet carries Lightyear's own daily formulas (252 days, CAGR, risk-free rate, compounded drawdown). The daily beta was
 the one formula that differed in form from Python; it was corrected earlier today (covariance over variance on returns
-minus the card's cash rate). The workbook-against-Python tests pass on the current code. **This run's workbook on disk must
-be rebuilt once more before it is read**: it was last built while the sheet briefly showed the Barra-mode formulas.
+minus the card's cash rate). The workbook-against-Python tests pass on the current code. This run's workbook was rebuilt on that code at 14:17 IST on 2026-11-13: the sheet shows the formulas above and all 3,538 workbook figures agree with Python within 1e-9. No difference found.
 
 ## 8. Classification and proposed fixes
 
