@@ -14,7 +14,9 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 
-ANN = 252
+from ros import config
+
+ANN = config.trading_days_per_year()     # trading days a year, config/fund.yaml (252)
 _CASH_CONSTANT = re.compile(r"^CASH_PROXY_CONSTANT_(\d+(?:\.\d+)?)PCT$")
 
 

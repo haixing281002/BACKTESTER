@@ -35,9 +35,14 @@ def hurdle_annual() -> float:
     return float(_load("fund.yaml")["sharpe_hurdle"])
 
 
+def trading_days_per_year() -> int:
+    """Trading days a year (config/fund.yaml), the one annualisation factor of every daily figure: ros/metrics/core.py ANN."""
+    return int(_load("fund.yaml")["trading_days_per_year"])
+
+
 def hurdle_daily() -> float:
-    """One trading day of the Sharpe yardstick: (1 + annual)^(1/252) - 1. Every Sharpe subtracts this."""
-    return (1.0 + hurdle_annual()) ** (1.0 / 252) - 1.0
+    """One trading day of the Sharpe yardstick: (1 + annual)^(1/trading_days_per_year) - 1. Every Sharpe subtracts this."""
+    return (1.0 + hurdle_annual()) ** (1.0 / trading_days_per_year()) - 1.0
 
 
 def calibration() -> dict[str, Any]:

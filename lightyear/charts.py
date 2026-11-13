@@ -170,8 +170,8 @@ def observations(df, met, names, sharpe_hurdle=None):
     for u in under:
         run = run + 1 if u else 0
         longest = max(longest, run)
-    if longest > 252:
-        neg.append(f"Longest stretch below its previous high lasted {longest} trading days (about {longest / 252:.1f} years).")
+    if longest > core.ANN:
+        neg.append(f"Longest stretch below its previous high lasted {longest} trading days (about {longest / core.ANN:.1f} years).")
     yr = df.assign(y=df["date"].dt.year).groupby("y")["strategy"].apply(lambda s_: (1 + s_.fillna(0)).prod() - 1)
     neg_years = int((yr < 0).sum())
     if len(yr) >= 3:
@@ -201,6 +201,7 @@ def build(df: pd.DataFrame, names: dict, cash_rate=None, comparators: pd.DataFra
            "names": {c: names.get(c, c) for c in cols},
            "growth": {}, "drawdown": {}, "rolling_vol": {}, "metrics": {}, "cash_rate": cash_rate, "cash_source": cash_source,
            "sharpe_hurdle": (sharpe_hurdle := _hurdle(sharpe_hurdle)),
+           "trading_days_per_year": core.ANN,    # config/fund.yaml; the page and the workbooks print and use this one
            # the headline Sharpe and Sortino are geometric, (CAGR - hurdle) / risk; yearly and Gate B figures are arithmetic
            "sharpe_basis": "geometric"}
     for c in cols:

@@ -154,3 +154,27 @@ def test_turnover_counts_the_first_book_bought_before_the_first_return():
     t = pd.DataFrame({"date": ["2024-01-01", "2024-01-03"], "weight_before": [0.0, 1.0], "weight_after": [1.0, 0.5]})
     out = core.two_way_turnover_from_trades(t, D)
     assert out.iloc[0] == pytest.approx(1.0) and out.iloc[1] == pytest.approx(0.5) and out.sum() == pytest.approx(1.5)
+
+
+def test_trading_days_per_year_is_the_one_config_setting(tmp_path, monkeypatch):
+    """core.ANN is config/fund.yaml's trading_days_per_year: change the setting and every annualised figure follows."""
+    import os
+    import subprocess
+    import sys
+
+    import yaml
+
+    from ros import config
+    assert core.ANN == config.trading_days_per_year()
+    fund = config.fund()
+    fund["trading_days_per_year"] = core.ANN - 2
+    (tmp_path / "fund.yaml").write_text(yaml.safe_dump(fund), encoding="utf-8")
+    code = ("import pandas as pd; from ros.metrics import core; "
+            "print(core.ANN, repr(core.ann_vol(pd.Series([0.01, -0.02, 0.03, 0.00, 0.01, -0.01]))))")
+    out = subprocess.run([sys.executable, "-c", code], cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                         env={**os.environ, "LIGHTYEAR_CONFIG_DIR": str(tmp_path)}, capture_output=True, text=True, check=True)
+    ann, vol = out.stdout.split()
+    assert int(ann) == core.ANN - 2
+    assert float(vol) == pytest.approx(core.ann_vol(R) * np.sqrt((core.ANN - 2) / core.ANN), rel=1e-12)
+    monkeypatch.setattr(config, "trading_days_per_year", lambda: 250)
+    assert config.hurdle_daily() == (1.0 + config.hurdle_annual()) ** (1.0 / 250) - 1.0

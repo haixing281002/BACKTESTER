@@ -426,14 +426,20 @@ def build(run_dir, results, df, title, out_path, holdings=None, trades=None, com
     name(wb, "Cash_Rate", "Summary!$B$4")
     hurdle = (core_metrics or {}).get("sharpe_hurdle")
     hurdle = config.hurdle_annual() if hurdle is None else hurdle
+    dpy = (core_metrics or {}).get("trading_days_per_year") or config.trading_days_per_year()
     put(ws, "A5", "Risk-free rate for Sharpe and Sortino (config/fund.yaml)", F_BOLD)
     put(ws, "B5", hurdle, F_INPUT, PCT, FILL_KEY, border=True,
         comment="Key assumption: the risk-free rate in Sharpe and Sortino, one setting in config/fund.yaml. A yardstick, not income: idle cash earns the cash rate above.")
-    put(ws, "C5", "=(1+Risk_Free_Rate)^(1/252)-1", F_BASE, "0.000000%", border=True)
+    put(ws, "C5", "=(1+Risk_Free_Rate)^(1/Days_Per_Year)-1", F_BASE, "0.000000%", border=True)
     put(ws, "D5", "the risk-free rate for one day. Sharpe = (CAGR - risk-free rate) / volatility; Sortino the same over downside "
                   "deviation. Both as defined in ros/metrics/core.py. Change the rate and both rows update.", F_NOTE)
     name(wb, "Risk_Free_Rate", "Summary!$B$5")
     name(wb, "Risk_Free_Daily", "Summary!$C$5")
+    # Row 19 (between the note and Gate B) holds the day count: rows 4 to 6 are full and moving them shifts every reference.
+    put(ws, "A19", "Trading days a year (config/fund.yaml)", F_BOLD)
+    put(ws, "B19", dpy, F_INPUT, "0", FILL_KEY, border=True,
+        comment="Key assumption: trading_days_per_year, config/fund.yaml. Annualises volatility, Sortino and the daily risk-free rate.")
+    name(wb, "Days_Per_Year", "Summary!$B$19")
     header(ws, 6, ["Metric", f"Strategy: {s_name}", f"Benchmark: {b_name}", f"Strategy minus {b_name}"])
     mrows = [
         ("Start (value = 100)", "=Start_Date", "=Start_Date", DATE, False, True),
@@ -442,10 +448,10 @@ def build(run_dir, results, df, title, out_path, holdings=None, trades=None, com
         ("Trading days", "=COUNT(Ret_Strat)", "=COUNT(Ret_Bench)", INT, False, True),
         ("Final value (100 = start)", "=INDEX(Val_Strat,ROWS(Val_Strat))", "=INDEX(Val_Bench,ROWS(Val_Bench))", NUM1, True, True),
         ("CAGR", "=(B11/100)^(1/B9)-1", "=(C11/100)^(1/C9)-1", PCT, True, False),
-        ("Annualised volatility", "=STDEV(Ret_Strat)*SQRT(252)", "=STDEV(Ret_Bench)*SQRT(252)", PCT, True, True),
+        ("Annualised volatility", "=STDEV(Ret_Strat)*SQRT(Days_Per_Year)", "=STDEV(Ret_Bench)*SQRT(Days_Per_Year)", PCT, True, True),
         (f"Sharpe (risk-free rate {hurdle:.0%})", '=(B12-Risk_Free_Rate)/B13', '=(C12-Risk_Free_Rate)/C13', NUM2, True, False),
         ("Maximum drawdown", "=-MIN(DD_Strat)", "=-MIN(DD_Bench)", PCT, True, True),
-        (f"Sortino (risk-free rate {hurdle:.0%})", '=(B12-Risk_Free_Rate)/(SQRT(SUMPRODUCT((Ret_Strat-Risk_Free_Daily<0)*(Ret_Strat-Risk_Free_Daily)^2)/COUNT(Ret_Strat))*SQRT(252))', '=(C12-Risk_Free_Rate)/(SQRT(SUMPRODUCT((Ret_Bench-Risk_Free_Daily<0)*(Ret_Bench-Risk_Free_Daily)^2)/COUNT(Ret_Bench))*SQRT(252))', NUM2, True, False),
+        (f"Sortino (risk-free rate {hurdle:.0%})", '=(B12-Risk_Free_Rate)/(SQRT(SUMPRODUCT((Ret_Strat-Risk_Free_Daily<0)*(Ret_Strat-Risk_Free_Daily)^2)/COUNT(Ret_Strat))*SQRT(Days_Per_Year))', '=(C12-Risk_Free_Rate)/(SQRT(SUMPRODUCT((Ret_Bench-Risk_Free_Daily<0)*(Ret_Bench-Risk_Free_Daily)^2)/COUNT(Ret_Bench))*SQRT(Days_Per_Year))', NUM2, True, False),
         ("Calmar", "=B12/B15", "=C12/C15", NUM2, True, False),
     ]
     for i, (label, fs, fb, fmt, ex, link) in enumerate(mrows, start=7):
@@ -459,7 +465,7 @@ def build(run_dir, results, df, title, out_path, holdings=None, trades=None, com
         ws.conditional_formatting.add(f"D{r}", CellIsRule(operator="greaterThan", formula=["0"], fill=FILL_FAIL))
         ws.conditional_formatting.add(f"D{r}", CellIsRule(operator="lessThan", formula=["0"], fill=FILL_PASS))
     put(ws, "A18", "CAGR on calendar years from the start row (days / 365.25); volatility = stdev of daily returns x "
-        "sqrt(252). Rows 7 to 17 are formulas over the Returns sheet (green = pulls from another sheet). The benchmark is "
+        f"sqrt({dpy}) ({dpy} trading days a year, B19). Rows 7 to 17 are formulas over the Returns sheet (green = pulls from another sheet). The benchmark is "
         "the NIFTY 500 PRICE index unless this run supplied a total-return one: relative figures flatter the strategy.", F_NOTE)
 
     # Gate B on the Summary: the status Lightyear scored, with the detail on the Gate B sheet.
@@ -528,7 +534,7 @@ def build(run_dir, results, df, title, out_path, holdings=None, trades=None, com
             rc, vc, dc = L(c0 + 1 + 3 * j), L(c0 + 2 + 3 * j), L(c0 + 3 + 3 * j)
             put(wc, f"A{row}", c, F_BASE, border=True)
             put(wc, f"B{row}", f"=({vc}{d1}/100)^(1/Summary!$B$9)-1", F_LINK, PCT, border=True)
-            put(wc, f"C{row}", f"=STDEV({rc}{d0}:{rc}{d1})*SQRT(252)", F_BASE, PCT, border=True)
+            put(wc, f"C{row}", f"=STDEV({rc}{d0}:{rc}{d1})*SQRT(Days_Per_Year)", F_BASE, PCT, border=True)
             put(wc, f"D{row}", f"=(B{row}-Risk_Free_Rate)/C{row}", F_LINK, NUM2, border=True)
             put(wc, f"E{row}", f"=-MIN({dc}{d0-1}:{dc}{d1})", F_BASE, PCT, border=True)
             put(wc, f"F{row}", f"=B{row}-Summary!$B$12", F_LINK, PCT, border=True)

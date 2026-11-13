@@ -21,6 +21,8 @@ import os
 import numpy as np
 import pandas as pd
 
+from ros.metrics import core
+
 TOLERANCE = 0.5e-4          # 0.5bp on a daily return
 FFILL_LIMIT = 5             # signals read a stale close at most 5 sessions (as the runs do)
 
@@ -44,7 +46,7 @@ def _prices(isins, start, end, demergers=True):
 def nav_rebuild(dr, tr, px, params) -> dict:
     """Rebuild the book's NAV day by day from the trades alone and compare its daily returns with daily_returns.csv."""
     close = px["close"].ffill()                                       # a held name is valued at its last close
-    day_rate = (1.0 + float(params.get("cash_rate", 0.0))) ** (1.0 / 252.0) - 1.0
+    day_rate = core.daily_cash(float(params.get("cash_rate", 0.0)))      # (1 + rate)^(1/trading_days_per_year) - 1
     half = float(params.get("cost_bp", 0.0)) / 2.0 / 1e4
     cash = float(params.get("start_capital", 1.0))
     units = {}

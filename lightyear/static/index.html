@@ -712,11 +712,12 @@ function fillCore(c){
   const m = c.metrics, s = m.strategy, b = m.benchmark, bp = c.card_bp, g = c.gross, se = c.se;
   const f = (v,fmt) => (v==null||Number.isNaN(v)) ? "–" : fmt==="pct" ? pct(v,2) : fmt==="int" ? Math.round(v) : num(v);
   const rf = c.sharpe_hurdle==null ? "" : pct(c.sharpe_hurdle,0);
+  const dpy = c.trading_days_per_year==null ? "N" : c.trading_days_per_year;   // trading days a year, config/fund.yaml, via charts.json; N on a run built before it was recorded
   const V = {}; ((se||{}).rows||[]).forEach(r => V[r.label] = r);
   // label, key, format, the daily formula in words, the monthly figure of the same kind
   const R = [["Final value (100 = start)","final","num","100 x product of (1 + daily return)","Total Return"],
     ["CAGR","cagr","pct","(final / 100)^(1 / years) - 1, years = calendar days / 365.25","CAGR"],
-    ["Volatility","vol","pct","sample stdev of daily returns x sqrt(252)","Annualized Volatility"],
+    ["Volatility","vol","pct",`sample stdev of daily returns x sqrt(${dpy})`,"Annualized Volatility"],
     [`Sharpe (risk-free rate ${rf})`,"sharpe","num","(CAGR - risk-free rate) / volatility","Sharpe Ratio"],
     [`Sortino (risk-free rate ${rf})`,"sortino","num","(CAGR - risk-free rate) / downside deviation of daily returns below the daily risk-free rate","Sortino Ratio"],
     ["Maximum drawdown","max_dd","pct","largest fall of the daily value from its previous high, as a positive number","Max Drawdown"],
@@ -726,13 +727,13 @@ function fillCore(c){
     ["Skew","skew","num","sample skew of daily returns","Skewness"],
     ["CAGR without the 10 best days","best_days_removed_cagr","pct","the 10 best days removed, then compounded",null],
     ["Beta","beta","num","slope of daily returns on the benchmark's, both over the card's cash rate","Beta"],
-    ["Tracking error","tracking_error","pct","sample stdev of (daily return - benchmark's) x sqrt(252)","Tracking Error"],
-    ["Information ratio","information_ratio","num","mean of (daily return - benchmark's) x 252 / tracking error","Information Ratio"],
-    ["Rolling one-year periods behind","rolling_behind","pct","share of 252-day windows with a compounded return below the benchmark's",null]];
+    ["Tracking error","tracking_error","pct",`sample stdev of (daily return - benchmark's) x sqrt(${dpy})`,"Tracking Error"],
+    ["Information ratio","information_ratio","num",`mean of (daily return - benchmark's) x ${dpy} / tracking error`,"Information Ratio"],
+    ["Rolling one-year periods behind","rolling_behind","pct",`share of ${dpy}-day windows with a compounded return below the benchmark's`,null]];
   const mon = (lab, who) => { const r = V[lab]; return r ? f(r[who], r.format) : "" };
   $("#dailybody").innerHTML = `<table class="t"><tr><th>Metric (daily)</th><th>Daily formula</th>${g?`<th>Strategy, gross: daily</th>`:""}<th>Strategy${g?`, at the card's ${num(bp,0)}bp`:""}: daily</th><th>${esc(c.names.benchmark)}: daily</th><th>Monthly figure of the same kind</th><th>Strategy: monthly</th><th>Benchmark: monthly</th></tr>` +
     R.map(([l,k,t,w,ml])=>`<tr><td>${l}</td><td class="small muted">${w}</td>${g?`<td>${f(g[k],t)}</td>`:""}<td>${f(s[k],t)}</td><td>${f(b[k],t)}</td><td class="small">${ml?esc(ml)+" (monthly)":"none"}</td><td>${ml?mon(ml,"strategy"):""}</td><td>${ml?mon(ml,"benchmark"):""}</td></tr>`).join("") +
-    `</table><div class="small muted" style="margin-top:6px">The daily block uses every daily return, sample standard deviation and 252 days a year; the monthly block uses complete calendar months, population standard deviation and month counts. The two differ by construction. The monthly Max Drawdown and CVaR are shown as negative numbers and the daily ones as positive. Gate B uses its own daily tests.</div>`;
+    `</table><div class="small muted" style="margin-top:6px">The daily block uses every daily return, sample standard deviation and ${dpy} days a year; the monthly block uses complete calendar months, population standard deviation and month counts. The two differ by construction. The monthly Max Drawdown and CVaR are shown as negative numbers and the daily ones as positive. Gate B uses its own daily tests.</div>`;
   const pp = c.post_publication, cp = c.capacity || {};
   $("#coremore").innerHTML = [
     c.annual_turnover!=null ? `Two-way turnover ${num(c.annual_turnover)} times capital a year. The cost is the one on this run's card, approved at Gate A.` : `Turnover not computed: this run wrote no trades or holdings.`,

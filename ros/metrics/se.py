@@ -27,7 +27,9 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 
-DEFAULT_INPUTS = {"drawdown_limit": 0.0, "omega_threshold": 0.01, "risk_free_rate": 0.05}
+from ros import config
+
+DEFAULT_INPUTS = {"drawdown_limit": 0.0, "omega_threshold": 0.01, "risk_free_rate": config.hurdle_annual()}
 NAN = float("nan")
 PCT, NUM, INT = "pct", "num", "int"
 

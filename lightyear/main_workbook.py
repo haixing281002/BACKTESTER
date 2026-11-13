@@ -30,8 +30,8 @@ from openpyxl.chart.data_source import NumFmt
 from openpyxl.utils import get_column_letter as L
 from openpyxl.worksheet.formula import ArrayFormula
 
+from ros.metrics import core, se
 from ros.metrics import qi as qi_mod
-from ros.metrics import se
 from universal_backtester.xlsx_style import (
     BOX,
     DATE,
@@ -528,29 +528,34 @@ def _daily_sheet(wb, ch, s_name, b_name, first, last, R) -> list[tuple[str, str,
     ws = wb.create_sheet("Daily calculations")
     m, b = ch["metrics"]["strategy"], ch["metrics"]["benchmark"]
     rf = ch["sharpe_hurdle"]
+    dpy = ch.get("trading_days_per_year") or core.ANN     # the setting the run's Python figures were computed with
     put(ws, "A1", "Daily calculations", F_TITLE)
-    put(ws, "A2", "The daily block: daily returns, sample standard deviation, 252 days a year, years = calendar days / 365.25, losses as positive numbers. The monthly columns "
+    put(ws, "A2", f"The daily block: daily returns, sample standard deviation, {dpy} days a year, years = calendar days / 365.25, losses as positive numbers. The monthly columns "
         f"are the main display's figures; the two differ by construction and neither is wrong. Gate B uses its own daily tests, not this sheet. {SIGN}", F_NOTE)
     put(ws, "A3", "Risk-free rate (config/fund.yaml)", F_BOLD)
     put(ws, "B3", rf, F_INPUT, PCT2, FILL_KEY, border=True, comment="Key assumption: the one risk-free rate, config/fund.yaml. A yardstick, not income.")
-    put(ws, "C3", "=(1+Risk_Free_Rate)^(1/252)-1", F_BASE, "0.000000%", border=True)
+    put(ws, "C3", "=(1+Risk_Free_Rate)^(1/Days_Per_Year)-1", F_BASE, "0.000000%", border=True)
     put(ws, "D3", "the same rate for one day", F_NOTE)
+    put(ws, "A4", "Trading days a year (config/fund.yaml)", F_BOLD)
+    put(ws, "B4", dpy, F_INPUT, "0", FILL_KEY, border=True, comment="Key assumption: trading_days_per_year, config/fund.yaml. Annualises every daily figure on this sheet.")
     name(wb, "Risk_Free_Rate", "'Daily calculations'!$B$3")
     name(wb, "Risk_Free_Daily", "'Daily calculations'!$C$3")
+    name(wb, "Days_Per_Year", "'Daily calculations'!$B$4")
     header(ws, 5, ["Metric (daily)", "Daily formula", f"{s_name}: daily", f"{b_name}: daily", "Monthly figure of the same kind", f"{s_name}: monthly", f"{b_name}: monthly"], height=34)
     n = last - first + 1
-    sortino = "=({c}8-Risk_Free_Rate)/(SQRT(SUMPRODUCT(({r}-Risk_Free_Daily<0)*({r}-Risk_Free_Daily)^2)/COUNT({r}))*SQRT(252))"
+    sortino = "=({c}8-Risk_Free_Rate)/(SQRT(SUMPRODUCT(({r}-Risk_Free_Daily<0)*({r}-Risk_Free_Daily)^2)/COUNT({r}))*SQRT(Days_Per_Year))"
     dur = "ARRAY:=MAX(_xlfn.SCAN(0,{dd},_xlfn.LAMBDA(_xlpm.a,_xlpm.x,IF(_xlpm.x<-0.000000000001,_xlpm.a+1,0))))"
     cvar = "ARRAY:=-AVERAGE(IF({r}<=_xlfn.PERCENTILE.INC({r},0.05),{r}))"
     best = "ARRAY:=(PRODUCT(1+{r})/PRODUCT(1+LARGE({r},{{1;2;3;4;5;6;7;8;9;10}})))^(365.25/(MAX(Dates)-INDEX(Dates,2)))-1"
-    roll = (f"=SUMPRODUCT(--((Returns!$D${first + 251}:$D${last}/Returns!$D$2:$D${last - 252})<(Returns!$E${first + 251}:$E${last}/Returns!$E$2:$E${last - 252})))/{n - 251}"
-            if n > 252 else None)
+    # a window is dpy returns: value at row k over the value dpy rows earlier (row offsets are built here, not named)
+    roll = (f"=SUMPRODUCT(--((Returns!$D${first + dpy - 1}:$D${last}/Returns!$D$2:$D${last - dpy})<(Returns!$E${first + dpy - 1}:$E${last}/Returns!$E$2:$E${last - dpy})))/{n - dpy + 1}"
+            if n > dpy else None)
     S, B = {"r": "Ret_Strat", "dd": "DD_Strat", "v": "Val_Strat", "c": "C"}, {"r": "Ret_Bench", "dd": "DD_Bench", "v": "Val_Bench", "c": "D"}
     # label, key, format, formula (strategy and benchmark share it; {..} filled per column; None = strategy only), words, monthly SE label
     rows = [("Years", "years", NUM2, "=(MAX(Dates)-Start_Date)/365.25", "(last date - start date) / 365.25", None),
             ("Final value (100 = start)", "final", "0.00", "=INDEX({v},ROWS({v}))", "100 x product of (1 + daily return)", "Total Return"),
             ("CAGR", "cagr", PCT2, "=({c}7/100)^(1/{c}6)-1", "(final / 100)^(1 / years) - 1", "CAGR"),
-            ("Volatility", "vol", PCT2, "=STDEV({r})*SQRT(252)", "sample stdev of daily returns x sqrt(252)", "Annualized Volatility"),
+            ("Volatility", "vol", PCT2, "=STDEV({r})*SQRT(Days_Per_Year)", f"sample stdev of daily returns x sqrt({dpy})", "Annualized Volatility"),
             ("Sharpe", "sharpe", NUM2, "=({c}8-Risk_Free_Rate)/{c}9", "(CAGR - risk-free rate) / volatility", "Sharpe Ratio"),
             ("Sortino", "sortino", NUM2, sortino, "(CAGR - risk-free rate) / downside deviation of daily returns below the daily risk-free rate", "Sortino Ratio"),
             ("Maximum drawdown", "max_dd", PCT2, "=-MIN({dd})", "largest fall of the daily value from its previous high, as a positive number", "Max Drawdown"),
@@ -560,11 +565,11 @@ def _daily_sheet(wb, ch, s_name, b_name, first, last, R) -> list[tuple[str, str,
             ("Skew", "skew", NUM2, "=SKEW({r})", "sample skew of daily returns", "Skewness"),
             ("CAGR without the 10 best days", "best_days_removed_cagr", PCT2, best, "the 10 best days removed, then compounded; years from the first return date", None),
             ("Beta", "beta", NUM2, None, "slope of daily returns on the benchmark's (both over the card's cash rate)", "Beta"),
-            ("Tracking error", "tracking_error", PCT2, None, "sample stdev of (daily return - benchmark's) x sqrt(252)", "Tracking Error"),
-            ("Information ratio", "information_ratio", NUM2, None, "mean of (daily return - benchmark's) x 252 / tracking error", "Information Ratio"),
-            ("Rolling one-year periods behind", "rolling_behind", PCT2, None, "share of 252-day windows with a compounded return below the benchmark's", None)]
-    only_s = {"beta": "=SLOPE(Ret_Strat,Ret_Bench)", "tracking_error": "ARRAY:=STDEV(Ret_Strat-Ret_Bench)*SQRT(252)",
-              "information_ratio": "ARRAY:=AVERAGE(Ret_Strat-Ret_Bench)*252/(STDEV(Ret_Strat-Ret_Bench)*SQRT(252))", "rolling_behind": roll}
+            ("Tracking error", "tracking_error", PCT2, None, f"sample stdev of (daily return - benchmark's) x sqrt({dpy})", "Tracking Error"),
+            ("Information ratio", "information_ratio", NUM2, None, f"mean of (daily return - benchmark's) x {dpy} / tracking error", "Information Ratio"),
+            ("Rolling one-year periods behind", "rolling_behind", PCT2, None, f"share of {dpy}-day windows with a compounded return below the benchmark's", None)]
+    only_s = {"beta": "=SLOPE(Ret_Strat,Ret_Bench)", "tracking_error": "ARRAY:=STDEV(Ret_Strat-Ret_Bench)*SQRT(Days_Per_Year)",
+              "information_ratio": "ARRAY:=AVERAGE(Ret_Strat-Ret_Bench)*Days_Per_Year/(STDEV(Ret_Strat-Ret_Bench)*SQRT(Days_Per_Year))", "rolling_behind": roll}
     items = []
     for i, (label, key, fmt, fx, words, mon) in enumerate(rows, start=6):
         _lab(ws, f"A{i}", label)
