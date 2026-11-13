@@ -98,3 +98,19 @@ def test_a_failed_step_says_why_and_writes_nothing(monkeypatch, tmp_path):
     with pytest.raises(RuntimeError, match="less than 95%"):
         barra_site.run(str(tmp_path), lambda m: None)
     assert barra_site.load(str(tmp_path)) is None
+
+
+def test_a_finished_backtest_is_sent_by_itself_only_when_a_tester_is_set_up_and_not_switched_off(monkeypatch, tmp_path):
+    monkeypatch.setattr(barra_site, "tester_dir", lambda: "")
+    assert not barra_site.auto_send()                                   # no tester: nothing is ever sent
+    t = _tester(tmp_path, "print('x')\n")
+    monkeypatch.setattr(barra_site, "tester_dir", lambda: t)
+    monkeypatch.delenv("LIGHTYEAR_BARRA_AUTO", raising=False)
+    assert barra_site.auto_send() or barra_site.sources._LOCAL.get("barra_auto_send") == "0"
+    monkeypatch.setenv("LIGHTYEAR_BARRA_AUTO", "0")
+    assert not barra_site.auto_send()
+
+
+def test_a_rebuild_never_sends_anything():
+    src = Path(barra_site.__file__).with_name("jobs.py").read_text(encoding="utf-8")
+    assert "if review and not os.environ.get(\"LIGHTYEAR_SKIP_REVIEW\") and barra_site.auto_send():" in src

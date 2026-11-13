@@ -989,7 +989,9 @@ function renderBarra(st){
   const art = url ? `<a class="btn" href="${esc(url)}" target="_blank" rel="noopener"><button type="button" class="primary">Open ART</button></a>
       <button type="button" title="Opens the site in its own window, already signed in" onclick="act('art')">Open ART signed in</button>` : "";
   const send = t => st.barra_configured && fin ? `<button type="button" onclick="act('barra')">${t}</button>` : "";
+  if(bs==="running" && fin) openArtOnce(st.id, st.barra_home);
   if(bs==="running"){ el.innerHTML = `<div class="now"><div class="spin"></div><div><b>The book is on its way to the Barra site.</b><div class="small muted">Mapping takes seconds. The first time a run is sent the site builds its analytics, about 20 minutes. Progress is on the Progress tab.</div></div></div><div class="row" style="margin-top:10px">${art}</div>`; return }
+  if(!b && fin) openArtOnce(st.id, st.barra_home);
   if(!b){ el.innerHTML = st.barra_configured ? `<div class="row" style="justify-content:space-between"><span>${bs==="failed"?`The Barra site step did not finish: ${esc(st.barra_error||"see the Progress tab")}`:"This run has not been sent to the Barra site."}</span><span class="row">${send("Send this book to the Barra site")}${art}</span></div>`
       : `<span class="muted">The Barra site step is not set up on this machine.</span>`; return }
   const f = (v,t) => v==null ? "–" : t==="pct" ? pct(v,2) : t==="x" ? num(v,1) + "x" : t==="d" ? num(v,0) : t==="ic" ? num(v,4) : num(v);
@@ -1001,6 +1003,13 @@ function renderBarra(st){
   const legs = b.attribution_pct_a_year || {}, ex = Object.entries(b.mean_factor_exposure||{}).sort((x,y)=>Math.abs(y[1])-Math.abs(x[1])).slice(0,8), rk = b.mean_risk || {};
   const p1 = v => v==null ? "–" : num(v*100,1) + "%";
   el.innerHTML = `<div class="row" style="justify-content:space-between"><span class="small muted">Barra site figures to ${esc(b.site_last_date)}, read ${esc(ist(b.built_at))} · <label style="display:inline"><input type="checkbox" ${LS.get("ly_art_auto","1")==="1"?"checked":""} onchange="LS.set('ly_art_auto', this.checked?'1':'0')"> open this run on ART when I open its results</label></span><span class="row">${send("Read again")}${art}</span></div>
+    ${b.site && b.lightyear_site_formula_shared_days ? (()=>{ const S = b.site, P = b.lightyear_site_formula_shared_days, g = b.daily_agreement || {};
+      const RR = [["Annualised return","annual_return","pct"],["Volatility","volatility","pct"],["Sharpe","sharpe","num"],["Sortino","sortino","num"],["Maximum drawdown","max_drawdown","pct"],["Days with a gain","hit_rate","pct"]];
+      const gap = (a,c,t) => (a==null||c==null) ? "–" : t==="pct" ? ((a-c)>=0?"+":"") + num((a-c)*100) + " pts" : ((a-c)>=0?"+":"") + num(a-c);
+      return `<h3>Reconciliation <span class="small muted">(uploaded long-only book, the ${num(g.shared_days,0)} days both have)</span></h3>
+      <table class="t"><tr><th>Metric</th><th>Barra site</th><th>Our Python on Barra formulas</th><th>Gap</th></tr>` +
+        RR.map(([l,k,t])=>`<tr><td>${l}</td><td>${f(S[k],t)}</td><td>${f(P[k],t)}</td><td>${gap(S[k],P[k],t)}</td></tr>`).join("") +
+        `</table><div class="small muted" style="margin:6px 0 14px">The formulas are the same on both sides, so the gap is data: dividends, special sessions, names with no Barra ID. Daily returns correlate ${num(g.corr,4)}; typical daily gap ${num(g.mean_abs_gap_bp,1)} bp.</div>` })() : ""}
     ${books.length?`<h3>The four weight books</h3>
     <table class="t"><tr><th>Barra site</th>${books.map(k=>`<th>${esc(k.label)}</th>`).join("")}</tr>` +
       R.map(([l,k,t])=>`<tr><td>${l}</td>${books.map(x=>`<td>${f(k==="max_drawdown" && x[k]!=null ? Math.abs(x[k]) : x[k],t)}</td>`).join("")}</tr>`).join("") + `</table>`:""}

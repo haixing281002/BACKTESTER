@@ -30,6 +30,12 @@ def tester_dir() -> str:
     return sources._path("LIGHTYEAR_BARRA_TESTER", "barra_tester")
 
 
+def auto_send() -> bool:
+    """Whether a freshly finished backtest is sent to the site without a click (operator, 2026-11-13). On when a tester
+    is set up; switch it off with LIGHTYEAR_BARRA_AUTO=0 or barra_auto_send: "0" in config/local.yaml."""
+    return configured() and str(sources._path("LIGHTYEAR_BARRA_AUTO", "barra_auto_send", "1")).strip() != "0"
+
+
 def configured() -> bool:
     d = tester_dir()
     return bool(d) and os.path.isfile(os.path.join(d, COMMAND))

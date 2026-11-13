@@ -788,6 +788,10 @@ def build_outputs(rid, review=True):
            has_holdings="holdings" in extra, has_trades=("trades" in extra or "holdings" in extra),
            has_comparators="comparators" in extra)
     log(rid, "gate", "Gate B ready. A named human records the decision on the page.")
+    # a freshly finished backtest goes to the Barra site by itself; a rebuild does not send anything
+    if review and not os.environ.get("LIGHTYEAR_SKIP_REVIEW") and barra_site.auto_send():
+        update(rid, barra_status="running")
+        start(barra_site_step, rid)
     if review and not os.environ.get("LIGHTYEAR_SKIP_REVIEW"):
         try:
             analyst_review(rid)
@@ -1000,7 +1004,12 @@ def barra_site_step(rid, then_read=True):
         return
     update(rid, barra_status="done", barra_error=None)
     log(rid, "server", f"Barra site step done: the site's figures to {res.get('site_last_date')} are on the Results tab.")
-    # the read is written once by itself; after that only the operator's button rewrites it
+    # the read is written once by itself; after that only the operator's button rewrites it. One model session at a
+    # time: wait for the analyst review to finish first (the site's own build usually outlasts it).
+    for _ in range(120):
+        if not live_session():
+            break
+        time.sleep(15)
     if then_read and gate_b_read.sha256(run_dir(rid)) is None and load(rid)["status"] == "gate_b" and not live_session():
         gate_b_analyst_read(rid)
 
