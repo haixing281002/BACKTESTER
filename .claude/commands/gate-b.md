@@ -1,11 +1,11 @@
 ---
-description: "Gate B — assemble the IC briefing. You do NOT vote."
+description: "Gate B — report the gate as scored and stop. You do NOT vote."
 argument-hint: "<report.txt>"
 ---
 
 # GATE B — INVESTMENT DECISION
 
-**No model votes here.** You assemble the briefing; a named PM or IC rules.
+**No model votes here.** You report what the code scored; a named PM or IC rules.
 
 **This is the ONE stop in the chain (changed 2026-10-06).** Everything from
 Stage 00 through Stage 07 now runs without pausing for a human — see
@@ -13,29 +13,18 @@ Stage 00 through Stage 07 now runs without pausing for a human — see
 reaches here: `decision: PENDING` until a named human actually records one,
 exactly as always.
 
-From `$1`, write `outputs/interpretation/<slug>__gate_b_brief.md`, at most one
-page:
+**No Gate B brief is written (removed 2026-11-13, operator).** The brief was a model's one-page note built on the old
+eight-criterion checklist; it is gone, and so is the "evidence supports" line. Do not write either.
 
-1. **The single sentence** a PM needs: what this is, and what the evidence supports.
-2. **The eight Gate B criteria**, each PASS/FAIL with its number.
-3. **The decisive one.** Usually incremental IR or the factor fingerprint, not
-   standalone Sharpe. Name it.
-4. **What would have to change** for the answer to differ — new data, a different
-   mandate, a fixed proxy.
-5. **What this costs to run** if approved: turnover, days to execute a rebalance.
+Under Lightyear the gate is scored by code (`ros/governance/gate_v2.py`, Gate B v4): three hard blocks (data integrity,
+edge over the benchmark at the card's cost, paired bootstrap) and a scorecard (sub-period stability, factor alpha,
+performance after publication). Report those rows exactly as scored, each with its status and its number, and say which
+could not be run. Add nothing that reads like a recommendation.
 
-Be careful with your own framing. You chose what to foreground, and that shapes a
-decision even though you cast no vote. Lead with the criterion that failed hardest,
-not the most flattering number available.
+`run_pipeline.py`, the command-line path outside Lightyear, still prints its own older checklist; report it as printed.
 
-End with exactly this, and nothing that reads like a recommendation dressed as a
-summary:
+End with exactly this:
 
-> Evidence supports: **<PROMOTE|OBSERVE|REJECT>**. No decision has been made.
+> No decision has been made.
 > A named PM records it with:
 > `python run_pipeline.py --card <card> --decision <APPROVE|OBSERVE|FIX|REJECT> --decided-by "<name>" --rationale "…"`
-
-```bash
-python -m ros.interpretation record --stage gate_b \
-    --output outputs/interpretation/<slug>__gate_b_brief.md --operator "<name>" --input "$1"
-```

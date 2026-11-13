@@ -32,7 +32,7 @@ from ros import config
 from ros.cards.schema import load_card
 from ros.metrics import core
 
-from . import allocation, analyst_read, changelog, charts, contract, gate_run, gates, main_workbook, prompts, spec_audit, wording, workbook
+from . import allocation, analyst_read, changelog, charts, contract, gate_run, main_workbook, prompts, spec_audit, wording, workbook
 from .paths import LEDGER, REPO, RUNS, code_hash, find_claude, git_bash, git_commit, rel, run_dir
 
 _log = logging.getLogger("lightyear")
@@ -782,7 +782,6 @@ def build_outputs(rid, review=True):
         + (" and comparators.csv." if "comparators" in extra else "."))
     res["gate_v2"] = _gate_v2(rid, st, res, df, extra)
     recalc = _workbook(rid, res, df, extra, ch["observations"], _load_review(rd), ch)
-    res["gate_rows"] = gates.rows(res["gate_b"].get("criteria", []))
     update(rid, status="gate_b", current_stage="GB", results=res, recalc=recalc, handoff_warnings=warn, error=None,
            card_unreadable=next((w for w in warn_core if w.startswith("Card not read")), None),
            card_checks=card_checks,
@@ -1065,7 +1064,8 @@ def decide(rid, decision, by, rationale):
                                "no session is live.")
         rec = {"run": rid, "decision": decision, "decided_by": by, "rationale": rationale, "at": now()}
         rec.update(slug=st["slug"], card=(st.get("phase_a") or {}).get("card_path"), paper=st["pdf"],
-                   evidence_supports=(st.get("results") or {}).get("evidence_supports"))
+                   gate_status=((st.get("results") or {}).get("gate_v2") or {}).get("status"),
+                   gate_version=((st.get("results") or {}).get("gate_v2") or {}).get("gate_version"))
         write_json_atomic(os.path.join(run_dir(rid), "decision.json"), rec, indent=1)
         os.makedirs(RUNS, exist_ok=True)
         with open(LEDGER, "a", encoding="utf-8") as f:

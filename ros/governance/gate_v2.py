@@ -3,7 +3,7 @@
 
 Code computes and reports. The decision stays PENDING until a named human records one, and nothing here can set it.
 Hard blocks that could be run must all pass. The scorecard feeds the human and blocks nothing by itself. A test with
-nothing to run on (no book, no AUM, no mandate limits) is shown as not run and listed beside the status: it never counts
+nothing to run on is shown as not run and listed beside the status: it never counts
 as a pass, and it does not hold the gate up (operator's ruling, 2026-11-05).
 
 Thresholds come only from config/gate_thresholds.yaml.
@@ -14,7 +14,7 @@ import math
 from dataclasses import asdict, dataclass, field
 from typing import Any
 
-from ros.versions import GATE_VERSION as GATE_V2   # "v3" since 2026-11-12: statistical tests and the mandate check only
+from ros.versions import GATE_VERSION as GATE_V2   # "v4" since 2026-11-13: data integrity and statistical tests only
 PASS, FAIL = "PASS", "FAIL"
 GREEN, AMBER, RED, NOT_RUN = "green", "amber", "red", "not run"
 
@@ -55,27 +55,6 @@ def _lower(v, green, amber):
     return GREEN if v <= green else (AMBER if v <= amber else RED)
 
 
-def mandate_row(observed: dict[str, float] | None, limits: dict[str, Any], overrides: list[dict[str, Any]] | None = None) -> Row:
-    """Observed positions against config/mandate.yaml. A card cannot change the limits; each override needs a named person
-    and a timestamp, and is shown as evidence."""
-    missing = [k for k in ("long_only", "max_cash_share", "max_single_weight") if limits.get(k) is None]
-    if missing:
-        return Row("mandate", "Implementable within the fund's mandate", NOT_RUN, evidence=f"config/mandate.yaml has no value for: {', '.join(missing)}")
-    if not observed:
-        return Row("mandate", "Implementable within the fund's mandate", NOT_RUN, evidence="the run supplied no positions to check")
-    breaches = {}
-    if observed["max_cash_share"] > limits["max_cash_share"] + 1e-9:
-        breaches["max_cash_share"] = f"cash reached {observed['max_cash_share']:.1%}, limit {limits['max_cash_share']:.1%}"
-    if observed["max_single_weight"] > limits["max_single_weight"] + 1e-9:
-        breaches["max_single_weight"] = f"a weight reached {observed['max_single_weight']:.1%}, limit {limits['max_single_weight']:.1%}"
-    if limits["long_only"] and observed["min_weight"] < -1e-9:
-        breaches["long_only"] = "negative weights under a long-only mandate"
-    approved = {o.get("limit"): o for o in (overrides or []) if o.get("approved_by") and o.get("approved_at")}
-    left = {k: v for k, v in breaches.items() if k not in approved}
-    notes = list(left.values()) + [f"OVERRIDDEN by {approved[k]['approved_by']} at {approved[k]['approved_at']}: {breaches[k]}" for k in breaches if k in approved]
-    return Row("mandate", "Implementable within the fund's mandate", FAIL if left else PASS, evidence="; ".join(notes) or "no breaches")
-
-
 def capacity_row(cap: dict[str, Any] | None, limit: float | None) -> Row:
     if limit is None:
         return Row("capacity", "Capacity at the fund's AUM", NOT_RUN, evidence="config/gate_thresholds.yaml has no capacity limit")
@@ -96,14 +75,16 @@ def integrity_row(checks: list[dict[str, Any]] | None, reconciles: bool | None, 
         return Row("data_integrity", "Data integrity", NOT_RUN, threshold=min_coverage, evidence="the run did not supply look-ahead checks, accounting reconciliation and priced-member coverage")
     failed = [str(c.get("check")) for c in checks if not c.get("passed")]
     ok = not failed and reconciles and coverage >= min_coverage
-    bits = [f"priced-member coverage {coverage:.1%}"]
+    if ok:      # a pass says PASS and nothing else (operator, 2026-11-13); the unpriced names are in the diagnostics workbook
+        return Row("data_integrity", "Data integrity", PASS, value=coverage, threshold=min_coverage)
+    bits = []
+    if coverage < min_coverage:
+        bits.append(f"priced-member coverage {coverage:.1%} is below {min_coverage:.0%} ({len(unpriced or [])} members never priced)")
     if failed:
         bits.append("failed: " + ", ".join(failed))
     if not reconciles:
         bits.append("accounting does not reconcile")
-    if unpriced:
-        bits.append(f"{len(unpriced)} unpriced: " + ", ".join(unpriced))
-    return Row("data_integrity", "Data integrity", PASS if ok else FAIL, value=coverage, threshold=min_coverage, evidence="; ".join(bits))
+    return Row("data_integrity", "Data integrity", FAIL, value=coverage, threshold=min_coverage, evidence="; ".join(bits))
 
 
 def _boot_evidence(e: dict) -> str:
@@ -118,10 +99,9 @@ def _boot_evidence(e: dict) -> str:
     return s
 
 
-def evaluate(e: dict[str, Any], th: dict[str, Any], mandate_limits: dict[str, Any], overrides: list[dict[str, Any]] | None = None) -> GateV2Result:
+def evaluate(e: dict[str, Any], th: dict[str, Any]) -> GateV2Result:
     """`e` is the evidence (ros.validation.gate_evidence), `th` the loaded thresholds file. Every number is at the cost on the run's card."""
     h: list[Row] = [
-        mandate_row(e.get("mandate_observed"), mandate_limits, overrides),
         integrity_row(e.get("checks"), e.get("reconciles"), e.get("priced_coverage"), e.get("unpriced"), th["data_integrity"]["min_priced_coverage"]),
     ]
     edge = e.get("net_edge")

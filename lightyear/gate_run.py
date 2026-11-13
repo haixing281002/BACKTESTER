@@ -52,14 +52,6 @@ def _coverage(rd):
     return share, names
 
 
-def _positions(holdings):
-    """Largest cash share, largest weight and lowest weight across the rebalances the run recorded."""
-    if holdings is None or not len(holdings):
-        return None
-    gross = holdings.groupby("date")["weight"].sum()
-    return {"max_cash_share": float(max(0.0, 1.0 - gross.min())), "max_single_weight": float(holdings["weight"].abs().max()), "min_weight": float(holdings["weight"].min())}
-
-
 def score(rd, card_path, df, trades=None, holdings=None, spec_failures=None) -> dict:
     """Gate v2 for a run, on its daily returns exactly as run: that is, at the cost on its approved card and nothing else.
     `spec_failures` is the audit's count of rules not honoured; None when no audit ran."""
@@ -68,7 +60,7 @@ def score(rd, card_path, df, trades=None, holdings=None, spec_failures=None) -> 
     r = pd.Series(df["strategy"].fillna(0.0).to_numpy(dtype=float), index=idx)
     b = pd.Series(df["benchmark"].fillna(0.0).to_numpy(dtype=float), index=idx)
     card = load_card(card_path if os.path.isabs(card_path) else os.path.join(REPO, card_path))
-    e = {"mandate_observed": _positions(holdings), "checks": _checks(rd), "reconciles": None if spec_failures is None else spec_failures == 0}
+    e = {"checks": _checks(rd), "reconciles": None if spec_failures is None else spec_failures == 0}
     e["priced_coverage"], e["unpriced"] = _coverage(rd)
     # v3: capacity is not a gate test. It is still computed for the Results tab (jobs.build_outputs -> charts.json).
 
@@ -101,7 +93,7 @@ def score(rd, card_path, df, trades=None, holdings=None, spec_failures=None) -> 
     pp = core.post_publication(series, b, cash, card.paper.date, hurdle=hurdle)
     if pp:
         e["post_publication_edge"] = pp["edge"]
-    res = gate_v2.evaluate(e, th, config.mandate()).to_dict()
+    res = gate_v2.evaluate(e, th).to_dict()
     res["basis"] = basis
     res["summary"] = {k: e.get(k) for k in ("net_edge", "bootstrap_p", "bootstrap_max_dd_gap", "bootstrap_block", "bootstrap_sensitivity", "sharpe_hurdle", "alpha_hurdle", "alpha_t_hurdle", "alpha", "alpha_t", "sub_period_positive", "sub_period_n", "sub_period_worst", "post_publication_edge")}
     return res

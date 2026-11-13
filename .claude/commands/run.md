@@ -28,4 +28,4 @@ Then read the result and report, in this order:
 3. Where the promotion ladder stopped, and the single criterion that stopped it.
 
 Do not summarise this as a success because the run completed. A clean run that
-fails six of eight Gate B criteria is a clean run and a failed strategy.
+fails Gate B is a clean run and a failed strategy.

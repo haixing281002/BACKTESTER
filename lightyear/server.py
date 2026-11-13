@@ -10,7 +10,7 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTex
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from . import __version__, analyst_read, gates, jobs, prompts, security, workbook
+from . import __version__, analyst_read, jobs, prompts, security, workbook
 from .paths import PAPERS, REPO, STATIC, code_hash, find_claude, git_commit, run_dir, slugify
 
 
@@ -150,13 +150,6 @@ def run_state(rid: str, response: Response):
             st["gate_a_md"] = None
     st["analyst_read"] = analyst_read.for_page(run_dir(st["id"]), (st.get("approval") or {}).get("analyst_read") or st.get("analyst_read_pin"))
     res = st.get("results") or {}
-    if res.get("gate_b_brief_path"):
-        try:
-            st["gate_b_md"] = open(_repo_file(res["gate_b_brief_path"]), encoding="utf-8").read()
-        except HTTPException:
-            st["gate_b_md"] = None
-    if res.get("gate_b"):
-        res["gate_rows"] = gates.rows(res["gate_b"].get("criteria", []))
     rv = os.path.join(run_dir(rid), "review.json")
     if os.path.exists(rv):
         try:

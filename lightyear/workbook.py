@@ -60,7 +60,6 @@ from universal_backtester.xlsx_style import (
     widths,
 )
 
-from . import gates
 from .charts import start_date
 from .paths import REPO
 
@@ -463,19 +462,18 @@ def build(run_dir, results, df, title, out_path, holdings=None, trades=None, com
         "sqrt(252). Rows 7 to 17 are formulas over the Returns sheet (green = pulls from another sheet). The benchmark is "
         "the NIFTY 500 PRICE index unless this run supplied a total-return one: relative figures flatter the strategy.", F_NOTE)
 
-    # Gate B on the Summary: the status Lightyear scored, with the detail on the Gate B sheet. (The folded v1 checklist that
-    # used to sit here was removed on 2026-11-12; v1 is still shown, folded, on the Lightyear page.)
+    # Gate B on the Summary: the status Lightyear scored, with the detail on the Gate B sheet.
     g2 = results.get("gate_v2") or {}
     header(ws, 20, [f"Gate B {g2.get('gate_version', '')} (detail on the Gate B sheet)", "Result"])
     gb = [("Status", g2.get("status") or "not scored"), ("Computed on", g2.get("basis") or ""),
           ("Tests not run, so not passed", ", ".join(g2.get("tests_not_run") or []) or "none"),
-          ("Evidence supports (Claude's written read, not calculated)", results.get("evidence_supports", "")), ("Decision", "PENDING")]
+          ("Decision", "PENDING")]
     for i, (k, v) in enumerate(gb, start=21):
         put(ws, f"A{i}", k, F_BOLD, border=True)
         put(ws, f"B{i}", v, F_BOLD, border=True, align=Alignment(horizontal="center", wrap_text=True))
     if g2.get("status"):
         pass_fail(ws, "B21")
-    r = 21 + len(gb) - 4
+    r = 21 + len(gb) - 3
     put(ws, f"A{r+3}", "The decision stays PENDING until a named human records one on the Lightyear page.", F_NOTE)
     legend(ws, r + 5)
     widths(ws, [52, 26, 18, 14, 20, 22])

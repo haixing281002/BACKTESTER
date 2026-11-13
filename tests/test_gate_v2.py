@@ -17,12 +17,10 @@ TH = {"status": "test", "capacity": {"p95_adv_participation_max": 0.10}, "data_i
       "deflated_sharpe": {"enabled": False, "green_min": 0.90, "amber_min": 0.70}, "sub_period": {"min_windows_ahead_share": 0.5, "window_floor": -1.0, "window_floor_amber": -1.5},
       "factor_alpha": {"t_green_min": 2.0, "t_amber_min": 1.0}, "book": {"corr_green_max": 0.80, "corr_amber_max": 0.90, "ir_gain_green_min": 0.05, "ir_gain_amber_min": 0.0},
       "post_publication": {"edge_green_min": 0.0, "edge_amber_min": -0.02}}
-LIMITS = {"long_only": True, "max_cash_share": 0.25, "max_single_weight": 0.10}
 
 
 def _good(**kw):
-    e = {"mandate_observed": {"max_cash_share": 0.05, "max_single_weight": 0.05, "min_weight": 0.0},
-         "capacity": {"status": "computed", "p95": 0.02, "names_above_limit": [], "n_no_adv": 0},
+    e = {"capacity": {"status": "computed", "p95": 0.02, "names_above_limit": [], "n_no_adv": 0},
          "checks": [{"check": "look-ahead", "passed": True}], "reconciles": True, "priced_coverage": 0.99, "unpriced": [],
          "net_edge": 0.03, "bootstrap_p": 0.01, "dsr": 0.97, "sub_period_n": 4, "sub_period_positive": 4, "sub_period_worst": 0.1,
          "alpha": 0.04, "alpha_t": 3.0, "book_corr": 0.5, "book_ir_gain": 0.1, "post_publication_edge": None}
@@ -35,74 +33,69 @@ def _row(res, key):
 
 
 def test_a_clean_result_passes_and_the_decision_stays_pending():
-    res = g.evaluate(_good(), TH, LIMITS)
-    assert res.status == g.PASS and res.decision == "PENDING" and res.gate_version == "v3"
+    res = g.evaluate(_good(), TH)
+    assert res.status == g.PASS and res.decision == "PENDING" and res.gate_version == "v4"
     assert g.all_green(res)
 
 
 def test_a_negative_alpha_fails_the_factor_test_however_large_its_t():
-    res = g.evaluate(_good(alpha=-0.05, alpha_t=-5.0), TH, LIMITS)
+    res = g.evaluate(_good(alpha=-0.05, alpha_t=-5.0), TH)
     assert _row(res, "factor_alpha").status == g.RED
     assert not g.all_green(res)
 
 
 def test_a_positive_alpha_below_the_bar_is_not_green():
-    assert _row(g.evaluate(_good(alpha=0.02, alpha_t=1.5), TH, LIMITS), "factor_alpha").status == g.AMBER
+    assert _row(g.evaluate(_good(alpha=0.02, alpha_t=1.5), TH), "factor_alpha").status == g.AMBER
 
 
-def test_gate_v3_holds_statistical_tests_and_the_mandate_only():
-    """v3 (2026-11-12): capacity and the two book rows are not gate tests. Supplying them, good or bad, changes nothing."""
-    res = g.evaluate(_good(), TH, LIMITS)
-    assert res.gate_version == "v3"
-    assert [r.key for r in res.hard_blocks] == ["mandate", "data_integrity", "net_edge", "bootstrap"]
+def test_gate_v4_holds_data_integrity_and_statistical_tests_only():
+    """v3 (2026-11-12): capacity and the two book rows are not gate tests. v4 (2026-11-13): nor is the mandate. Supplying
+    any of them, good or bad, changes nothing."""
+    res = g.evaluate(_good(), TH)
+    assert res.gate_version == "v4"
+    assert [r.key for r in res.hard_blocks] == ["data_integrity", "net_edge", "bootstrap"]
+    assert not hasattr(g, "mandate_row")
     assert [r.key for r in res.scorecard] == ["sub_period", "factor_alpha", "post_publication"]
-    worst = g.evaluate(_good(book_corr=0.99, book_ir_gain=-1.0, capacity={"status": "computed", "p95": 0.9, "names_above_limit": ["X"]}), TH, LIMITS)
+    worst = g.evaluate(_good(book_corr=0.99, book_ir_gain=-1.0, capacity={"status": "computed", "p95": 0.9, "names_above_limit": ["X"]},
+                             mandate_observed={"max_cash_share": 1.0, "max_single_weight": 0.9, "min_weight": -0.5}), TH)
     assert worst.status == res.status == g.PASS and g.all_green(worst) == g.all_green(res)
-    assert not any("book" in t.lower() or "capacity" in t.lower() for t in worst.tests_not_run)
+    assert not any("book" in t.lower() or "capacity" in t.lower() or "mandate" in t.lower() for t in worst.tests_not_run)
+
+
+def test_a_passing_data_integrity_row_says_pass_and_nothing_else_and_a_failing_one_says_why():
+    ok = _row(g.evaluate(_good(unpriced=["AAA", "BBB"]), TH), "data_integrity")
+    assert ok.status == g.PASS and ok.evidence == ""
+    low = _row(g.evaluate(_good(priced_coverage=0.5, unpriced=["AAA", "BBB"]), TH), "data_integrity")
+    assert low.status == g.FAIL and "50.0%" in low.evidence and "2 members never priced" in low.evidence and "AAA" not in low.evidence
+    chk = _row(g.evaluate(_good(checks=[{"check": "look-ahead", "passed": False}], reconciles=False), TH), "data_integrity")
+    assert chk.status == g.FAIL and "look-ahead" in chk.evidence and "does not reconcile" in chk.evidence
 
 
 def test_a_failed_hard_block_fails_with_no_book():
-    assert g.evaluate(_good(book_corr=None, book_ir_gain=None, bootstrap_p=0.4), TH, LIMITS).status == g.FAIL
+    assert g.evaluate(_good(book_corr=None, book_ir_gain=None, bootstrap_p=0.4), TH).status == g.FAIL
 
 
 def test_the_deflated_sharpe_is_out_of_the_gate_until_it_is_enabled():
-    res = g.evaluate(_good(dsr=0.0), TH, LIMITS)
+    res = g.evaluate(_good(dsr=0.0), TH)
     assert not [r for r in res.scorecard if r.key == "deflated_sharpe"] and g.all_green(res)
     th = {**TH, "deflated_sharpe": {"enabled": True, "green_min": 0.9, "amber_min": 0.7}}
-    assert _row(g.evaluate(_good(dsr=0.0), th, LIMITS), "deflated_sharpe").status == g.RED
-
-
-def test_a_card_override_without_a_named_approval_fails():
-    high_cash = _good(mandate_observed={"max_cash_share": 1.0, "max_single_weight": 0.05, "min_weight": 0.0})
-    assert _row(g.evaluate(high_cash, TH, LIMITS), "mandate").status == g.FAIL
-    assert _row(g.evaluate(high_cash, TH, LIMITS, [{"limit": "max_cash_share", "approved_by": "", "approved_at": ""}]), "mandate").status == g.FAIL
-
-
-def test_a_named_timestamped_override_passes_and_is_shown():
-    high_cash = _good(mandate_observed={"max_cash_share": 1.0, "max_single_weight": 0.05, "min_weight": 0.0})
-    r = _row(g.evaluate(high_cash, TH, LIMITS, [{"limit": "max_cash_share", "approved_by": "A Person", "approved_at": "2026-11-05T10:00:00+05:30"}]), "mandate")
-    assert r.status == g.PASS and "A Person" in r.evidence and "2026-11-05" in r.evidence
-
-
-def test_blank_mandate_limits_are_not_run_and_listed():
-    blank = g.evaluate(_good(), TH, {"long_only": None, "max_cash_share": None, "max_single_weight": None})
-    assert blank.status == g.PASS and _row(blank, "mandate").status == g.NOT_RUN and "Implementable within the fund's mandate" in blank.tests_not_run
+    assert _row(g.evaluate(_good(dsr=0.0), th), "deflated_sharpe").status == g.RED
 
 
 def test_a_gate_with_nothing_run_cannot_pass():
-    empty = g.evaluate({}, TH, {"long_only": None, "max_cash_share": None, "max_single_weight": None})
+    empty = g.evaluate({}, TH)
     assert empty.status == g.FAIL
 
 
 @pytest.mark.parametrize("kw", [{"net_edge": -0.01}, {"bootstrap_p": 0.2}, {"priced_coverage": 0.5},
                                 {"reconciles": False}, {"checks": [{"check": "look-ahead", "passed": False}]}])
 def test_each_hard_block_can_fail_alone(kw):
-    assert g.evaluate(_good(**kw), TH, LIMITS).status == g.FAIL
+    assert g.evaluate(_good(**kw), TH).status == g.FAIL
 
 
 def test_the_scorecard_alone_never_blocks():
     bad = _good(sub_period_positive=0, sub_period_worst=-3.0, alpha=-0.1, alpha_t=-4.0, book_corr=0.99, book_ir_gain=-1.0)
-    res = g.evaluate(bad, TH, LIMITS)
+    res = g.evaluate(bad, TH)
     assert res.status == g.PASS and not g.all_green(res)
 
 
@@ -188,7 +181,7 @@ def test_the_shipped_thresholds_load_and_are_marked_with_their_status():
     import yaml
     with open(os.path.join(REPO, "config", "gate_thresholds.yaml"), encoding="utf-8") as fh:
         th = yaml.safe_load(fh)
-    assert th["gate_version"] == "v3" and th["status"]
+    assert th["gate_version"] == "v4" and th["status"]
     for k in TH:
         assert k in th
     assert th["deflated_sharpe"]["enabled"] is False and th["deflated_sharpe"]["bar_starts_at"] == "benchmark"
@@ -223,7 +216,7 @@ def test_the_calibration_tables_and_the_gate_give_the_same_answer():
     for i, r in rows.iterrows():
         e = _good(net_edge=r["edge"], bootstrap_p=r["boot_p"], sub_period_n=r["sp_n"], sub_period_positive=r["sp_pos"], sub_period_worst=r["sp_worst"],
                   alpha=r["alpha"], alpha_t=r["alpha_t"], book_corr=r["book_corr"], book_ir_gain=r["book_ir_gain"])
-        res = g.evaluate(e, th, LIMITS)
+        res = g.evaluate(e, th)
         assert (res.status == g.PASS and g.all_green(res)) == bool(table[i]), i
 
 
@@ -246,7 +239,7 @@ def test_a_run_folder_scores_at_the_cards_cost_and_no_other(tmp_path, monkeypatc
     heavy = pd.DataFrame({"date": list(b.index[:500]), "isin": ["A"] * 500, "weight_before": [0.0] * 500, "weight_after": [1.0] * 500})
     res = gate_run.score(str(tmp_path), card, df, heavy)
     light = gate_run.score(str(tmp_path), card, df)
-    assert res["status"] == "PASS" and res["decision"] == "PENDING" and res["gate_version"] == "v3"
+    assert res["status"] == "PASS" and res["decision"] == "PENDING" and res["gate_version"] == "v4"
     assert "0bp" in res["basis"]
     assert res["summary"]["net_edge"] == light["summary"]["net_edge"]     # however heavy the trading, a 0bp card is charged nothing
     assert not any("book" in x.lower() or "capacity" in x.lower() for x in res["tests_not_run"])    # v3: not gate tests
@@ -334,10 +327,3 @@ def test_capacity_needs_no_aum_and_says_aum_not_set():
     assert abs(u["capital_at_limit_cr"] - 0.10 / u["per_cr_p95"]) < 1e-9
     row = gate_v2.capacity_row({"status": "AUM not set at Gate A", "why": "AUM not set at Gate A", "unit": u}, 0.10)
     assert row.status == gate_v2.NOT_RUN and "AUM not set at Gate A" in row.evidence and "None" not in row.evidence
-
-
-def test_a_missing_value_or_threshold_is_never_shown_as_none():
-    from lightyear import gates
-    r = gates.rows([{"name": "implementable within mandate", "passed": True, "blocking": True,
-                     "value": None, "threshold": None}])[0]
-    assert r["value_raw"] == "" and r["threshold_raw"] == ""

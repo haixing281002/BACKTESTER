@@ -168,15 +168,6 @@ def run(run_dir, card_path, results=None):
                 add(f"'{c}' is a separate costed simulation and ends below the {head:g}bp headline", tot_c < tot_s,
                     f"growth of 1: {tot_c:.3f} vs headline {tot_s:.3f}")
 
-    # ---- mandate flag read as the card says
-    if port.get("mandate_allow_cash") is not None and results is not None:
-        crit = {c["name"]: c for c in (results.get("gate_b") or {}).get("criteria", [])}
-        m = crit.get("implementable within mandate")
-        if m is not None:
-            exp_pass = bool(port["mandate_allow_cash"]) or (rb is not None and rb["cash_share"].max() < 0.01)
-            add(f"Mandate criterion judged with mandate_allow_cash = {port['mandate_allow_cash']}", bool(m.get("passed")) == exp_pass,
-                f"gate_b criterion passed = {m.get('passed')}; {m.get('evidence', '')[:120]}")
-
     # the numbers half: NAV, filters and fill prices recomputed from the source data, not from the script's columns
     from . import numbers_audit
     out.extend(numbers_audit.run(run_dir, card))

@@ -373,8 +373,6 @@ def content():
     W4 = [23, 40, 22, 15]
     H4 = ["Test", "What is calculated", "Pass mark", "Kind"]
     A('<h2 id="3.1">3.1 Hard blocks</h2>' + table("3.1", H4, [
-        ("Implementable within the fund's mandate", "The largest cash share, the largest single weight and the lowest weight actually held, against the fund's limits", "No breach", "Hard block",
-         "ros/governance/gate_v2.py mandate_row(); lightyear/gate_run.py _positions(); config/mandate.yaml"),
         ("Data integrity", "Every check the run wrote passed; no card rule broken; coverage = Σ(priced members × sessions) ÷ Σ(all members × sessions)",
          f"All pass; coverage ≥ {pc(di['min_priced_coverage'])}", "Hard block", "lightyear/gate_run.py _coverage(), _checks(); ros/governance/gate_v2.py integrity_row()"),
         ("Edge over the benchmark", "CAGR<sub>strategy</sub> − CAGR<sub>benchmark</sub>, at the cost on the card", "&gt; 0", "Hard block", f"lightyear/gate_run.py score() net_edge; {core} cagr_from_returns()"),
@@ -388,8 +386,7 @@ def content():
          f"Green: α &gt; 0 and t ≥ {fa['t_green_min']}. Amber: t ≥ {fa['t_amber_min']}", "Scorecard", f"{pf} factor_fingerprint(); {ge} factor_alpha(), INVESTABLE_FACTORS"),
         ("Performance after publication", "CAGR<sub>strategy</sub> − CAGR<sub>benchmark</sub> from the paper's publication date; needs 252 trading days",
          f"Green: &gt; {pc(pp['edge_green_min'])}. Amber: &gt; {pc(pp['edge_amber_min'])}", "Scorecard", f"{core} post_publication(), publication_cutoff(); ros/governance/gate_v2.py evaluate()")], W4))
-    A('<p>The same tab also shows the older v1 checklist, folded shut, for comparison. "Evidence supports" is Claude\'s written read, not a calculation, and the decision '
-      "stays PENDING until a named person records it.</p>")
+    A("<p>Under each test the tab says in plain words what it asks. The decision stays PENDING until a named person records it.</p>")
 
     A('<h3>The two workbooks</h3><p>Both are downloaded from the Results tab, and every section above names its sheet. <b>Main workbook:</b> Returns overview, Market phases, '
       "Rolling returns, Factor attribution, Drawdown and risk, Tail risk, Index and capture, Calendar years, Allocation, Daily calculations, Python vs Excel, SE Return Analytics, "
@@ -397,7 +394,7 @@ def content():
       "table the run wrote.</p>")
     A('<p class="src">Sources: ros/metrics/se.py, ros/metrics/qi.py, ros/metrics/core.py, lightyear/charts.py, lightyear/main_workbook.py, lightyear/allocation.py, lightyear/workbook.py, '
       "lightyear/se_sheet.py, lightyear/gate_run.py, ros/governance/gate_v2.py, ros/validation/gate_evidence.py, research.py, portfolio.py, trials.py, config/fund.yaml, "
-      "config/market_phases.yaml, config/sector_groups.yaml, config/gate_thresholds.yaml, config/mandate.yaml.</p>")
+      "config/market_phases.yaml, config/sector_groups.yaml, config/gate_thresholds.yaml.</p>")
     return "\n".join(h)
 
 

@@ -19,9 +19,9 @@ PHASE_A_OPTIONAL = {"one_line": "", "how_it_works": [], "sleeves": [], "universe
                     "gaps": [], "success_looks_like": "", "data_verdict": "", "open_questions": [], "files": [],
                     "paper_reported": []}
 WEEKDAYS = {"monday": 0, "tuesday": 1, "wednesday": 2, "thursday": 3, "friday": 4, "saturday": 5, "sunday": 6}
-RESULTS_KEYS = ["strategy_name", "benchmark_name", "headline", "evidence_supports", "gate_b", "validation", "notes"]
+RESULTS_KEYS = ["strategy_name", "benchmark_name", "headline", "validation", "notes"]
 RESULTS_OPTIONAL = {"strengths": [], "weaknesses": [], "tables": [], "assumptions": [], "files": [],
-                    "sleeve_name": None, "decisive_criterion": "", "gate_b_brief_path": None,
+                    "sleeve_name": None,
                     "headline_cost_bp": None}
 
 
@@ -87,13 +87,11 @@ def check_results(run_dir):
     missing = [k for k in RESULTS_KEYS if k not in r]
     if missing:
         raise ContractError(f"results.json is missing keys: {missing}")
-    gb = r["gate_b"]
-    if not isinstance(gb, dict) or "criteria" not in gb:
-        raise ContractError("results.json gate_b must be gate_b(...).to_dict() with a 'criteria' list")
-    if str(gb.get("decision", "PENDING")).upper() != "PENDING":
-        raise ContractError(f"gate_b.decision must be PENDING (a human decides), got {gb.get('decision')!r}")
-    if r["evidence_supports"] not in ("PROMOTE", "OBSERVE", "REJECT"):
-        raise ContractError("evidence_supports must be PROMOTE, OBSERVE or REJECT")
+    # A run never decides. Runs no longer write a Gate B checklist (v1 was removed on 2026-11-13: Lightyear scores the gate
+    # itself); an older run's results.json may still carry one, and a decision in it other than PENDING is refused.
+    for where, d in (("gate_b", r.get("gate_b")), ("results.json", r)):
+        if isinstance(d, dict) and str(d.get("decision", "PENDING")).upper() != "PENDING":
+            raise ContractError(f"{where} decision must be PENDING (a human decides), got {d.get('decision')!r}")
     for t in r.get("tables", []) or []:
         if not os.path.exists(_abs(t.get("csv", ""))):
             raise ContractError(f"table CSV not found: {t.get('csv')}")

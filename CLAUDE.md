@@ -536,10 +536,12 @@ Per-calendar-year figures and every Gate B Sharpe (bootstrap, sub-period, post-p
 Sortino follows the same split. The card's cash rate is what idle cash earns, and what beta and factor alpha subtract. Never write a third. `ros/metrics/legacy_v1.py`
 exists only so a paper's printed Sharpe compares on its own basis and v1 stays measurable.
 
-Lightyear scores **Gate B v3** (`ros/governance/gate_v2.py`, thresholds in `config/gate_thresholds.yaml`) from each run's files,
-at the cost on the run's own card. v3 (2026-11-12) is statistical tests plus the mandate check: hard blocks are mandate, data integrity,
-net edge and the paired bootstrap; the scorecard is sub-period stability, factor alpha and performance after publication. Capacity and
-the two book rows left the gate with no pass mark changed; capacity per Rs 1 crore is information on the Results tab. Hard blocks must pass; the scorecard informs and does not block. A test with
+Lightyear scores **Gate B v4** (`ros/governance/gate_v2.py`, thresholds in `config/gate_thresholds.yaml`) from each run's files,
+at the cost on the run's own card. v4 (2026-11-13) is data integrity plus statistical tests: hard blocks are data integrity,
+net edge and the paired bootstrap; the scorecard is sub-period stability, factor alpha and performance after publication. The mandate row
+(v4), capacity and the two book rows (v3) left the gate with no pass mark changed; capacity per Rs 1 crore is information on the Results tab.
+A Lightyear run no longer writes the old eight-criterion checklist, an "evidence supports" line or a Gate B brief (removed 2026-11-13);
+`run_pipeline.py`, outside Lightyear, still prints that checklist. Hard blocks must pass; the scorecard informs and does not block. A test with
 nothing to run on shows as not run: it is not a pass and does not hold the gate up. The deflated Sharpe is out of the gate for
 now, so **the gate does not test for selection luck**. The decision stays PENDING until a named human records one.
 

@@ -1,7 +1,7 @@
 # Quant AI Researcher
 # Gate B v2 thresholds. APPROVED by the operator on 2026-11-05, who asked for them to be easier than first proposed.
 # Set from 8,000 simulated strategies (docs/gate_b/calibration/), committed before any named strategy was scored on them.
-gate_version: v3   # v3 (2026-11-12): capacity and the two book rows left the gate. Every mark below that v3 still reads is unchanged.
+gate_version: v4   # v4 (2026-11-13): the mandate row left the gate. Every mark below is unchanged.
 status: "Approved 2026-11-05"
 capacity:                           # NOT a gate test since v3: information on the Results tab only
   p95_adv_participation_max: 0.10   # PLACEHOLDER for the operator's call (X). Not simulated. Capacity is reported per Rs 1 crore and as the capital where the 95th-percentile trade reaches X.
