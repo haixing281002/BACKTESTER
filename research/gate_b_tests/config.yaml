@@ -1,0 +1,39 @@
+# Quant AI Researcher
+# EXPERIMENT (2026-11-13): which extra statistical tests would help Gate B tell a good strategy from luck.
+# Nothing here is read by Gate B. ros/governance/gate_v2.py and config/gate_thresholds.yaml are not changed by this
+# experiment. Every pass mark below was written BEFORE the script was run, and is a textbook level, not a level chosen
+# to let any strategy through.
+experiment: gate-b-tests
+run_dir: outputs/lightyear/20261111-163906-237b      # the one good candidate on file: the Clenow run, at its card's 0bp
+random_books: 200                                    # random 30-stock books from NIFTY 500 members, monthly, equal weight
+random_seed_base: 20261113
+n_boot: 2000
+boot_seed: 7
+monthly_block: 3                                     # mean block of the monthly bootstraps, in months
+high_cost_bp: 30                                     # the round trip of the "edge left at a higher cost" test
+
+success_metric: >
+  A test is worth keeping if it passes the Clenow run, fails the NIFTY 500 itself and the equal-weight basket, and
+  passes no more than 5% of the random books.
+kill_criterion: >
+  Drop a test that passes more than 10% of the random books. Stop and report if no candidate does better than the
+  current daily paired bootstrap on that measure.
+
+tests:                                 # key: [what must hold, pass mark]
+  boot_daily:    {label: "Current gate: paired bootstrap on daily Sharpe", rule: "p <= mark", mark: 0.10}
+  boot_monthly:  {label: "Paired bootstrap on monthly Sharpe", rule: "p <= mark", mark: 0.10}
+  psr:           {label: "Probabilistic Sharpe against the benchmark's Sharpe", rule: "value >= mark", mark: 0.95}
+  capm_alpha_t:  {label: "Alpha against NIFTY 500, with intercept, HAC t", rule: "value >= mark", mark: 2.0}
+  active_t:      {label: "Active return t-stat (information ratio x sqrt(years))", rule: "value >= mark", mark: 2.0}
+  dd_shallower:  {label: "Worst drawdown shallower than the index, share of bootstrap draws", rule: "value >= mark", mark: 0.90}
+  capture:       {label: "Monthly upside capture above downside capture, share of bootstrap draws", rule: "value >= mark", mark: 0.90}
+  roll3y:        {label: "Rolling 3-year alpha positive, share of windows", rule: "value >= mark", mark: 0.75}
+  edge_at_cost:  {label: "Edge over the index left at a 30bp round trip", rule: "value > mark", mark: 0.0}
+
+not_run:
+  deflated_sharpe: >
+    Needs the number of versions tried. The placebo books have none, and with one version it is the same number as the
+    probabilistic Sharpe above, so it cannot be told apart from that test here.
+  power: >
+    How often real skill passes needs the calibration simulation (strategies with a known true edge). That simulation
+    is not run by this experiment; it stays behind the operator's standing "ask me first".
