@@ -12,6 +12,8 @@ from typing import Any
 
 import pandas as pd
 
+from ros import config
+
 
 def file_sha256(path: str) -> str:
     h = hashlib.sha256()
@@ -212,7 +214,7 @@ def synthetic_cash_series(
     into a rate-cut cycle), so any result that depends on it must be shown
     under a rate sensitivity sweep before it is believed.
     """
-    daily = (1.0 + annual_rate) ** (1.0 / 252.0) - 1.0
+    daily = (1.0 + annual_rate) ** (1.0 / config.trading_days_per_year()) - 1.0
     return pd.Series(daily, index=index, name=name)
 
 

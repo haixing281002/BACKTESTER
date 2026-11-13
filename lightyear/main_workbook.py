@@ -541,6 +541,12 @@ def _daily_sheet(wb, ch, s_name, b_name, first, last, R) -> list[tuple[str, str,
     name(wb, "Risk_Free_Rate", "'Daily calculations'!$B$3")
     name(wb, "Risk_Free_Daily", "'Daily calculations'!$C$3")
     name(wb, "Days_Per_Year", "'Daily calculations'!$B$4")
+    cash = ch.get("cash_rate")
+    if cash is not None:    # beta is over the card's cash rate; with no rate on the card beta is blank, as in Python
+        put(ws, "E3", "Cash rate (the card)", F_BOLD)
+        put(ws, "F3", cash, F_INPUT, PCT2, FILL_KEY, border=True, comment="Key assumption: what idle cash earns, from the run's card. Beta subtracts one day of it from both series.")
+        put(ws, "G3", "=(1+F3)^(1/Days_Per_Year)-1", F_BASE, "0.000000%", border=True)
+        name(wb, "Cash_Daily", "'Daily calculations'!$G$3")
     header(ws, 5, ["Metric (daily)", "Daily formula", f"{s_name}: daily", f"{b_name}: daily", "Monthly figure of the same kind", f"{s_name}: monthly", f"{b_name}: monthly"], height=34)
     n = last - first + 1
     sortino = "=({c}8-Risk_Free_Rate)/(SQRT(SUMPRODUCT(({r}-Risk_Free_Daily<0)*({r}-Risk_Free_Daily)^2)/COUNT({r}))*SQRT(Days_Per_Year))"
@@ -564,11 +570,11 @@ def _daily_sheet(wb, ch, s_name, b_name, first, last, R) -> list[tuple[str, str,
             ("95% CVaR (daily loss)", "cvar_95", PCT2, cvar, "minus the average of the daily returns at or below their 5th percentile", "95% CVaR"),
             ("Skew", "skew", NUM2, "=SKEW({r})", "sample skew of daily returns", "Skewness"),
             ("CAGR without the 10 best days", "best_days_removed_cagr", PCT2, best, "the 10 best days removed, then compounded; years from the first return date", None),
-            ("Beta", "beta", NUM2, None, "slope of daily returns on the benchmark's (both over the card's cash rate)", "Beta"),
+            ("Beta", "beta", NUM2, None, "Cov(r - c, b - c) / Var(b - c): daily returns and the benchmark's, each minus one day of the card's cash rate (G3)", "Beta"),
             ("Tracking error", "tracking_error", PCT2, None, f"sample stdev of (daily return - benchmark's) x sqrt({dpy})", "Tracking Error"),
             ("Information ratio", "information_ratio", NUM2, None, f"mean of (daily return - benchmark's) x {dpy} / tracking error", "Information Ratio"),
             ("Rolling one-year periods behind", "rolling_behind", PCT2, None, f"share of {dpy}-day windows with a compounded return below the benchmark's", None)]
-    only_s = {"beta": "=SLOPE(Ret_Strat,Ret_Bench)", "tracking_error": "ARRAY:=STDEV(Ret_Strat-Ret_Bench)*SQRT(Days_Per_Year)",
+    only_s = {"beta": "ARRAY:=_xlfn.COVARIANCE.S(Ret_Strat-Cash_Daily,Ret_Bench-Cash_Daily)/_xlfn.VAR.S(Ret_Bench-Cash_Daily)", "tracking_error": "ARRAY:=STDEV(Ret_Strat-Ret_Bench)*SQRT(Days_Per_Year)",
               "information_ratio": "ARRAY:=AVERAGE(Ret_Strat-Ret_Bench)*Days_Per_Year/(STDEV(Ret_Strat-Ret_Bench)*SQRT(Days_Per_Year))", "rolling_behind": roll}
     items = []
     for i, (label, key, fmt, fx, words, mon) in enumerate(rows, start=6):
