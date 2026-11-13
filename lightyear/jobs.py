@@ -1000,7 +1000,8 @@ def barra_site_step(rid, then_read=True):
         return
     update(rid, barra_status="done", barra_error=None)
     log(rid, "server", f"Barra site step done: the site's figures to {res.get('site_last_date')} are on the Results tab.")
-    if then_read and load(rid)["status"] == "gate_b" and not live_session():
+    # the read is written once by itself; after that only the operator's button rewrites it
+    if then_read and gate_b_read.sha256(run_dir(rid)) is None and load(rid)["status"] == "gate_b" and not live_session():
         gate_b_analyst_read(rid)
 
 
