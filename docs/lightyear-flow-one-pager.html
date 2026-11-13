@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Lightyear: steps and data</title>
+<style>
+@page { size: A4; margin: 11mm 12mm 12mm 12mm; }
+* { box-sizing: border-box; }
+body { font: 9.4pt/1.32 Arial, Helvetica, sans-serif; color: #1c2430; margin: 0; }
+.page { height: 272mm; display: flex; flex-direction: column; break-after: page; }
+.page:last-child { break-after: auto; }
+h1 { color: #1f4e79; font-size: 19pt; margin: 0 0 1mm; }
+.sub { color: #5f6b7a; font-size: 10pt; margin: 0 0 3mm; }
+.foot { margin-top: auto; padding-top: 2mm; border-top: 0.5pt solid #d9dee5; color: #6b7785; font-size: 8pt; display: flex; justify-content: space-between; }
+.lane { font-size: 8pt; font-weight: bold; letter-spacing: .5px; text-transform: uppercase; color: #5f6b7a; margin: 1.6mm 0 0.8mm; }
+.row { display: flex; gap: 2.5mm; align-items: stretch; }
+.box { flex: 1; border: 0.8pt solid #9aa5b1; border-radius: 2mm; padding: 1.6mm 2.4mm; background: #fff; }
+.box b { color: #1f4e79; }
+.box small { display: block; color: #4a5562; font-size: 8.2pt; margin-top: 0.4mm; }
+.model { background: #eef3f8; border-color: #1f4e79; }
+.code { background: #eef7ef; border-color: #2e7d4f; }
+.human { background: #fff4d6; border-color: #d9a514; }
+.out { background: #f6f8fa; }
+.miss { background: #fdecea; border-color: #b3261e; }
+.arrow { text-align: center; color: #1f4e79; font-size: 12pt; line-height: 1; margin: 0.6mm 0; }
+.rarrow { flex: 0 0 5mm; display: flex; align-items: center; justify-content: center; color: #1f4e79; font-size: 12pt; }
+.key { display: flex; gap: 5mm; font-size: 8.2pt; margin: 0 0 1mm; }
+.key span { display: inline-flex; align-items: center; gap: 1.5mm; }
+.key i { width: 4mm; height: 3mm; border-radius: 0.8mm; border: 0.8pt solid; display: inline-block; }
+.cols { display: grid; grid-template-columns: 1fr 5mm 1.15fr 5mm 1fr; gap: 0; align-items: stretch; }
+.col { display: flex; flex-direction: column; gap: 1.8mm; }
+.colh { font-size: 8pt; font-weight: bold; letter-spacing: .5px; text-transform: uppercase; color: #5f6b7a; margin-bottom: 0.5mm; }
+.mid { display: flex; align-items: center; justify-content: center; color: #1f4e79; font-size: 14pt; }
+ul { margin: 0.6mm 0 0 3.6mm; padding: 0; } li { margin: 0.2mm 0; font-size: 8.2pt; color: #4a5562; }
+.note { font-size: 8.4pt; color: #4a5562; margin: 1.5mm 0 0; }
+</style></head><body>
+
+<!-- ============================================================ page 1 -->
+<div class="page">
+  <h1>1. The steps, from paper to decision</h1>
+  <p class="sub">What happens when a paper is put into Lightyear, in order. A person decides twice: at Gate A and at Gate B.</p>
+  <div class="key"><span><i style="background:#eef3f8;border-color:#1f4e79"></i>The model reads and writes</span><span><i style="background:#eef7ef;border-color:#2e7d4f"></i>Code calculates</span><span><i style="background:#fff4d6;border-color:#d9a514"></i>A person decides</span><span><i style="background:#f6f8fa;border-color:#9aa5b1"></i>What you get</span></div>
+
+  <div class="lane">Before any backtest (no market data needed)</div>
+  <div class="row">
+    <div class="box model"><b>00 Triage</b><small>Is this a paper worth testing at all?</small></div><div class="rarrow">→</div>
+    <div class="box model"><b>01 Ingest</b><small>Read the paper. Work out the strategy and which Indian universe to test it on.</small></div><div class="rarrow">→</div>
+    <div class="box model"><b>02 Strategy card</b><small>Write the rules as one card: signal, weights, rebalance, cost, cash rate, what counts as failure.</small></div><div class="rarrow">→</div>
+    <div class="box model"><b>Data map + analyst read</b><small>What data the rules need. The model's one-page view of the paper, written now, before any result exists.</small></div>
+  </div>
+  <div class="arrow">↓</div>
+  <div class="row"><div class="box human"><b>GATE A: you approve the card</b><small>You read the card and the analyst read, ask for changes if needed, and approve. The card and the read are locked together with a hash at that moment, so neither can be edited after results exist. The cost and cash rate are whatever the card says.</small></div></div>
+  <div class="arrow">↓</div>
+
+  <div class="lane">The backtest</div>
+  <div class="row">
+    <div class="box code"><b>03 Data check</b><small>Are the prices, index members and index levels on file for these rules?</small></div><div class="rarrow">→</div>
+    <div class="box code"><b>04 Point-in-time data</b><small>Build the data as it was known on each date. Delisted stocks stay in.</small></div><div class="rarrow">→</div>
+    <div class="box code"><b>05 Run</b><small>The run's script trades the card's rules day by day: signal at one close, fill at the next.</small></div><div class="rarrow">→</div>
+    <div class="box code"><b>06 Research checks</b><small>Bootstrap, sub-periods, cost and rule sensitivities.</small></div><div class="rarrow">→</div>
+    <div class="box code"><b>07 Portfolio checks</b><small>Factor regression, simpler alternatives, capacity.</small></div>
+  </div>
+  <div class="arrow">↓ the run hands over its files: daily returns, holdings, trades, comparators, checks</div>
+
+  <div class="lane">What Lightyear builds from those files (no new backtest; "Rebuild" repeats only this part)</div>
+  <div class="row">
+    <div class="box code"><b>Rule check</b><small>Re-reads the run's files against the approved card: did the backtest do what the card says?</small></div>
+    <div class="box code"><b>Monthly figures</b><small>Complete calendar months only. Returns, risk ratios, market phases, rolling returns, factor attribution, tail risk, capture, allocation.</small></div>
+    <div class="box code"><b>Daily figures</b><small>The same strategy on daily returns, kept beside the monthly ones.</small></div>
+    <div class="box code"><b>Gate B score (v4)</b><small>Three hard blocks and three scorecard rows, at the card's cost.</small></div>
+  </div>
+  <div class="arrow">↓</div>
+  <div class="row">
+    <div class="box out"><b>Results tab</b><small>Tiles, financial-year returns, NAV chart, trailing returns, market phases, rolling returns, factor attribution, drawdown, tail risk, capture, calendar years, allocation. Daily calculations and run diagnostics are folded below.</small></div>
+    <div class="box out"><b>Main workbook</b><small>The same sections with live Excel formulas. A "Python vs Excel" sheet checks every figure to 1e-9.</small></div>
+    <div class="box out"><b>Diagnostics workbook</b><small>The working: every holding and trade, alternatives, cost sweeps, data checks, Gate B rows.</small></div>
+    <div class="box model"><b>Analyst review</b><small>The model's plain-English read of the results. An opinion, not a decision.</small></div>
+  </div>
+  <div class="arrow">↓</div>
+  <div class="row">
+    <div class="box human" style="flex:2.2"><b>GATE B: you decide</b>
+      <small><b>Hard blocks (all must pass):</b> data integrity · edge over the NIFTY 500 at the card's cost · paired bootstrap (could the better Sharpe be luck?).</small>
+      <small><b>Scorecard (informs, does not block):</b> sub-period stability · factor alpha · performance after publication.</small>
+      <small>The page shows PASS or FAIL. The decision stays PENDING until you record APPROVE, OBSERVE, FIX or REJECT with your name and reason.</small></div>
+    <div class="rarrow">→</div>
+    <div class="box code"><b>08 Record</b><small>The decision is written to the run folder and the decisions ledger. Nothing is traded by Lightyear.</small></div>
+  </div>
+  <p class="note"><b>The one rule:</b> the model reads and writes, code calculates every number, a person makes every decision. Experimental Gate B tests are kept on a separate branch and do not count until you choose them.</p>
+  <div class="foot"><span>Quant AI Researcher</span><span>Lightyear: steps and data · page 1 of 2</span></div>
+</div>
+
+<!-- ============================================================ page 2 -->
+<div class="page">
+  <h1>2. Where the data comes from</h1>
+  <p class="sub">Every price, index member and index level comes from three files. Nothing is downloaded during a run.</p>
+  <div class="key"><span><i style="background:#eef3f8;border-color:#1f4e79"></i>A file someone supplied</span><span><i style="background:#eef7ef;border-color:#2e7d4f"></i>Built by code from those files</span><span><i style="background:#fff4d6;border-color:#d9a514"></i>A setting a person chose</span><span><i style="background:#fdecea;border-color:#b3261e"></i>Not on file</span></div>
+
+  <div class="cols">
+    <div class="col">
+      <div class="colh">Source files</div>
+      <div class="box model"><b>1. Ace Equity daily prices</b><small>One large file, January 2000 onward, keyed by Ace's company code.</small>
+        <ul><li>Adjusted and unadjusted open, high, low, close</li><li>Market cap, volume, traded value</li><li>PE and P/BV</li><li>No dividends</li></ul></div>
+      <div class="box model"><b>2. NIFTY 500 holdings workbook</b><small>Quarterly member lists from March 2012.</small>
+        <ul><li>Who was in the NIFTY 500 on each date</li><li>Nifty 100 / Midcap 150 / Smallcap 250 split</li><li>Company code ↔ ISIN ↔ symbol master, with Ace's sector</li></ul></div>
+      <div class="box model"><b>3. NSE index workbook</b><small>Daily index levels, 1996 onward. Price indices.</small>
+        <ul><li>NIFTY 500 (the benchmark)</li><li>Broad indices: Midcap 150, Smallcap 250 and others</li><li>Factor indices: Quality 50, Momentum 50, Value 50, Low Volatility 50</li></ul></div>
+      <div class="box model"><b>The paper (PDF)</b><small>Read by the model. Treated as untrusted: its text is analysed, never obeyed.</small></div>
+      <div class="box human"><b>Settings in config/</b>
+        <ul><li>Risk-free rate 5% (fund.yaml)</li><li>Gate B pass marks (gate_thresholds.yaml)</li><li>Market phases (market_phases.yaml)</li><li>Sector groups (sector_groups.yaml)</li></ul>
+        <small><b>On the card, approved at Gate A:</b> trading cost and cash rate.</small></div>
+    </div>
+    <div class="mid">→</div>
+    <div class="col">
+      <div class="colh">Built once by code (data/processed/)</div>
+      <div class="box code"><b>Price cache</b><small>The Ace file parsed into a fast table: date × stock, by ISIN. Also gives the NSE trading calendar.</small></div>
+      <div class="box code"><b>Security master</b><small>One row per company: code, ISIN, symbol, sector.</small></div>
+      <div class="box code"><b>Membership, point in time</b><small>Start and end date of every stock's time in the NIFTY 500, delisted names included. Version v2 fills gaps from a fund data pull; v3 uses NSE's own effective dates.</small></div>
+      <div class="box code"><b>Index returns</b><small>Daily returns of the benchmark and the factor indices on the run's own days.</small></div>
+      <div class="colh" style="margin-top:1.5mm">Written by each run (its own folder)</div>
+      <div class="box code"><b>daily_returns.csv</b><small>Strategy and benchmark, one row per day. Everything on the Results tab starts here.</small></div>
+      <div class="box code"><b>holdings.csv · trades.csv</b><small>Weights at each rebalance; every buy and sell with its price.</small></div>
+      <div class="box code"><b>comparators.csv · checks · tables</b><small>The simpler alternatives, the run's own data checks, and its sensitivity tables.</small></div>
+    </div>
+    <div class="mid">→</div>
+    <div class="col">
+      <div class="colh">Where each number on the page comes from</div>
+      <div class="box out"><b>Tiles, returns, risk ratios, drawdown, tail risk, capture, calendar years</b><small>daily_returns.csv, compounded into complete calendar months.</small></div>
+      <div class="box out"><b>Market phases</b><small>The same monthly returns, cut at the phase dates in market_phases.yaml.</small></div>
+      <div class="box out"><b>Factor attribution</b><small>Monthly returns against three NSE factor indices from the index workbook.</small></div>
+      <div class="box out"><b>Market-cap and sector allocation</b><small>holdings.csv, with returns from the price cache, size buckets from the member lists, sectors from the security master.</small></div>
+      <div class="box out"><b>Gate B</b><small>daily_returns.csv, the run's checks, member coverage, the factor indices, the paper's date from the card.</small></div>
+      <div class="box out"><b>Rule check</b><small>trades and holdings re-priced from the Ace file and compared with the approved card.</small></div>
+      <div class="box miss"><b>Not on file today</b>
+        <ul><li>NIFTY 500 total-return index: the benchmark has no dividends, so every alpha is flattered by about the dividend yield</li><li>Benchmark sector weights</li><li>41 former NIFTY 500 members have no price at all</li><li>The fund's own returns: used only as a private reference, never stored in the repo</li></ul></div>
+    </div>
+  </div>
+  <p class="note"><b>Rules the data follows:</b> everything is keyed by ISIN, never by symbol. A value used on a day must have been known before that day. The raw files are never changed; anything derived is written to data/processed/ or the run's folder.</p>
+  <div class="foot"><span>Quant AI Researcher</span><span>Lightyear: steps and data · page 2 of 2</span></div>
+</div>
+</body></html>
