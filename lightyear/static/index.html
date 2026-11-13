@@ -1003,6 +1003,7 @@ function renderBarra(st){
   const legs = b.attribution_pct_a_year || {}, ex = Object.entries(b.mean_factor_exposure||{}).sort((x,y)=>Math.abs(y[1])-Math.abs(x[1])).slice(0,8), rk = b.mean_risk || {};
   const p1 = v => v==null ? "–" : num(v*100,1) + "%";
   el.innerHTML = `<div class="row" style="justify-content:space-between"><span class="small muted">Barra site figures to ${esc(b.site_last_date)}, read ${esc(ist(b.built_at))} · <label style="display:inline"><input type="checkbox" ${LS.get("ly_art_auto","1")==="1"?"checked":""} onchange="LS.set('ly_art_auto', this.checked?'1':'0')"> open this run on ART when I open its results</label></span><span class="row">${send("Read again")}${art}</span></div>
+    <div id="artnote" class="banner info" style="display:${ART_BLOCKED?"":"none"};margin-top:10px">This browser stopped the ART tab from opening by itself. Press Open ART, or allow pop-ups for this page once and it will open with the results from then on.</div>
     ${b.site && b.lightyear_site_formula_shared_days ? (()=>{ const S = b.site, P = b.lightyear_site_formula_shared_days, g = b.daily_agreement || {};
       const RR = [["Annualised return","annual_return","pct"],["Volatility","volatility","pct"],["Sharpe","sharpe","num"],["Sortino","sortino","num"],["Maximum drawdown","max_drawdown","pct"],["Days with a gain","hit_rate","pct"]];
       const gap = (a,c,t) => (a==null||c==null) ? "–" : t==="pct" ? ((a-c)>=0?"+":"") + num((a-c)*100) + " pts" : ((a-c)>=0?"+":"") + num(a-c);
@@ -1022,16 +1023,18 @@ function renderBarra(st){
       <table class="t">${ex.map(([k,v])=>`<tr><td>${esc(k)}</td><td>${(v>=0?"+":"")+num(v)}</td></tr>`).join("")}</table></div></div>`;
 }
 // With a run's results, its page on the full site opens too (once per run per browser session), so the weight books can be
-// checked there. A new tab of this browser when the browser allows it; otherwise the tester's own signed-in window.
+// checked there. Always a new tab of THIS browser, never another program. A browser may refuse a tab that no click asked
+// for; then the card says so and the next click on the Results tab tries again.
 function openArtOnce(rid, url){
   if(!url || TAB !== "results" || LS.get("ly_art_auto","1") !== "1") return;
   let seen = null; try{ seen = sessionStorage.getItem("ly_art_" + rid) }catch(e){}
   if(seen) return;
-  try{ sessionStorage.setItem("ly_art_" + rid, "1") }catch(e){}
   const w = window.open(url, "_blank");
-  if(w){ try{ w.opener = null }catch(e){} }
-  else api(`/api/runs/${rid}/art`, {method:"POST"}).catch(()=>{});
+  if(w){ try{ w.opener = null; sessionStorage.setItem("ly_art_" + rid, "1") }catch(e){} ART_BLOCKED = false }
+  else ART_BLOCKED = true;
+  const n = $("#artnote"); if(n) n.style.display = ART_BLOCKED ? "" : "none";
 }
+let ART_BLOCKED = false;
 function renderGbRead(st){
   const el = $("#gbread"); if(!el) return;
   const r = st.gate_b_read || {}, rs = st.gate_b_read_status, at = st.status==="gate_b";
