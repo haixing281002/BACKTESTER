@@ -360,7 +360,7 @@ function tabsFor(st){
   $("#tabs").innerHTML = t.map(([k,l]) => `<button class="tab ${k===TAB?'on':''} ${k==='log'?'tech':''}" onclick="setTab('${k}',true)">${l}</button>`).join("");
   document.querySelectorAll("#panes > div").forEach(d => d.classList.toggle("hide", d.dataset.p !== TAB));
 }
-function setTab(k, byUser){ TAB = k; if(byUser) USER_TAB = true; tabsFor(ST); if(k==="results") drawCharts(true); if(k==="positions") renderPositions(true) }
+function setTab(k, byUser){ TAB = k; if(byUser) USER_TAB = true; if(k==="results") BARRA_SIG = null; tabsFor(ST); if(k==="results") drawCharts(true); if(k==="positions") renderPositions(true) }
 
 async function tick(){
   if(!CUR) return;
@@ -994,12 +994,13 @@ function renderBarra(st){
       : `<span class="muted">The Barra site step is not set up on this machine.</span>`; return }
   const f = (v,t) => v==null ? "–" : t==="pct" ? pct(v,2) : t==="x" ? num(v,1) + "x" : t==="d" ? num(v,0) : t==="ic" ? num(v,4) : num(v);
   const books = b.books || [];
+  openArtOnce(st.id, b.url);
   const R = [["Annualised return","annual_return","pct"],["Volatility","volatility","pct"],["Sharpe","sharpe","num"],["Sortino","sortino","num"],["Maximum drawdown","max_drawdown","pct"],
     ["Information ratio","information_ratio_specific","num"],["Information coefficient","information_coefficient","ic"],["Days with a gain","hit_rate","pct"],
     ["Turnover a year","annual_turnover","x"],["Holding period (days)","holding_period_days","d"],["Cost a year (the site's model)","annual_cost","pct"]];
   const legs = b.attribution_pct_a_year || {}, ex = Object.entries(b.mean_factor_exposure||{}).sort((x,y)=>Math.abs(y[1])-Math.abs(x[1])).slice(0,8), rk = b.mean_risk || {};
   const p1 = v => v==null ? "–" : num(v*100,1) + "%";
-  el.innerHTML = `<div class="row" style="justify-content:space-between"><span class="small muted">Barra site figures to ${esc(b.site_last_date)}, read ${esc(ist(b.built_at))}</span><span class="row">${send("Read again")}${art}</span></div>
+  el.innerHTML = `<div class="row" style="justify-content:space-between"><span class="small muted">Barra site figures to ${esc(b.site_last_date)}, read ${esc(ist(b.built_at))} · <label style="display:inline"><input type="checkbox" ${LS.get("ly_art_auto","1")==="1"?"checked":""} onchange="LS.set('ly_art_auto', this.checked?'1':'0')"> open this run on ART when I open its results</label></span><span class="row">${send("Read again")}${art}</span></div>
     ${books.length?`<h3>The four weight books</h3>
     <table class="t"><tr><th>Barra site</th>${books.map(k=>`<th>${esc(k.label)}</th>`).join("")}</tr>` +
       R.map(([l,k,t])=>`<tr><td>${l}</td>${books.map(x=>`<td>${f(k==="max_drawdown" && x[k]!=null ? Math.abs(x[k]) : x[k],t)}</td>`).join("")}</tr>`).join("") + `</table>`:""}
@@ -1010,6 +1011,17 @@ function renderBarra(st){
         <tr><td>Share of variance: market / style / industry / specific</td><td>${p1(rk["Market Risk (%variance)"])} / ${p1(rk["Style Risk (%variance)"])} / ${p1(rk["Industry Risk (%variance)"])} / ${p1(rk["Specific Risk (%variance)"])}</td></tr></table></div>
     <div><h3>Largest factor exposures <span class="small muted">(uploaded book, standard deviations)</span></h3>
       <table class="t">${ex.map(([k,v])=>`<tr><td>${esc(k)}</td><td>${(v>=0?"+":"")+num(v)}</td></tr>`).join("")}</table></div></div>`;
+}
+// With a run's results, its page on the full site opens too (once per run per browser session), so the weight books can be
+// checked there. A new tab of this browser when the browser allows it; otherwise the tester's own signed-in window.
+function openArtOnce(rid, url){
+  if(!url || TAB !== "results" || LS.get("ly_art_auto","1") !== "1") return;
+  let seen = null; try{ seen = sessionStorage.getItem("ly_art_" + rid) }catch(e){}
+  if(seen) return;
+  try{ sessionStorage.setItem("ly_art_" + rid, "1") }catch(e){}
+  const w = window.open(url, "_blank");
+  if(w){ try{ w.opener = null }catch(e){} }
+  else api(`/api/runs/${rid}/art`, {method:"POST"}).catch(()=>{});
 }
 function renderGbRead(st){
   const el = $("#gbread"); if(!el) return;
