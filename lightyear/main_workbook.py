@@ -526,12 +526,16 @@ def _daily_sheet(wb, ch, s_name, b_name, first, last, R) -> list[tuple[str, str,
     """Every daily metric as a live formula over the Returns sheet (each reproduces ros/metrics/core.py), its formula in
     words, and the monthly figure of the same name beside it. Returns the items the Python vs Excel sheet checks."""
     ws = wb.create_sheet("Daily calculations")
-    m, b = ch["metrics"]["strategy"], ch["metrics"]["benchmark"]
+    ds = ch.get("daily_site") or {}
+    sdpy = ds.get("days_per_year") or core.SITE_ANN
+    # the five headline rows and the hit rate follow the Barra site's formulas (core.site_block); the rest are Lightyear's own
+    m, b = {**ch["metrics"]["strategy"], **(ds.get("strategy") or {})}, {**ch["metrics"]["benchmark"], **(ds.get("benchmark") or {})}
     rf = ch["sharpe_hurdle"]
     dpy = ch.get("trading_days_per_year") or core.ANN     # the setting the run's Python figures were computed with
     put(ws, "A1", "Daily calculations", F_TITLE)
-    put(ws, "A2", f"The daily block: daily returns, sample standard deviation, {dpy} days a year, years = calendar days / 365.25, losses as positive numbers. The monthly columns "
-        f"are the main display's figures; the two differ by construction and neither is wrong. Gate B uses its own daily tests, not this sheet. {SIGN}", F_NOTE)
+    put(ws, "A2", f"The daily block follows the Barra site's formulas: daily returns added (not compounded), sample standard deviation, {sdpy} days a year, no risk-free rate, "
+        f"losses as positive numbers. Rows marked 'Lightyear only' have no figure on the site and keep Lightyear's own formula ({dpy} days). The monthly columns are the main "
+        f"display's figures; the two differ by construction. Gate B uses its own daily tests, not this sheet. {SIGN}", F_NOTE)
     put(ws, "A3", "Risk-free rate (config/fund.yaml)", F_BOLD)
     put(ws, "B3", rf, F_INPUT, PCT2, FILL_KEY, border=True, comment="Key assumption: the one risk-free rate, config/fund.yaml. A yardstick, not income.")
     put(ws, "C3", "=(1+Risk_Free_Rate)^(1/Days_Per_Year)-1", F_BASE, "0.000000%", border=True)
@@ -541,6 +545,9 @@ def _daily_sheet(wb, ch, s_name, b_name, first, last, R) -> list[tuple[str, str,
     name(wb, "Risk_Free_Rate", "'Daily calculations'!$B$3")
     name(wb, "Risk_Free_Daily", "'Daily calculations'!$C$3")
     name(wb, "Days_Per_Year", "'Daily calculations'!$B$4")
+    put(ws, "E4", "Days a year, Barra site formulas (config/fund.yaml)", F_BOLD)
+    put(ws, "F4", sdpy, F_INPUT, "0", FILL_KEY, border=True, comment="Key assumption: site_days_per_year, config/fund.yaml. Annualises the Barra-formula rows of this sheet.")
+    name(wb, "Site_Days_Per_Year", "'Daily calculations'!$F$4")
     cash = ch.get("cash_rate")
     if cash is not None:    # beta is over the card's cash rate; with no rate on the card beta is blank, as in Python
         put(ws, "E3", "Cash rate (the card)", F_BOLD)
@@ -549,7 +556,10 @@ def _daily_sheet(wb, ch, s_name, b_name, first, last, R) -> list[tuple[str, str,
         name(wb, "Cash_Daily", "'Daily calculations'!$G$3")
     header(ws, 5, ["Metric (daily)", "Daily formula", f"{s_name}: daily", f"{b_name}: daily", "Monthly figure of the same kind", f"{s_name}: monthly", f"{b_name}: monthly"], height=34)
     n = last - first + 1
-    sortino = "=({c}8-Risk_Free_Rate)/(SQRT(SUMPRODUCT(({r}-Risk_Free_Daily<0)*({r}-Risk_Free_Daily)^2)/COUNT({r}))*SQRT(Days_Per_Year))"
+    sortino = "ARRAY:={c}8/(STDEV(IF({r}<0,{r}))*SQRT(Site_Days_Per_Year))"
+    # the running sum of daily returns and its running high; the high starts at the first day's own sum, as the site's does
+    sum_dd = ("ARRAY:=-MIN(_xlfn.LET(_xlpm.cs,_xlfn.SCAN(0,{r},_xlfn.LAMBDA(_xlpm.a,_xlpm.x,_xlpm.a+_xlpm.x)),"
+              "_xlpm.cs-_xlfn.SCAN(-1E+99,_xlpm.cs,_xlfn.LAMBDA(_xlpm.a,_xlpm.x,MAX(_xlpm.a,_xlpm.x)))))")
     dur = "ARRAY:=MAX(_xlfn.SCAN(0,{dd},_xlfn.LAMBDA(_xlpm.a,_xlpm.x,IF(_xlpm.x<-0.000000000001,_xlpm.a+1,0))))"
     cvar = "ARRAY:=-AVERAGE(IF({r}<=_xlfn.PERCENTILE.INC({r},0.05),{r}))"
     best = "ARRAY:=(PRODUCT(1+{r})/PRODUCT(1+LARGE({r},{{1;2;3;4;5;6;7;8;9;10}})))^(365.25/(MAX(Dates)-INDEX(Dates,2)))-1"
@@ -560,20 +570,20 @@ def _daily_sheet(wb, ch, s_name, b_name, first, last, R) -> list[tuple[str, str,
     # label, key, format, formula (strategy and benchmark share it; {..} filled per column; None = strategy only), words, monthly SE label
     rows = [("Years", "years", NUM2, "=(MAX(Dates)-Start_Date)/365.25", "(last date - start date) / 365.25", None),
             ("Final value (100 = start)", "final", "0.00", "=INDEX({v},ROWS({v}))", "100 x product of (1 + daily return)", "Total Return"),
-            ("CAGR", "cagr", PCT2, "=({c}7/100)^(1/{c}6)-1", "(final / 100)^(1 / years) - 1", "CAGR"),
-            ("Volatility", "vol", PCT2, "=STDEV({r})*SQRT(Days_Per_Year)", f"sample stdev of daily returns x sqrt({dpy})", "Annualized Volatility"),
-            ("Sharpe", "sharpe", NUM2, "=({c}8-Risk_Free_Rate)/{c}9", "(CAGR - risk-free rate) / volatility", "Sharpe Ratio"),
-            ("Sortino", "sortino", NUM2, sortino, "(CAGR - risk-free rate) / downside deviation of daily returns below the daily risk-free rate", "Sortino Ratio"),
-            ("Maximum drawdown", "max_dd", PCT2, "=-MIN({dd})", "largest fall of the daily value from its previous high, as a positive number", "Max Drawdown"),
-            ("Calmar", "calmar", NUM2, "={c}8/{c}12", "CAGR / maximum drawdown", "Calmar Ratio"),
-            ("Drawdown duration (trading days)", "dd_duration_days", INT, dur, "longest run of days below a previous high", None),
-            ("95% CVaR (daily loss)", "cvar_95", PCT2, cvar, "minus the average of the daily returns at or below their 5th percentile", "95% CVaR"),
-            ("Skew", "skew", NUM2, "=SKEW({r})", "sample skew of daily returns", "Skewness"),
-            ("CAGR without the 10 best days", "best_days_removed_cagr", PCT2, best, "the 10 best days removed, then compounded; years from the first return date", None),
-            ("Beta", "beta", NUM2, None, "Cov(r - c, b - c) / Var(b - c): daily returns and the benchmark's, each minus one day of the card's cash rate (G3)", "Beta"),
-            ("Tracking error", "tracking_error", PCT2, None, f"sample stdev of (daily return - benchmark's) x sqrt({dpy})", "Tracking Error"),
-            ("Information ratio", "information_ratio", NUM2, None, f"mean of (daily return - benchmark's) x {dpy} / tracking error", "Information Ratio"),
-            ("Rolling one-year periods behind", "rolling_behind", PCT2, None, f"share of {dpy}-day windows with a compounded return below the benchmark's", None)]
+            ("Annualised return", "annual_return", PCT2, "=AVERAGE({r})*Site_Days_Per_Year", f"mean daily return x {sdpy}", "CAGR"),
+            ("Volatility", "vol", PCT2, "=STDEV({r})*SQRT(Site_Days_Per_Year)", f"sample stdev of daily returns x sqrt({sdpy})", "Annualized Volatility"),
+            ("Sharpe (no risk-free rate)", "sharpe", NUM2, "={c}8/{c}9", "annualised return / volatility", "Sharpe Ratio"),
+            ("Sortino (no risk-free rate)", "sortino", NUM2, sortino, f"annualised return / (sample stdev of the days with a loss x sqrt({sdpy}))", "Sortino Ratio"),
+            ("Maximum drawdown", "max_dd", PCT2, sum_dd, "largest fall of the running sum of daily returns from its previous high, as a positive number", "Max Drawdown"),
+            ("Days with a gain", "hit_rate", PCT2, '=COUNTIF({r},">0")/COUNT({r})', "days with a return above zero / all days", None),
+            ("Lightyear only: drawdown duration (trading days)", "dd_duration_days", INT, dur, "longest run of days the compounded value is below a previous high", None),
+            ("Lightyear only: 95% CVaR (daily loss)", "cvar_95", PCT2, cvar, "minus the average of the daily returns at or below their 5th percentile", "95% CVaR"),
+            ("Lightyear only: skew", "skew", NUM2, "=SKEW({r})", "sample skew of daily returns", "Skewness"),
+            ("Lightyear only: CAGR without the 10 best days", "best_days_removed_cagr", PCT2, best, "the 10 best days removed, then compounded; years from the first return date", None),
+            ("Lightyear only: beta to the benchmark", "beta", NUM2, None, "Cov(r - c, b - c) / Var(b - c): daily returns and the benchmark's, each minus one day of the card's cash rate (G3)", "Beta"),
+            ("Lightyear only: tracking error", "tracking_error", PCT2, None, f"sample stdev of (daily return - benchmark's) x sqrt({dpy})", "Tracking Error"),
+            ("Lightyear only: information ratio against the benchmark", "information_ratio", NUM2, None, f"mean of (daily return - benchmark's) x {dpy} / tracking error", "Information Ratio"),
+            ("Lightyear only: rolling one-year periods behind", "rolling_behind", PCT2, None, f"share of {dpy}-day windows with a compounded return below the benchmark's", None)]
     only_s = {"beta": "ARRAY:=_xlfn.COVARIANCE.S(Ret_Strat-Cash_Daily,Ret_Bench-Cash_Daily)/_xlfn.VAR.S(Ret_Bench-Cash_Daily)", "tracking_error": "ARRAY:=STDEV(Ret_Strat-Ret_Bench)*SQRT(Days_Per_Year)",
               "information_ratio": "ARRAY:=AVERAGE(Ret_Strat-Ret_Bench)*Days_Per_Year/(STDEV(Ret_Strat-Ret_Bench)*SQRT(Days_Per_Year))", "rolling_behind": roll}
     items = []
@@ -594,13 +604,14 @@ def _daily_sheet(wb, ch, s_name, b_name, first, last, R) -> list[tuple[str, str,
                 _f(ws, f"G{i}", f"={SEQ}L{R[mon]}", PCT2 if fmt in (PCT2, "0.00") else fmt)
     r = 7 + len(rows)
     put(ws, f"A{r}", "The monthly Max Drawdown and 95% CVaR are negative numbers and the daily ones positive: each block keeps its own sign convention. "
+        "The daily drawdown is in points of summed return, the monthly one a fall in compounded wealth. "
         "The monthly Total Return sits beside the daily final value: final / 100 - 1 over all days against the product of the complete months.", F_NOTE)
     gross = ch.get("gross")
     if gross:
         put(ws, f"A{r + 2}", f"Before the card's {ch.get('card_bp')}bp round-trip cost (Python values; the gross returns are not in the workbook)", F_BOLD)
         for j, (label, key, fmt, *_rest) in enumerate(rows, start=r + 3):
             _lab(ws, f"A{j}", label)
-            put(ws, f"C{j}", gross.get(key), F_INPUT, fmt, border=True)
+            put(ws, f"C{j}", {**gross, **(ds.get("gross") or {})}.get(key), F_INPUT, fmt, border=True)
     widths(ws, [34, 70, 20, 20, 34, 20, 20])
     ws.freeze_panes = "C6"
     return items

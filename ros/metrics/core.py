@@ -17,6 +17,7 @@ from scipy import stats
 from ros import config
 
 ANN = config.trading_days_per_year()     # trading days a year, config/fund.yaml (252)
+SITE_ANN = config.site_days_per_year()   # days a year of the daily display block, config/fund.yaml (250): the Barra site's
 _CASH_CONSTANT = re.compile(r"^CASH_PROXY_CONSTANT_(\d+(?:\.\d+)?)PCT$")
 
 
@@ -570,6 +571,55 @@ def post_publication(returns: pd.Series, bench: pd.Series, cash: float | pd.Seri
     vb = value_from_returns(b, start=before_b[-1] if len(before_b) else None)
     return {"from": str(cut.date()), "days": len(r), "cagr": cagr(vr), "benchmark_cagr": cagr(vb), "edge": edge(cagr(vr), cagr(vb)),
             "sharpe": sharpe(r, cash if hurdle is None else hurdle), "benchmark_sharpe": sharpe(b, cash if hurdle is None else hurdle), "max_dd": max_drawdown(vr), "information_ratio": information_ratio(r, b)}
+
+
+# ---------------------------------------------------------------------------------------------- the daily display block
+# The Barra site's formulas for a book whose daily returns are added, not compounded (operator, 2026-11-13). The Results
+# tab's "Daily calculations" and the workbook sheet of that name show these, so a Lightyear book and the same book on the
+# site differ only by their data. No risk-free rate anywhere; a drawdown is a positive number, in points of return.
+# Gate B does not read this block.
+def site_annual_return(returns: pd.Series) -> float:
+    """Mean daily return x 250."""
+    r = returns.dropna()
+    return float(r.mean() * SITE_ANN) if len(r) else float("nan")
+
+
+def site_vol(returns: pd.Series) -> float:
+    """Sample stdev of daily returns x sqrt(250)."""
+    r = returns.dropna()
+    return float(r.std(ddof=1) * np.sqrt(SITE_ANN)) if len(r) > 2 else float("nan")
+
+
+def site_sharpe(returns: pd.Series) -> float:
+    """Annual return / volatility. No risk-free rate."""
+    v = site_vol(returns)
+    return float(site_annual_return(returns) / v) if v and v > 0 else float("nan")
+
+
+def site_sortino(returns: pd.Series) -> float:
+    """Annual return / (sample stdev of the days with a loss x sqrt(250))."""
+    r = returns.dropna()
+    neg = r[r < 0]
+    sd = float(neg.std(ddof=1)) if len(neg) > 2 else float("nan")
+    return float(site_annual_return(r) / (sd * np.sqrt(SITE_ANN))) if sd and sd > 0 else float("nan")
+
+
+def site_max_drawdown(returns: pd.Series) -> float:
+    """Worst fall of the running SUM of daily returns from its previous high, as a positive number."""
+    cs = returns.dropna().cumsum()
+    return float(-(cs - cs.cummax()).min()) if len(cs) else float("nan")
+
+
+def hit_rate(returns: pd.Series) -> float:
+    """Days with a gain / all days."""
+    r = returns.dropna()
+    return float((r > 0).mean()) if len(r) else float("nan")
+
+
+def site_block(returns: pd.Series) -> dict[str, float]:
+    return {"annual_return": site_annual_return(returns), "vol": site_vol(returns), "sharpe": site_sharpe(returns),
+            "sortino": site_sortino(returns), "max_dd": site_max_drawdown(returns), "hit_rate": hit_rate(returns),
+            "days": len(returns.dropna())}
 
 
 # ---------------------------------------------------------------------------------------------- one block of metrics

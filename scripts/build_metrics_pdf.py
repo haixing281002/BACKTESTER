@@ -239,20 +239,18 @@ def content():
 
     # ------------------------------------------------------------ Part 2
     A('<h1 class="brk" id="p2">Part 2. Daily calculations and run diagnostics</h1>')
-    A("<p>Both sections are collapsed on the Results tab, under the main display. The daily figures use every daily return, the sample standard deviation and 252 days a "
-      "year, so they differ from the monthly figures of the same name in Part 1. Gate B reads the run diagnostics and its own daily tests.</p>")
+    A("<p>Both sections are collapsed on the Results tab, under the main display. The first six daily figures follow the Barra site's formulas (daily returns added, not compounded; sample standard deviation; 250 days a year; no risk-free rate), "
+      "so a book here and the same book on the site differ only by their data. The rows after them are Lightyear's own, on 252 days. All differ from the monthly figures of the same name in Part 1. Gate B reads the run diagnostics and its own daily tests.</p>")
     A('<h2 id="2.1">2.1 Daily calculations</h2>' + where('Results tab, section "Daily calculations": one row per metric, with its daily formula, the daily value and the monthly figure beside it.',
       'main workbook, sheet "Daily calculations", formulas over the "Returns" sheet, checked on "Python vs Excel". The "Summary" sheet of the diagnostics workbook repeats the first rows.'))
     A(table("2.1", H3, [
-        ("CAGR", "(V<sub>end</sub> ÷ V<sub>start</sub>)<sup>1 ÷ years</sup> − 1, with V<sub>start</sub> = 100 on the session before the first return", "The steady yearly growth rate from start to finish.",
-         f"{core} cagr(), cagr_from_returns(); workbook 'Daily calculations'"),
-        ("Volatility", "stdev(r) × √252", "How much returns swing in a year. Lower is a smoother ride.", f"{core} ann_vol(); workbook 'Daily calculations'"),
-        (f"Sharpe (risk-free rate {RF})", f"(CAGR − {RF}) ÷ Volatility", "Return above the risk-free rate, per unit of risk.", f"{core} sharpe_geometric(); config/fund.yaml sharpe_hurdle; workbook 'Daily calculations'"),
-        ("Maximum drawdown", "max over t of (1 − V<sub>t</sub> ÷ highest V so far)", "The biggest loss from a high to a later low, as a positive number.", f"{core} max_drawdown(); workbook 'Daily calculations'"),
+        ("Annualised return", "mean(r) × 250", "The average day's return, scaled to a year by adding. Not a compounded rate.", f"{core} site_annual_return(); config/fund.yaml site_days_per_year; workbook 'Daily calculations'"),
+        ("Volatility", "stdev(r) × √250", "How much returns swing in a year. Lower is a smoother ride.", f"{core} site_vol(); workbook 'Daily calculations'"),
+        ("Sharpe (no risk-free rate)", "Annualised return ÷ Volatility", "Return per unit of risk, with nothing taken off for the risk-free rate.", f"{core} site_sharpe(); workbook 'Daily calculations'"),
+        ("Sortino (no risk-free rate)", "Annualised return ÷ (stdev of the days with r &lt; 0 × √250)", "Like the Sharpe, but only the days with a loss count as risk.", f"{core} site_sortino(); workbook 'Daily calculations'"),
+        ("Maximum drawdown", "max over t of (highest S so far − S<sub>t</sub>), S = running sum of r", "The biggest fall of the summed returns from a high to a later low, in points of return, as a positive number.", f"{core} site_max_drawdown(); workbook 'Daily calculations'"),
+        ("Days with a gain", "count(r &gt; 0) ÷ count(r)", "The share of days the book made money.", f"{core} hit_rate(); workbook 'Daily calculations'"),
         ("Final value", "100 × ∏(1 + r)", "What 100 grew into after every daily return.", f"{core} value_from_returns(); workbook 'Daily calculations'"),
-        (f"Sortino (risk-free rate {RF})", f"(CAGR − {RF}) ÷ DD, where DD = √mean(min(r − Rf per day, 0)²) × √252", "Like the Sharpe, but only falls below the risk-free rate count as risk.",
-         f"{core} sortino_geometric(); workbook 'Daily calculations'"),
-        ("Calmar", "CAGR ÷ maximum drawdown", "Return per unit of worst fall.", f"{core} calmar(); workbook 'Daily calculations'"),
         ("Drawdown duration", "Longest run of trading days below a previous high", "How long the longest wait to recover took.", f"{core} drawdown_duration(); workbook 'Daily calculations'"),
         ("95% CVaR (daily loss)", "−mean of the daily returns at or below their 5th percentile", "The average bad day, as a positive number.", f"{core} cvar(), cvar_95(); workbook 'Daily calculations'"),
         ("Skew", "Sample skew of daily returns", "Negative means big falls are more common than big rises.", f"{core} skew(); workbook 'Daily calculations'"),

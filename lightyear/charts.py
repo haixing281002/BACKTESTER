@@ -247,9 +247,12 @@ def build(df: pd.DataFrame, names: dict, cash_rate=None, comparators: pd.DataFra
     out["card_bp"] = card_bp
     out["annual_turnover"] = core.annual_turnover(turnover) if turnover is not None else None
     out["gross"] = None
+    # the daily display block: the Barra site's formulas (core.site_block). Shown in "Daily calculations"; Gate B does not read it.
+    out["daily_site"] = {"days_per_year": core.SITE_ANN, "strategy": core.site_block(strat), "benchmark": core.site_block(bench), "gross": None}
     if turnover is not None and card_bp:
         gross = core.returns_at_cost(strat, turnover, 0.0, card_bp)
         out["gross"] = metrics(pd.Series(gross.to_numpy()), d, cash_rate, df["benchmark"], sharpe_hurdle)
+        out["daily_site"]["gross"] = core.site_block(pd.Series(gross.to_numpy(), index=idx))
     out["post_publication"] = core.post_publication(strat, bench, cash, publication_date, hurdle=core.daily_cash(sharpe_hurdle))
     # SE Return Analytics (monthly): the reference sheet's own formulas on calendar-month returns. Separate from every
     # daily figure above and from Gate B. Its risk-free rate is the same one config setting.

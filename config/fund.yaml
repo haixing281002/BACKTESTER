@@ -7,6 +7,10 @@ sharpe_hurdle: 0.05
 # TRADING DAYS A YEAR (operator, 2026-11-13): annualises every daily figure (volatility, the daily risk-free rate, the
 # one-year rolling window). This one setting is the only place the number lives; the workbooks show it as Days_Per_Year.
 trading_days_per_year: 252
+# DAYS A YEAR OF THE DAILY DISPLAY (operator, 2026-11-13): the Results tab's "Daily calculations" block and the workbook
+# sheet of that name use the Barra site's formulas, which annualise on 250 days. Gate B and the cash accrual keep the
+# setting above. The workbook shows this one as Site_Days_Per_Year.
+site_days_per_year: 250
 cash_rate_sweep: [0.0, 0.04, 0.08]   # Rates an appendix sweep tries beside the card's own. Never reaches a headline or a gate.
 # AUM is set only on a card, at Gate A (portfolio.aum_inr_cr; operator's ruling 2026-11-06). No capital size here.
 book_returns_csv: null  # NOT SET: the fund's own daily book returns (columns date, book), needed for gate tests 4 and 5

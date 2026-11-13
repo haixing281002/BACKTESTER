@@ -580,7 +580,7 @@ function renderResults(st){
         ${st.diagnostics_workbook?`<p class="small muted" style="margin:2px 0 8px"><b>What the diagnostics workbook is:</b> the second Excel file of this run. The main file (Download Excel) holds what is on this page. The diagnostics file holds the working behind it: every holding and trade, the simpler alternatives the strategy had to beat, the cost and cash-rate sweeps, the checks on the data and on the card's rules, and the Gate B rows. Open it to check how a number came about, not to read the result.</p>`:""}
         <div class="kpis" id="kpis"></div></div>
       <div id="qibody"><div class="card small muted">Not built for this run yet. Press Rebuild.</div></div>
-      <details class="card" ontoggle="resizeCharts(this)"><summary>Daily calculations <span class="small muted" style="font-weight:400">every metric on daily returns, with its formula, beside the monthly figure</span></summary>
+      <details class="card" ontoggle="resizeCharts(this)"><summary>Daily calculations <span class="small muted" style="font-weight:400">daily returns on the Barra site's formulas, each with its formula, beside the monthly figure</span></summary>
         <div id="dailybody" style="margin-top:10px"></div></details>
       <details class="card" ontoggle="resizeCharts(this)"><summary>Run diagnostics <span class="small muted" style="font-weight:400">cost tables, strategy rule rows, run facts, robustness rows, daily charts. Gate B's evidence reads from here.</span></summary>
         <div style="margin-top:12px">
@@ -709,31 +709,34 @@ function fillCore(c){
     $("#coremore").innerHTML = "";
     return;
   }
-  const m = c.metrics, s = m.strategy, b = m.benchmark, bp = c.card_bp, g = c.gross, se = c.se;
+  const ds = c.daily_site;
+  if(!ds){ $("#dailybody").innerHTML = `This run's daily figures were built before they followed the Barra site's formulas. Press Rebuild to redo them from its own files with no new backtest.`; $("#coremore").innerHTML = ""; return; }
+  const m = c.metrics, s = {...m.strategy, ...ds.strategy}, b = {...m.benchmark, ...ds.benchmark}, bp = c.card_bp, g = c.gross ? {...c.gross, ...(ds.gross||{})} : null, se = c.se;
+  const sd = ds.days_per_year;
   const f = (v,fmt) => (v==null||Number.isNaN(v)) ? "–" : fmt==="pct" ? pct(v,2) : fmt==="int" ? Math.round(v) : num(v);
   const rf = c.sharpe_hurdle==null ? "" : pct(c.sharpe_hurdle,0);
   const dpy = c.trading_days_per_year==null ? "N" : c.trading_days_per_year;   // trading days a year, config/fund.yaml, via charts.json; N on a run built before it was recorded
   const V = {}; ((se||{}).rows||[]).forEach(r => V[r.label] = r);
   // label, key, format, the daily formula in words, the monthly figure of the same kind
   const R = [["Final value (100 = start)","final","num","100 x product of (1 + daily return)","Total Return"],
-    ["CAGR","cagr","pct","(final / 100)^(1 / years) - 1, years = calendar days / 365.25","CAGR"],
-    ["Volatility","vol","pct",`sample stdev of daily returns x sqrt(${dpy})`,"Annualized Volatility"],
-    [`Sharpe (risk-free rate ${rf})`,"sharpe","num","(CAGR - risk-free rate) / volatility","Sharpe Ratio"],
-    [`Sortino (risk-free rate ${rf})`,"sortino","num","(CAGR - risk-free rate) / downside deviation of daily returns below the daily risk-free rate","Sortino Ratio"],
-    ["Maximum drawdown","max_dd","pct","largest fall of the daily value from its previous high, as a positive number","Max Drawdown"],
-    ["Calmar","calmar","num","CAGR / maximum drawdown","Calmar Ratio"],
-    ["Drawdown duration (trading days)","dd_duration_days","int","longest run of days below a previous high",null],
-    ["95% CVaR (daily loss)","cvar_95","pct","minus the average of the daily returns at or below their 5th percentile","95% CVaR"],
-    ["Skew","skew","num","sample skew of daily returns","Skewness"],
-    ["CAGR without the 10 best days","best_days_removed_cagr","pct","the 10 best days removed, then compounded",null],
-    ["Beta","beta","num","slope of daily returns on the benchmark's, both over the card's cash rate","Beta"],
-    ["Tracking error","tracking_error","pct",`sample stdev of (daily return - benchmark's) x sqrt(${dpy})`,"Tracking Error"],
-    ["Information ratio","information_ratio","num",`mean of (daily return - benchmark's) x ${dpy} / tracking error`,"Information Ratio"],
-    ["Rolling one-year periods behind","rolling_behind","pct",`share of ${dpy}-day windows with a compounded return below the benchmark's`,null]];
+    ["Annualised return","annual_return","pct",`mean daily return x ${sd}`,"CAGR"],
+    ["Volatility","vol","pct",`sample stdev of daily returns x sqrt(${sd})`,"Annualized Volatility"],
+    ["Sharpe (no risk-free rate)","sharpe","num","annualised return / volatility","Sharpe Ratio"],
+    ["Sortino (no risk-free rate)","sortino","num",`annualised return / (sample stdev of the days with a loss x sqrt(${sd}))`,"Sortino Ratio"],
+    ["Maximum drawdown","max_dd","pct","largest fall of the running sum of daily returns from its previous high, as a positive number","Max Drawdown"],
+    ["Days with a gain","hit_rate","pct","days with a return above zero / all days",null],
+    ["Lightyear only: drawdown duration (trading days)","dd_duration_days","int","longest run of days the compounded value is below a previous high",null],
+    ["Lightyear only: 95% CVaR (daily loss)","cvar_95","pct","minus the average of the daily returns at or below their 5th percentile","95% CVaR"],
+    ["Lightyear only: skew","skew","num","sample skew of daily returns","Skewness"],
+    ["Lightyear only: CAGR without the 10 best days","best_days_removed_cagr","pct","the 10 best days removed, then compounded",null],
+    ["Lightyear only: beta to the benchmark","beta","num","Cov(r - c, b - c) / Var(b - c), each minus one day of the card's cash rate","Beta"],
+    ["Lightyear only: tracking error","tracking_error","pct",`sample stdev of (daily return - benchmark's) x sqrt(${dpy})`,"Tracking Error"],
+    ["Lightyear only: information ratio against the benchmark","information_ratio","num",`mean of (daily return - benchmark's) x ${dpy} / tracking error`,"Information Ratio"],
+    ["Lightyear only: rolling one-year periods behind","rolling_behind","pct",`share of ${dpy}-day windows with a compounded return below the benchmark's`,null]];
   const mon = (lab, who) => { const r = V[lab]; return r ? f(r[who], r.format) : "" };
   $("#dailybody").innerHTML = `<table class="t"><tr><th>Metric (daily)</th><th>Daily formula</th>${g?`<th>Strategy, gross: daily</th>`:""}<th>Strategy${g?`, at the card's ${num(bp,0)}bp`:""}: daily</th><th>${esc(c.names.benchmark)}: daily</th><th>Monthly figure of the same kind</th><th>Strategy: monthly</th><th>Benchmark: monthly</th></tr>` +
     R.map(([l,k,t,w,ml])=>`<tr><td>${l}</td><td class="small muted">${w}</td>${g?`<td>${f(g[k],t)}</td>`:""}<td>${f(s[k],t)}</td><td>${f(b[k],t)}</td><td class="small">${ml?esc(ml)+" (monthly)":"none"}</td><td>${ml?mon(ml,"strategy"):""}</td><td>${ml?mon(ml,"benchmark"):""}</td></tr>`).join("") +
-    `</table><div class="small muted" style="margin-top:6px">The daily block uses every daily return, sample standard deviation and ${dpy} days a year; the monthly block uses complete calendar months, population standard deviation and month counts. The two differ by construction. The monthly Max Drawdown and CVaR are shown as negative numbers and the daily ones as positive. Gate B uses its own daily tests.</div>`;
+    `</table><div class="small muted" style="margin-top:6px">The daily block follows the Barra site's formulas, so this book and the same book on the site differ only by their data: daily returns added (not compounded), sample standard deviation, ${sd} days a year, no risk-free rate, and a drawdown in points of summed return. Rows marked "Lightyear only" have no figure on the site and keep Lightyear's own formula (${dpy} days). The monthly block uses complete calendar months, population standard deviation and month counts. The two differ by construction. The monthly Max Drawdown and CVaR are shown as negative numbers and the daily ones as positive. Gate B uses its own daily tests.</div>`;
   const pp = c.post_publication, cp = c.capacity || {};
   $("#coremore").innerHTML = [
     c.annual_turnover!=null ? `Two-way turnover ${num(c.annual_turnover)} times capital a year. The cost is the one on this run's card, approved at Gate A.` : `Turnover not computed: this run wrote no trades or holdings.`,

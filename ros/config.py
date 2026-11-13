@@ -40,6 +40,11 @@ def trading_days_per_year() -> int:
     return int(_load("fund.yaml")["trading_days_per_year"])
 
 
+def site_days_per_year() -> int:
+    """Days a year of the daily display block (config/fund.yaml), which follows the Barra site's formulas: ros/metrics/core.py SITE_ANN."""
+    return int(_load("fund.yaml")["site_days_per_year"])
+
+
 def hurdle_daily() -> float:
     """One trading day of the Sharpe yardstick: (1 + annual)^(1/trading_days_per_year) - 1. Every Sharpe subtracts this."""
     return (1.0 + hurdle_annual()) ** (1.0 / trading_days_per_year()) - 1.0

@@ -159,3 +159,48 @@ def test_monthly_figures_use_complete_months_only():
     days = pd.bdate_range("2024-01-10", "2024-04-12")       # stand-in sessions; the rule is what is tested
     p0, p1, info = se.complete_months(pd.Series(0.001, index=days[1:]), sessions=pd.bdate_range("2024-01-01", "2024-04-30"))
     assert (str(p0), str(p1)) == ("2024-02", "2024-03") and [x["month"] for x in info["left_out"]] == ["2024-01", "2024-04"]
+
+
+# ------------------------------------------------------------------------------- the daily display block (Barra site formulas)
+SN = config.site_days_per_year()
+
+
+def test_the_daily_display_block_annualises_on_250_days_from_the_config():
+    assert SN == 250 and core.SITE_ANN == SN and core.ANN == 252
+
+
+def test_display_annual_return_is_the_mean_daily_return_times_250():
+    assert core.site_annual_return(R) == pytest.approx(st.mean(r) * SN, rel=1e-12)
+
+
+def test_display_volatility_is_the_sample_stdev_times_root_250():
+    assert core.site_vol(R) == pytest.approx(st.stdev(r) * math.sqrt(SN), rel=1e-12)
+
+
+def test_display_sharpe_has_no_risk_free_rate():
+    assert core.site_sharpe(R) == pytest.approx(st.mean(r) * SN / (st.stdev(r) * math.sqrt(SN)), rel=1e-12)
+
+
+def test_display_sortino_is_over_the_sample_stdev_of_the_days_with_a_loss():
+    days = pd.date_range("2024-01-01", periods=8)
+    x = [0.01, -0.02, 0.03, -0.01, 0.00, -0.03, 0.02, -0.005]
+    neg = [v for v in x if v < 0]                            # the 0.00 day is not a loss
+    assert core.site_sortino(pd.Series(x, index=days)) == pytest.approx(st.mean(x) * SN / (st.stdev(neg) * math.sqrt(SN)), rel=1e-12)
+
+
+def test_display_drawdown_is_on_the_running_sum_and_positive():
+    two = pd.Series([0.05, -0.10, -0.10, 0.02], index=pd.date_range("2024-01-01", periods=4))
+    assert core.site_max_drawdown(two) == pytest.approx(0.20, rel=1e-12)          # added: -20%; compounded it would be -19%
+    assert core.max_drawdown(core.value_from_returns(two, start=pd.Timestamp("2023-12-31"))) == pytest.approx(0.19, rel=1e-12)
+
+
+def test_display_hit_rate_is_the_share_of_days_with_a_gain():
+    assert core.hit_rate(R) == pytest.approx(3 / 6)
+
+
+def test_the_workbook_writes_the_display_rows_with_the_same_formulas():
+    src = Path(main_workbook.__file__).read_text(encoding="utf-8")
+    for fx in ('"=AVERAGE({r})*Site_Days_Per_Year"', '"=STDEV({r})*SQRT(Site_Days_Per_Year)"', '"={c}8/{c}9"',
+               'STDEV(IF({r}<0,{r}))*SQRT(Site_Days_Per_Year)', "_xlfn.SCAN(0,{r},", "COUNTIF({r},\">0\")/COUNT({r})"):
+        assert fx in src, fx
+    assert "Risk_Free_Rate)/{c}9" not in src                 # no risk-free rate in the display Sharpe
