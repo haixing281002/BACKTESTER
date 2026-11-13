@@ -155,7 +155,7 @@ def content():
       "The benchmark is the NIFTY 500 price index until a total-return series is on file.</p></div>")
     A('<h2 id="1.1">1.1 Strategy vs benchmark: the five tiles</h2>' + where('Results tab, card "Strategy vs benchmark (monthly)".', 'main workbook, sheet "Returns overview", rows 6 to 10, links to "SE Return Analytics".'))
     A("<p>The tiles are CAGR and Total Return (formulas in 1.5) and Annualized Volatility, Sharpe Ratio and Max Drawdown (formulas in 1.9), for the strategy with the benchmark "
-      "under each. "Notes on these figures", at the foot of the page, gives the first and last complete month and the daily returns left out.</p>")
+      "under each. The notes at the foot of the page give the first and last complete month and the daily returns left out.</p>")
     CHECKS.append(("1.1", "Complete months: first and last complete calendar months, and the daily returns outside them", "ros/metrics/se.py complete_months(), block()"))
     A('<h2 id="1.2">1.2 Financial-year returns</h2>' + where('Results tab, card "Financial-year returns".', 'main workbook, sheet "Returns overview", second table.'))
     A(table("1.2", H3, [
